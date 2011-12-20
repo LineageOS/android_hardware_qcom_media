@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAOX///f8\u003d",
+        "filename": "mm-video/vidc/vdec/src/omx_vdec.cpp",
+        "patchSetId": 3
+      },
+      "lineNbr": 99,
+      "author": {
+        "id": 605
+      },
+      "writtenOn": "2011-12-20T23:32:53Z",
+      "side": 1,
+      "message": "please take a look in bionic/libc/kernel/common/linux/msm_vidc*.h",
+      "revId": "2acb8fde8f051bfc267f225f2b20b58bd119e84b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
