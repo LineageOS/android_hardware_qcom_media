@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAARH///Os\u003d",
+        "filename": "audio/msm8x60/AudioHardware.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 3642,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2012-03-12T15:50:02Z",
+      "side": 1,
+      "message": "mRecordState is checked by aic3254_config and do_aic3254_control, but never set, so this change seems to be all that\u0027s required to make it work on my Sensation.",
+      "revId": "34cacc340986c001bc2ce5a77d02a9587b3d8779",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
