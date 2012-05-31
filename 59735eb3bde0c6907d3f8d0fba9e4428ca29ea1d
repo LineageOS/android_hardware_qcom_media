@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAATH//85k\u003d",
+        "filename": "audio/msm8660/AudioHardware.cpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 153,
+      "author": {
+        "id": 19
+      },
+      "writtenOn": "2012-05-31T13:52:15Z",
+      "side": 1,
+      "message": "i think at some point we can start using enum :)",
+      "revId": "59735eb3bde0c6907d3f8d0fba9e4428ca29ea1d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
