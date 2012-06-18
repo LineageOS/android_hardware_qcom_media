@@ -16,6 +16,24 @@
       "revId": "53d9be89d6387094754ee4e9c2d70db1ecb716f9",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "AAAAUH//9ms\u003d",
+        "filename": "audio/msm8660/AudioHardware.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 2236,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2012-06-18T20:42:54Z",
+      "side": 1,
+      "message": "I have tried this on HTC, it addresses the problem of voice record causing audio to route to handset.",
+      "parentUuid": "AAAAUH//9oc\u003d",
+      "revId": "53d9be89d6387094754ee4e9c2d70db1ecb716f9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
