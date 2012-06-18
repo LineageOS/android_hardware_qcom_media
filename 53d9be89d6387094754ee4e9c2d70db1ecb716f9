@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAUH//9oc\u003d",
+        "filename": "audio/msm8660/AudioHardware.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 2236,
+      "author": {
+        "id": 19
+      },
+      "writtenOn": "2012-06-18T20:11:24Z",
+      "side": 1,
+      "message": "maybe we can consider that for all, not only sammy ...\ni will try it soon on htc",
+      "revId": "53d9be89d6387094754ee4e9c2d70db1ecb716f9",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
