@@ -34,6 +34,24 @@
       "revId": "88d56767f25c481a6b0e92d480e65cade0ab29f7",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da20952f_ac1d2e11",
+        "filename": "libc2dcolorconvert/Android.mk",
+        "patchSetId": 6
+      },
+      "lineNbr": 6,
+      "author": {
+        "id": 3671
+      },
+      "writtenOn": "2013-11-20T13:05:06Z",
+      "side": 1,
+      "message": "Neither am I. Its certainly possible though. Usually display-legacy would use a media-legacy repo, and display-mdss I believe uses the media-v4l2 repo (or something like that) but it can\u0027t hurt either, leaves it open at least.",
+      "parentUuid": "da20952f_acf68ed5",
+      "revId": "88d56767f25c481a6b0e92d480e65cade0ab29f7",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
