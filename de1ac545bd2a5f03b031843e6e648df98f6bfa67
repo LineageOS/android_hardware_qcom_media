@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "fa80f949_a0caf84d",
+        "filename": "mm-video-legacy/vidc/venc/src/video_encoder_device.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1432,
+      "author": {
+        "id": 3556
+      },
+      "writtenOn": "2013-12-07T22:05:12Z",
+      "side": 1,
+      "message": "This change can easily be back ported to 3.0 kernel. https://github.com/CyanogenMod/android_kernel_motorola_msm8960-common/commit/84ce4782202bedc9bb1509c4cfc8eba1af7797af",
+      "revId": "de1ac545bd2a5f03b031843e6e648df98f6bfa67",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
