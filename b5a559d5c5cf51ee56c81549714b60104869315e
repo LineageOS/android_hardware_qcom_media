@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7a740942_51af76e3",
+        "filename": "mm-video-legacy/Android.mk",
+        "patchSetId": 2
+      },
+      "lineNbr": 1,
+      "author": {
+        "id": 3556
+      },
+      "writtenOn": "2013-12-13T20:20:24Z",
+      "side": 1,
+      "message": "Actually this may break other devices, probably better to just add msm8660 to it since some devices ues mm-video-v4l2",
+      "revId": "b5a559d5c5cf51ee56c81549714b60104869315e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
