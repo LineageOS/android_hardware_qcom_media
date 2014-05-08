@@ -652,6 +652,14 @@ omx_vdec::omx_vdec():
     property_get("vidc.log.loc", property_value, "");
     if (*property_value)
         strlcpy(m_debug.log_loc, property_value, PROPERTY_VALUE_MAX);
+
+    property_value[0] = '\0';
+    property_get("vidc.dec.debug.dyn.disabled", property_value, "1");
+    m_disable_dynamic_buf_mode = atoi(property_value);
+
+    property_value[0] = '\0';
+    property_get("vidc.dec.debug.adap.disabled", property_value, "1");
+    m_disable_adaptive_playback = atoi(property_value);
 #endif
     memset(&m_cmp,0,sizeof(m_cmp));
     memset(&m_cb,0,sizeof(m_cb));
@@ -3871,6 +3879,12 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
         break;
     case OMX_QcomIndexParamVideoMetaBufferMode:
         {
+            DEBUG_PRINT_LOW("set_parameter: OMX_QcomIndexParamVideoMetaBufferMode");
+            if (m_disable_dynamic_buf_mode) {
+                DEBUG_PRINT_HIGH("Dynamic buffer mode is not supported");
+                eRet = OMX_ErrorUnsupportedSetting;
+                break;
+            }
             StoreMetaDataInBuffersParams *metabuffer =
                 (StoreMetaDataInBuffersParams *)paramData;
             if (!metabuffer) {
@@ -3923,6 +3937,11 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
         case OMX_QcomIndexParamVideoAdaptivePlaybackMode:
         {
             DEBUG_PRINT_LOW("set_parameter: OMX_GoogleAndroidIndexPrepareForAdaptivePlayback");
+            if (m_disable_adaptive_playback) {
+                DEBUG_PRINT_HIGH("Adaptive playback is not supported");
+                eRet = OMX_ErrorUnsupportedSetting;
+                break;
+            }
             PrepareForAdaptivePlaybackParams* pParams =
                     (PrepareForAdaptivePlaybackParams *) paramData;
             if (pParams->nPortIndex == OMX_CORE_OUTPUT_PORT_INDEX) {
