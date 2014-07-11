@@ -209,53 +209,6 @@ include $(BUILD_SHARED_LIBRARY)
 endif
 endif
 
-# ---------------------------------------------------------------------------------
-# 			Make the apps-test (mm-vdec-omx-test)
-# ---------------------------------------------------------------------------------
-include $(CLEAR_VARS)
-
-mm-vdec-test-inc    := $(call project-path-for,qcom-media)/mm-core/inc
-mm-vdec-test-inc    += $(LOCAL_PATH)/inc
-
-LOCAL_MODULE                    := mm-vdec-omx-test
-LOCAL_MODULE_TAGS               := optional
-LOCAL_VENDOR_MODULE             := true
-LOCAL_CFLAGS                    := $(libOmxVdec-def)
-LOCAL_C_INCLUDES                := $(mm-vdec-test-inc)
-
-LOCAL_HEADER_LIBRARIES := generated_kernel_headers
-
-LOCAL_PRELINK_MODULE      := false
-LOCAL_SHARED_LIBRARIES    := libutils libOmxCore libOmxVdec libbinder libcutils
-
-LOCAL_SRC_FILES           := src/queue.c
-LOCAL_SRC_FILES           += test/omx_vdec_test.cpp
-
-include $(BUILD_EXECUTABLE)
-
-# ---------------------------------------------------------------------------------
-# 			Make the driver-test (mm-video-driver-test)
-# ---------------------------------------------------------------------------------
-include $(CLEAR_VARS)
-
-mm-vdec-drv-test-inc    := $(call project-path-for,qcom-media)/mm-core/inc
-mm-vdec-drv-test-inc    += $(LOCAL_PATH)/inc
-
-LOCAL_MODULE                    := mm-video-driver-test
-LOCAL_MODULE_TAGS               := optional
-LOCAL_VENDOR_MODULE             := true
-LOCAL_CFLAGS                    := $(libOmxVdec-def)
-LOCAL_C_INCLUDES                := $(mm-vdec-drv-test-inc)
-
-LOCAL_HEADER_LIBRARIES := generated_kernel_headers
-
-LOCAL_PRELINK_MODULE            := false
-
-LOCAL_SRC_FILES                 := src/message_queue.c
-LOCAL_SRC_FILES                 += test/decoder_driver_test.c
-
-include $(BUILD_EXECUTABLE)
-
 endif #BUILD_TINY_ANDROID
 
 # ---------------------------------------------------------------------------------
