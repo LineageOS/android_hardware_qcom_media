@@ -35,7 +35,6 @@ Copyright (c) 2012 The Linux Foundation. All rights reserved.
 
 #include <pthread.h>
 #include <c2d2.h>
-#include <ColorConverter.h>
 #include <sys/types.h>
 
 typedef C2D_STATUS (*LINK_c2dCreateSurface)( uint32 *surface_id,

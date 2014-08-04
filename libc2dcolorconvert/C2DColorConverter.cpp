@@ -29,7 +29,6 @@
 /*--------------------------------------------------------------------------
 Copyright (c) 2012 The Linux Foundation. All rights reserved.
 --------------------------------------------------------------------------*/
-#include <string.h>
 #include <C2DColorConverter.h>
 #include <arm_neon.h>
 #include <stdlib.h>
@@ -38,6 +37,8 @@ Copyright (c) 2012 The Linux Foundation. All rights reserved.
 #include <sys/ioctl.h>
 #include <log/log.h>
 #include <dlfcn.h>
+#include <string.h>
+#include <errno.h>
 
 #undef LOG_TAG
 #define LOG_TAG "C2DColorConvert"
