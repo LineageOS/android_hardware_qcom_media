@@ -5730,6 +5730,8 @@ OMX_ERRORTYPE  omx_vdec::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
             /*Free the Buffer Header*/
             if (release_input_done())
             {
+                if ((!m_pSwVdec) || (m_swvdec_mode == SWVDEC_MODE_DECODE_ONLY))
+                    release_buffers(this, VDEC_BUFFER_TYPE_INPUT);
                 DEBUG_PRINT_HIGH("ALL input buffers are freed/released");
                 free_input_buffer_header();
             }
@@ -5764,6 +5766,8 @@ OMX_ERRORTYPE  omx_vdec::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
 
             if (release_output_done())
             {
+                if ((!m_pSwVdec) || (m_swvdec_mode == SWVDEC_MODE_DECODE_ONLY))
+                    release_buffers(this, VDEC_BUFFER_TYPE_OUTPUT);
                 free_output_buffer_header();
                 if (m_swvdec_mode == SWVDEC_MODE_DECODE_ONLY)
                 {
