@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "3ac371cc_99bb9d0e",
+        "filename": "mm-core/inc/QCMetaData.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 38,
+      "author": {
+        "id": 10094
+      },
+      "writtenOn": "2015-04-13T23:51:59Z",
+      "side": 1,
+      "message": "I actually still got redefinition errors. I had to #if 0 like this: http://review.cyanogenmod.org/94185",
+      "revId": "fb366a6292345cfcf3ad2ce14631bc19a3278d90",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
