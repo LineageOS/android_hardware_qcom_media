@@ -98,8 +98,6 @@ LOCAL_PATH:= $(ROOT_DIR)
 libmm-vdec-inc          := $(LOCAL_PATH)/vdec/inc
 libmm-vdec-inc          += $(OMX_VIDEO_PATH)/vidc/common/inc
 libmm-vdec-inc          += hardware/qcom/media/msm8974/mm-core/inc
-#DRM include - Interface which loads the DRM library
-libmm-vdec-inc	        += $(OMX_VIDEO_PATH)/DivxDrmDecrypt/inc
 libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/adreno
 libmm-vdec-inc          += frameworks/native/include/media/openmax
 libmm-vdec-inc          += frameworks/native/include/media/hardware
@@ -119,7 +117,6 @@ LOCAL_HEADER_LIBRARIES  := \
 
 LOCAL_SHARED_LIBRARIES  := liblog libutils libui libbinder libcutils libdl
 
-LOCAL_SHARED_LIBRARIES  += libdivxdrmdecrypt
 LOCAL_SHARED_LIBRARIES  += libqdMetaData
 
 LOCAL_SRC_FILES         := vdec/src/frameparser.cpp
@@ -164,7 +161,6 @@ LOCAL_HEADER_LIBRARIES  := generated_kernel_headers
 
 LOCAL_SHARED_LIBRARIES  := liblog libutils libui libbinder libcutils libdl
 
-LOCAL_SHARED_LIBRARIES  += libdivxdrmdecrypt
 LOCAL_SHARED_LIBRARIES  += libqdMetaData
 
 LOCAL_SRC_FILES         := vdec/src/frameparser.cpp
