@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "df140735_dc232105",
+        "filename": "mm-video-v4l2/vidc/venc/inc/video_encoder_device_v4l2.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 116,
+      "author": {
+        "id": 10984
+      },
+      "writtenOn": "2015-07-21T17:56:51Z",
+      "side": 1,
+      "message": "format (should be four spaces instead of one)",
+      "range": {
+        "startLine": 116,
+        "startChar": 13,
+        "endLine": 116,
+        "endChar": 17
+      },
+      "revId": "680ee75013569aa78acf3e0c14ab6af1fe5e2bac",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
