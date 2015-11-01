@@ -11210,7 +11210,7 @@ OMX_ERRORTYPE omx_vdec::describeColorFormat(DescribeColorFormatParams *params) {
     DEBUG_PRINT_LOW("  FrameWidth x FrameHeight : %d x %d", params->nFrameWidth, params->nFrameHeight);
     DEBUG_PRINT_LOW("  YWidth x YHeight : %d x %d", img->mWidth, img->mHeight);
     for (size_t i = 0; i < img->mNumPlanes; ++i) {
-        DEBUG_PRINT_LOW("    Plane[%d] : offset=%u / xStep=%u / yStep = %u",
+        DEBUG_PRINT_LOW("    Plane[%u] : offset=%u / xStep=%u / yStep = %u",
                 (int)i, img->mPlane[i].mOffset, img->mPlane[i].mColInc, img->mPlane[i].mRowInc);
     }
     return OMX_ErrorNone;
