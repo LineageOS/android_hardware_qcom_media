@@ -199,9 +199,9 @@ void* async_venc_message_thread (void *input)
     {
         DEBUG_PRINT_ERROR("\n ERESTARTSYS received in ioctl read next msg!");
     }
-    else if (error_code <0)
+    else if (error_code <0 && errno != EINTR && errno != EAGAIN)
     {
-        DEBUG_PRINT_LOW("\nioctl VEN_IOCTL_CMD_READ_NEXT_MSG failed");
+        DEBUG_PRINT_LOW("\nioctl VEN_IOCTL_CMD_READ_NEXT_MSG failed, error_code = %d, errno = %d", error_code, errno);
         break;
     }
     else if(omx->async_message_process(input,&venc_msg) < 0)

@@ -190,9 +190,9 @@ void* async_message_thread (void *input)
     {
       DEBUG_PRINT_ERROR("\n ERESTARTSYS received in ioctl read next msg!");
     }
-    else if (error_code < 0)
+    else if (error_code < 0 && errno != EINTR && errno != EAGAIN)
     {
-      DEBUG_PRINT_ERROR("\n Error in ioctl read next msg");
+      DEBUG_PRINT_ERROR("\n Error in ioctl read next msg, error_code = %d, errno = %d", error_code, errno);
       break;
     }        /*Call Instance specific process function*/
     else if (omx->async_message_process(input,&vdec_msg) < 0)
