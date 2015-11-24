@@ -1,0 +1,242 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ff82abbf_2583f806",
+        "filename": "mm-core/src/8084/qc_registry_table.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 364,
+      "author": {
+        "id": 13956
+      },
+      "writtenOn": "2015-11-24T07:04:43Z",
+      "side": 0,
+      "message": "Already defined here",
+      "revId": "156f1a914e87e47c0017728b591319991daf34fc",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ff82abbf_45887c1e",
+        "filename": "mm-core/src/8084/qc_registry_table_android.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 411,
+      "author": {
+        "id": 13956
+      },
+      "writtenOn": "2015-11-24T07:04:43Z",
+      "side": 0,
+      "message": "already defined here",
+      "revId": "156f1a914e87e47c0017728b591319991daf34fc",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ff82abbf_e57c3022",
+        "filename": "mm-core/src/8226/qc_registry_table.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 317,
+      "author": {
+        "id": 13956
+      },
+      "writtenOn": "2015-11-24T07:04:43Z",
+      "side": 0,
+      "message": "already defined here",
+      "revId": "156f1a914e87e47c0017728b591319991daf34fc",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ff82abbf_057a7423",
+        "filename": "mm-core/src/8226/qc_registry_table_android.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 369,
+      "author": {
+        "id": 13956
+      },
+      "writtenOn": "2015-11-24T07:04:43Z",
+      "side": 0,
+      "message": "already defineds here",
+      "revId": "156f1a914e87e47c0017728b591319991daf34fc",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ff82abbf_a576283e",
+        "filename": "mm-core/src/8610/qc_registry_table.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 343,
+      "author": {
+        "id": 13956
+      },
+      "writtenOn": "2015-11-24T07:04:43Z",
+      "side": 0,
+      "message": "already defined here",
+      "revId": "156f1a914e87e47c0017728b591319991daf34fc",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ff82abbf_658ee028",
+        "filename": "mm-core/src/8610/qc_registry_table_android.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 343,
+      "author": {
+        "id": 13956
+      },
+      "writtenOn": "2015-11-24T07:04:43Z",
+      "side": 0,
+      "message": "already defined here",
+      "revId": "156f1a914e87e47c0017728b591319991daf34fc",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ff82abbf_c5a80c79",
+        "filename": "mm-core/src/8974/qc_registry_table.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 330,
+      "author": {
+        "id": 13956
+      },
+      "writtenOn": "2015-11-24T07:04:43Z",
+      "side": 0,
+      "message": "already defined here",
+      "revId": "156f1a914e87e47c0017728b591319991daf34fc",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ff82abbf_65b7c0da",
+        "filename": "mm-core/src/8974/qc_registry_table_android.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 394,
+      "author": {
+        "id": 13956
+      },
+      "writtenOn": "2015-11-24T07:04:43Z",
+      "side": 0,
+      "message": "already defined  here",
+      "revId": "156f1a914e87e47c0017728b591319991daf34fc",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ff82abbf_e5caf04d",
+        "filename": "mm-core/src/msm8992/registry_table.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 380,
+      "author": {
+        "id": 13956
+      },
+      "writtenOn": "2015-11-24T07:04:43Z",
+      "side": 0,
+      "message": "already defined here",
+      "revId": "156f1a914e87e47c0017728b591319991daf34fc",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ff82abbf_05c83453",
+        "filename": "mm-core/src/msm8992/registry_table_android.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 491,
+      "author": {
+        "id": 13956
+      },
+      "writtenOn": "2015-11-24T07:04:43Z",
+      "side": 0,
+      "message": "already defined here",
+      "revId": "156f1a914e87e47c0017728b591319991daf34fc",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ff82abbf_a5c4e841",
+        "filename": "mm-core/src/msm8994/registry_table.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 364,
+      "author": {
+        "id": 13956
+      },
+      "writtenOn": "2015-11-24T07:04:43Z",
+      "side": 0,
+      "message": "already defined here",
+      "revId": "156f1a914e87e47c0017728b591319991daf34fc",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ff82abbf_c5c1ec30",
+        "filename": "mm-core/src/msm8994/registry_table_android.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 507,
+      "author": {
+        "id": 13956
+      },
+      "writtenOn": "2015-11-24T07:04:43Z",
+      "side": 0,
+      "message": "already defined here",
+      "revId": "156f1a914e87e47c0017728b591319991daf34fc",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ff82abbf_65dca018",
+        "filename": "mm-core/src/plutonium/registry_table.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 364,
+      "author": {
+        "id": 13956
+      },
+      "writtenOn": "2015-11-24T07:04:43Z",
+      "side": 0,
+      "message": "already defined here",
+      "revId": "156f1a914e87e47c0017728b591319991daf34fc",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ff82abbf_85e1a4d3",
+        "filename": "mm-core/src/plutonium/registry_table_android.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 427,
+      "author": {
+        "id": 13956
+      },
+      "writtenOn": "2015-11-24T07:04:43Z",
+      "side": 0,
+      "message": "already defined here",
+      "revId": "156f1a914e87e47c0017728b591319991daf34fc",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
