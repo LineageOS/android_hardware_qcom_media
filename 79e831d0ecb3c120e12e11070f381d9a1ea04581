@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1fcbff3d_9d2a41e5",
+        "filename": "libc2dcolorconvert/C2DColorConverter.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 576,
+      "author": {
+        "id": 13956
+      },
+      "writtenOn": "2016-01-16T02:33:54Z",
+      "side": 1,
+      "message": "We check those color  format here, why not in calcLumaAlign",
+      "revId": "79e831d0ecb3c120e12e11070f381d9a1ea04581",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
