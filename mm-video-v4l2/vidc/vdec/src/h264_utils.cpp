@@ -292,7 +292,7 @@ boolean H264_Utils::extract_rbsp(OMX_IN   OMX_U8  *buffer,
     }
     nal_unit->nal_ref_idc   = (buffer[pos] & 0x60) >> 5;
     nal_unit->nalu_type = buffer[pos++] & 0x1f;
-    ALOGV("@#@# Pos = %x NalType = %x buflen = %d",
+    ALOGV("@#@# Pos = %x NalType = %x buflen = %lu",
             pos-1, nal_unit->nalu_type, buffer_length);
     *rbsp_length = 0;
 
@@ -364,8 +364,8 @@ bool H264_Utils::isNewFrame(OMX_BUFFERHEADERTYPE *p_buf_hdr,
     OMX_IN OMX_U32 buffer_length = p_buf_hdr->nFilledLen;
     bool eRet = true;
 
-    ALOGV("isNewFrame: buffer %p buffer_length %d "
-            "size_of_nal_length_field %d", buffer, buffer_length,
+    ALOGV("isNewFrame: buffer %p buffer_length %lu "
+            "size_of_nal_length_field %lu", buffer, buffer_length,
             size_of_nal_length_field);
 
     if ( false == extract_rbsp(buffer, buffer_length, size_of_nal_length_field,
@@ -566,8 +566,8 @@ void h264_stream_parser::parse_vui(bool vui_in_extradata)
         vui_param.time_scale = extract_bits(32);
         vui_param.fixed_frame_rate_flag = extract_bits(1);
         ALOGV("Timing info present in VUI!");
-        ALOGV("  num units in tick  : %u", vui_param.num_units_in_tick);
-        ALOGV("  time scale         : %u", vui_param.time_scale);
+        ALOGV("  num units in tick  : %lu", vui_param.num_units_in_tick);
+        ALOGV("  time scale         : %lu", vui_param.time_scale);
         ALOGV("  fixed frame rate   : %u", vui_param.fixed_frame_rate_flag);
     }
     vui_param.nal_hrd_parameters_present_flag = extract_bits(1);
@@ -677,9 +677,9 @@ void h264_stream_parser::aspect_ratio_info()
             ALOGV("-->aspect_ratio_idc: Reserved Value ");
             break;
     }
-    ALOGV("-->aspect_ratio_idc        : %u", aspect_ratio_idc);
-    ALOGV("-->aspect_ratio_x          : %u", aspect_ratio_x);
-    ALOGV("-->aspect_ratio_y          : %u", aspect_ratio_y);
+    ALOGV("-->aspect_ratio_idc        : %lu", aspect_ratio_idc);
+    ALOGV("-->aspect_ratio_x          : %lu", aspect_ratio_x);
+    ALOGV("-->aspect_ratio_y          : %lu", aspect_ratio_y);
     vui_param.aspect_ratio_info.aspect_ratio_idc = aspect_ratio_idc;
     vui_param.aspect_ratio_info.aspect_ratio_x = aspect_ratio_x;
     vui_param.aspect_ratio_info.aspect_ratio_y = aspect_ratio_y;
@@ -693,20 +693,20 @@ void h264_stream_parser::hrd_parameters(h264_hrd_param *hrd_param)
     hrd_param->cpb_cnt = uev() + 1;
     hrd_param->bit_rate_scale = extract_bits(4);
     hrd_param->cpb_size_scale = extract_bits(4);
-    ALOGV("-->cpb_cnt        : %u", hrd_param->cpb_cnt);
+    ALOGV("-->cpb_cnt        : %lu", hrd_param->cpb_cnt);
     ALOGV("-->bit_rate_scale : %u", hrd_param->bit_rate_scale);
     ALOGV("-->cpb_size_scale : %u", hrd_param->cpb_size_scale);
     if (hrd_param->cpb_cnt > MAX_CPB_COUNT) {
-        ALOGV("ERROR: Invalid hrd_param->cpb_cnt [%u]!", hrd_param->cpb_cnt);
+        ALOGV("ERROR: Invalid hrd_param->cpb_cnt [%lu]!", hrd_param->cpb_cnt);
         return;
     }
     for (idx = 0; idx < hrd_param->cpb_cnt && more_bits(); idx++) {
         hrd_param->bit_rate_value[idx] = uev() + 1;
         hrd_param->cpb_size_value[idx] = uev() + 1;
         hrd_param->cbr_flag[idx] = extract_bits(1);
-        ALOGV("-->bit_rate_value [%d] : %u", idx, hrd_param->bit_rate_value[idx]);
-        ALOGV("-->cpb_size_value [%d] : %u", idx, hrd_param->cpb_size_value[idx]);
-        ALOGV("-->cbr_flag       [%d] : %u", idx, hrd_param->cbr_flag[idx]);
+        ALOGV("-->bit_rate_value [%lu] : %lu", idx, hrd_param->bit_rate_value[idx]);
+        ALOGV("-->cpb_size_value [%lu] : %lu", idx, hrd_param->cpb_size_value[idx]);
+        ALOGV("-->cbr_flag       [%lu] : %u", idx, hrd_param->cbr_flag[idx]);
     }
     hrd_param->initial_cpb_removal_delay_length = extract_bits(5) + 1;
     hrd_param->cpb_removal_delay_length = extract_bits(5) + 1;
@@ -724,7 +724,7 @@ void h264_stream_parser::parse_sei()
     OMX_U32 value = 0, processed_bytes = 0;
     OMX_U8 *sei_msg_start = bitstream;
     OMX_U32 sei_unit_size = bitstream_bytes;
-    ALOGV("@@parse_sei: IN sei_unit_size(%u)", sei_unit_size);
+    ALOGV("@@parse_sei: IN sei_unit_size(%lu)", sei_unit_size);
     while ((processed_bytes + 2) < sei_unit_size && more_bits()) {
         init_bitstream(sei_msg_start + processed_bytes, sei_unit_size - processed_bytes);
         ALOGV("-->NALU_TYPE_SEI");
@@ -734,13 +734,13 @@ void h264_stream_parser::parse_sei()
             payload_type += value;
             processed_bytes++;
         } while (value == 0xFF);
-        ALOGV("-->payload_type   : %u", payload_type);
+        ALOGV("-->payload_type   : %lu", payload_type);
         do {
             value = extract_bits(8);
             payload_size += value;
             processed_bytes++;
         } while (value == 0xFF);
-        ALOGV("-->payload_size   : %u", payload_size);
+        ALOGV("-->payload_size   : %lu", payload_size);
         if (payload_size > 0) {
             switch (payload_type) {
                 case BUFFERING_PERIOD:
@@ -756,11 +756,11 @@ void h264_stream_parser::parse_sei()
                     parse_frame_pack();
                     break;
                 default:
-                    ALOGV("-->SEI payload type [%u] not implemented! size[%u]", payload_type, payload_size);
+                    ALOGV("-->SEI payload type [%lu] not implemented! size[%lu]", payload_type, payload_size);
             }
         }
         processed_bytes += (payload_size + emulation_code_skip_cntr);
-        ALOGV("-->SEI processed_bytes[%u]", processed_bytes);
+        ALOGV("-->SEI processed_bytes[%lu]", processed_bytes);
     }
     ALOGV("@@parse_sei: OUT");
 }
@@ -772,38 +772,38 @@ void h264_stream_parser::sei_buffering_period()
     h264_hrd_param *hrd_param = NULL;
     ALOGV("@@sei_buffering_period: IN");
     value = uev(); // seq_parameter_set_id
-    ALOGV("-->seq_parameter_set_id : %u", value);
+    ALOGV("-->seq_parameter_set_id : %lu", value);
     if (value > 31) {
-        ALOGV("ERROR: Invalid seq_parameter_set_id [%u]!", value);
+        ALOGV("ERROR: Invalid seq_parameter_set_id [%lu]!", value);
         return;
     }
     sei_buf_period.is_valid = false;
     if (vui_param.nal_hrd_parameters_present_flag) {
         hrd_param = &vui_param.nal_hrd_parameters;
         if (hrd_param->cpb_cnt > MAX_CPB_COUNT) {
-            ALOGV("ERROR: Invalid hrd_param->cpb_cnt [%u]!", hrd_param->cpb_cnt);
+            ALOGV("ERROR: Invalid hrd_param->cpb_cnt [%lu]!", hrd_param->cpb_cnt);
             return;
         }
         for (idx = 0; idx < hrd_param->cpb_cnt ; idx++) {
             sei_buf_period.is_valid = true;
             sei_buf_period.initial_cpb_removal_delay[idx] = extract_bits(hrd_param->initial_cpb_removal_delay_length);
             sei_buf_period.initial_cpb_removal_delay_offset[idx] = extract_bits(hrd_param->initial_cpb_removal_delay_length);
-            ALOGV("-->initial_cpb_removal_delay        : %u", sei_buf_period.initial_cpb_removal_delay[idx]);
-            ALOGV("-->initial_cpb_removal_delay_offset : %u", sei_buf_period.initial_cpb_removal_delay_offset[idx]);
+            ALOGV("-->initial_cpb_removal_delay        : %lu", sei_buf_period.initial_cpb_removal_delay[idx]);
+            ALOGV("-->initial_cpb_removal_delay_offset : %lu", sei_buf_period.initial_cpb_removal_delay_offset[idx]);
         }
     }
     if (vui_param.vcl_hrd_parameters_present_flag) {
         hrd_param = &vui_param.vcl_hrd_parameters;
         if (hrd_param->cpb_cnt > MAX_CPB_COUNT) {
-            ALOGV("ERROR: Invalid hrd_param->cpb_cnt [%u]!", hrd_param->cpb_cnt);
+            ALOGV("ERROR: Invalid hrd_param->cpb_cnt [%lu]!", hrd_param->cpb_cnt);
             return;
         }
         for (idx = 0; idx < hrd_param->cpb_cnt ; idx++) {
             sei_buf_period.is_valid = true;
             sei_buf_period.initial_cpb_removal_delay[idx] = extract_bits(hrd_param->initial_cpb_removal_delay_length);
             sei_buf_period.initial_cpb_removal_delay_offset[idx] = extract_bits(hrd_param->initial_cpb_removal_delay_length);
-            ALOGV("-->initial_cpb_removal_delay        : %u", sei_buf_period.initial_cpb_removal_delay[idx]);
-            ALOGV("-->initial_cpb_removal_delay_offset : %u", sei_buf_period.initial_cpb_removal_delay_offset[idx]);
+            ALOGV("-->initial_cpb_removal_delay        : %lu", sei_buf_period.initial_cpb_removal_delay[idx]);
+            ALOGV("-->initial_cpb_removal_delay_offset : %lu", sei_buf_period.initial_cpb_removal_delay_offset[idx]);
         }
     }
     sei_buf_period.au_cntr = 0;
@@ -829,10 +829,10 @@ void h264_stream_parser::sei_picture_timing()
     }
     sei_pic_timing.cpb_removal_delay = extract_bits(cpb_removal_len);
     sei_pic_timing.dpb_output_delay = extract_bits(dpb_output_len);
-    ALOGV("-->cpb_removal_len : %u", cpb_removal_len);
-    ALOGV("-->dpb_output_len  : %u", dpb_output_len);
-    ALOGV("-->cpb_removal_delay : %u", sei_pic_timing.cpb_removal_delay);
-    ALOGV("-->dpb_output_delay  : %u", sei_pic_timing.dpb_output_delay);
+    ALOGV("-->cpb_removal_len : %lu", cpb_removal_len);
+    ALOGV("-->dpb_output_len  : %lu", dpb_output_len);
+    ALOGV("-->cpb_removal_delay : %lu", sei_pic_timing.cpb_removal_delay);
+    ALOGV("-->dpb_output_delay  : %lu", sei_pic_timing.dpb_output_delay);
     if (vui_param.pic_struct_present_flag) {
         sei_pic_timing.pic_struct = extract_bits(4);
         sei_pic_timing.num_clock_ts = 0;
@@ -855,7 +855,7 @@ void h264_stream_parser::sei_picture_timing()
             default:
                 ALOGE("sei_picture_timing: pic_struct invalid!");
         }
-        ALOGV("-->num_clock_ts      : %u", sei_pic_timing.num_clock_ts);
+        ALOGV("-->num_clock_ts      : %lu", sei_pic_timing.num_clock_ts);
         for (OMX_U32 i = 0; i < sei_pic_timing.num_clock_ts && more_bits(); i++) {
             sei_pic_timing.clock_ts_flag = extract_bits(1);
             if (sei_pic_timing.clock_ts_flag) {
@@ -868,7 +868,7 @@ void h264_stream_parser::sei_picture_timing()
                 sei_pic_timing.cnt_dropped_flag = extract_bits(1);
                 sei_pic_timing.n_frames = extract_bits(8);
                 ALOGV("-->f_timestamp_flg   : %u", sei_pic_timing.full_timestamp_flag);
-                ALOGV("-->n_frames          : %u", sei_pic_timing.n_frames);
+                ALOGV("-->n_frames          : %lu", sei_pic_timing.n_frames);
                 sei_pic_timing.seconds_value = 0;
                 sei_pic_timing.minutes_value = 0;
                 sei_pic_timing.hours_value = 0;
@@ -891,10 +891,10 @@ void h264_stream_parser::sei_picture_timing()
                 sei_pic_timing.time_offset = 0;
                 if (time_offset_len > 0)
                     sei_pic_timing.time_offset = iv(time_offset_len);
-                ALOGV("-->seconds_value     : %u", sei_pic_timing.seconds_value);
-                ALOGV("-->minutes_value     : %u", sei_pic_timing.minutes_value);
-                ALOGV("-->hours_value       : %u", sei_pic_timing.hours_value);
-                ALOGV("-->time_offset       : %d", sei_pic_timing.time_offset);
+                ALOGV("-->seconds_value     : %lu", sei_pic_timing.seconds_value);
+                ALOGV("-->minutes_value     : %lu", sei_pic_timing.minutes_value);
+                ALOGV("-->hours_value       : %lu", sei_pic_timing.hours_value);
+                ALOGV("-->time_offset       : %ld", sei_pic_timing.time_offset);
             }
         }
     }
@@ -1147,9 +1147,9 @@ OMX_U32 h264_stream_parser::get_nal_unit_type(OMX_U32 *nal_unit_type)
             ALOGE("WARNING: forbidden_zero_bit should be zero!");
         }
         value = extract_bits(2);
-        ALOGV("-->nal_ref_idc    : %x", value);
+        ALOGV("-->nal_ref_idc    : %lx", value);
         *nal_unit_type = extract_bits(5);
-        ALOGV("-->nal_unit_type  : %x", *nal_unit_type);
+        ALOGV("-->nal_unit_type  : %lx", *nal_unit_type);
         consumed_bytes++;
         if (consumed_bytes > 5) {
             ALOGE("-->WARNING: Startcode was found after the first 4 bytes!");
@@ -1235,33 +1235,33 @@ void h264_stream_parser::parse_frame_pack()
 
 void h264_stream_parser::print_frame_pack()
 {
-    ALOGV("## frame_packing_arrangement.id = %u", frame_packing_arrangement.id);
-    ALOGV("## frame_packing_arrangement.cancel_flag = %u",
+    ALOGV("## frame_packing_arrangement.id = %lu", frame_packing_arrangement.id);
+    ALOGV("## frame_packing_arrangement.cancel_flag = %lu",
             frame_packing_arrangement.cancel_flag);
     if (!frame_packing_arrangement.cancel_flag) {
-        ALOGV("## frame_packing_arrangement.type = %u",
+        ALOGV("## frame_packing_arrangement.type = %lu",
                 frame_packing_arrangement.type);
-        ALOGV("## frame_packing_arrangement.quincunx_sampling_flag = %u",
+        ALOGV("## frame_packing_arrangement.quincunx_sampling_flag = %lu",
                 frame_packing_arrangement.quincunx_sampling_flag);
-        ALOGV("## frame_packing_arrangement.content_interpretation_type = %u",
+        ALOGV("## frame_packing_arrangement.content_interpretation_type = %lu",
                 frame_packing_arrangement.content_interpretation_type);
-        ALOGV("## frame_packing_arrangement.spatial_flipping_flag = %u",
+        ALOGV("## frame_packing_arrangement.spatial_flipping_flag = %lu",
                 frame_packing_arrangement.spatial_flipping_flag);
-        ALOGV("## frame_packing_arrangement.frame0_flipped_flag = %u",
+        ALOGV("## frame_packing_arrangement.frame0_flipped_flag = %lu",
                 frame_packing_arrangement.frame0_flipped_flag);
-        ALOGV("## frame_packing_arrangement.field_views_flag = %u",
+        ALOGV("## frame_packing_arrangement.field_views_flag = %lu",
                 frame_packing_arrangement.field_views_flag);
-        ALOGV("## frame_packing_arrangement.current_frame_is_frame0_flag = %u",
+        ALOGV("## frame_packing_arrangement.current_frame_is_frame0_flag = %lu",
                 frame_packing_arrangement.current_frame_is_frame0_flag);
-        ALOGV("## frame_packing_arrangement.frame0_self_contained_flag = %u",
+        ALOGV("## frame_packing_arrangement.frame0_self_contained_flag = %lu",
                 frame_packing_arrangement.frame0_self_contained_flag);
-        ALOGV("## frame_packing_arrangement.frame1_self_contained_flag = %u",
+        ALOGV("## frame_packing_arrangement.frame1_self_contained_flag = %lu",
                 frame_packing_arrangement.frame1_self_contained_flag);
-        ALOGV("## frame_packing_arrangement.reserved_byte = %u",
+        ALOGV("## frame_packing_arrangement.reserved_byte = %lu",
                 frame_packing_arrangement.reserved_byte);
-        ALOGV("## frame_packing_arrangement.repetition_period = %u",
+        ALOGV("## frame_packing_arrangement.repetition_period = %lu",
                 frame_packing_arrangement.repetition_period);
-        ALOGV("## frame_packing_arrangement.extension_flag = %u",
+        ALOGV("## frame_packing_arrangement.extension_flag = %lu",
                 frame_packing_arrangement.extension_flag);
     }
 }
@@ -1300,7 +1300,7 @@ void h264_stream_parser::parse_nal(OMX_U8* data_ptr, OMX_U32 data_len, OMX_U32 n
     if (nal_type != NALU_TYPE_VUI) {
         cons_bytes = get_nal_unit_type(&nal_unit_type);
         if (nal_type != nal_unit_type && nal_type != NALU_TYPE_UNSPECIFIED) {
-            ALOGV("Unexpected nal_type(%x) expected(%x)", nal_unit_type, nal_type);
+            ALOGV("Unexpected nal_type(%lx) expected(%lx)", nal_unit_type, nal_type);
             return;
         }
     }

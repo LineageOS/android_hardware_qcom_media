@@ -108,6 +108,10 @@ ifeq ($(call is-platform-sdk-version-at-least, 22),true)
 libOmxVdec-def += -DFLEXYUV_SUPPORTED
 endif
 
+ifeq ($(TARGET_USES_MEDIA_EXTENSIONS),true)
+libmm-vdec-def += -DALLOCATE_OUTPUT_NATIVEHANDLE
+endif
+
 # ---------------------------------------------------------------------------------
 # 			Make the Shared library (libOmxVdec)
 # ---------------------------------------------------------------------------------
@@ -118,8 +122,6 @@ LOCAL_PATH:= $(ROOT_DIR)
 libmm-vdec-inc          += $(LOCAL_PATH)/inc 
 libmm-vdec-inc          += $(OMX_VIDEO_PATH)/vidc/common/inc
 libmm-vdec-inc          += $(call project-path-for,qcom-media)/mm-core/inc
-#DRM include - Interface which loads the DRM library
-libmm-vdec-inc	        += $(OMX_VIDEO_PATH)/DivxDrmDecrypt/inc
 libmm-vdec-inc          += $(call project-path-for,qcom-display)/libgralloc
 libmm-vdec-inc          += frameworks/native/include/media/openmax
 libmm-vdec-inc          += frameworks/native/include/media/hardware
@@ -148,7 +150,6 @@ LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 LOCAL_PRELINK_MODULE    := false
 LOCAL_SHARED_LIBRARIES  := liblog libutils libbinder libcutils libdl
 
-LOCAL_SHARED_LIBRARIES  += libdivxdrmdecrypt
 LOCAL_SHARED_LIBRARIES  += libqdMetaData
 
 LOCAL_SRC_FILES         := src/frameparser.cpp
@@ -158,11 +159,6 @@ LOCAL_SRC_FILES         += src/mp4_utils.cpp
 LOCAL_SRC_FILES         += src/hevc_utils.cpp
 ifneq (,$(filter msm8974 msm8610 msm8226 apq8084 mpq8092 msm_bronze msm8916,$(TARGET_BOARD_PLATFORM)))
 LOCAL_SRC_FILES         += src/omx_vdec_msm8974.cpp
-else
-LOCAL_SHARED_LIBRARIES  += libhardware
-libmm-vdec-inc          += $(call project-path-for,qcom-display)/libhwcomposer
-LOCAL_SRC_FILES         += src/power_module.cpp
-LOCAL_SRC_FILES         += src/omx_vdec.cpp
 endif
 
 LOCAL_SRC_FILES         += ../common/src/extra_data_handler.cpp
@@ -195,7 +191,6 @@ LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 LOCAL_PRELINK_MODULE    := false
 LOCAL_SHARED_LIBRARIES  := liblog libutils libbinder libcutils libdl
 
-LOCAL_SHARED_LIBRARIES  += libdivxdrmdecrypt
 LOCAL_SHARED_LIBRARIES  += libqdMetaData
 
 LOCAL_SRC_FILES         := src/frameparser.cpp

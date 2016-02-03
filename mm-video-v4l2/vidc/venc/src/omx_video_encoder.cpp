@@ -490,7 +490,7 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
    OMX Error None if successful.
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
+OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp __unused,
         OMX_IN OMX_INDEXTYPE paramIndex,
         OMX_IN OMX_PTR        paramData)
 {
@@ -538,7 +538,7 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     DEBUG_PRINT_LOW("i/p min cnt requested = %lu", portDefn->nBufferCountMin);
                     DEBUG_PRINT_LOW("i/p buffersize requested = %lu", portDefn->nBufferSize);
                     if (portDefn->nBufferCountActual > MAX_NUM_INPUT_BUFFERS) {
-                        DEBUG_PRINT_ERROR("ERROR: (In_PORT) actual count (%lu) exceeds max(%lu)",
+                        DEBUG_PRINT_ERROR("ERROR: (In_PORT) actual count (%u) exceeds max(%u)",
                                 (unsigned int)portDefn->nBufferCountActual, (unsigned int)MAX_NUM_INPUT_BUFFERS);
                         return OMX_ErrorUnsupportedSetting;
                     }
@@ -1331,6 +1331,7 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
            }
        case QOMX_IndexParamVideoInitialQp:
             {
+                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_EXTNINDEX_VIDEO_INITIALQP);
                 if(!handle->venc_set_param(paramData,
                             (OMX_INDEXTYPE)QOMX_IndexParamVideoInitialQp)) {
                     DEBUG_PRINT_ERROR("Request to Enable initial QP failed");
@@ -1439,7 +1440,7 @@ bool omx_venc::update_profile_level()
    RETURN VALUE
    OMX Error None if successful.
    ========================================================================== */
-OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
+OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp __unused,
         OMX_IN OMX_INDEXTYPE configIndex,
         OMX_IN OMX_PTR        configData)
 {
@@ -1540,7 +1541,7 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                     } else {
                         m_sParamAVC.nPFrames = pParam->nPFrames;
                         if ((m_sParamAVC.eProfile != OMX_VIDEO_AVCProfileBaseline) &&
-                            (m_sParamAVC.eProfile != QOMX_VIDEO_AVCProfileConstrainedBaseline))
+                            (m_sParamAVC.eProfile != (OMX_VIDEO_AVCPROFILETYPE)QOMX_VIDEO_AVCProfileConstrainedBaseline))
                             m_sParamAVC.nBFrames = pParam->nBFrames;
                         else
                             m_sParamAVC.nBFrames = 0;
@@ -1748,7 +1749,7 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
    OMX Error None if everything successful.
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_venc::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
+OMX_ERRORTYPE  omx_venc::component_deinit(OMX_IN OMX_HANDLETYPE hComp __unused)
 {
     OMX_U32 i = 0;
     DEBUG_PRINT_HIGH("omx_venc(): Inside component_deinit()");
@@ -1883,15 +1884,20 @@ bool omx_venc::dev_get_seq_hdr(void *buffer, unsigned size, unsigned *hdrlen)
     return handle->venc_get_seq_hdr(buffer, size, hdrlen);
 }
 
-bool omx_venc::dev_get_capability_ltrcount(OMX_U32 *min, OMX_U32 *max, OMX_U32 *step_size)
-{
 #ifdef _MSM8974_
+bool omx_venc::dev_get_capability_ltrcount(OMX_U32 *min __unused,
+					   OMX_U32 *max __unused,
+					   OMX_U32 *step_size __unused)
+{
     DEBUG_PRINT_ERROR("Get Capability LTR Count is not supported");
     return false;
-#else
-    return handle->venc_get_capability_ltrcount(min, max, step_size);
-#endif
 }
+#else
+bool omx_venc::dev_get_capability_ltrcount(OMX_U32 *min, OMX_U32 *max, OMX_U32 *step_size)
+{
+    return handle->venc_get_capability_ltrcount(min, max, step_size);
+}
+#endif
 
 bool omx_venc::dev_get_performance_level(OMX_U32 *perflevel)
 {
@@ -1995,6 +2001,7 @@ int omx_venc::async_message_process (void *context, void* message)
     struct venc_msg *m_sVenc_msg = NULL;
     OMX_BUFFERHEADERTYPE* omxhdr = NULL;
     struct venc_buffer *temp_buff = NULL;
+    native_handle_t *nh = NULL;
 
     if (context == NULL || message == NULL) {
         DEBUG_PRINT_ERROR("ERROR: omx_venc::async_message_process invalid i/p params");
@@ -2064,7 +2071,7 @@ int omx_venc::async_message_process (void *context, void* message)
 
             if ( (omxhdr != NULL) &&
                     ((OMX_U32)(omxhdr - omx->m_out_mem_ptr)  < omx->m_sOutPortDef.nBufferCountActual)) {
-                if (m_sVenc_msg->buf.len <=  omxhdr->nAllocLen) {
+                if (!omx->is_secure_session() && (m_sVenc_msg->buf.len <=  omxhdr->nAllocLen)) {
                     omxhdr->nFilledLen = m_sVenc_msg->buf.len;
                     omxhdr->nOffset = m_sVenc_msg->buf.offset;
                     omxhdr->nTimeStamp = m_sVenc_msg->buf.timestamp;
@@ -2072,12 +2079,20 @@ int omx_venc::async_message_process (void *context, void* message)
                     omxhdr->nFlags = m_sVenc_msg->buf.flags;
 
                     /*Use buffer case*/
-                    if (omx->output_use_buffer && !omx->m_use_output_pmem) {
+                    if (omx->output_use_buffer && !omx->m_use_output_pmem && !omx->is_secure_session()) {
                         DEBUG_PRINT_LOW("memcpy() for o/p Heap UseBuffer");
                         memcpy(omxhdr->pBuffer,
                                 (m_sVenc_msg->buf.ptrbuffer),
                                 m_sVenc_msg->buf.len);
                     }
+                } else if (omx->is_secure_session()) {
+                    output_metabuffer *meta_buf = (output_metabuffer *)(omxhdr->pBuffer);
+                    native_handle_t *nh = meta_buf->nh;
+                    nh->data[1] = m_sVenc_msg->buf.offset;
+                    nh->data[2] = m_sVenc_msg->buf.len;
+                    omxhdr->nFilledLen = sizeof(output_metabuffer);
+                    omxhdr->nTimeStamp = m_sVenc_msg->buf.timestamp;
+                    omxhdr->nFlags = m_sVenc_msg->buf.flags;
                 } else {
                     omxhdr->nFilledLen = 0;
                 }

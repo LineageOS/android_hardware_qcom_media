@@ -180,7 +180,7 @@ class VideoHeap : public MemoryHeapBase
 #define DESC_BUFFER_SIZE (8192 * 16)
 
 #ifdef _ANDROID_
-#define MAX_NUM_INPUT_OUTPUT_BUFFERS 32
+#define MAX_NUM_INPUT_OUTPUT_BUFFERS 64
 #endif
 
 #define OMX_FRAMEINFO_EXTRADATA 0x00010000
@@ -249,6 +249,7 @@ struct video_driver_context {
     enum vdec_output_fromat output_format;
     enum vdec_interlaced_format interlace;
     enum vdec_output_order picture_order;
+    struct vdec_framesize frame_size;
     struct vdec_picsize video_resolution;
     struct vdec_allocatorproperty ip_buf;
     struct vdec_allocatorproperty op_buf;
@@ -273,10 +274,6 @@ struct video_driver_context {
     int num_planes;
 #endif
 };
-
-#ifdef _ANDROID_
-class DivXDrmDecrypt;
-#endif //_ANDROID_
 
 struct video_decoder_capability {
     unsigned int min_width;
@@ -467,7 +464,8 @@ class omx_vdec: public qc_omx_component
             OMX_COMPONENT_PAUSE_PENDING          =0xB,
             OMX_COMPONENT_EXECUTE_PENDING        =0xC,
             OMX_COMPONENT_OUTPUT_FLUSH_IN_DISABLE_PENDING =0xD,
-            OMX_COMPONENT_DISABLE_OUTPUT_DEFERRED=0xE
+            OMX_COMPONENT_DISABLE_OUTPUT_DEFERRED=0xE,
+            OMX_COMPONENT_FLUSH_DEFERRED = 0xF
         };
 
         // Deferred callback identifiers
@@ -751,9 +749,6 @@ class omx_vdec: public qc_omx_component
             }
         }
 
-#ifdef _ANDROID_
-        OMX_ERRORTYPE createDivxDrmContext();
-#endif //_ANDROID_
 #if defined (_ANDROID_HONEYCOMB_) || defined (_ANDROID_ICS_)
         OMX_ERRORTYPE use_android_native_buffer(OMX_IN OMX_HANDLETYPE hComp, OMX_PTR data);
 #endif
@@ -772,6 +767,7 @@ class omx_vdec: public qc_omx_component
         //*************************************************************
         pthread_mutex_t       m_lock;
         pthread_mutex_t       c_lock;
+        pthread_mutex_t       buf_lock;
         //sem to handle the minimum procesing of commands
         sem_t                 m_cmd_lock;
         sem_t                 m_safe_flush;
@@ -878,8 +874,8 @@ class omx_vdec: public qc_omx_component
         OMX_U32 m_demux_entries;
         OMX_U32 m_disp_hor_size;
         OMX_U32 m_disp_vert_size;
-
         OMX_S64 prev_ts;
+        OMX_S64 prev_ts_actual;
         bool rst_prev_ts;
         OMX_U32 frm_int;
 
@@ -921,14 +917,12 @@ class omx_vdec: public qc_omx_component
         };
         meta_buffer meta_buff;
         extra_data_handler extra_data_handle;
-#ifdef _ANDROID_
-        DivXDrmDecrypt* iDivXDrmDecrypt;
-#endif //_ANDROID_
         OMX_PARAM_PORTDEFINITIONTYPE m_port_def;
         OMX_QCOM_FRAME_PACK_ARRANGEMENT m_frame_pack_arrangement;
         omx_time_stamp_reorder time_stamp_dts;
         desc_buffer_hdr *m_desc_buffer_ptr;
         bool secure_mode;
+        bool allocate_native_handle;
         bool external_meta_buffer;
         bool external_meta_buffer_iommu;
         OMX_QCOM_EXTRADATA_FRAMEINFO *m_extradata;
@@ -938,8 +932,9 @@ class omx_vdec: public qc_omx_component
         int capture_capability;
         int output_capability;
         bool streaming[MAX_PORT];
+        OMX_FRAMESIZETYPE framesize;
         OMX_CONFIG_RECTTYPE rectangle;
-        int prev_n_filled_len;
+        OMX_U32 prev_n_filled_len;
         bool is_down_scalar_enabled;
 #endif
         struct custom_buffersize {
@@ -966,7 +961,6 @@ class omx_vdec: public qc_omx_component
 
         unsigned int m_fill_output_msg;
         bool client_set_fps;
-        bool ignore_not_coded_vops;
         class allocate_color_convert_buf
         {
             public:

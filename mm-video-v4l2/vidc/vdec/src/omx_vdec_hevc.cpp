@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+Copyright (c) 2013, 2015 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -65,10 +65,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <gralloc_priv.h>
 #endif
 
-#ifdef _ANDROID_
-#include "DivXDrmDecrypt.h"
-#endif //_ANDROID_
-
 #ifdef USE_EGL_IMAGE_GPU
 #include <EGL/egl.h>
 #include <EGL/eglQCOM.h>
@@ -133,6 +129,7 @@ extern "C" {
 #define Log2(number, power)  { OMX_U32 temp = number; power = 0; while( (0 == (temp & 0x1)) &&  power < 16) { temp >>=0x1; power++; } }
 #define Q16ToFraction(q,num,den) { OMX_U32 power; Log2(q,power);  num = q >> power; den = 0x1 << (16 - power); }
 #define EXTRADATA_IDX(__num_planes) (__num_planes  - 1)
+#define ALIGN(x, to_align) ((((unsigned) x) + (to_align - 1)) & ~(to_align - 1))
 
 #define DEFAULT_EXTRADATA (OMX_INTERLACE_EXTRADATA)
 
@@ -546,7 +543,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
 #ifdef _ANDROID_
     m_enable_android_native_buffers(OMX_FALSE),
     m_use_android_native_buffers(OMX_FALSE),
-    iDivXDrmDecrypt(NULL),
 #endif
     m_desc_buffer_ptr(NULL),
     secure_mode(false)
@@ -725,6 +721,11 @@ int release_buffers(omx_vdec* obj, enum vdec_buffer buffer_type)
         bufreq.memory = V4L2_MEMORY_USERPTR;
         bufreq.count = 0;
         bufreq.type=V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+        rc = ioctl(obj->drv_ctx.video_driver_fd,VIDIOC_REQBUFS, &bufreq);
+    } else if (buffer_type == VDEC_BUFFER_TYPE_INPUT) {
+        bufreq.memory = V4L2_MEMORY_USERPTR;
+        bufreq.count = 0;
+        bufreq.type=V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
         rc = ioctl(obj->drv_ctx.video_driver_fd,VIDIOC_REQBUFS, &bufreq);
     }
     return rc;
@@ -1330,11 +1331,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         codec_type_parse = CODEC_TYPE_DIVX;
         m_frame_parser.init_start_codes (codec_type_parse);
 
-        eRet = createDivxDrmContext();
-        if (eRet != OMX_ErrorNone) {
-            DEBUG_PRINT_ERROR("createDivxDrmContext Failed");
-            return eRet;
-        }
     } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.divx4",\
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_decoder.divx",OMX_MAX_STRINGNAME_SIZE);
@@ -1346,11 +1342,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         codec_ambiguous = true;
         m_frame_parser.init_start_codes (codec_type_parse);
 
-        eRet = createDivxDrmContext();
-        if (eRet != OMX_ErrorNone) {
-            DEBUG_PRINT_ERROR("createDivxDrmContext Failed");
-            return eRet;
-        }
     } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.divx",\
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_decoder.divx",OMX_MAX_STRINGNAME_SIZE);
@@ -1361,12 +1352,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         codec_type_parse = CODEC_TYPE_DIVX;
         codec_ambiguous = true;
         m_frame_parser.init_start_codes (codec_type_parse);
-
-        eRet = createDivxDrmContext();
-        if (eRet != OMX_ErrorNone) {
-            DEBUG_PRINT_ERROR("createDivxDrmContext Failed");
-            return eRet;
-        }
 
     } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.avc",\
                 OMX_MAX_STRINGNAME_SIZE)) {
@@ -1480,6 +1465,7 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         if (ret) {
             /*TODO: How to handle this case */
             DEBUG_PRINT_ERROR("Failed to set format on output port");
+            return OMX_ErrorInsufficientResources;
         }
         DEBUG_PRINT_HIGH("Set Format was successful");
         if (codec_ambiguous) {
@@ -2822,8 +2808,14 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                             if (ret) {
                                 DEBUG_PRINT_ERROR("Set Resolution failed");
                                 eRet = OMX_ErrorUnsupportedSetting;
-                            } else
+                            } else {
+                                eRet = get_buffer_req(&drv_ctx.ip_buf);
+                                if (eRet)
+                                    DEBUG_PRINT_ERROR("%s:Requesting buffer requirements failed for input port",__FUNCTION__);
                                 eRet = get_buffer_req(&drv_ctx.op_buf);
+                                if (eRet)
+                                    DEBUG_PRINT_ERROR("%s:Requesting buffer requirements failed for output port",__FUNCTION__);
+                            }
                         }
                     } else if (portDefn->nBufferCountActual >= drv_ctx.ip_buf.mincount
                             || portDefn->nBufferSize != drv_ctx.ip_buf.buffer_size) {
@@ -4850,6 +4842,7 @@ OMX_ERRORTYPE  omx_vdec::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
             /*Free the Buffer Header*/
             if (release_input_done()) {
                 DEBUG_PRINT_HIGH("ALL input buffers are freed/released");
+                release_buffers(this, VDEC_BUFFER_TYPE_INPUT);
                 free_input_buffer_header();
             }
         } else {
@@ -4876,6 +4869,7 @@ OMX_ERRORTYPE  omx_vdec::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
             client_buffers.free_output_buffer (buffer);
 
             if (release_output_done()) {
+                release_buffers(this, VDEC_BUFFER_TYPE_OUTPUT);
                 free_output_buffer_header();
             }
         } else {
@@ -4960,15 +4954,6 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
         return OMX_ErrorBadPortIndex;
     }
 
-#ifdef _ANDROID_
-    if (iDivXDrmDecrypt) {
-        OMX_ERRORTYPE drmErr = iDivXDrmDecrypt->Decrypt(buffer);
-        if (drmErr != OMX_ErrorNone) {
-            // this error can be ignored
-            DEBUG_PRINT_LOW("ERROR:iDivXDrmDecrypt->Decrypt %d", drmErr);
-        }
-    }
-#endif //_ANDROID_
     if (perf_flag) {
         if (!latency) {
             dec_time.stop();
@@ -5435,12 +5420,6 @@ OMX_ERRORTYPE  omx_vdec::set_callbacks(OMX_IN OMX_HANDLETYPE        hComp,
    ========================================================================== */
 OMX_ERRORTYPE  omx_vdec::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
 {
-#ifdef _ANDROID_
-    if (iDivXDrmDecrypt) {
-        delete iDivXDrmDecrypt;
-        iDivXDrmDecrypt=NULL;
-    }
-#endif //_ANDROID_
 
     unsigned i = 0;
     if (OMX_StateLoaded != m_state) {
@@ -7356,6 +7335,12 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
     portDefn->format.video.nFrameWidth  =  drv_ctx.video_resolution.frame_width;
     portDefn->format.video.nStride = drv_ctx.video_resolution.stride;
     portDefn->format.video.nSliceHeight = drv_ctx.video_resolution.scan_lines;
+
+    if ((portDefn->format.video.eColorFormat == OMX_COLOR_FormatYUV420Planar) ||
+       (portDefn->format.video.eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar)) {
+        portDefn->format.video.nStride = ALIGN(drv_ctx.video_resolution.frame_width, 16);
+        portDefn->format.video.nSliceHeight = drv_ctx.video_resolution.frame_height;
+    }
     DEBUG_PRINT_HIGH("update_portdef Width = %lu Height = %lu Stride = %ld"
             " SliceHeight = %lu", portDefn->format.video.nFrameWidth,
             portDefn->format.video.nFrameHeight,
@@ -8125,24 +8110,6 @@ OMX_ERRORTYPE omx_vdec::handle_demux_data(OMX_BUFFERHEADERTYPE *p_buf_hdr)
     m_demux_entries = 0;
     DEBUG_PRINT_LOW("Demux table complete!");
     return OMX_ErrorNone;
-}
-
-OMX_ERRORTYPE omx_vdec::createDivxDrmContext()
-{
-    OMX_ERRORTYPE err = OMX_ErrorNone;
-    iDivXDrmDecrypt = DivXDrmDecrypt::Create();
-    if (iDivXDrmDecrypt) {
-        OMX_ERRORTYPE err = iDivXDrmDecrypt->Init();
-        if (err!=OMX_ErrorNone) {
-            DEBUG_PRINT_ERROR("ERROR :iDivXDrmDecrypt->Init %d", err);
-            delete iDivXDrmDecrypt;
-            iDivXDrmDecrypt = NULL;
-        }
-    } else {
-        DEBUG_PRINT_ERROR("Unable to Create DIVX DRM");
-        err = OMX_ErrorUndefined;
-    }
-    return err;
 }
 
 omx_vdec::allocate_color_convert_buf::allocate_color_convert_buf()

@@ -49,7 +49,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define ALIGN(x, to_align) ((((unsigned) x) + (to_align - 1)) & ~(to_align - 1))
 #define EXTRADATA_IDX(__num_planes) (__num_planes  - 1)
-
+#define MAXDPB 16
+#define MIN(x,y) (((x) < (y)) ? (x) : (y))
+#define MAX_PROFILE_PARAMS 6
 #define MPEG4_SP_START 0
 #define MPEG4_ASP_START (MPEG4_SP_START + 10)
 #define H263_BP_START 0
@@ -63,106 +65,106 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define SZ_1M 0x100000
 
 /* MPEG4 profile and level table*/
-static const unsigned int mpeg4_profile_level_table[][5]= {
-    /*max mb per frame, max mb per sec, max bitrate, level, profile*/
-    {99,1485,64000,OMX_VIDEO_MPEG4Level0,OMX_VIDEO_MPEG4ProfileSimple},
-    {99,1485,64000,OMX_VIDEO_MPEG4Level1,OMX_VIDEO_MPEG4ProfileSimple},
-    {396,5940,128000,OMX_VIDEO_MPEG4Level2,OMX_VIDEO_MPEG4ProfileSimple},
-    {396,11880,384000,OMX_VIDEO_MPEG4Level3,OMX_VIDEO_MPEG4ProfileSimple},
-    {1200,36000,4000000,OMX_VIDEO_MPEG4Level4a,OMX_VIDEO_MPEG4ProfileSimple},
-    {1620,40500,8000000,OMX_VIDEO_MPEG4Level5,OMX_VIDEO_MPEG4ProfileSimple},
-    {3600,108000,12000000,OMX_VIDEO_MPEG4Level5,OMX_VIDEO_MPEG4ProfileSimple},
-    {32400,972000,20000000,OMX_VIDEO_MPEG4Level5,OMX_VIDEO_MPEG4ProfileSimple},
-    {34560,1036800,20000000,OMX_VIDEO_MPEG4Level5,OMX_VIDEO_MPEG4ProfileSimple},
-    {0,0,0,0,0},
+static const unsigned int mpeg4_profile_level_table[][MAX_PROFILE_PARAMS]= {
+    /*max mb per frame, max mb per sec, max bitrate, level, profile, dpbmbs*/
+    {99,1485,64000,OMX_VIDEO_MPEG4Level0,OMX_VIDEO_MPEG4ProfileSimple,0},
+    {99,1485,64000,OMX_VIDEO_MPEG4Level1,OMX_VIDEO_MPEG4ProfileSimple,0},
+    {396,5940,128000,OMX_VIDEO_MPEG4Level2,OMX_VIDEO_MPEG4ProfileSimple,0},
+    {396,11880,384000,OMX_VIDEO_MPEG4Level3,OMX_VIDEO_MPEG4ProfileSimple,0},
+    {1200,36000,4000000,OMX_VIDEO_MPEG4Level4a,OMX_VIDEO_MPEG4ProfileSimple,0},
+    {1620,40500,8000000,OMX_VIDEO_MPEG4Level5,OMX_VIDEO_MPEG4ProfileSimple,0},
+    {3600,108000,12000000,OMX_VIDEO_MPEG4Level5,OMX_VIDEO_MPEG4ProfileSimple,0},
+    {32400,972000,20000000,OMX_VIDEO_MPEG4Level5,OMX_VIDEO_MPEG4ProfileSimple,0},
+    {34560,1036800,20000000,OMX_VIDEO_MPEG4Level5,OMX_VIDEO_MPEG4ProfileSimple,0},
+    {0,0,0,0,0,0},
 
-    {99,1485,128000,OMX_VIDEO_MPEG4Level0,OMX_VIDEO_MPEG4ProfileAdvancedSimple},
-    {99,1485,128000,OMX_VIDEO_MPEG4Level1,OMX_VIDEO_MPEG4ProfileAdvancedSimple},
-    {396,5940,384000,OMX_VIDEO_MPEG4Level2,OMX_VIDEO_MPEG4ProfileAdvancedSimple},
-    {396,11880,768000,OMX_VIDEO_MPEG4Level3,OMX_VIDEO_MPEG4ProfileAdvancedSimple},
-    {792,23760,3000000,OMX_VIDEO_MPEG4Level4,OMX_VIDEO_MPEG4ProfileAdvancedSimple},
-    {1620,48600,8000000,OMX_VIDEO_MPEG4Level5,OMX_VIDEO_MPEG4ProfileAdvancedSimple},
-    {32400,972000,20000000,OMX_VIDEO_MPEG4Level5,OMX_VIDEO_MPEG4ProfileAdvancedSimple},
-    {34560,1036800,20000000,OMX_VIDEO_MPEG4Level5,OMX_VIDEO_MPEG4ProfileAdvancedSimple},
-    {0,0,0,0,0},
+    {99,1485,128000,OMX_VIDEO_MPEG4Level0,OMX_VIDEO_MPEG4ProfileAdvancedSimple,0},
+    {99,1485,128000,OMX_VIDEO_MPEG4Level1,OMX_VIDEO_MPEG4ProfileAdvancedSimple,0},
+    {396,5940,384000,OMX_VIDEO_MPEG4Level2,OMX_VIDEO_MPEG4ProfileAdvancedSimple,0},
+    {396,11880,768000,OMX_VIDEO_MPEG4Level3,OMX_VIDEO_MPEG4ProfileAdvancedSimple,0},
+    {792,23760,3000000,OMX_VIDEO_MPEG4Level4,OMX_VIDEO_MPEG4ProfileAdvancedSimple,0},
+    {1620,48600,8000000,OMX_VIDEO_MPEG4Level5,OMX_VIDEO_MPEG4ProfileAdvancedSimple,0},
+    {32400,972000,20000000,OMX_VIDEO_MPEG4Level5,OMX_VIDEO_MPEG4ProfileAdvancedSimple,0},
+    {34560,1036800,20000000,OMX_VIDEO_MPEG4Level5,OMX_VIDEO_MPEG4ProfileAdvancedSimple,0},
+    {0,0,0,0,0,0},
 };
 
 /* H264 profile and level table*/
-static const unsigned int h264_profile_level_table[][5]= {
-    /*max mb per frame, max mb per sec, max bitrate, level, profile*/
-    {99,1485,64000,OMX_VIDEO_AVCLevel1,OMX_VIDEO_AVCProfileBaseline},
-    {99,1485,128000,OMX_VIDEO_AVCLevel1b,OMX_VIDEO_AVCProfileBaseline},
-    {396,3000,192000,OMX_VIDEO_AVCLevel11,OMX_VIDEO_AVCProfileBaseline},
-    {396,6000,384000,OMX_VIDEO_AVCLevel12,OMX_VIDEO_AVCProfileBaseline},
-    {396,11880,768000,OMX_VIDEO_AVCLevel13,OMX_VIDEO_AVCProfileBaseline},
-    {396,11880,2000000,OMX_VIDEO_AVCLevel2,OMX_VIDEO_AVCProfileBaseline},
-    {792,19800,4000000,OMX_VIDEO_AVCLevel21,OMX_VIDEO_AVCProfileBaseline},
-    {1620,20250,4000000,OMX_VIDEO_AVCLevel22,OMX_VIDEO_AVCProfileBaseline},
-    {1620,40500,10000000,OMX_VIDEO_AVCLevel3,OMX_VIDEO_AVCProfileBaseline},
-    {3600,108000,14000000,OMX_VIDEO_AVCLevel31,OMX_VIDEO_AVCProfileBaseline},
-    {5120,216000,20000000,OMX_VIDEO_AVCLevel32,OMX_VIDEO_AVCProfileBaseline},
-    {8192,245760,20000000,OMX_VIDEO_AVCLevel4,OMX_VIDEO_AVCProfileBaseline},
-    {8192,245760,50000000,OMX_VIDEO_AVCLevel41,OMX_VIDEO_AVCProfileBaseline},
-    {8704,522240,50000000,OMX_VIDEO_AVCLevel42,OMX_VIDEO_AVCProfileBaseline},
-    {22080,589824,135000000,OMX_VIDEO_AVCLevel5,OMX_VIDEO_AVCProfileBaseline},
-    {36864,983040,240000000,OMX_VIDEO_AVCLevel51,OMX_VIDEO_AVCProfileBaseline},
-    {36864,2073600,240000000,OMX_VIDEO_AVCLevel52,OMX_VIDEO_AVCProfileBaseline},
-    {0,0,0,0,0},
+static const unsigned int h264_profile_level_table[][MAX_PROFILE_PARAMS]= {
+    /*max mb per frame, max mb per sec, max bitrate, level, profile, dpbmbs*/
+    {99,1485,64000,OMX_VIDEO_AVCLevel1,OMX_VIDEO_AVCProfileBaseline,396},
+    {99,1485,128000,OMX_VIDEO_AVCLevel1b,OMX_VIDEO_AVCProfileBaseline,396},
+    {396,3000,192000,OMX_VIDEO_AVCLevel11,OMX_VIDEO_AVCProfileBaseline,900},
+    {396,6000,384000,OMX_VIDEO_AVCLevel12,OMX_VIDEO_AVCProfileBaseline,2376},
+    {396,11880,768000,OMX_VIDEO_AVCLevel13,OMX_VIDEO_AVCProfileBaseline,2376},
+    {396,11880,2000000,OMX_VIDEO_AVCLevel2,OMX_VIDEO_AVCProfileBaseline,2376},
+    {792,19800,4000000,OMX_VIDEO_AVCLevel21,OMX_VIDEO_AVCProfileBaseline,4752},
+    {1620,20250,4000000,OMX_VIDEO_AVCLevel22,OMX_VIDEO_AVCProfileBaseline,8100},
+    {1620,40500,10000000,OMX_VIDEO_AVCLevel3,OMX_VIDEO_AVCProfileBaseline,8100},
+    {3600,108000,14000000,OMX_VIDEO_AVCLevel31,OMX_VIDEO_AVCProfileBaseline,18000},
+    {5120,216000,20000000,OMX_VIDEO_AVCLevel32,OMX_VIDEO_AVCProfileBaseline,20480},
+    {8192,245760,20000000,OMX_VIDEO_AVCLevel4,OMX_VIDEO_AVCProfileBaseline,32768},
+    {8192,245760,50000000,OMX_VIDEO_AVCLevel41,OMX_VIDEO_AVCProfileBaseline,32768},
+    {8704,522240,50000000,OMX_VIDEO_AVCLevel42,OMX_VIDEO_AVCProfileBaseline,34816},
+    {22080,589824,135000000,OMX_VIDEO_AVCLevel5,OMX_VIDEO_AVCProfileBaseline,110400},
+    {36864,983040,240000000,OMX_VIDEO_AVCLevel51,OMX_VIDEO_AVCProfileBaseline,184320},
+    {36864,2073600,240000000,OMX_VIDEO_AVCLevel52,OMX_VIDEO_AVCProfileBaseline,184320},
+    {0,0,0,0,0,0},
 
-    {99,1485,64000,OMX_VIDEO_AVCLevel1,OMX_VIDEO_AVCProfileHigh},
-    {99,1485,160000,OMX_VIDEO_AVCLevel1b,OMX_VIDEO_AVCProfileHigh},
-    {396,3000,240000,OMX_VIDEO_AVCLevel11,OMX_VIDEO_AVCProfileHigh},
-    {396,6000,480000,OMX_VIDEO_AVCLevel12,OMX_VIDEO_AVCProfileHigh},
-    {396,11880,960000,OMX_VIDEO_AVCLevel13,OMX_VIDEO_AVCProfileHigh},
-    {396,11880,2500000,OMX_VIDEO_AVCLevel2,OMX_VIDEO_AVCProfileHigh},
-    {792,19800,5000000,OMX_VIDEO_AVCLevel21,OMX_VIDEO_AVCProfileHigh},
-    {1620,20250,5000000,OMX_VIDEO_AVCLevel22,OMX_VIDEO_AVCProfileHigh},
-    {1620,40500,12500000,OMX_VIDEO_AVCLevel3,OMX_VIDEO_AVCProfileHigh},
-    {3600,108000,17500000,OMX_VIDEO_AVCLevel31,OMX_VIDEO_AVCProfileHigh},
-    {5120,216000,25000000,OMX_VIDEO_AVCLevel32,OMX_VIDEO_AVCProfileHigh},
-    {8192,245760,25000000,OMX_VIDEO_AVCLevel4,OMX_VIDEO_AVCProfileHigh},
-    {8192,245760,50000000,OMX_VIDEO_AVCLevel41,OMX_VIDEO_AVCProfileHigh},
-    {8704,522240,50000000,OMX_VIDEO_AVCLevel42,OMX_VIDEO_AVCProfileHigh},
-    {22080,589824,135000000,OMX_VIDEO_AVCLevel5,OMX_VIDEO_AVCProfileHigh},
-    {36864,983040,240000000,OMX_VIDEO_AVCLevel51,OMX_VIDEO_AVCProfileHigh},
-    {36864,2073600,240000000,OMX_VIDEO_AVCLevel52,OMX_VIDEO_AVCProfileHigh},
-    {0,0,0,0,0},
+    {99,1485,64000,OMX_VIDEO_AVCLevel1,OMX_VIDEO_AVCProfileHigh,396},
+    {99,1485,160000,OMX_VIDEO_AVCLevel1b,OMX_VIDEO_AVCProfileHigh,396},
+    {396,3000,240000,OMX_VIDEO_AVCLevel11,OMX_VIDEO_AVCProfileHigh,900},
+    {396,6000,480000,OMX_VIDEO_AVCLevel12,OMX_VIDEO_AVCProfileHigh,2376},
+    {396,11880,960000,OMX_VIDEO_AVCLevel13,OMX_VIDEO_AVCProfileHigh,2376},
+    {396,11880,2500000,OMX_VIDEO_AVCLevel2,OMX_VIDEO_AVCProfileHigh,2376},
+    {792,19800,5000000,OMX_VIDEO_AVCLevel21,OMX_VIDEO_AVCProfileHigh,4752},
+    {1620,20250,5000000,OMX_VIDEO_AVCLevel22,OMX_VIDEO_AVCProfileHigh,8100},
+    {1620,40500,12500000,OMX_VIDEO_AVCLevel3,OMX_VIDEO_AVCProfileHigh,8100},
+    {3600,108000,17500000,OMX_VIDEO_AVCLevel31,OMX_VIDEO_AVCProfileHigh,18000},
+    {5120,216000,25000000,OMX_VIDEO_AVCLevel32,OMX_VIDEO_AVCProfileHigh,20480},
+    {8192,245760,25000000,OMX_VIDEO_AVCLevel4,OMX_VIDEO_AVCProfileHigh,32768},
+    {8192,245760,50000000,OMX_VIDEO_AVCLevel41,OMX_VIDEO_AVCProfileHigh,32768},
+    {8704,522240,50000000,OMX_VIDEO_AVCLevel42,OMX_VIDEO_AVCProfileHigh,34816},
+    {22080,589824,135000000,OMX_VIDEO_AVCLevel5,OMX_VIDEO_AVCProfileHigh,110400},
+    {36864,983040,240000000,OMX_VIDEO_AVCLevel51,OMX_VIDEO_AVCProfileHigh,184320},
+    {36864,2073600,240000000,OMX_VIDEO_AVCLevel52,OMX_VIDEO_AVCProfileHigh,184320},
+    {0,0,0,0,0,0},
 
-    {99,1485,64000,OMX_VIDEO_AVCLevel1,OMX_VIDEO_AVCProfileMain},
-    {99,1485,128000,OMX_VIDEO_AVCLevel1b,OMX_VIDEO_AVCProfileMain},
-    {396,3000,192000,OMX_VIDEO_AVCLevel11,OMX_VIDEO_AVCProfileMain},
-    {396,6000,384000,OMX_VIDEO_AVCLevel12,OMX_VIDEO_AVCProfileMain},
-    {396,11880,768000,OMX_VIDEO_AVCLevel13,OMX_VIDEO_AVCProfileMain},
-    {396,11880,2000000,OMX_VIDEO_AVCLevel2,OMX_VIDEO_AVCProfileMain},
-    {792,19800,4000000,OMX_VIDEO_AVCLevel21,OMX_VIDEO_AVCProfileMain},
-    {1620,20250,4000000,OMX_VIDEO_AVCLevel22,OMX_VIDEO_AVCProfileMain},
-    {1620,40500,10000000,OMX_VIDEO_AVCLevel3,OMX_VIDEO_AVCProfileMain},
-    {3600,108000,14000000,OMX_VIDEO_AVCLevel31,OMX_VIDEO_AVCProfileMain},
-    {5120,216000,20000000,OMX_VIDEO_AVCLevel32,OMX_VIDEO_AVCProfileMain},
-    {8192,245760,20000000,OMX_VIDEO_AVCLevel4,OMX_VIDEO_AVCProfileMain},
-    {8192,245760,50000000,OMX_VIDEO_AVCLevel41,OMX_VIDEO_AVCProfileMain},
-    {8704,522240,50000000,OMX_VIDEO_AVCLevel42,OMX_VIDEO_AVCProfileMain},
-    {22080,589824,135000000,OMX_VIDEO_AVCLevel5,OMX_VIDEO_AVCProfileMain},
-    {36864,983040,240000000,OMX_VIDEO_AVCLevel51,OMX_VIDEO_AVCProfileMain},
-    {36864,2073600,240000000,OMX_VIDEO_AVCLevel52,OMX_VIDEO_AVCProfileBaseline},
-    {0,0,0,0,0}
+    {99,1485,64000,OMX_VIDEO_AVCLevel1,OMX_VIDEO_AVCProfileMain,396},
+    {99,1485,128000,OMX_VIDEO_AVCLevel1b,OMX_VIDEO_AVCProfileMain,396},
+    {396,3000,192000,OMX_VIDEO_AVCLevel11,OMX_VIDEO_AVCProfileMain,900},
+    {396,6000,384000,OMX_VIDEO_AVCLevel12,OMX_VIDEO_AVCProfileMain,2376},
+    {396,11880,768000,OMX_VIDEO_AVCLevel13,OMX_VIDEO_AVCProfileMain,2376},
+    {396,11880,2000000,OMX_VIDEO_AVCLevel2,OMX_VIDEO_AVCProfileMain,2376},
+    {792,19800,4000000,OMX_VIDEO_AVCLevel21,OMX_VIDEO_AVCProfileMain,4752},
+    {1620,20250,4000000,OMX_VIDEO_AVCLevel22,OMX_VIDEO_AVCProfileMain,8100},
+    {1620,40500,10000000,OMX_VIDEO_AVCLevel3,OMX_VIDEO_AVCProfileMain,8100},
+    {3600,108000,14000000,OMX_VIDEO_AVCLevel31,OMX_VIDEO_AVCProfileMain,18000},
+    {5120,216000,20000000,OMX_VIDEO_AVCLevel32,OMX_VIDEO_AVCProfileMain,20480},
+    {8192,245760,20000000,OMX_VIDEO_AVCLevel4,OMX_VIDEO_AVCProfileMain,32768},
+    {8192,245760,50000000,OMX_VIDEO_AVCLevel41,OMX_VIDEO_AVCProfileMain,32768},
+    {8704,522240,50000000,OMX_VIDEO_AVCLevel42,OMX_VIDEO_AVCProfileMain,34816},
+    {22080,589824,135000000,OMX_VIDEO_AVCLevel5,OMX_VIDEO_AVCProfileMain,110400},
+    {36864,983040,240000000,OMX_VIDEO_AVCLevel51,OMX_VIDEO_AVCProfileMain,184320},
+    {36864,2073600,240000000,OMX_VIDEO_AVCLevel52,OMX_VIDEO_AVCProfileMain,184320},
+    {0,0,0,0,0,0}
 
 };
 
 /* H263 profile and level table*/
-static const unsigned int h263_profile_level_table[][5]= {
-    /*max mb per frame, max mb per sec, max bitrate, level, profile*/
-    {99,1485,64000,OMX_VIDEO_H263Level10,OMX_VIDEO_H263ProfileBaseline},
-    {396,5940,128000,OMX_VIDEO_H263Level20,OMX_VIDEO_H263ProfileBaseline},
-    {396,11880,384000,OMX_VIDEO_H263Level30,OMX_VIDEO_H263ProfileBaseline},
-    {396,11880,2048000,OMX_VIDEO_H263Level40,OMX_VIDEO_H263ProfileBaseline},
-    {99,1485,128000,OMX_VIDEO_H263Level45,OMX_VIDEO_H263ProfileBaseline},
-    {396,19800,4096000,OMX_VIDEO_H263Level50,OMX_VIDEO_H263ProfileBaseline},
-    {810,40500,8192000,OMX_VIDEO_H263Level60,OMX_VIDEO_H263ProfileBaseline},
-    {1620,81000,16384000,OMX_VIDEO_H263Level70,OMX_VIDEO_H263ProfileBaseline},
-    {32400,972000,20000000,OMX_VIDEO_H263Level70,OMX_VIDEO_H263ProfileBaseline},
-    {34560,1036800,20000000,OMX_VIDEO_H263Level70,OMX_VIDEO_H263ProfileBaseline},
-    {0,0,0,0,0}
+static const unsigned int h263_profile_level_table[][MAX_PROFILE_PARAMS]= {
+    /*max mb per frame, max mb per sec, max bitrate, level, profile, dpbmbs*/
+    {99,1485,64000,OMX_VIDEO_H263Level10,OMX_VIDEO_H263ProfileBaseline,0},
+    {396,5940,128000,OMX_VIDEO_H263Level20,OMX_VIDEO_H263ProfileBaseline,0},
+    {396,11880,384000,OMX_VIDEO_H263Level30,OMX_VIDEO_H263ProfileBaseline,0},
+    {396,11880,2048000,OMX_VIDEO_H263Level40,OMX_VIDEO_H263ProfileBaseline,0},
+    {99,1485,128000,OMX_VIDEO_H263Level45,OMX_VIDEO_H263ProfileBaseline,0},
+    {396,19800,4096000,OMX_VIDEO_H263Level50,OMX_VIDEO_H263ProfileBaseline,0},
+    {810,40500,8192000,OMX_VIDEO_H263Level60,OMX_VIDEO_H263ProfileBaseline,0},
+    {1620,81000,16384000,OMX_VIDEO_H263Level70,OMX_VIDEO_H263ProfileBaseline,0},
+    {32400,972000,20000000,OMX_VIDEO_H263Level70,OMX_VIDEO_H263ProfileBaseline,0},
+    {34560,1036800,20000000,OMX_VIDEO_H263Level70,OMX_VIDEO_H263ProfileBaseline,0},
+    {0,0,0,0,0,0}
 };
 
 #define Log2(number, power)  { OMX_U32 temp = number; power = 0; while( (0 == (temp & 0x1)) &&  power < 16) { temp >>=0x1; power++; } }
@@ -396,6 +398,7 @@ void* venc_dev::async_venc_message_thread (void *input)
             } else if (dqevent.type == V4L2_EVENT_MSM_VIDC_SYS_ERROR){
                 DEBUG_PRINT_ERROR("ERROR: Encoder is in bad state");
                 venc_msg.statuscode=VEN_S_EFAIL;
+		venc_msg.msgcode = VEN_MSG_INDICATION;
 
                 if (omx->async_message_process(input,&venc_msg) < 0) {
                     DEBUG_PRINT_ERROR("ERROR: Wrong ioctl message");
@@ -484,7 +487,7 @@ bool venc_dev::handle_extradata(void *buffer, int index)
     p_extra = (OMX_OTHER_EXTRADATATYPE *)ALIGN(p_bufhdr->pBuffer +
                 p_bufhdr->nOffset + p_bufhdr->nFilledLen, 4);
 
-    if (extradata_info.buffer_size >
+    if ((unsigned long)extradata_info.buffer_size >
             p_bufhdr->nAllocLen - ALIGN(p_bufhdr->nOffset + p_bufhdr->nFilledLen, 4)) {
         DEBUG_PRINT_ERROR("Insufficient buffer size for extradata");
         p_extra = NULL;
@@ -534,7 +537,7 @@ bool venc_dev::handle_extradata(void *buffer, int index)
                 p_bufhdr->nOffset + p_bufhdr->nFilledLen, 4);
     while(p_extra->eType != OMX_ExtraDataNone)
     {
-        DEBUG_PRINT_LOW("[%p/%d] found extradata type %x of size %d (%d) at %x",
+        DEBUG_PRINT_LOW("[%p/%lu] found extradata type %x of size %lu (%lu) at %p",
                 p_bufhdr->pBuffer, p_bufhdr->nFilledLen, p_extra->eType,
                 p_extra->nSize, p_extra->nDataSize, p_extra);
 
@@ -626,23 +629,28 @@ bool venc_dev::venc_get_output_log_flag()
 
 int venc_dev::venc_output_log_buffers(const char *buffer_addr, int buffer_len)
 {
+    if (venc_handle->is_secure_session()) {
+        DEBUG_PRINT_ERROR("logging secure output buffers is not allowed!");
+        return -1;
+    }
+
     if (!m_debug.outfile) {
         int size = 0;
         if(m_sVenc_cfg.codectype == V4L2_PIX_FMT_MPEG4) {
-           size = snprintf(m_debug.outfile_name, PROPERTY_VALUE_MAX, "%s/output_enc_%d_%d_%p.m4v",
+           size = snprintf(m_debug.outfile_name, PROPERTY_VALUE_MAX, "%s/output_enc_%lu_%lu_%p.m4v",
                            m_debug.log_loc, m_sVenc_cfg.input_width, m_sVenc_cfg.input_height, this);
         } else if(m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264) {
-           size = snprintf(m_debug.outfile_name, PROPERTY_VALUE_MAX, "%s/output_enc_%d_%d_%p.264",
+           size = snprintf(m_debug.outfile_name, PROPERTY_VALUE_MAX, "%s/output_enc_%lu_%lu_%p.264",
                            m_debug.log_loc, m_sVenc_cfg.input_width, m_sVenc_cfg.input_height, this);
         } else if(m_sVenc_cfg.codectype == V4L2_PIX_FMT_H263) {
-           size = snprintf(m_debug.outfile_name, PROPERTY_VALUE_MAX, "%s/output_enc_%d_%d_%p.263",
+           size = snprintf(m_debug.outfile_name, PROPERTY_VALUE_MAX, "%s/output_enc_%lu_%lu_%p.263",
                            m_debug.log_loc, m_sVenc_cfg.input_width, m_sVenc_cfg.input_height, this);
         } else if(m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8) {
-           size = snprintf(m_debug.outfile_name, PROPERTY_VALUE_MAX, "%s/output_enc_%d_%d_%p.ivf",
+           size = snprintf(m_debug.outfile_name, PROPERTY_VALUE_MAX, "%s/output_enc_%lu_%lu_%p.ivf",
                            m_debug.log_loc, m_sVenc_cfg.input_width, m_sVenc_cfg.input_height, this);
         }
         if ((size > PROPERTY_VALUE_MAX) && (size < 0)) {
-             DEBUG_PRINT_ERROR("Failed to open output file: %s for logging size:%s",
+             DEBUG_PRINT_ERROR("Failed to open output file: %s for logging size:%d",
                                 m_debug.outfile_name, size);
         }
         m_debug.outfile = fopen(m_debug.outfile_name, "ab");
@@ -661,22 +669,27 @@ int venc_dev::venc_output_log_buffers(const char *buffer_addr, int buffer_len)
 }
 
 int venc_dev::venc_input_log_buffers(OMX_BUFFERHEADERTYPE *pbuffer, int fd, int plane_offset) {
+    if (venc_handle->is_secure_session()) {
+        DEBUG_PRINT_ERROR("logging secure input buffers is not allowed!");
+        return -1;
+    }
+
     if (!m_debug.infile) {
-        int size = snprintf(m_debug.infile_name, PROPERTY_VALUE_MAX, "%s/input_enc_%d_%d_%p.yuv",
+        int size = snprintf(m_debug.infile_name, PROPERTY_VALUE_MAX, "%s/input_enc_%lu_%lu_%p.yuv",
                             m_debug.log_loc, m_sVenc_cfg.input_width, m_sVenc_cfg.input_height, this);
         if ((size > PROPERTY_VALUE_MAX) && (size < 0)) {
-             DEBUG_PRINT_ERROR("Failed to open output file: %s for logging size:%s",
+             DEBUG_PRINT_ERROR("Failed to open output file: %s for logging size:%d",
                                 m_debug.infile_name, size);
         }
         m_debug.infile = fopen (m_debug.infile_name, "ab");
         if (!m_debug.infile) {
-            DEBUG_PRINT_HIGH("Failed to open input file: %s for logging", m_debug.infile);
+            DEBUG_PRINT_HIGH("Failed to open input file: %s for logging", m_debug.infile_name);
             m_debug.infile_name[0] = '\0';
             return -1;
         }
     }
     if (m_debug.infile && pbuffer && pbuffer->nFilledLen) {
-        int i,msize;
+        unsigned long i,msize;
         int stride = VENUS_Y_STRIDE(COLOR_FMT_NV12, m_sVenc_cfg.input_width);
         int scanlines = VENUS_Y_SCANLINES(COLOR_FMT_NV12, m_sVenc_cfg.input_height);
         unsigned char *pvirt,*ptemp;
@@ -920,7 +933,7 @@ bool venc_dev::venc_open(OMX_U32 codec)
     }
 
     sess_priority.priority = 1; /* default to non-real-time */
-    if (venc_set_session_priority(sess_priority.priority)) {
+    if (!venc_set_session_priority(sess_priority.priority)) {
         DEBUG_PRINT_ERROR("Setting session priority failed");
         return OMX_ErrorUnsupportedSetting;
     }
@@ -984,9 +997,9 @@ void venc_dev::venc_close()
 
 }
 
-bool venc_dev::venc_set_buf_req(unsigned long *min_buff_count,
+bool venc_dev::venc_set_buf_req(unsigned long *min_buff_count __unused,
         unsigned long *actual_buff_count,
-        unsigned long *buff_size,
+        unsigned long *buff_size __unused,
         unsigned long port)
 {
 
@@ -1030,8 +1043,8 @@ bool venc_dev::venc_loaded_stop_done()
     return true;
 }
 
-bool venc_dev::venc_get_seq_hdr(void *buffer,
-        unsigned buffer_size, unsigned *header_len)
+bool venc_dev::venc_get_seq_hdr(void *buffer __unused,
+        unsigned buffer_size __unused, unsigned *header_len __unused)
 {
     return true;
 }
@@ -1374,7 +1387,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                         return false;
                     } else {
                         if ((pParam->eProfile != OMX_VIDEO_AVCProfileBaseline) &&
-                            (pParam->eProfile != QOMX_VIDEO_AVCProfileConstrainedBaseline)) {
+                            (pParam->eProfile != (OMX_VIDEO_AVCPROFILETYPE)QOMX_VIDEO_AVCProfileConstrainedBaseline)) {
                             if (pParam->nBFrames) {
                                 bFrames = pParam->nBFrames;
                             }
@@ -1516,7 +1529,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 QOMX_EXTNINDEX_VIDEO_INITIALQP * initqp =
                     (QOMX_EXTNINDEX_VIDEO_INITIALQP *)paramData;
                  if (initqp->bEnableInitQp) {
-                    DEBUG_PRINT_LOW("Enable initial QP: %d", initqp->bEnableInitQp);
+                    DEBUG_PRINT_LOW("Enable initial QP: %lu", initqp->bEnableInitQp);
                     if(venc_enable_initial_qp(initqp) == false) {
                        DEBUG_PRINT_ERROR("ERROR: Failed to enable initial QP");
                        return OMX_ErrorUnsupportedSetting;
@@ -1534,7 +1547,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 if(session_qp_range->nPortIndex == (OMX_U32)PORT_INDEX_OUT) {
                     if(venc_set_session_qp_range (session_qp_range->minQP,
                                 session_qp_range->maxQP) == false) {
-                        DEBUG_PRINT_ERROR("ERROR: Setting QP Range[%d %d] failed",
+                        DEBUG_PRINT_ERROR("ERROR: Setting QP Range[%lu %lu] failed",
                             session_qp_range->minQP, session_qp_range->maxQP);
                         return false;
                     } else {
@@ -1628,7 +1641,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                         return false;
                     }
                 } else {
-                    DEBUG_PRINT_ERROR("OMX_QcomIndexHierarchicalStructure called on wrong port(%d)", pParam->nPortIndex);
+                    DEBUG_PRINT_ERROR("OMX_QcomIndexHierarchicalStructure called on wrong port(%lu)", pParam->nPortIndex);
                     return false;
                 }
 
@@ -1737,7 +1750,7 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
             {
                 OMX_CONFIG_FRAMERATETYPE *frame_rate = (OMX_CONFIG_FRAMERATETYPE *)
                     configData;
-                DEBUG_PRINT_LOW("venc_set_config: OMX_IndexConfigVideoFramerate: %d",
+                DEBUG_PRINT_LOW("venc_set_config: OMX_IndexConfigVideoFramerate: %lu",
 								frame_rate->xEncodeFramerate);
 
                 if (frame_rate->nPortIndex == (OMX_U32)PORT_INDEX_OUT) {
@@ -1755,7 +1768,7 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
             {
 				QOMX_VIDEO_INTRAPERIODTYPE *intraperiod =
                     (QOMX_VIDEO_INTRAPERIODTYPE *)configData;
-                DEBUG_PRINT_LOW("venc_set_config:QOMX_IndexConfigVideoIntraperiod: %d: %d",
+                DEBUG_PRINT_LOW("venc_set_config:QOMX_IndexConfigVideoIntraperiod: %lu: %lu",
 								intraperiod->nPFrames, intraperiod->nBFrames);
                 if (intraperiod->nPortIndex == (OMX_U32) PORT_INDEX_OUT) {
                     if (venc_set_intra_period(intraperiod->nPFrames, intraperiod->nBFrames) == false) {
@@ -1788,10 +1801,12 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                 OMX_CONFIG_ROTATIONTYPE *config_rotation =
                     reinterpret_cast<OMX_CONFIG_ROTATIONTYPE*>(configData);
                 OMX_U32 nFrameWidth;
+
                 if (!config_rotation) {
                    return false;
                 }
-                if (true == deinterlace_enabled) {
+
+                if (config_rotation->nRotation && deinterlace_enabled) {
                     DEBUG_PRINT_ERROR("ERROR: Rotation is not supported with deinterlacing");
                     return false;
                 }
@@ -1905,7 +1920,7 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
         case OMX_IndexConfigPriority:
             {
                 OMX_PARAM_U32TYPE *priority = (OMX_PARAM_U32TYPE *)configData;
-                DEBUG_PRINT_LOW("Set_config: priority %u",priority->nU32);
+                DEBUG_PRINT_LOW("Set_config: priority %lu",priority->nU32);
                 if (!venc_set_session_priority(priority->nU32)) {
                     DEBUG_PRINT_ERROR("Failed to set priority");
                     return false;
@@ -1915,7 +1930,7 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
         case OMX_IndexConfigOperatingRate:
             {
                 OMX_PARAM_U32TYPE *rate = (OMX_PARAM_U32TYPE *)configData;
-                DEBUG_PRINT_LOW("Set_config: operating rate %d", rate->nU32);
+                DEBUG_PRINT_LOW("Set_config: operating rate %lu", rate->nU32);
                 if (!venc_set_operatingrate(rate->nU32)) {
                     DEBUG_PRINT_ERROR("Failed to set operating rate");
                     return false;
@@ -2043,12 +2058,13 @@ unsigned venc_dev::venc_start(void)
 {
     enum v4l2_buf_type buf_type;
     int ret,r;
-    struct v4l2_control control = {0};
+    struct v4l2_control control = {0, 0};
 
     DEBUG_PRINT_HIGH("%s(): Check Profile/Level set in driver before start",
             __func__);
+    m_level_set = false;
 
-    if (!venc_set_profile_level(0, 0)) {
+	if (!venc_set_profile_level(0, 0)) {
         DEBUG_PRINT_ERROR("ERROR: %s(): Driver Profile/Level is NOT SET",
                 __func__);
     } else {
@@ -2117,15 +2133,15 @@ void venc_dev::venc_config_print()
     DEBUG_PRINT_HIGH("ENC_CONFIG: Init_qpI: %ld, Init_qpP: %ld, Init_qpb: %ld",
             init_qp.iframeqp, init_qp.pframeqp, init_qp.bframeqp);
 
-    DEBUG_PRINT_HIGH("ENC_CONFIG: minQP: %d, maxQP: %d",
+    DEBUG_PRINT_HIGH("ENC_CONFIG: minQP: %lu, maxQP: %lu",
             session_qp_values.minqp, session_qp_values.maxqp);
 
     DEBUG_PRINT_HIGH("ENC_CONFIG: VOP_Resolution: %ld, Slice-Mode: %ld, Slize_Size: %ld",
             voptimecfg.voptime_resolution, multislice.mslice_mode,
             multislice.mslice_size);
 
-    DEBUG_PRINT_HIGH("ENC_CONFIG: EntropyMode: %d, CabacModel: %ld",
-            entropy.longentropysel, entropy.cabacmodel);
+    DEBUG_PRINT_HIGH("ENC_CONFIG: EntropyMode: %lu, CabacModel: %ld",
+            entropy.entropysel, entropy.cabacmodel);
 
     DEBUG_PRINT_HIGH("ENC_CONFIG: DB-Mode: %ld, alpha: %ld, Beta: %ld",
             dbkfilter.db_mode, dbkfilter.slicealpha_offset,
@@ -2144,9 +2160,9 @@ void venc_dev::venc_config_print()
 
     DEBUG_PRINT_HIGH("ENC_CONFIG: Peak bitrate: %d", peak_bitrate.peakbitrate);
 
-    DEBUG_PRINT_HIGH("ENC_CONFIG: Session Priority: %u", sess_priority.priority);
+    DEBUG_PRINT_HIGH("ENC_CONFIG: Session Priority: %lu", sess_priority.priority);
 
-    DEBUG_PRINT_HIGH("ENC_CONFIG: Operating Rate: %u", operating_rate);
+    DEBUG_PRINT_HIGH("ENC_CONFIG: Operating Rate: %lu", operating_rate);
 }
 
 bool venc_dev::venc_reconfig_reqbufs()
@@ -2384,7 +2400,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
     struct v4l2_plane plane;
     int rc=0;
     struct OMX_BUFFERHEADERTYPE *bufhdr;
-    encoder_media_buffer_type * meta_buf = NULL;
+    LEGACY_CAM_METADATA_TYPE * meta_buf = NULL;
     temp_buffer = (struct pmem *)buffer;
 
     memset (&buf, 0, sizeof(buf));
@@ -2416,7 +2432,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
         // ---------------------------------------------------------------------------------------
         if (metadatamode) {
             plane.m.userptr = index;
-            meta_buf = (encoder_media_buffer_type *)bufhdr->pBuffer;
+            meta_buf = (LEGACY_CAM_METADATA_TYPE *)bufhdr->pBuffer;
 
             if (!meta_buf) {
                 //empty EOS buffer
@@ -2429,7 +2445,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                     return false;
                 }
             } else if (!color_format) {
-                if (meta_buf->buffer_type == kMetadataBufferTypeCameraSource) {
+                if (meta_buf->buffer_type == LEGACY_CAM_SOURCE) {
                     if (meta_buf->meta_handle->data[3] & private_handle_t::PRIV_FLAGS_ITU_R_709)
                         buf.flags = V4L2_MSM_BUF_FLAG_YUV_601_709_CLAMP;
                     plane.data_offset = meta_buf->meta_handle->data[1];
@@ -2438,7 +2454,8 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                     DEBUG_PRINT_LOW("venc_empty_buf: camera buf: fd = %d filled %d of %d flag 0x%x",
                             fd, plane.bytesused, plane.length, buf.flags);
                 } else if (meta_buf->buffer_type == kMetadataBufferTypeGrallocSource) {
-                    private_handle_t *handle = (private_handle_t *)meta_buf->meta_handle;
+                    VideoGrallocMetadata *meta_buf = (VideoGrallocMetadata *)bufhdr->pBuffer;
+                    private_handle_t *handle = (private_handle_t *)meta_buf->pHandle;
                     fd = handle->fd;
                     plane.data_offset = 0;
                     plane.length = handle->size;
@@ -2540,6 +2557,12 @@ bool venc_dev::venc_fill_buf(void *buffer, void *pmem_data_buf,unsigned index,un
     buf.m.planes = plane;
     buf.length = num_planes;
 
+    if (venc_handle->is_secure_session()) {
+        output_metabuffer *meta_buf = (output_metabuffer *)(bufhdr->pBuffer);
+        native_handle_t *handle = meta_buf->nh;
+        plane[0].length = handle->data[3];
+    }
+
     extra_idx = EXTRADATA_IDX(num_planes);
 
     if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
@@ -2612,7 +2635,7 @@ bool venc_dev::venc_set_hier_layers(QOMX_VIDEO_HIERARCHICALCODINGTYPE type,
     control.id = V4L2_CID_MPEG_VIDC_VIDEO_HIER_P_NUM_LAYERS;
     if (type == QOMX_HIERARCHICALCODING_P) {
         control.value = num_layers;
-        DEBUG_PRINT_HIGH("Set Hier P num layers: %d", num_layers);
+        DEBUG_PRINT_HIGH("Set Hier P num layers: %lu", num_layers);
         if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
             DEBUG_PRINT_ERROR("Request to set Hier P num layers failed");
             return false;
@@ -2646,12 +2669,12 @@ bool venc_dev::venc_set_extradata(OMX_U32 extra_data, OMX_BOOL enable)
             control.value = V4L2_MPEG_VIDC_EXTRADATA_METADATA_MBI;
             break;
         default:
-            DEBUG_PRINT_ERROR("Unrecognized extradata index 0x%x", extra_data);
+            DEBUG_PRINT_ERROR("Unrecognized extradata index 0x%lx", extra_data);
             return false;
     }
 
     if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
-        DEBUG_PRINT_ERROR("ERROR: Request for setting extradata (%x) failed %d",
+        DEBUG_PRINT_ERROR("ERROR: Request for setting extradata (%lx) failed %d",
                 extra_data, errno);
         return false;
     }
@@ -2824,7 +2847,7 @@ bool venc_dev::venc_set_session_qp_range(OMX_U32 min_qp, OMX_U32 max_qp)
             return false;
         }
     } else {
-        DEBUG_PRINT_ERROR("Wrong qp values[%d %d], allowed range[%d %d]",
+        DEBUG_PRINT_ERROR("Wrong qp values[%lu %lu], allowed range[%lu %lu]",
             min_qp, max_qp, session_qp_range.minqp, session_qp_range.maxqp);
     }
 
@@ -3199,7 +3222,7 @@ bool venc_dev::venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames)
     }
 
     intra_period.num_bframes = nBFrames;
-    DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, intra_period.num_bframes);
+    DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%lu", control.id, intra_period.num_bframes);
 
     if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264) {
         control.id = V4L2_CID_MPEG_VIDC_VIDEO_IDR_PERIOD;
@@ -3272,7 +3295,7 @@ bool venc_dev::venc_set_entropy_config(OMX_BOOL enable, OMX_U32 i_cabac_level)
         }
 
         DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
-        entropy.longentropysel = control.value;
+        entropy.entropysel = control.value;
 
         if (i_cabac_level == 0) {
             control.value = V4L2_CID_MPEG_VIDC_VIDEO_H264_CABAC_MODEL_0;
@@ -3306,7 +3329,7 @@ bool venc_dev::venc_set_entropy_config(OMX_BOOL enable, OMX_U32 i_cabac_level)
         }
 
         DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
-        entropy.longentropysel=control.value;
+        entropy.entropysel=control.value;
     } else {
         DEBUG_PRINT_ERROR("Invalid Entropy mode for Baseline Profile");
         return false;
@@ -3700,7 +3723,9 @@ bool venc_dev::venc_set_ltrmode(OMX_U32 enable, OMX_U32 count)
     struct v4l2_control control;
     struct v4l2_ext_control ctrl[2];
     struct v4l2_ext_controls controls;
-    int rc;
+    unsigned const int *profile_tbl = NULL;
+    OMX_U32 mb_per_frame, mb_per_sec;
+    int rc, new_level, new_profile;
 
     ctrl[0].id = V4L2_CID_MPEG_VIDC_VIDEO_LTRMODE;
     if (enable)
@@ -3743,6 +3768,15 @@ bool venc_dev::venc_set_ltrmode(OMX_U32 enable, OMX_U32 count)
         DEBUG_PRINT_ERROR("ERROR: Request for setting extradata failed");
         return false;
     }
+
+    if (!venc_set_profile_level(0, 0)) {
+        DEBUG_PRINT_ERROR("ERROR: %s(): Driver Profile/Level is NOT SET",
+                __func__);
+    } else {
+        DEBUG_PRINT_HIGH("%s(): Driver Profile[%lu]/Level[%lu] successfully SET",
+                __func__, codec_profile.profile, profile_level.level);
+    }
+
     return true;
 }
 
@@ -3975,7 +4009,7 @@ bool venc_dev::venc_set_session_priority(OMX_U32 priority) {
         default:
             priority = 1;
             control.value = V4L2_MPEG_VIDC_VIDEO_PRIORITY_REALTIME_DISABLE;
-            DEBUG_PRINT_ERROR("Unsupported priority level %u", priority);
+            DEBUG_PRINT_ERROR("Unsupported priority level %lu", priority);
             break;
     }
 
@@ -3998,17 +4032,17 @@ bool venc_dev::venc_set_operatingrate(OMX_U32 rate) {
     control.id = V4L2_CID_MPEG_VIDC_VIDEO_OPERATING_RATE;
     control.value = rate;
 
-    DEBUG_PRINT_LOW("venc_set_operating_rate: %d fps", rate >> 16);
+    DEBUG_PRINT_LOW("venc_set_operating_rate: %lu fps", rate >> 16);
     DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
 
     if(ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
         hw_overload = errno == EBUSY;
-        DEBUG_PRINT_ERROR("Failed to set operating rate %d fps (%s)",
+        DEBUG_PRINT_ERROR("Failed to set operating rate %lu fps (%s)",
                 rate >> 16, hw_overload ? "HW overload" : strerror(errno));
         return false;
     }
     operating_rate = rate;
-    DEBUG_PRINT_LOW("Operating Rate Set = %d fps",  rate >> 16);
+    DEBUG_PRINT_LOW("Operating Rate Set = %lu fps",  rate >> 16);
     return true;
 }
 
@@ -4406,16 +4440,27 @@ bool venc_dev::venc_validate_profile_level(OMX_U32 *eProfile, OMX_U32 *eLevel)
         if (mb_per_frame <= (unsigned int)profile_tbl[0]) {
             if (mb_per_sec <= (unsigned int)profile_tbl[1]) {
                 if (m_sVenc_cfg.targetbitrate <= (unsigned int)profile_tbl[2]) {
-                    new_level = (int)profile_tbl[3];
-                    new_profile = (int)profile_tbl[4];
-                    profile_level_found = true;
-                    DEBUG_PRINT_LOW("Appropriate profile/level found %lu/%lu", new_profile, new_level);
-                    break;
+                    if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264) {
+                        if ((ltrinfo.count + 2) <= MIN((unsigned int) (profile_tbl[5] / mb_per_frame), MAXDPB)) {
+                            new_level = (int)profile_tbl[3];
+                            new_profile = (int)profile_tbl[4];
+                            profile_level_found = true;
+                            DEBUG_PRINT_LOW("Appropriate H264 profile/level for count: %u is %lu/%lu, maxDPB: %u",
+                                            ltrinfo.count, new_profile, new_level,
+                                            MIN((unsigned int) (profile_tbl[5] / mb_per_frame), MAXDPB));
+                            break;
+                         }
+                    } else {
+                        new_level = (int)profile_tbl[3];
+                        new_profile = (int)profile_tbl[4];
+                        profile_level_found = true;
+                        DEBUG_PRINT_LOW("Appropriate profile/level found %lu/%lu", new_profile, new_level);
+                        break;
+                    }
                 }
             }
         }
-
-        profile_tbl = profile_tbl + 5;
+        profile_tbl = profile_tbl + MAX_PROFILE_PARAMS;
     } while (profile_tbl[0] != 0);
 
     if (profile_level_found != true) {
@@ -4434,7 +4479,7 @@ bool venc_dev::venc_validate_profile_level(OMX_U32 *eProfile, OMX_U32 *eLevel)
     return true;
 }
 #ifdef _ANDROID_ICS_
-bool venc_dev::venc_set_meta_mode(bool mode)
+bool venc_dev::venc_set_meta_mode(bool mode __unused)
 {
     metadatamode = 1;
     return true;
