@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -47,6 +47,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string.h>
 #include <inttypes.h>
 #include <cstddef>
+#include <cutils/atomic.h>
 
 #include "SwVdecTypes.h"
 #include "SwVdecAPI.h"
@@ -282,10 +283,6 @@ struct video_driver_context
 #endif
 };
 
-#ifdef _ANDROID_
-class DivXDrmDecrypt;
-#endif //_ANDROID_
-
 struct video_decoder_capability {
     unsigned int min_width;
     unsigned int max_width;
@@ -487,7 +484,8 @@ private:
         OMX_COMPONENT_PAUSE_PENDING          =0xB,
         OMX_COMPONENT_EXECUTE_PENDING        =0xC,
         OMX_COMPONENT_OUTPUT_FLUSH_IN_DISABLE_PENDING =0xD,
-        OMX_COMPONENT_DISABLE_OUTPUT_DEFERRED=0xE
+        OMX_COMPONENT_DISABLE_OUTPUT_DEFERRED=0xE,
+        OMX_COMPONENT_FLUSH_DEFERRED = 0xF
     };
 
     // Deferred callback identifiers
@@ -800,9 +798,6 @@ private:
                     OMX_EventError,OMX_ErrorUnsupportedSetting,0,NULL);
         }
     }
-#ifdef _ANDROID_
-    OMX_ERRORTYPE createDivxDrmContext();
-#endif //_ANDROID_
 #if defined (_ANDROID_HONEYCOMB_) || defined (_ANDROID_ICS_)
     OMX_ERRORTYPE use_android_native_buffer(OMX_IN OMX_HANDLETYPE hComp, OMX_PTR data);
 #endif
@@ -822,6 +817,7 @@ private:
     pthread_mutex_t       m_lock;
     pthread_mutex_t       c_lock;
     //sem to handle the minimum procesing of commands
+    sem_t                 m_safe_flush;
     sem_t                 m_cmd_lock;
     bool              m_error_propogated;
     // compression format
@@ -966,6 +962,8 @@ private:
     bool m_use_android_native_buffers;
     bool m_debug_extradata;
     bool m_debug_concealedmb;
+    bool m_disable_dynamic_buf_mode;
+    bool m_disable_adaptive_playback;
 #endif
 #ifdef MAX_RES_1080P
     MP4_Utils mp4_headerparser;
@@ -990,9 +988,6 @@ private:
     };
     meta_buffer meta_buff;
     extra_data_handler extra_data_handle;
-#ifdef _ANDROID_
-    DivXDrmDecrypt* iDivXDrmDecrypt;
-#endif //_ANDROID_
     OMX_PARAM_PORTDEFINITIONTYPE m_port_def;
     omx_time_stamp_reorder time_stamp_dts;
     desc_buffer_hdr *m_desc_buffer_ptr;
@@ -1079,6 +1074,10 @@ private:
     int log_output_buffers(OMX_BUFFERHEADERTYPE *);
     int log_im_buffer(OMX_BUFFERHEADERTYPE * buffer);
     static OMX_ERRORTYPE describeColorFormat(OMX_PTR params);
+    volatile int32_t m_queued_codec_config_count;
+#ifdef _MSM8974_
+    void send_codec_config();
+#endif
 };
 
 #ifdef _MSM8974_

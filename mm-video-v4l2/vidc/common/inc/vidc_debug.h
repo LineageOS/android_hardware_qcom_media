@@ -31,6 +31,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifdef _ANDROID_
 #include <cstdio>
+#include <pthread.h>
 
 enum {
    PRIO_ERROR=0x1,
@@ -41,17 +42,20 @@ enum {
 extern int debug_level;
 
 #undef DEBUG_PRINT_ERROR
-#define DEBUG_PRINT_ERROR(fmt, args...) \
+#define DEBUG_PRINT_ERROR(fmt, args...) ({ \
       if (debug_level & PRIO_ERROR) \
-          ALOGE(fmt,##args)
+          ALOGE(fmt,##args); \
+      })
 #undef DEBUG_PRINT_LOW
-#define DEBUG_PRINT_LOW(fmt, args...) \
+#define DEBUG_PRINT_LOW(fmt, args...) ({ \
       if (debug_level & PRIO_LOW) \
-          ALOGD(fmt,##args)
+          ALOGD(fmt,##args); \
+      })
 #undef DEBUG_PRINT_HIGH
-#define DEBUG_PRINT_HIGH(fmt, args...) \
+#define DEBUG_PRINT_HIGH(fmt, args...) ({ \
       if (debug_level & PRIO_HIGH) \
-          ALOGD(fmt,##args)
+          ALOGD(fmt,##args); \
+      })
 #else
 #define DEBUG_PRINT_ERROR printf
 #define DEBUG_PRINT_LOW printf
@@ -68,5 +72,18 @@ extern int debug_level;
             return OMX_ErrorBadParameter;                                      \
         }                                                                      \
     }                                                                          \
+
+class auto_lock {
+    public:
+        auto_lock(pthread_mutex_t &lock)
+            : mLock(lock) {
+                pthread_mutex_lock(&mLock);
+            }
+        ~auto_lock() {
+            pthread_mutex_unlock(&mLock);
+        }
+    private:
+        pthread_mutex_t &mLock;
+};
 
 #endif

@@ -97,7 +97,7 @@ OMX_U32 extra_data_handler::d_ue()
     return symbol;
 }
 
-OMX_U32 extra_data_handler::parse_frame_pack(OMX_U32 payload_size)
+OMX_U32 extra_data_handler::parse_frame_pack(OMX_U32 payload_size __attribute__ ((__unused__)))
 {
     frame_packing_arrangement.id = d_ue();
     frame_packing_arrangement.cancel_flag = d_u(1);
@@ -236,7 +236,7 @@ OMX_S32 extra_data_handler::parse_sei(OMX_U8 *buffer, OMX_U32 buffer_length)
 }
 
 OMX_S32 extra_data_handler::parse_ltrinfo(
-        OMX_BUFFERHEADERTYPE *pBufHdr, OMX_OTHER_EXTRADATATYPE *pExtra)
+        OMX_BUFFERHEADERTYPE *pBufHdr __attribute__ ((__unused__)), OMX_OTHER_EXTRADATATYPE *pExtra)
 {
     OMX_U32 *pLTR;
     pExtra->eType = (OMX_EXTRADATATYPE)OMX_ExtraDataVideoLTRInfo;
