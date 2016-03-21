@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2013, 2015, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2013, 2015-2017 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -2441,7 +2441,6 @@ OMX_ERRORTYPE  omx_video::use_output_buffer(
       *bufferHdr = (m_out_mem_ptr + i );
       (*bufferHdr)->pBuffer = (OMX_U8 *)buffer;
 	  (*bufferHdr)->pAppPrivate = appData;
-      m_out_bm_count = BITMASK_SET_U32(m_out_bm_count,i);
 
       if(!m_use_output_pmem)
       {
@@ -2513,6 +2512,7 @@ OMX_ERRORTYPE  omx_video::use_output_buffer(
         DEBUG_PRINT_ERROR("ERROR: dev_use_buf Failed for o/p buf");
         return OMX_ErrorInsufficientResources;
       }
+      m_out_bm_count = BITMASK_SET_U32(m_out_bm_count,i);
     }
     else
     {
@@ -3261,7 +3261,8 @@ OMX_ERRORTYPE  omx_video::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
 
     DEBUG_PRINT_LOW("free_buffer on i/p port - Port idx %d, actual cnt %d \n",
                     nPortIndex, m_sInPortDef.nBufferCountActual);
-    if(nPortIndex < m_sInPortDef.nBufferCountActual)
+    if(nPortIndex < m_sInPortDef.nBufferCountActual &&
+       BITMASK_PRESENT_U32(m_inp_bm_count,nPortIndex))
     {
       // Clear the bit associated with it.
       m_inp_bm_count = BITMASK_CLEAR_U32(m_inp_bm_count,nPortIndex);
@@ -3321,7 +3322,8 @@ OMX_ERRORTYPE  omx_video::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
 
     DEBUG_PRINT_LOW("free_buffer on o/p port - Port idx %d, actual cnt %d \n",
                     nPortIndex, m_sOutPortDef.nBufferCountActual);
-    if(nPortIndex < m_sOutPortDef.nBufferCountActual)
+    if(nPortIndex < m_sOutPortDef.nBufferCountActual &&
+       BITMASK_PRESENT_U32(m_out_bm_count,nPortIndex))
     {
       // Clear the bit associated with it.
       m_out_bm_count = BITMASK_CLEAR_U32(m_out_bm_count,nPortIndex);
