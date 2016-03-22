@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7faddb67_7771ace0",
+        "filename": "mm-video-v4l2/vidc/venc/src/omx_video_base.cpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 3975,
+      "author": {
+        "id": 13956
+      },
+      "writtenOn": "2016-03-22T18:46:21Z",
+      "side": 0,
+      "message": "the problem with cts testSignalSurfaceEOS is that buffer_index is negative number and then it called push_input_buffer. but inside push_input_buffer it re-calculate the offset using unsigned, causing it prints out \"Output buffer index is wrong 2575749686 act count 5 0xb01aaea8 0xb5f8fdc0\" and return OMX_ErrorHardware to client. The patch from qulcomm add an additional check for buffer_index \u003e\u003d 0",
+      "revId": "200d6b00c28697745d39925b447f9f4dc3260bdb",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
