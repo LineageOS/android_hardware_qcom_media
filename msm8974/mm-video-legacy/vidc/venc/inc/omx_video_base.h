@@ -55,6 +55,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <linux/msm_vidc_enc.h>
 #include "OMX_Core.h"
 #include "OMX_QCOMExtns.h"
+#include "OMX_VideoExt.h"
+#include "OMX_IndexExt.h"
 #include "qc_omx_component.h"
 #include "omx_video_common.h"
 #include "extra_data_handler.h"
@@ -555,6 +557,8 @@ public:
   OMX_U32 m_sExtraData;
   OMX_U32 m_sDebugSliceinfo;
   OMX_U32 m_input_msg_id;
+  OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE m_sConfigIntraRefresh;
+
   // fill this buffer queue
   omx_cmd_queue         m_ftb_q;
   // Command Q for rest of the events

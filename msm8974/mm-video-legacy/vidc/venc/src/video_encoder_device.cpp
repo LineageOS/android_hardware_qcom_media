@@ -37,6 +37,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <linux/msm_ion.h>
 #endif
 
+#define ALIGN(x, to_align) ((((unsigned long) x) + (to_align - 1)) & ~(to_align - 1))
 #define MPEG4_SP_START 0
 #define MPEG4_ASP_START (MPEG4_SP_START + 8)
 #define MPEG4_720P_LEVEL 6
@@ -1123,6 +1124,24 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
       if(ioctl (m_nDriver_fd,VEN_IOCTL_SET_BASE_CFG,(void*)&ioctl_msg) < 0) {
           DEBUG_PRINT_ERROR("\nERROR: Dimension Change for Rotation failed");
           return false;
+      }
+      break;
+    }
+  case OMX_IndexConfigAndroidIntraRefresh:
+    {
+      OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE *intra_refresh = (OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE *)configData;
+      DEBUG_PRINT_LOW("OMX_IndexConfigAndroidIntraRefresh : num frames = %d", intra_refresh->nRefreshPeriod);
+
+      if (intra_refresh->nPortIndex == (OMX_U32) PORT_INDEX_OUT) {
+          OMX_U32 num_mbs_per_frame = (ALIGN(m_sVenc_cfg.dvs_height, 16)/16) * (ALIGN(m_sVenc_cfg.dvs_width, 16)/16);
+          OMX_U32 num_intra_refresh_mbs = num_mbs_per_frame / intra_refresh->nRefreshPeriod;
+
+          if (venc_set_intra_refresh(OMX_VIDEO_IntraRefreshRandom, num_intra_refresh_mbs) == false) {
+              DEBUG_PRINT_ERROR("ERROR: Setting Intra refresh failed");
+              return false;
+          }
+      } else {
+         DEBUG_PRINT_ERROR("ERROR: Invalid Port Index for OMX_IndexConfigVideoIntraRefreshType");
       }
       break;
     }

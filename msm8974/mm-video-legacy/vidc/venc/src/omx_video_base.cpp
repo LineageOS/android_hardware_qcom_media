@@ -1930,6 +1930,13 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
       break;
     }
   default:
+  case OMX_IndexConfigAndroidIntraRefresh:
+    {
+      OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE* pParam = reinterpret_cast<OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE*>(configData);
+      DEBUG_PRINT_LOW("get_config: OMX_IndexConfigAndroidIntraRefresh");
+      memcpy(pParam, &m_sConfigIntraRefresh, sizeof(m_sConfigIntraRefresh));
+      break;
+    }
     DEBUG_PRINT_ERROR("ERROR: unsupported index %d", (int) configIndex);
     return OMX_ErrorUnsupportedIndex;
   }
