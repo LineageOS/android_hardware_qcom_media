@@ -3638,9 +3638,9 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                break;
         case OMX_QcomIndexEnableExtnUserData:
                                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
-                                eRet = enable_extradata(OMX_EXTNUSER_EXTRADATA, false,
-                                    ((QOMX_ENABLETYPE *)paramData)->bEnable);
-                                break;
+                               eRet = enable_extradata(OMX_EXTNUSER_EXTRADATA, false,
+                                   ((QOMX_ENABLETYPE *)paramData)->bEnable);
+                               break;
         case OMX_QcomIndexParamVideoDivx: {
                               QOMX_VIDEO_PARAM_DIVXTYPE* divXType = (QOMX_VIDEO_PARAM_DIVXTYPE *) paramData;
                           }

@@ -1331,6 +1331,7 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
            }
        case QOMX_IndexParamVideoInitialQp:
             {
+                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_EXTNINDEX_VIDEO_INITIALQP);
                 if(!handle->venc_set_param(paramData,
                             (OMX_INDEXTYPE)QOMX_IndexParamVideoInitialQp)) {
                     DEBUG_PRINT_ERROR("Request to Enable initial QP failed");
