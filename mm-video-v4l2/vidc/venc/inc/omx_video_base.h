@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2016, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -135,10 +135,8 @@ static const char* MEM_DEVICE = "/dev/pmem_smipool";
         & BITMASK_FLAG(mIndex))
 #define BITMASK_ABSENT(mArray,mIndex) (((mArray)[BITMASK_OFFSET(mIndex)] \
             & BITMASK_FLAG(mIndex)) == 0x0)
-#ifdef _ANDROID_ICS_
 #define MAX_NUM_INPUT_BUFFERS 32
 #define MAX_NUM_OUTPUT_BUFFERS 64
-#endif
 void* enc_message_thread(void *);
 
 // OMX video class
