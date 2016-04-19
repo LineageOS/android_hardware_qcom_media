@@ -513,6 +513,8 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     /* Custom extension provided to IMS-VT to set meta-mode */
     OMX_QTIIndexParamIMSVTVideoMetaBufferMode = 0x7F00005C,
 
+    /* OMX.google.android.index.allocateNativeHandle */
+    OMX_GoogleAndroidIndexAllocateNativeHandle = 0x7F00005D,
 };
 
 /**
