@@ -629,6 +629,7 @@ omx_vdec::omx_vdec(): m_pipe_in(-1),
   m_vendor_config.pData = NULL;
   pthread_mutex_init(&m_lock, NULL);
   pthread_mutex_init(&c_lock, NULL);
+  pthread_mutex_init(&buf_lock, NULL);
   sem_init(&m_cmd_lock,0,0);
 #ifdef _ANDROID_
   char extradata_value[PROPERTY_VALUE_MAX] = {0};
@@ -713,6 +714,7 @@ omx_vdec::~omx_vdec()
 
   pthread_mutex_destroy(&m_lock);
   pthread_mutex_destroy(&c_lock);
+  pthread_mutex_destroy(&buf_lock);
   sem_destroy(&m_cmd_lock);
 #ifdef _ANDROID_
   if (perf_flag)
@@ -4930,6 +4932,9 @@ OMX_ERRORTYPE omx_vdec::free_input_buffer(OMX_BUFFERHEADERTYPE *bufferHdr)
   index = bufferHdr - m_inp_mem_ptr;
   DEBUG_PRINT_LOW("Free Input Buffer index = %d",index);
 
+  auto_lock l(buf_lock);
+  bufferHdr->pInputPortPrivate = NULL;
+
   if (index < drv_ctx.ip_buf.actualcount && drv_ctx.ptr_inputbuffer)
   {
     DEBUG_PRINT_LOW("Free Input Buffer index = %d",index);
@@ -6009,7 +6014,9 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
     codec_config_flag = false;
   }
 
-  if (m_state == OMX_StateInvalid)
+  if (m_state != OMX_StateExecuting &&
+          m_state != OMX_StatePause &&
+          m_state != OMX_StateIdle)
   {
       DEBUG_PRINT_ERROR("Empty this buffer in Invalid State\n");
       return OMX_ErrorInvalidState;
@@ -6170,9 +6177,10 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE         h
     return OMX_ErrorNone;
   }
 
+  auto_lock l(buf_lock);
   temp_buffer = (struct vdec_bufferpayload *)buffer->pInputPortPrivate;
 
-  if ((temp_buffer -  drv_ctx.ptr_inputbuffer) > (int)drv_ctx.ip_buf.actualcount)
+  if (!temp_buffer || (temp_buffer -  drv_ctx.ptr_inputbuffer) > (int)drv_ctx.ip_buf.actualcount)
   {
     return OMX_ErrorBadParameter;
   }
@@ -6181,7 +6189,7 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE         h
   /*for use buffer we need to memcpy the data*/
   temp_buffer->buffer_len = buffer->nFilledLen;
 
-  if (input_use_buffer)
+  if (input_use_buffer && temp_buffer->bufferaddr)
   {
     if (buffer->nFilledLen <= temp_buffer->buffer_len)
     {
@@ -6322,16 +6330,16 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer(OMX_IN OMX_HANDLETYPE  hComp,
                                           OMX_IN OMX_BUFFERHEADERTYPE* buffer)
 {
 
-  if (m_state == OMX_StateInvalid)
-  {
-      DEBUG_PRINT_ERROR("FTB in Invalid State\n");
+  if (m_state != OMX_StateExecuting &&
+          m_state != OMX_StatePause &&
+          m_state != OMX_StateIdle) {
+      DEBUG_PRINT_ERROR("FTB in Invalid State");
       return OMX_ErrorInvalidState;
   }
 
-  if (!m_out_bEnabled)
-  {
-    DEBUG_PRINT_ERROR("\nERROR:FTB incorrect state operation, output port is disabled.");
-    return OMX_ErrorIncorrectStateOperation;
+  if (!m_out_bEnabled) {
+      DEBUG_PRINT_ERROR("ERROR:FTB incorrect state operation, output port is disabled.");
+      return OMX_ErrorIncorrectStateOperation;
   }
 
   if (buffer == NULL ||
@@ -6369,6 +6377,18 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
                          OMX_IN OMX_HANDLETYPE        hComp,
                          OMX_IN OMX_BUFFERHEADERTYPE* bufferAdd)
 {
+  if (m_state != OMX_StateExecuting &&
+          m_state != OMX_StatePause &&
+          m_state != OMX_StateIdle) {
+      DEBUG_PRINT_ERROR("FTB in Invalid State");
+      return OMX_ErrorInvalidState;
+  }
+
+  if (!m_out_bEnabled) {
+      DEBUG_PRINT_ERROR("ERROR:FTB incorrect state operation, output port is disabled.");
+      return OMX_ErrorIncorrectStateOperation;
+    }
+
   OMX_ERRORTYPE nRet = OMX_ErrorNone;
   struct vdec_ioctl_msg ioctl_msg = {NULL,NULL};
   OMX_BUFFERHEADERTYPE *buffer = bufferAdd;
