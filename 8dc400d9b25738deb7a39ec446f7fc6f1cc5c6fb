@@ -1,0 +1,44 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5faad753_137a6a87",
+        "filename": "mm-video-v4l2/vidc/common/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 30,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2016-05-24T07:14:24Z",
+      "side": 1,
+      "message": "This is already set below.",
+      "revId": "8dc400d9b25738deb7a39ec446f7fc6f1cc5c6fb",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "5faad753_b37036a7",
+        "filename": "mm-video-v4l2/vidc/common/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 36,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2016-05-24T07:14:24Z",
+      "side": 1,
+      "message": "Here...",
+      "range": {
+        "startLine": 36,
+        "startChar": 0,
+        "endLine": 36,
+        "endChar": 75
+      },
+      "revId": "8dc400d9b25738deb7a39ec446f7fc6f1cc5c6fb",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
