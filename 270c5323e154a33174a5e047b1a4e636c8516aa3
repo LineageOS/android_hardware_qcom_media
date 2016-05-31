@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "5faad753_f8051d12",
+        "filename": "mm-video-v4l2/vidc/venc/Android.mk",
+        "patchSetId": 2
+      },
+      "lineNbr": 77,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2016-05-31T12:26:56Z",
+      "side": 1,
+      "message": "Shouldn\u0027t it be: ifneq ($(QCPATH),)",
+      "range": {
+        "startLine": 77,
+        "startChar": 0,
+        "endLine": 77,
+        "endChar": 15
+      },
+      "revId": "270c5323e154a33174a5e047b1a4e636c8516aa3",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
