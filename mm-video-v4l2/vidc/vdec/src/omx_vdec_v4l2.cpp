@@ -124,7 +124,7 @@ extern "C" {
 #define EXTRADATA_IDX(__num_planes) ((__num_planes) ? (__num_planes) - 1 : 0)
 #define ALIGN(x, to_align) ((((unsigned) x) + (to_align - 1)) & ~(to_align - 1))
 
-#define DEFAULT_EXTRADATA (OMX_INTERLACE_EXTRADATA | OMX_FRAMEPACK_EXTRADATA | OMX_OUTPUTCROP_EXTRADATA)
+#define DEFAULT_EXTRADATA (OMX_INTERLACE_EXTRADATA | OMX_FRAMEPACK_EXTRADATA | OMX_OUTPUTCROP_EXTRADATA | OMX_DISPLAY_INFO_EXTRADATA)
 #define DEFAULT_CONCEAL_COLOR "32784" //0x8010, black by default
 
 #ifndef ION_FLAG_CP_BITSTREAM
@@ -735,6 +735,8 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     memset (m_hwdevice_name,0,sizeof(m_hwdevice_name));
     memset(m_demux_offsets, 0, ( sizeof(OMX_U32) * 8192) );
     memset(&m_custom_buffersize, 0, sizeof(m_custom_buffersize));
+    memset(&m_client_color_space, 0, sizeof(DescribeColorAspectsParams));
+    memset(&m_internal_color_space, 0, sizeof(DescribeColorAspectsParams));
     m_demux_entries = 0;
     msg_thread_id = 0;
     async_thread_id = 0;
@@ -783,6 +785,18 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_perf_control.send_hint_to_mpctl(true);
     m_input_pass_buffer_fd = false;
     memset(&m_extradata_info, 0, sizeof(m_extradata_info));
+    m_client_color_space.nPortIndex = (OMX_U32)OMX_CORE_INPUT_PORT_INDEX;
+    m_client_color_space.sAspects.mRange =  ColorAspects::RangeUnspecified;
+    m_client_color_space.sAspects.mPrimaries = ColorAspects::PrimariesUnspecified;
+    m_client_color_space.sAspects.mMatrixCoeffs = ColorAspects::MatrixUnspecified;
+    m_client_color_space.sAspects.mTransfer = ColorAspects::TransferUnspecified;
+
+    m_internal_color_space.nPortIndex = (OMX_U32)OMX_CORE_OUTPUT_PORT_INDEX;
+    m_internal_color_space.sAspects.mRange =  ColorAspects::RangeUnspecified;
+    m_internal_color_space.sAspects.mPrimaries = ColorAspects::PrimariesUnspecified;
+    m_internal_color_space.sAspects.mMatrixCoeffs = ColorAspects::MatrixUnspecified;
+    m_internal_color_space.sAspects.mTransfer = ColorAspects::TransferUnspecified;
+    m_internal_color_space.nSize = sizeof(DescribeColorAspectsParams);
 }
 
 static const int event_type[] = {
@@ -1028,11 +1042,10 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool force_split_mode)
 
     //Restore the capture format again here, because
     //in switching between different DPB-OPB modes, the pixelformat
-    //on capture port may be changed.
+    //on capture port may be changed. Don't change resolutions.
     memset(&fmt, 0x0, sizeof(struct v4l2_format));
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-    fmt.fmt.pix_mp.height = drv_ctx.video_resolution.frame_height;
-    fmt.fmt.pix_mp.width = drv_ctx.video_resolution.frame_width;
+    rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_FMT, &fmt);
     fmt.fmt.pix_mp.pixelformat = capture_capability;
     rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_FMT, &fmt);
     if (rc) {
@@ -1099,6 +1112,7 @@ int omx_vdec::decide_downscalar()
     int rc = 0;
     struct v4l2_format fmt;
     enum color_fmts color_format;
+    OMX_U32 width, height;
 
     if  (!m_downscalar_width || !m_downscalar_height) {
         DEBUG_PRINT_LOW("%s: downscalar not supported", __func__);
@@ -1119,10 +1133,13 @@ int omx_vdec::decide_downscalar()
        return rc;
     }
 
+    height = fmt.fmt.pix_mp.height;
+    width = fmt.fmt.pix_mp.width;
+
     DEBUG_PRINT_HIGH("%s: driver wxh = %dx%d, downscalar wxh = %dx%d m_is_display_session = %d", __func__,
         fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height, m_downscalar_width, m_downscalar_height, m_is_display_session);
 
-    if ((fmt.fmt.pix_mp.width * fmt.fmt.pix_mp.height > m_downscalar_width * m_downscalar_height) &&
+    if ((fmt.fmt.pix_mp.width * fmt.fmt.pix_mp.height >= m_downscalar_width * m_downscalar_height) &&
          m_is_display_session) {
         rc = enable_downscalar();
         if (rc < 0) {
@@ -1130,9 +1147,9 @@ int omx_vdec::decide_downscalar()
             return rc;
         }
 
-        OMX_U32 width = m_downscalar_width > fmt.fmt.pix_mp.width ?
+        width = m_downscalar_width > fmt.fmt.pix_mp.width ?
                             fmt.fmt.pix_mp.width : m_downscalar_width;
-        OMX_U32 height = m_downscalar_height > fmt.fmt.pix_mp.height ?
+        height = m_downscalar_height > fmt.fmt.pix_mp.height ?
                             fmt.fmt.pix_mp.height : m_downscalar_height;
         switch (capture_capability) {
             case V4L2_PIX_FMT_NV12:
@@ -1149,13 +1166,6 @@ int omx_vdec::decide_downscalar()
                 rc = OMX_ErrorUndefined;
                 return rc;
         }
-
-        rc = update_resolution(width, height,
-                VENUS_Y_STRIDE(color_format, width), VENUS_Y_SCANLINES(color_format, height));
-        if (rc < 0) {
-            DEBUG_PRINT_ERROR("%s: update_resolution WxH %dx%d failed \n", __func__, width, height);
-            return rc;
-        }
     } else {
 
         rc = disable_downscalar();
@@ -1163,20 +1173,12 @@ int omx_vdec::decide_downscalar()
             DEBUG_PRINT_ERROR("%s: disable_downscalar failed\n", __func__);
             return rc;
         }
-
-        rc = update_resolution(fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height,
-                fmt.fmt.pix_mp.plane_fmt[0].bytesperline, fmt.fmt.pix_mp.plane_fmt[0].reserved[0]);
-        if (rc < 0) {
-            DEBUG_PRINT_ERROR("%s: update_resolution WxH %dx%d failed\n", __func__, fmt.fmt.pix_mp.width,
-                fmt.fmt.pix_mp.height);
-            return rc;
-        }
     }
 
     memset(&fmt, 0x0, sizeof(struct v4l2_format));
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-    fmt.fmt.pix_mp.height = drv_ctx.video_resolution.frame_height;
-    fmt.fmt.pix_mp.width = drv_ctx.video_resolution.frame_width;
+    fmt.fmt.pix_mp.height = height;
+    fmt.fmt.pix_mp.width = width;
     fmt.fmt.pix_mp.pixelformat = capture_capability;
     rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_FMT, &fmt);
     if (rc) {
@@ -1672,6 +1674,8 @@ void omx_vdec::process_event_cb(void *ctxt, unsigned char id)
                                             DEBUG_PRINT_HIGH("Updated Crop Info: L: %u, T: %u, R: %u, B: %u",
                                                     pThis->rectangle.nLeft, pThis->rectangle.nTop,
                                                     pThis->rectangle.nWidth, pThis->rectangle.nHeight);
+                                        } else if (p2 == OMX_QTIIndexConfigDescribeColorAspects) {
+                                            DEBUG_PRINT_HIGH("Rxd PORT_RECONFIG: OMX_QTIIndexConfigDescribeColorAspects");
                                         } else {
                                             DEBUG_PRINT_ERROR("Rxd Invalid PORT_RECONFIG event (%lu)", p2);
                                             break;
@@ -3973,10 +3977,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                                (portDefn->format.video.nFrameWidth != (unsigned int)fmt.fmt.pix_mp.width)) {
                                                    port_format_changed = true;
                                            }
-                                           update_resolution(portDefn->format.video.nFrameWidth,
-                                                   portDefn->format.video.nFrameHeight,
-                                                   portDefn->format.video.nFrameWidth,
-                                                   portDefn->format.video.nFrameHeight);
 
                                            /* set crop info */
                                            rectangle.nLeft = 0;
@@ -3989,8 +3989,8 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                                break;
                                            memset(&fmt, 0x0, sizeof(struct v4l2_format));
                                            fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-                                           fmt.fmt.pix_mp.height = drv_ctx.video_resolution.frame_height;
-                                           fmt.fmt.pix_mp.width = drv_ctx.video_resolution.frame_width;
+                                           fmt.fmt.pix_mp.height = (unsigned int)portDefn->format.video.nFrameHeight;
+                                           fmt.fmt.pix_mp.width = (unsigned int)portDefn->format.video.nFrameWidth;
                                            fmt.fmt.pix_mp.pixelformat = capture_capability;
                                            DEBUG_PRINT_LOW("fmt.fmt.pix_mp.height = %d , fmt.fmt.pix_mp.width = %d",
                                                fmt.fmt.pix_mp.height, fmt.fmt.pix_mp.width);
@@ -4148,13 +4148,28 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                            eRet = is_video_session_supported();
                                            if (eRet)
                                                break;
-                                           memset(&fmt, 0x0, sizeof(struct v4l2_format));
-                                           fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
-                                           fmt.fmt.pix_mp.height = drv_ctx.video_resolution.frame_height;
-                                           fmt.fmt.pix_mp.width = drv_ctx.video_resolution.frame_width;
-                                           fmt.fmt.pix_mp.pixelformat = output_capability;
-                                           DEBUG_PRINT_LOW("fmt.fmt.pix_mp.height = %d , fmt.fmt.pix_mp.width = %d",fmt.fmt.pix_mp.height,fmt.fmt.pix_mp.width);
-                                           ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_FMT, &fmt);
+                                           if (is_down_scalar_enabled) {
+                                               memset(&fmt, 0x0, sizeof(struct v4l2_format));
+                                               fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
+                                               fmt.fmt.pix_mp.height = drv_ctx.video_resolution.frame_height;
+                                               fmt.fmt.pix_mp.width = drv_ctx.video_resolution.frame_width;
+                                               fmt.fmt.pix_mp.pixelformat = output_capability;
+                                               DEBUG_PRINT_LOW("DS Enabled : height = %d , width = %d",
+                                                   fmt.fmt.pix_mp.height,fmt.fmt.pix_mp.width);
+                                               ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_FMT, &fmt);
+                                           } else {
+                                               memset(&fmt, 0x0, sizeof(struct v4l2_format));
+                                               fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
+                                               fmt.fmt.pix_mp.height = drv_ctx.video_resolution.frame_height;
+                                               fmt.fmt.pix_mp.width = drv_ctx.video_resolution.frame_width;
+                                               fmt.fmt.pix_mp.pixelformat = output_capability;
+                                               DEBUG_PRINT_LOW("DS Disabled : height = %d , width = %d",
+                                                   fmt.fmt.pix_mp.height,fmt.fmt.pix_mp.width);
+                                               ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_FMT, &fmt);
+                                               fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+                                               fmt.fmt.pix_mp.pixelformat = capture_capability;
+                                               ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_FMT, &fmt);
+                                           }
                                            if (ret) {
                                                DEBUG_PRINT_ERROR("Set Resolution failed");
                                                eRet = OMX_ErrorUnsupportedSetting;
@@ -4218,24 +4233,27 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                 memset(&fmt, 0x0, sizeof(struct v4l2_format));
                                 if (1 == portFmt->nPortIndex) {
                                     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-                                    fmt.fmt.pix_mp.height = drv_ctx.video_resolution.frame_height;
-                                    fmt.fmt.pix_mp.width = drv_ctx.video_resolution.frame_width;
+                                    ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_FMT, &fmt);
+                                    if (ret < 0) {
+                                        DEBUG_PRINT_ERROR("%s: Failed to get format on capture mplane", __func__);
+                                        return OMX_ErrorBadParameter;
+                                    }
                                     enum vdec_output_fromat op_format;
                                     if (portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
-                                                QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m ||
+                                            QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m ||
                                             portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
-                                                QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mMultiView ||
+                                            QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mMultiView ||
                                             portFmt->eColorFormat == OMX_COLOR_FormatYUV420Planar ||
                                             portFmt->eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar) {
                                         op_format = (enum vdec_output_fromat)VDEC_YUV_FORMAT_NV12;
                                     } else if (portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
-                                                QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed) {
+                                            QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed) {
                                         op_format = (enum vdec_output_fromat)VDEC_YUV_FORMAT_NV12_UBWC;
                                     } else
                                         eRet = OMX_ErrorBadParameter;
 
                                     if (portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
-                                                QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed) {
+                                            QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed) {
                                         fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12_UBWC;
                                     } else {
                                         fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12;
@@ -5082,6 +5100,28 @@ OMX_ERRORTYPE  omx_vdec::get_config(OMX_IN OMX_HANDLETYPE      hComp,
 
             break;
         }
+        case OMX_QTIIndexConfigDescribeColorAspects:
+        {
+            VALIDATE_OMX_PARAM_DATA(configData, DescribeColorAspectsParams);
+            DescribeColorAspectsParams *params = (DescribeColorAspectsParams *)configData;
+
+            print_debug_color_aspects(&(m_client_color_space.sAspects), "GetConfig Client");
+            print_debug_color_aspects(&(m_internal_color_space.sAspects), "GetConfig Internal");
+
+            if (params->bRequestingDataSpace) {
+                DEBUG_PRINT_ERROR("Does not handle dataspace request");
+                return OMX_ErrorUnsupportedSetting;
+            }
+            if (m_internal_color_space.bDataSpaceChanged == OMX_TRUE) {
+                DEBUG_PRINT_LOW("Updating Client's color aspects with internal");
+                memcpy(&(m_client_color_space.sAspects),
+                        &(m_internal_color_space.sAspects), sizeof(ColorAspects));
+                m_internal_color_space.bDataSpaceChanged = OMX_FALSE;
+            }
+            memcpy(&(params->sAspects), &(m_client_color_space.sAspects), sizeof(ColorAspects));
+
+            break;
+        }
         default: {
                  DEBUG_PRINT_ERROR("get_config: unknown param %d",configIndex);
                  eRet = OMX_ErrorBadParameter;
@@ -5295,12 +5335,23 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                     rate->nU32 >> 16, errno == -EBUSY ? "HW Overload" : strerror(errno));
         }
         return ret;
+
+    } else if ((int)configIndex == (int)OMX_QTIIndexConfigDescribeColorAspects) {
+        VALIDATE_OMX_PARAM_DATA(configData, DescribeColorAspectsParams);
+        DescribeColorAspectsParams *params = (DescribeColorAspectsParams *)configData;
+        if (!DEFAULT_EXTRADATA & OMX_DISPLAY_INFO_EXTRADATA) {
+            enable_extradata(OMX_DISPLAY_INFO_EXTRADATA, true, true);
+        }
+
+        print_debug_color_aspects(&(params->sAspects), "Set Config");
+        memcpy(&m_client_color_space, params, sizeof(DescribeColorAspectsParams));
+        return ret;
     }
 
     return OMX_ErrorNotImplemented;
 }
 
-#define extn_equals(param, extn) (!strncmp(param, extn, strlen(extn)))
+#define extn_equals(param, extn) (!strcmp(param, extn))
 
 /* ======================================================================
    FUNCTION
@@ -5381,6 +5432,8 @@ OMX_ERRORTYPE  omx_vdec::get_extension_index(OMX_IN OMX_HANDLETYPE      hComp,
         *indexType = (OMX_INDEXTYPE)OMX_QTIIndexParamLowLatencyMode;
     } else if (extn_equals(paramName, OMX_QTI_INDEX_PARAM_VIDEO_CLIENT_EXTRADATA)) {
         *indexType = (OMX_INDEXTYPE)OMX_QTIIndexParamVideoClientExtradata;
+    } else if (extn_equals(paramName, "OMX.google.android.index.describeColorAspects")) {
+        *indexType = (OMX_INDEXTYPE)OMX_QTIIndexConfigDescribeColorAspects;
     } else {
         DEBUG_PRINT_ERROR("Extension: %s not implemented", paramName);
         return OMX_ErrorNotImplemented;
@@ -8043,6 +8096,47 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
         }
     }
 
+    if (!output_flush_progress && (buffer->nFilledLen > 0)) {
+        // set the default colorspace advised by client, since the bitstream may be
+        // devoid of colorspace-info.
+        if (m_enable_android_native_buffers) {
+            ColorSpace_t color_space = ITU_R_601;
+
+        // Disabled ?
+        // WA for VP8. Vp8 encoder does not embed color-info (yet!).
+        // Encoding RGBA results in 601-LR for all resolutions.
+        // This conflicts with the client't defaults which are based on resolution.
+        //   Eg: 720p will be encoded as 601-LR. Client will say 709.
+        // Re-enable this code once vp8 encoder generates color-info and hence the
+        // decoder will be able to override with the correct source color.
+#if 0
+            switch (m_client_color_space.sAspects.mPrimaries) {
+                case ColorAspects::PrimariesBT601_6_625:
+                case ColorAspects::PrimariesBT601_6_525:
+                {
+                    color_space = m_client_color_space.sAspects.mRange == ColorAspects::RangeFull ?
+                            ITU_R_601_FR : ITU_R_601;
+                    break;
+                }
+                case ColorAspects::PrimariesBT709_5:
+                {
+                    color_space = ITU_R_709;
+                    break;
+                }
+                default:
+                {
+                    break;
+                }
+            }
+#endif
+            DEBUG_PRINT_LOW("setMetaData for Color Space (client) = 0x%x (601=%u FR=%u 709=%u)",
+                    color_space, ITU_R_601, ITU_R_601_FR, ITU_R_709);
+            set_colorspace_in_handle(color_space, buffer - m_out_mem_ptr);
+        }
+        DEBUG_PRINT_LOW("Processing extradata");
+        handle_extradata(buffer);
+    }
+
 #ifdef OUTPUT_EXTRADATA_LOG
     if (outputExtradataFile) {
         int buf_index = buffer - m_out_mem_ptr;
@@ -8548,9 +8642,10 @@ int omx_vdec::async_message_process (void *context, void* message)
                    vdec_msg->msgdata.output_frame.bufferaddr =
                        omx->drv_ctx.ptr_outputbuffer[v4l2_buf_ptr->index].bufferaddr;
 
-                   memcpy(&omx->drv_ctx.frame_size,
-                           &vdec_msg->msgdata.output_frame.framesize,
-                           sizeof(struct vdec_framesize));
+                   if (vdec_msg->msgdata.output_frame.len)
+                       memcpy(&omx->drv_ctx.frame_size,
+                               &vdec_msg->msgdata.output_frame.framesize,
+                               sizeof(struct vdec_framesize));
 
                    DEBUG_PRINT_LOW("[RespBufDone] Buf(%p) Ts(%lld) PicType(%u) Flags (0x%x) FillLen(%u) Crop: L(%u) T(%u) R(%u) B(%u)",
                            omxhdr, (long long)vdec_msg->msgdata.output_frame.time_stamp,
@@ -9619,15 +9714,8 @@ OMX_ERRORTYPE omx_vdec::get_buffer_req(vdec_allocatorproperty *buffer_prop)
     DEBUG_PRINT_LOW("GetBufReq IN: ActCnt(%d) Size(%u)",
             buffer_prop->actualcount, (unsigned int)buffer_prop->buffer_size);
 
-    fmt.fmt.pix_mp.height = drv_ctx.video_resolution.frame_height;
-    fmt.fmt.pix_mp.width = drv_ctx.video_resolution.frame_width;
-
     ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_FMT, &fmt);
 
-    update_resolution(fmt.fmt.pix_mp.width,
-            fmt.fmt.pix_mp.height,
-            fmt.fmt.pix_mp.plane_fmt[0].bytesperline,
-            fmt.fmt.pix_mp.plane_fmt[0].reserved[0]);
     if (fmt.type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
         drv_ctx.num_planes = fmt.fmt.pix_mp.num_planes;
     DEBUG_PRINT_HIGH("Buffer Size = %d",fmt.fmt.pix_mp.plane_fmt[0].sizeimage);
@@ -9688,9 +9776,9 @@ OMX_ERRORTYPE omx_vdec::set_buffer_req(vdec_allocatorproperty *buffer_prop)
 {
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
     unsigned buf_size = 0;
-    struct v4l2_format fmt;
+    struct v4l2_format fmt, c_fmt;
     struct v4l2_requestbuffers bufreq;
-    int ret;
+    int ret = 0;
     DEBUG_PRINT_LOW("SetBufReq IN: ActCnt(%d) Size(%u)",
             buffer_prop->actualcount, (unsigned int)buffer_prop->buffer_size);
     buf_size = (buffer_prop->buffer_size + buffer_prop->alignment - 1)&(~(buffer_prop->alignment - 1));
@@ -9700,6 +9788,7 @@ OMX_ERRORTYPE omx_vdec::set_buffer_req(vdec_allocatorproperty *buffer_prop)
         eRet = OMX_ErrorBadParameter;
     } else {
         memset(&fmt, 0x0, sizeof(struct v4l2_format));
+        memset(&c_fmt, 0x0, sizeof(struct v4l2_format));
         fmt.fmt.pix_mp.height = drv_ctx.video_resolution.frame_height;
         fmt.fmt.pix_mp.width = drv_ctx.video_resolution.frame_width;
         fmt.fmt.pix_mp.plane_fmt[0].sizeimage = buf_size;
@@ -9707,14 +9796,17 @@ OMX_ERRORTYPE omx_vdec::set_buffer_req(vdec_allocatorproperty *buffer_prop)
         if (buffer_prop->buffer_type == VDEC_BUFFER_TYPE_INPUT) {
             fmt.type =V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
             fmt.fmt.pix_mp.pixelformat = output_capability;
+            ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_FMT, &fmt);
         } else if (buffer_prop->buffer_type == VDEC_BUFFER_TYPE_OUTPUT) {
-            fmt.type =V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-            fmt.fmt.pix_mp.pixelformat = capture_capability;
+            c_fmt.type =V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+            c_fmt.fmt.pix_mp.pixelformat = capture_capability;
+            ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_FMT, &c_fmt);
+            c_fmt.fmt.pix_mp.plane_fmt[0].sizeimage = buf_size;
+            ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_FMT, &c_fmt);
         } else {
             eRet = OMX_ErrorBadParameter;
         }
 
-        ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_FMT, &fmt);
         if (ret) {
             /*TODO: How to handle this case */
             DEBUG_PRINT_ERROR("Setting buffer requirements (format) failed %d", ret);
@@ -9791,10 +9883,18 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
 
         fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
         fmt.fmt.pix_mp.pixelformat = output_capability;
+        ioctl(drv_ctx.video_driver_fd, VIDIOC_G_FMT, &fmt);
     } else if (1 == portDefn->nPortIndex) {
         unsigned int buf_size = 0;
         int ret = 0;
-       memset(&fmt, 0x0, sizeof(struct v4l2_format));
+       if (!is_down_scalar_enabled) {
+           fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
+           ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_FMT, &fmt);
+           fmt.fmt.pix_mp.pixelformat = capture_capability;
+           fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+           ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_FMT, &fmt);
+       }
+
        fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
        fmt.fmt.pix_mp.pixelformat = capture_capability;
        ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_FMT, &fmt);
@@ -9831,24 +9931,13 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
                 (int)portDefn->nPortIndex);
         eRet = OMX_ErrorBadPortIndex;
     }
-    if (is_down_scalar_enabled) {
-        int ret = 0;
-        ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_FMT, &fmt);
-        if (ret) {
-            DEBUG_PRINT_ERROR("update_portdef : Error in getting port resolution");
-            return OMX_ErrorHardware;
-        } else {
-            portDefn->format.video.nFrameWidth = fmt.fmt.pix_mp.width;
-            portDefn->format.video.nFrameHeight = fmt.fmt.pix_mp.height;
-            portDefn->format.video.nStride = fmt.fmt.pix_mp.plane_fmt[0].bytesperline;
-            portDefn->format.video.nSliceHeight = fmt.fmt.pix_mp.plane_fmt[0].reserved[0];
-        }
-    } else {
+    update_resolution(fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height,
+        fmt.fmt.pix_mp.plane_fmt[0].bytesperline, fmt.fmt.pix_mp.plane_fmt[0].reserved[0]);
+
         portDefn->format.video.nFrameHeight =  drv_ctx.video_resolution.frame_height;
         portDefn->format.video.nFrameWidth  =  drv_ctx.video_resolution.frame_width;
         portDefn->format.video.nStride = drv_ctx.video_resolution.stride;
         portDefn->format.video.nSliceHeight = drv_ctx.video_resolution.scan_lines;
-    }
 
     if ((portDefn->format.video.eColorFormat == OMX_COLOR_FormatYUV420Planar) ||
        (portDefn->format.video.eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar)) {
@@ -10148,6 +10237,279 @@ OMX_BUFFERHEADERTYPE* omx_vdec::get_omx_output_buffer_header(int index)
     return m_out_mem_ptr + index;
 }
 
+void omx_vdec::convert_color_space_info(OMX_U32 primaries, OMX_U32 range,
+    OMX_U32 transfer, OMX_U32 matrix, ColorSpace_t *color_space, ColorAspects *aspects)
+{
+    switch (primaries) {
+        case MSM_VIDC_BT709_5:
+            *color_space = ITU_R_709;
+            aspects->mPrimaries = ColorAspects::PrimariesBT709_5;
+            break;
+        case MSM_VIDC_BT470_6_M:
+            aspects->mPrimaries = ColorAspects::PrimariesBT470_6M;
+            break;
+        case MSM_VIDC_BT601_6_625:
+            aspects->mPrimaries = ColorAspects::PrimariesBT601_6_625;
+            break;
+        case MSM_VIDC_BT601_6_525:
+            *color_space = range ? ITU_R_601_FR : ITU_R_601;
+            aspects->mPrimaries = ColorAspects::PrimariesBT601_6_525;
+            break;
+        case MSM_VIDC_GENERIC_FILM:
+            aspects->mPrimaries = ColorAspects::PrimariesGenericFilm;
+            break;
+        case MSM_VIDC_BT2020:
+            aspects->mPrimaries = ColorAspects::PrimariesBT2020;
+            break;
+        case MSM_VIDC_UNSPECIFIED:
+            //Client does not expect ColorAspects::PrimariesUnspecified, but rather the supplied default
+        default:
+            //aspects->mPrimaries = ColorAspects::PrimariesOther;
+            aspects->mPrimaries = m_client_color_space.sAspects.mPrimaries;
+            break;
+    }
+
+    aspects->mRange = range ? ColorAspects::RangeFull : ColorAspects::RangeLimited;
+
+    switch (transfer) {
+        case MSM_VIDC_TRANSFER_BT709_5:
+        case MSM_VIDC_TRANSFER_601_6_525: // case MSM_VIDC_TRANSFER_601_6_625:
+            aspects->mTransfer = ColorAspects::TransferSMPTE170M;
+            break;
+        case MSM_VIDC_TRANSFER_BT_470_6_M:
+            aspects->mTransfer = ColorAspects::TransferGamma22;
+            break;
+        case MSM_VIDC_TRANSFER_BT_470_6_BG:
+            aspects->mTransfer = ColorAspects::TransferGamma28;
+            break;
+        case MSM_VIDC_TRANSFER_SMPTE_240M:
+            aspects->mTransfer = ColorAspects::TransferSMPTE240M;
+            break;
+        case MSM_VIDC_TRANSFER_LINEAR:
+            aspects->mTransfer = ColorAspects::TransferLinear;
+            break;
+        case MSM_VIDC_TRANSFER_IEC_61966:
+            aspects->mTransfer = ColorAspects::TransferXvYCC;
+            break;
+        case MSM_VIDC_TRANSFER_BT_1361:
+            aspects->mTransfer = ColorAspects::TransferBT1361;
+            break;
+        case MSM_VIDC_TRANSFER_SRGB:
+            aspects->mTransfer = ColorAspects::TransferSRGB;
+            break;
+        default:
+            //aspects->mTransfer = ColorAspects::TransferOther;
+            aspects->mTransfer = m_client_color_space.sAspects.mTransfer;
+            break;
+    }
+
+    switch (matrix) {
+        case MSM_VIDC_MATRIX_BT_709_5:
+            aspects->mMatrixCoeffs = ColorAspects::MatrixBT709_5;
+            break;
+        case MSM_VIDC_MATRIX_FCC_47:
+            aspects->mMatrixCoeffs = ColorAspects::MatrixBT470_6M;
+            break;
+        case MSM_VIDC_MATRIX_601_6_625:
+        case MSM_VIDC_MATRIX_601_6_525:
+            aspects->mMatrixCoeffs = ColorAspects::MatrixBT601_6;
+            break;
+        case MSM_VIDC_MATRIX_SMPTE_240M:
+            aspects->mMatrixCoeffs = ColorAspects::MatrixSMPTE240M;
+            break;
+        case MSM_VIDC_MATRIX_BT_2020:
+            aspects->mMatrixCoeffs = ColorAspects::MatrixBT2020;
+            break;
+        case MSM_VIDC_MATRIX_BT_2020_CONST:
+            aspects->mMatrixCoeffs = ColorAspects::MatrixBT2020Constant;
+            break;
+        default:
+            //aspects->mMatrixCoeffs = ColorAspects::MatrixOther;
+            aspects->mMatrixCoeffs = m_client_color_space.sAspects.mMatrixCoeffs;
+            break;
+    }
+}
+
+void omx_vdec::print_debug_color_aspects(ColorAspects *aspects, const char *prefix) {
+        DEBUG_PRINT_HIGH("%s : Color aspects : Primaries = %d Range = %d Transfer = %d MatrixCoeffs = %d",
+                prefix, aspects->mPrimaries, aspects->mRange, aspects->mTransfer, aspects->mMatrixCoeffs);
+}
+
+void omx_vdec::handle_color_space_info(void *data, unsigned int buf_index)
+{
+    ColorSpace_t color_space = ITU_R_601;
+    ColorAspects tempAspects;
+    memset(&tempAspects, 0x0, sizeof(ColorAspects));
+    ColorAspects *aspects = &tempAspects;
+
+    switch(output_capability) {
+        case V4L2_PIX_FMT_MPEG2:
+            {
+                struct msm_vidc_mpeg2_seqdisp_payload *seqdisp_payload;
+                seqdisp_payload = (struct msm_vidc_mpeg2_seqdisp_payload *)data;
+
+                /* Refer MPEG2 Spec @ Rec. ISO/IEC 13818-2, ITU-T Draft Rec. H.262 to
+                 * understand this code */
+
+                if (seqdisp_payload && seqdisp_payload->color_descp) {
+
+                    convert_color_space_info(seqdisp_payload->color_primaries, 1,
+                            seqdisp_payload->transfer_char, seqdisp_payload->matrix_coeffs,
+                            &color_space,aspects);
+                    m_disp_hor_size = seqdisp_payload->disp_width;
+                    m_disp_vert_size = seqdisp_payload->disp_height;
+                }
+            }
+            break;
+        case V4L2_PIX_FMT_H264:
+        case V4L2_PIX_FMT_HEVC:
+            {
+                struct msm_vidc_vui_display_info_payload *display_info_payload;
+                display_info_payload = (struct msm_vidc_vui_display_info_payload*)data;
+
+                /* Refer H264 Spec @ Rec. ITU-T H.264 (02/2014) to understand this code */
+
+                if (display_info_payload->video_signal_present_flag &&
+                        display_info_payload->color_description_present_flag) {
+                    convert_color_space_info(display_info_payload->color_primaries,
+                            display_info_payload->video_full_range_flag,
+                            display_info_payload->transfer_characteristics,
+                            display_info_payload->matrix_coefficients,
+                            &color_space,aspects);
+                }
+            }
+            break;
+        case V4L2_PIX_FMT_VC1_ANNEX_G:
+        case V4L2_PIX_FMT_VC1_ANNEX_L:
+            {
+                struct msm_vidc_vc1_seqdisp_payload *vc1_seq_disp_payload;
+                vc1_seq_disp_payload = (struct msm_vidc_vc1_seqdisp_payload*)data;
+
+                /* Refer VC-1 Spec @ SMPTE Draft Standard for Television Date: 2005-08-23
+                 * SMPTE 421M to understand this code */
+
+                if (m_enable_android_native_buffers &&
+                        vc1_seq_disp_payload->color_primaries) {
+
+                    convert_color_space_info(vc1_seq_disp_payload->color_primaries,
+                            1,
+                            vc1_seq_disp_payload->transfer_char,
+                            vc1_seq_disp_payload->matrix_coeffs,
+                            &color_space,aspects);
+                }
+            }
+            break;
+        case V4L2_PIX_FMT_VP8:
+            {
+                struct msm_vidc_vpx_colorspace_payload *vpx_color_space_payload;
+                vpx_color_space_payload = (struct msm_vidc_vpx_colorspace_payload*)data;
+
+                /* Refer VP8 Data Format in latest VP8 spec and Decoding Guide November 2011
+                 * to understand this code */
+
+                if (vpx_color_space_payload->color_space == 0) {
+                    color_space = ITU_R_601;
+                } else {
+                    DEBUG_PRINT_ERROR("Unsupported Color space for VP8");
+                    break;
+                }
+            }
+            break;
+        case V4L2_PIX_FMT_VP9:
+            {
+                struct msm_vidc_vpx_colorspace_payload *vpx_color_space_payload;
+                vpx_color_space_payload = (struct msm_vidc_vpx_colorspace_payload*)data;
+
+                /* Refer VP9 Spec @ VP9 Bitstream & Decoding Process Specification - v0.6 31st March 2016
+                 * to understand this code */
+
+                switch(vpx_color_space_payload->color_space) {
+                    case MSM_VIDC_CS_BT_601:
+                        aspects->mMatrixCoeffs = ColorAspects::MatrixBT601_6;
+                        aspects->mTransfer = ColorAspects::TransferSMPTE170M;
+                        aspects->mPrimaries = ColorAspects::PrimariesBT601_6_625;
+                        aspects->mRange = m_client_color_space.sAspects.mRange;
+                        break;
+                    case MSM_VIDC_CS_BT_709:
+                        color_space = ITU_R_709;
+                        aspects->mMatrixCoeffs = ColorAspects::MatrixBT709_5;
+                        aspects->mTransfer = ColorAspects::TransferSMPTE170M;
+                        aspects->mPrimaries =  ColorAspects::PrimariesBT709_5;
+                        aspects->mRange = m_client_color_space.sAspects.mRange;
+                        break;
+                    case MSM_VIDC_CS_SMPTE_170:
+                        aspects->mMatrixCoeffs = ColorAspects::MatrixBT709_5;
+                        aspects->mTransfer = ColorAspects::TransferSMPTE170M;
+                        aspects->mPrimaries = m_client_color_space.sAspects.mPrimaries;
+                        aspects->mRange = m_client_color_space.sAspects.mRange;
+                        break;
+                    case MSM_VIDC_CS_SMPTE_240:
+                        aspects->mMatrixCoeffs = m_client_color_space.sAspects.mMatrixCoeffs;
+                        aspects->mTransfer = ColorAspects::TransferSMPTE240M;
+                        aspects->mPrimaries = m_client_color_space.sAspects.mPrimaries;
+                        aspects->mRange = m_client_color_space.sAspects.mRange;
+                        break;
+                    case MSM_VIDC_CS_BT_2020:
+                        aspects->mMatrixCoeffs = ColorAspects::MatrixBT2020;
+                        aspects->mTransfer = ColorAspects:: TransferSMPTE170M;
+                        aspects->mPrimaries = ColorAspects::PrimariesBT2020;
+                        aspects->mRange = m_client_color_space.sAspects.mRange;
+                        break;
+                    case MSM_VIDC_CS_RESERVED:
+                        aspects->mMatrixCoeffs = ColorAspects::MatrixOther;
+                        aspects->mTransfer = ColorAspects::TransferOther;
+                        aspects->mPrimaries = ColorAspects::PrimariesOther;
+                        aspects->mRange = m_client_color_space.sAspects.mRange;
+                        break;
+                    case MSM_VIDC_CS_RGB:
+                        aspects->mMatrixCoeffs = ColorAspects::MatrixBT709_5;
+                        aspects->mTransfer = ColorAspects::TransferSMPTE170M;
+                        aspects->mPrimaries = ColorAspects::PrimariesOther;
+                        aspects->mRange = m_client_color_space.sAspects.mRange;
+                        break;
+                    default:
+                        break;
+                }
+            }
+            break;
+        default:
+            break;
+    }
+    if (m_enable_android_native_buffers) {
+        DEBUG_PRINT_HIGH("setMetaData for Color Space = 0x%x (601=%u FR=%u 709=%u)", color_space, ITU_R_601, ITU_R_601_FR, ITU_R_709);
+        set_colorspace_in_handle(color_space, buf_index);
+    }
+    print_debug_color_aspects(aspects, "Bitstream");
+
+    if (m_internal_color_space.sAspects.mPrimaries != aspects->mPrimaries ||
+            m_internal_color_space.sAspects.mTransfer != aspects->mTransfer ||
+            m_internal_color_space.sAspects.mMatrixCoeffs != aspects->mMatrixCoeffs ||
+            m_internal_color_space.sAspects.mRange != aspects->mRange) {
+        memcpy(&(m_internal_color_space.sAspects), aspects, sizeof(ColorAspects));
+        m_internal_color_space.bDataSpaceChanged = OMX_TRUE;
+
+        DEBUG_PRINT_HIGH("Initiating PORT Reconfig");
+        print_debug_color_aspects(&(m_internal_color_space.sAspects), "Internal");
+        print_debug_color_aspects(&(m_client_color_space.sAspects), "Client");
+
+        post_event(OMX_CORE_OUTPUT_PORT_INDEX,
+                OMX_QTIIndexConfigDescribeColorAspects,
+                OMX_COMPONENT_GENERATE_PORT_RECONFIG);
+    }
+}
+
+void omx_vdec::set_colorspace_in_handle(ColorSpace_t color_space, unsigned int buf_index) {
+    private_handle_t *private_handle = NULL;
+    if (buf_index < drv_ctx.op_buf.actualcount &&
+            buf_index < MAX_NUM_INPUT_OUTPUT_BUFFERS &&
+            native_buffer[buf_index].privatehandle) {
+        private_handle = native_buffer[buf_index].privatehandle;
+    }
+    if (private_handle) {
+        setMetaData(private_handle, UPDATE_COLOR_SPACE, (void*)&color_space);
+    }
+}
+
 void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
 {
     OMX_OTHER_EXTRADATATYPE *p_extra = NULL, *p_sei = NULL, *p_vui = NULL, *p_client_extra = NULL;
@@ -10227,7 +10589,7 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                 return;
             }
 
-            DEBUG_PRINT_LOW("handle_extradata: eType = %d", data->eType);
+            DEBUG_PRINT_LOW("handle_extradata: eType = 0x%x", data->eType);
             switch ((unsigned long)data->eType) {
                 case MSM_VIDC_EXTRADATA_INTERLACE_VIDEO:
                     struct msm_vidc_interlace_payload *payload;
@@ -10254,11 +10616,9 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                         switch (payload->color_format) {
                            case MSM_VIDC_HAL_INTERLACE_COLOR_FORMAT_NV12:
                                interlace_color_format = (int)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
-                               drv_ctx.output_format = VDEC_YUV_FORMAT_NV12;
                                break;
                            case MSM_VIDC_HAL_INTERLACE_COLOR_FORMAT_NV12_UBWC:
                                interlace_color_format = (int)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed;
-                               drv_ctx.output_format = VDEC_YUV_FORMAT_NV12_UBWC;
                                break;
                            default:
                                interlace_color_format = (int)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
@@ -10277,6 +10637,9 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                         if (interlace_color_format == QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m) {
                             setMetaData((private_handle_t *)native_buffer[buf_index].privatehandle,
                                LINEAR_FORMAT, (void*)&interlace_color_format);
+                        } else if (interlace_color_format == QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed) {
+                            setMetaData((private_handle_t *)native_buffer[buf_index].privatehandle,
+                               LINEAR_FORMAT, NULL);
                         }
                     }
                     if (client_extradata & OMX_INTERLACE_EXTRADATA) {
@@ -10355,12 +10718,10 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                     }
                     break;
                 case MSM_VIDC_EXTRADATA_MPEG2_SEQDISP:
-                    struct msm_vidc_mpeg2_seqdisp_payload *seqdisp_payload;
-                    seqdisp_payload = (struct msm_vidc_mpeg2_seqdisp_payload *)(void *)data->data;
-                    if (seqdisp_payload) {
-                        m_disp_hor_size = seqdisp_payload->disp_width;
-                        m_disp_vert_size = seqdisp_payload->disp_height;
-                    }
+                case MSM_VIDC_EXTRADATA_VUI_DISPLAY_INFO:
+                case MSM_VIDC_EXTRADATA_VC1_SEQDISP:
+                case MSM_VIDC_EXTRADATA_VPX_COLORSPACE_INFO:
+                        handle_color_space_info((void *)data->data, buf_index);
                     break;
                 case MSM_VIDC_EXTRADATA_S3D_FRAME_PACKING:
                     struct msm_vidc_s3d_frame_packing_payload *s3d_frame_packing_payload;
@@ -10616,6 +10977,33 @@ OMX_ERRORTYPE omx_vdec::enable_extradata(OMX_U32 requested_extradata,
             DEBUG_PRINT_LOW("Enable output crop extra data");
             if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
                 DEBUG_PRINT_HIGH("Failed to set output crop extradata");
+            }
+        }
+        if (requested_extradata & OMX_DISPLAY_INFO_EXTRADATA) {
+            control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
+            switch(output_capability) {
+                case V4L2_PIX_FMT_H264:
+                case V4L2_PIX_FMT_HEVC:
+                    control.value =  V4L2_MPEG_VIDC_EXTRADATA_VUI_DISPLAY;
+                    break;
+                case CODEC_TYPE_MPEG2:
+                    control.value =  V4L2_MPEG_VIDC_EXTRADATA_MPEG2_SEQDISP;
+                    break;
+                case V4L2_PIX_FMT_VP8:
+                case V4L2_PIX_FMT_VP9:
+                    control.value = V4L2_MPEG_VIDC_EXTRADATA_VPX_COLORSPACE;
+                    break;
+                case V4L2_PIX_FMT_VC1_ANNEX_G:
+                case V4L2_PIX_FMT_VC1_ANNEX_L:
+                    control.value = V4L2_MPEG_VIDC_EXTRADATA_VC1_SEQDISP;
+                    break;
+                default:
+                    DEBUG_PRINT_HIGH("Don't support Disp info for this codec : %s", drv_ctx.kind);
+                    return ret;
+            }
+
+            if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
+                DEBUG_PRINT_HIGH("Failed to set Display info extradata");
             }
         }
     }
@@ -11274,7 +11662,10 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
 {
     bool status = true;
     unsigned int src_size = 0, destination_size = 0;
+    unsigned int height, width;
+    struct v4l2_format fmt;
     OMX_COLOR_FORMATTYPE drv_color_format;
+
     if (!omx) {
         DEBUG_PRINT_ERROR("Invalid client in color convert");
         return false;
@@ -11285,8 +11676,15 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
     }
     pthread_mutex_lock(&omx->c_lock);
 
-    bool resolution_upgrade = (omx->drv_ctx.video_resolution.frame_height > m_c2d_height ||
-            omx->drv_ctx.video_resolution.frame_width > m_c2d_width);
+    memset(&fmt, 0x0, sizeof(struct v4l2_format));
+    fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+    fmt.fmt.pix_mp.pixelformat = omx->capture_capability;
+    ioctl(omx->drv_ctx.video_driver_fd, VIDIOC_G_FMT, &fmt);
+    width = fmt.fmt.pix_mp.width;
+    height =  fmt.fmt.pix_mp.height;
+
+    bool resolution_upgrade = (height > m_c2d_height ||
+            width > m_c2d_width);
     if (resolution_upgrade) {
         // resolution upgraded ? ensure we are yet to allocate;
         // failing which, c2d buffers will never be reallocated and bad things will happen
@@ -11305,8 +11703,8 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
         goto fail_update_buf_req;
     }
     c2d.close();
-    status = c2d.open(omx->drv_ctx.video_resolution.frame_height,
-            omx->drv_ctx.video_resolution.frame_width,
+    status = c2d.open(height,
+            width,
             NV12_128m,dest_format);
     if (status) {
         status = c2d.get_buffer_size(C2D_INPUT,src_size);
@@ -11327,8 +11725,8 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
             //  smaller than what C2D needs !!
         } else {
             buffer_size_req = destination_size;
-            m_c2d_height = omx->drv_ctx.video_resolution.frame_height;
-            m_c2d_width = omx->drv_ctx.video_resolution.frame_width;
+            m_c2d_height = height;
+            m_c2d_width = width;
         }
     }
 fail_update_buf_req:
