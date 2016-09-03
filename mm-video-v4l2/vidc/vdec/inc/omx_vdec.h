@@ -242,6 +242,14 @@ enum vidc_perf_level {
     VIDC_NOMINAL = 1,
     VIDC_TURBO = 2
 };
+
+enum turbo_mode {
+    TURBO_MODE_NONE = 0x0,
+    TURBO_MODE_CLIENT_REQUESTED = 0x1,
+    TURBO_MODE_HIGH_FPS = 0x2,
+    TURBO_MODE_MAX = 0xFF
+};
+
 #ifdef USE_ION
 struct vdec_ion {
     int ion_device_fd;
@@ -1009,7 +1017,7 @@ class omx_vdec: public qc_omx_component
         DescribeColorAspectsParams m_internal_color_space;
 
         OMX_U32 operating_frame_rate;
-        bool high_fps;
+        uint8_t m_need_turbo;
 
         OMX_U32 m_smoothstreaming_width;
         OMX_U32 m_smoothstreaming_height;
