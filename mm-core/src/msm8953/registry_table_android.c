@@ -512,6 +512,32 @@ omx_core_cb_type core[] =
     }
   },
   {
+    "OMX.qcom.audio.decoder.g711mlaw",
+    NULL,   // Create instance function
+    // Unique instance handle
+    {
+      NULL
+    },
+    NULL,   // Shared object library handle
+    "libOmxG711Dec.so",
+    {
+      "audio_decoder.g711"
+    }
+  },
+  {
+    "OMX.qcom.audio.decoder.g711alaw",
+    NULL,   // Create instance function
+    // Unique instance handle
+    {
+      NULL
+    },
+    NULL,   // Shared object library handle
+    "libOmxG711Dec.so",
+    {
+      "audio_decoder.g711"
+    }
+  },
+  {
     "OMX.qti.audio.decoder.alac.sw",
     NULL,   // Create instance function
     // Unique instance handle
