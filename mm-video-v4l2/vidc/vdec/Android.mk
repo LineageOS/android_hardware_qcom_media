@@ -162,53 +162,6 @@ LOCAL_CLANG_CFLAGS      += -Wno-pointer-bool-conversion
 include $(BUILD_SHARED_LIBRARY)
 
 
-# ---------------------------------------------------------------------------------
-# 			Make the Shared library (libOmxVdecHevc)
-# ---------------------------------------------------------------------------------
-
-include $(CLEAR_VARS)
-LOCAL_PATH:= $(ROOT_DIR)
-
-# libOmxVdecHevc library is not built for OSS builds as QCPATH is null in OSS builds.
-
-ifneq "$(wildcard $(QCPATH) )" ""
-ifeq ($(call is-board-platform-in-list,msm8974 msm8610 apq8084 mpq8092 msm8226),true)
-
-LOCAL_MODULE                    := libOmxVdecHevc
-LOCAL_MODULE_TAGS               := optional
-LOCAL_VENDOR_MODULE             := true
-LOCAL_CFLAGS                    := $(libOmxVdec-def)
-LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
-
-LOCAL_HEADER_LIBRARIES := generated_kernel_headers
-
-LOCAL_PRELINK_MODULE    := false
-LOCAL_SHARED_LIBRARIES  := liblog libutils libbinder libcutils libdl
-
-LOCAL_SHARED_LIBRARIES  += libqdMetaData
-
-LOCAL_SRC_FILES         := src/frameparser.cpp
-LOCAL_SRC_FILES         += src/h264_utils.cpp
-LOCAL_SRC_FILES         += src/ts_parser.cpp
-LOCAL_SRC_FILES         += src/mp4_utils.cpp
-
-ifeq ($(call is-board-platform-in-list,msm8974 msm8226),true)
-LOCAL_SHARED_LIBRARIES  += libHevcSwDecoder
-LOCAL_SRC_FILES         += src/omx_vdec_hevc_swvdec.cpp
-else
-LOCAL_SRC_FILES         += src/omx_vdec_hevc.cpp
-endif
-
-LOCAL_SRC_FILES         += src/hevc_utils.cpp
-
-LOCAL_SRC_FILES         += ../common/src/extra_data_handler.cpp
-LOCAL_SRC_FILES         += ../common/src/vidc_color_converter.cpp
-
-include $(BUILD_SHARED_LIBRARY)
-
-endif
-endif
-
 endif #BUILD_TINY_ANDROID
 
 # ---------------------------------------------------------------------------------
