@@ -7893,7 +7893,9 @@ void venc_dev::venc_try_enable_pq(void)
 
     codec_supported = m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264;
 
-    rc_mode_supported = rate_ctrl.rcmode == V4L2_CID_MPEG_VIDC_VIDEO_RATE_CONTROL_VBR_CFR;
+    rc_mode_supported = (rate_ctrl.rcmode == V4L2_CID_MPEG_VIDC_VIDEO_RATE_CONTROL_VBR_CFR) ||
+        (rate_ctrl.rcmode == V4L2_CID_MPEG_VIDC_VIDEO_RATE_CONTROL_MBR_CFR) ||
+        (rate_ctrl.rcmode == V4L2_CID_MPEG_VIDC_VIDEO_RATE_CONTROL_MBR_VFR);
 
     resolution_supported = m_sVenc_cfg.input_height * m_sVenc_cfg.input_width <=
         m_pq.caps.max_width * m_pq.caps.max_height;
