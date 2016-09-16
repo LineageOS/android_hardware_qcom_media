@@ -50,6 +50,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <qdMetaData.h>
 
+#define YUV_STATS_LIBRARY_NAME "libgpustats.so" // UBWC case: use GPU library
+
 #define ALIGN(x, to_align) ((((unsigned long) x) + (to_align - 1)) & ~(to_align - 1))
 #define EXTRADATA_IDX(__num_planes) ((__num_planes) ? (__num_planes) - 1 : 0)
 #define MAXDPB 16
@@ -353,11 +355,6 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     } else {
         is_pq_force_disable = 0;
     }
-    #ifdef _UBWC_
-        #define YUV_STATS_LIBRARY_NAME "libgpustats.so" // UBWC case: use GPU library
-    #else // _UBWC_
-        // Non UBWC case. May be CPU
-    #endif // _UBWC_
 #endif // _PQ_
 
     snprintf(m_debug.log_loc, PROPERTY_VALUE_MAX,
