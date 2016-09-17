@@ -27,7 +27,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --------------------------------------------------------------------------*/
 #include "omx_video_encoder.h"
 #include <string.h>
-#include "video_encoder_device.h"
 #include <stdio.h>
 #ifdef _ANDROID_ICS_
 #include <media/hardware/HardwareAPI.h>
