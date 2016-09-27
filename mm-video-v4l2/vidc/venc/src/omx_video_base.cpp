@@ -47,11 +47,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/prctl.h>
+#include <sys/ioctl.h>
 #ifdef _ANDROID_ICS_
 #include <media/hardware/HardwareAPI.h>
 #include <gralloc_priv.h>
 #endif
-#ifndef _ANDROID_
+#ifdef _USE_GLIB_
 #include <glib.h>
 #define strlcpy g_strlcpy
 #endif
