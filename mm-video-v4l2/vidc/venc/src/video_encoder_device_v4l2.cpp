@@ -2706,12 +2706,6 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                     DEBUG_PRINT_ERROR("ERROR: Rotation is not supported with deinterlacing");
                     return false;
                 }
-                if (config_rotation->nRotation == 90 || config_rotation->nRotation == 270) {
-                    DEBUG_PRINT_HIGH("venc_set_config: updating the new Dims");
-                    nFrameWidth = m_sVenc_cfg.dvs_width;
-                    m_sVenc_cfg.dvs_width  = m_sVenc_cfg.dvs_height;
-                    m_sVenc_cfg.dvs_height = nFrameWidth;
-                }
                 if(venc_set_vpe_rotation(config_rotation->nRotation) == false) {
                     DEBUG_PRINT_ERROR("ERROR: Dimension Change for Rotation failed");
                     return false;
