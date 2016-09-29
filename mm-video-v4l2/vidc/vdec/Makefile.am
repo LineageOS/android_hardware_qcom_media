@@ -22,6 +22,12 @@ AM_CPPFLAGS += -Wno-parentheses
 AM_CPPFLAGS += -D_ANDROID_ICS_
 AM_CPPFLAGS += -D_MSM8974_
 AM_CPPFLAGS += -DPROCESS_EXTRADATA_IN_OUTPUT_PORT
+
+#Hypervisor
+if TARGET_HYPERVISOR
+AM_CPPFLAGS += -D_HYPERVISOR_
+endif
+
 AM_CPPFLAGS += -DMAX_RES_1080P
 AM_CPPFLAGS += -DMAX_RES_1080P_EBI
 #AM_CPPFLAGS += "-include stdint.h"
@@ -66,6 +72,8 @@ c_sources         += src/hevc_utils.cpp
 c_sources         += src/omx_vdec_v4l2.cpp
 c_sources += $(top_srcdir)/mm-video-v4l2/vidc/common/src/extra_data_handler.cpp
 c_sources += $(top_srcdir)/mm-video-v4l2/vidc/common/src/vidc_color_converter.cpp
+#Hypervisor
+c_sources += ../common/src/hypv_intercept.cpp
 
 lib_LTLIBRARIES = libOmxVdec.la
 libOmxVdec_la_SOURCES = $(c_sources)

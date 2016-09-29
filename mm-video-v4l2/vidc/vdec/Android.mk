@@ -108,6 +108,10 @@ else ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_MAX_H264_LEV
 libmm-vdec-def += -DMAX_H264_LEVEL_52
 endif
 
+# Hypervisor
+ifneq (,$(filter $(MACHINE), "8x96quinhyp" "8x96redhyp"))
+libmm-vdec-def += -D_HYPERVISOR_
+endif
 # ---------------------------------------------------------------------------------
 # 			Make the Shared library (libOmxVdec)
 # ---------------------------------------------------------------------------------
@@ -133,6 +137,7 @@ LOCAL_SRC_FILES         += src/mp4_utils.cpp
 LOCAL_SRC_FILES         += src/hevc_utils.cpp
 LOCAL_STATIC_LIBRARIES  := libOmxVidcCommon
 LOCAL_SRC_FILES         += src/omx_vdec_v4l2.cpp
+LOCAL_SRC_FILES         += ../common/src/hypv_intercept.cpp
 
 include $(BUILD_SHARED_LIBRARY)
 
