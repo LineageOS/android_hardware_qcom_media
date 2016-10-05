@@ -1344,6 +1344,7 @@ typedef struct OMX_QCOM_EXTRADATA_FRAMEINFO
    OMX_QCOM_ASPECT_RATIO  aspectRatio;
    OMX_QCOM_DISPLAY_ASPECT_RATIO displayAspectRatio;
    OMX_U32                nConcealedMacroblocks;
+   OMX_U32                nRecoverySeiFlag;
    OMX_U32                nFrameRate;
    OMX_TICKS              nTimeStamp;
 } OMX_QCOM_EXTRADATA_FRAMEINFO;
@@ -1461,6 +1462,26 @@ typedef enum OMX_INTERLACETYPE
    OMX_InterlaceFrameBottomFieldFirst
 } OMX_INTERLACES;
 
+typedef enum QOMX_VIDEO_RECOVERYSEITYPE {
+/*
+ * 0: Frame reconstruction is incorrect
+ *   a) Open Gop, frames before recovery point SEI
+ * 1: Frame reconstruction is correct.
+ *   a) Closed Gop, When decoding starts from the top of closed GOP at IDR
+ *   b) Open Gop, Output at and subsequent to recovery point SEI with
+ *      exact_match_flag = true
+ * 2: Frame reconstruction is approximately correct:
+ *   a) Closed Gop, When decoding starts from a P/B/I frames wihtout
+ *      any recovery point SEI information
+ *   b) Open Gop, Output at and subsequent to recovery point SEI with
+ *      exact_match_flag = false
+ * In case flag is set to 0 or 2, DATACORRUPT shall be enabled
+ * for buffer (nFlags) in FILL_BUFFER_DONE
+ */
+    OMX_FRAME_RECONSTRUCTION_INCORRECT = 0,
+    OMX_FRAME_RECONSTRUCTION_CORRECT = 1,
+    OMX_FRAME_RECONSTRUCTION_APPROXIMATELY_CORRECT = 2
+} QOMX_VIDEO_RECOVERYSEI;
 
 #define OMX_EXTRADATA_HEADER_SIZE 20
 

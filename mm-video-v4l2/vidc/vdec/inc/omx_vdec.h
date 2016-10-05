@@ -719,6 +719,7 @@ class omx_vdec: public qc_omx_component
                 bool enable = true);
         void append_frame_info_extradata(OMX_OTHER_EXTRADATATYPE *extra,
                 OMX_U32 num_conceal_mb,
+                OMX_U32 recovery_sei_flag,
                 OMX_U32 picture_type,
                 OMX_U32 frame_rate,
                 OMX_TICKS time_stamp,
@@ -731,6 +732,7 @@ class omx_vdec: public qc_omx_component
 #endif
         void append_frame_info_extradata(OMX_OTHER_EXTRADATATYPE *extra,
                 OMX_U32 num_conceal_mb,
+                OMX_U32 recovery_sei_flag,
                 OMX_U32 picture_type,
                 OMX_S64 timestamp,
                 OMX_U32 frame_rate,

@@ -11231,13 +11231,13 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
         if (client_extradata & OMX_FRAMEINFO_EXTRADATA) {
             p_buf_hdr->nFlags |= OMX_BUFFERFLAG_EXTRADATA;
             append_frame_info_extradata(p_extra,
-                    num_conceal_MB, ((struct vdec_output_frameinfo *)p_buf_hdr->pOutputPortPrivate)->pic_type, frame_rate,
+                    num_conceal_MB, recovery_sei_flags, ((struct vdec_output_frameinfo *)p_buf_hdr->pOutputPortPrivate)->pic_type, frame_rate,
                     time_stamp, panscan_payload,&((struct vdec_output_frameinfo *)
                         p_buf_hdr->pOutputPortPrivate)->aspect_ratio_info);
             p_extra = (OMX_OTHER_EXTRADATATYPE *) (((OMX_U8 *) p_extra) + ALIGN(p_extra->nSize, 4));
             if (p_client_extra) {
                 append_frame_info_extradata(p_client_extra,
-                        num_conceal_MB, ((struct vdec_output_frameinfo *)p_buf_hdr->pOutputPortPrivate)->pic_type, frame_rate,
+                        num_conceal_MB, recovery_sei_flags, ((struct vdec_output_frameinfo *)p_buf_hdr->pOutputPortPrivate)->pic_type, frame_rate,
                         time_stamp, panscan_payload,&((struct vdec_output_frameinfo *)
                             p_buf_hdr->pOutputPortPrivate)->aspect_ratio_info);
                 p_client_extra = (OMX_OTHER_EXTRADATATYPE *) (((OMX_U8 *) p_client_extra) + ALIGN(p_client_extra->nSize, 4));
@@ -11513,6 +11513,7 @@ void omx_vdec::print_debug_extradata(OMX_OTHER_EXTRADATATYPE *extra)
                 "           Interlace Type: %d\n"
                 " Pan Scan Total Frame Num: %u\n"
                 "   Concealed Macro Blocks: %u\n"
+                "        Recovery SEI Flag: %u\n"
                 "               frame rate: %u\n"
                 "               Time Stamp: %llu\n"
                 "           Aspect Ratio X: %u\n"
@@ -11521,6 +11522,7 @@ void omx_vdec::print_debug_extradata(OMX_OTHER_EXTRADATATYPE *extra)
                 fminfo->interlaceType,
                 (unsigned int)fminfo->panScan.numWindows,
                 (unsigned int)fminfo->nConcealedMacroblocks,
+                (unsigned int)fminfo->nRecoverySeiFlag,
                 (unsigned int)fminfo->nFrameRate,
                 fminfo->nTimeStamp,
                 (unsigned int)fminfo->aspectRatio.aspectRatioX,
@@ -11700,7 +11702,7 @@ void omx_vdec::fill_aspect_ratio_info(
 }
 
 void omx_vdec::append_frame_info_extradata(OMX_OTHER_EXTRADATATYPE *extra,
-        OMX_U32 num_conceal_mb, OMX_U32 picture_type, OMX_U32 frame_rate,
+        OMX_U32 num_conceal_mb, OMX_U32 recovery_sei_flag, OMX_U32 picture_type, OMX_U32 frame_rate,
         OMX_TICKS time_stamp, struct msm_vidc_panscan_window_payload *panscan_payload,
         struct vdec_aspectratioinfo *aspect_ratio_info)
 {
@@ -11736,6 +11738,7 @@ void omx_vdec::append_frame_info_extradata(OMX_OTHER_EXTRADATATYPE *extra,
         frame_info->interlaceType = OMX_QCOM_InterlaceFrameProgressive;
     memset(&frame_info->aspectRatio, 0, sizeof(frame_info->aspectRatio));
     frame_info->nConcealedMacroblocks = num_conceal_mb;
+    frame_info->nRecoverySeiFlag = recovery_sei_flag;
     frame_info->nFrameRate = frame_rate;
     frame_info->nTimeStamp = time_stamp;
     frame_info->panScan.numWindows = 0;
