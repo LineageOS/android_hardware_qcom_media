@@ -4936,11 +4936,9 @@ bool venc_dev::venc_set_profile_level(OMX_U32 eProfile,OMX_U32 eLevel)
                     requested_level.level = V4L2_MPEG_VIDEO_MPEG4_LEVEL_4;
                     break;
                 case OMX_VIDEO_MPEG4Level5:
+                case OMX_VIDEO_MPEG4LevelMax:
+                default: //Set max level possible as default so that invalid levels are non-fatal
                     requested_level.level = V4L2_MPEG_VIDEO_MPEG4_LEVEL_5;
-                    break;
-                default:
-                    return false;
-                    // TODO update corresponding levels for MPEG4_LEVEL_3b,MPEG4_LEVEL_6
                     break;
             }
         }
@@ -5004,10 +5002,9 @@ bool venc_dev::venc_set_profile_level(OMX_U32 eProfile,OMX_U32 eLevel)
                 requested_level.level = V4L2_MPEG_VIDC_VIDEO_H263_LEVEL_6_0;
                 break;
             case OMX_VIDEO_H263Level70:
+            case OMX_VIDEO_H263LevelMax:
+            default: //Set max level possible as default so that invalid levels are non-fatal
                 requested_level.level = V4L2_MPEG_VIDC_VIDEO_H263_LEVEL_7_0;
-                break;
-            default:
-                return false;
                 break;
         }
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264) {
@@ -5086,15 +5083,9 @@ bool venc_dev::venc_set_profile_level(OMX_U32 eProfile,OMX_U32 eLevel)
                 requested_level.level = V4L2_MPEG_VIDEO_H264_LEVEL_5_1;
                 break;
             case OMX_VIDEO_AVCLevel52:
-                requested_level.level = V4L2_MPEG_VIDEO_H264_LEVEL_5_2;
-                break;
             case OMX_VIDEO_AVCLevelMax:
+            default: //Set max level possible as default so that invalid levels are non-fatal
                 requested_level.level = V4L2_MPEG_VIDEO_H264_LEVEL_5_2;
-                break;
-            default :
-                DEBUG_PRINT_ERROR("ERROR: Unsupported H.264 level= %lu",
-                        requested_level.level);
-                return false;
                 break;
         }
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8) {
@@ -5110,12 +5101,9 @@ bool venc_dev::venc_set_profile_level(OMX_U32 eProfile,OMX_U32 eLevel)
                 requested_level.level = V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_0;
                 break;
             case OMX_VIDEO_VP8Level_Version1:
+            case OMX_VIDEO_VP8LevelMax:
+            default: //Set max level possible as default so that invalid levels are non-fatal
                 requested_level.level = V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_1;
-                break;
-            default:
-                DEBUG_PRINT_ERROR("ERROR: Unsupported VP8 level= %u",
-                            (unsigned int)eLevel);
-                return false;
                 break;
         }
     }  else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
@@ -5201,12 +5189,10 @@ bool venc_dev::venc_set_profile_level(OMX_U32 eProfile,OMX_U32 eLevel)
                 requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_6_1;
                 break;
             case OMX_VIDEO_HEVCHighTierLevel61:
+            case OMX_VIDEO_HEVCLevelMax:
+            default: //Set max level possible as default so that invalid levels are non-fatal
                 requested_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_6_1;
                 break;
-            default :
-                DEBUG_PRINT_ERROR("ERROR: Unsupported HEVC level= %lu",
-                        requested_level.level);
-                return false;
         }
     }
 
