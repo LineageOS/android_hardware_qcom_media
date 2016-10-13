@@ -1501,7 +1501,7 @@ bool venc_dev::venc_open(OMX_U32 codec)
     }
 
 #ifdef _PQ_
-    if (codec == OMX_VIDEO_CodingAVC) {
+    if (codec == OMX_VIDEO_CodingAVC && !is_pq_force_disable) {
         m_pq.init(V4L2_DEFAULT_OUTPUT_COLOR_FMT);
         m_pq.get_caps();
     }
@@ -4051,10 +4051,10 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
     }
 
 #ifdef _PQ_
-    if (!streaming[OUTPUT_PORT]) {
+    if (!streaming[OUTPUT_PORT] && !is_pq_force_disable) {
         /*
          * This is the place where all parameters for deciding
-         * PQ enablement are aailable. Evaluate PQ for the final time.
+         * PQ enablement are available. Evaluate PQ for the final time.
          */
         m_pq.is_YUV_format_uncertain = false;
         m_pq.reinit(m_sVenc_cfg.inputformat);
@@ -4212,7 +4212,7 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
             }
 
 #ifdef _PQ_
-            if (!streaming[OUTPUT_PORT]) {
+            if (!streaming[OUTPUT_PORT] && !is_pq_force_disable) {
                 m_pq.is_YUV_format_uncertain = false;
                 m_pq.reinit(m_sVenc_cfg.inputformat);
                 venc_try_enable_pq();
@@ -7939,19 +7939,21 @@ void venc_dev::venc_try_enable_pq(void)
             is_pq_force_disable, codec_supported, rc_mode_supported, resolution_supported, frame_rate_supported, yuv_format_supported,
             is_non_secure_session, is_pq_handle_valid, is_non_vpe_session, enable);
 
-    venc_set_extradata(OMX_ExtraDataEncoderOverrideQPInfo, (OMX_BOOL)enable);
-    extradata |= enable;
-
-    m_pq.pConfig.algo = ADAPTIVE_QP;
-    m_pq.pConfig.height = m_sVenc_cfg.input_height;
-    m_pq.pConfig.width = m_sVenc_cfg.input_width;
-    m_pq.pConfig.mb_height = 16;
-    m_pq.pConfig.mb_width = 16;
-    m_pq.pConfig.a_qp.pq_enabled = enable;
-    m_pq.pConfig.stride = VENUS_Y_STRIDE(COLOR_FMT_NV12, m_sVenc_cfg.input_width);
-    m_pq.configure();
     m_pq.is_pq_enabled = enable;
 
+    if (enable) {
+        venc_set_extradata(OMX_ExtraDataEncoderOverrideQPInfo, (OMX_BOOL)enable);
+        extradata |= enable;
+
+        m_pq.pConfig.algo = ADAPTIVE_QP;
+        m_pq.pConfig.height = m_sVenc_cfg.input_height;
+        m_pq.pConfig.width = m_sVenc_cfg.input_width;
+        m_pq.pConfig.mb_height = 16;
+        m_pq.pConfig.mb_width = 16;
+        m_pq.pConfig.a_qp.pq_enabled = enable;
+        m_pq.pConfig.stride = VENUS_Y_STRIDE(COLOR_FMT_NV12, m_sVenc_cfg.input_width);
+        m_pq.configure();
+    }
     return;
 }
 
@@ -8062,14 +8064,12 @@ bool venc_dev::venc_dev_pq::reinit(unsigned long format)
 {
     bool status = false;
 
-    if (configured_format != format) {
+    if ((configured_format != format) && (is_color_format_supported(format))) {
         DEBUG_PRINT_HIGH("New format (%lu) is different from configure format (%lu);"
                                 " reinitializing PQ lib", format, configured_format);
         deinit();
-        if (is_color_format_supported(format)) {
-            status = init(format);
-            get_caps();
-        }
+        status = init(format);
+        get_caps();
     } else {
         // ignore if new format is same as configured
     }
