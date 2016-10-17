@@ -2773,9 +2773,13 @@ OMX_ERRORTYPE  omx_vdec::send_command_proxy(OMX_IN OMX_HANDLETYPE hComp,
             if (eState == OMX_StateLoaded) {
                 if (release_done()) {
                     /*
-                       Since error is None , we will post an event at the end
-                       of this function definition
+                     * Since error is None , we will post an event at the end
+                     * of this function definition
+                     * Reset buffer requirements here to ensure setting buffer requirement
+                     * when component move to executing state from loaded state via Idle.
                      */
+                    drv_ctx.op_buf.buffer_size = 0;
+                    drv_ctx.op_buf.actualcount = 0;
                     DEBUG_PRINT_LOW("send_command_proxy(): Idle-->Loaded");
                 } else {
                     DEBUG_PRINT_LOW("send_command_proxy(): Idle-->Loaded-Pending");
@@ -7042,6 +7046,13 @@ OMX_ERRORTYPE  omx_vdec::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
     if ((eRet == OMX_ErrorNone) &&
             (BITMASK_PRESENT(&m_flags ,OMX_COMPONENT_LOADING_PENDING))) {
         if (release_done()) {
+            /*
+             * Reset buffer requirements here to ensure setting buffer requirement
+             * when component move to executing state from loaded state via idle.
+             */
+            drv_ctx.op_buf.buffer_size = 0;
+            drv_ctx.op_buf.actualcount = 0;
+
             // Send the callback now
             BITMASK_CLEAR((&m_flags),OMX_COMPONENT_LOADING_PENDING);
             post_event(OMX_CommandStateSet, OMX_StateLoaded,
