@@ -34,6 +34,24 @@
       "revId": "e2c116ac6f9e627cf967fabe2e9a86025f3cf230",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ff2e2bb8_53c20287",
+        "filename": "mm-video-v4l2/vidc/venc/src/video_encoder_device_v4l2.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 2439,
+      "author": {
+        "id": 9509
+      },
+      "writtenOn": "2016-10-17T16:17:44Z",
+      "side": 1,
+      "message": "Makes sense. I\u0027ve been so itching to get video cam going on bacon that I jumped on what I could find :)",
+      "parentUuid": "ff2e2bb8_d3d61250",
+      "revId": "e2c116ac6f9e627cf967fabe2e9a86025f3cf230",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
