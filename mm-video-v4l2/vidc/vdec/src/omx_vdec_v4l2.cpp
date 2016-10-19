@@ -237,6 +237,14 @@ void* async_message_thread (void *input)
                     omx->m_progressive = ptr[4];
                     DEBUG_PRINT_HIGH("VIDC Port Reconfig PicStruct change - %d", ptr[4]);
                 }
+                if(ptr[2] & V4L2_EVENT_COLOUR_SPACE_FLAG) {
+                    if (ptr[5] == MSM_VIDC_BT2020) {
+                        omx->m_color_space = omx_vdec::BT2020;
+                    } else {
+                        omx->m_color_space = omx_vdec::EXCEPT_BT2020;
+                    }
+                    DEBUG_PRINT_HIGH("VIDC Port Reconfig ColorSpace change - %d", omx->m_color_space);
+                }
                 if (omx->async_message_process(input,&vdec_msg) < 0) {
                     DEBUG_PRINT_HIGH("async_message_thread Exited");
                     break;
@@ -828,7 +836,17 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_internal_hdr_info.nPortIndex = (OMX_U32)OMX_CORE_OUTPUT_PORT_INDEX;
     m_change_client_hdr_info = false;
     pthread_mutex_init(&m_hdr_info_client_lock, NULL);
-    m_dither_config = is_platform_tp10capture_supported() ? DITHER_DISABLE : DITHER_ALL_COLORSPACE;
+
+    char dither_value[PROPERTY_VALUE_MAX] = {0};
+    property_get("vidc.dec.dither", dither_value, "0");
+    if ((atoi(dither_value) > DITHER_ALL_COLORSPACE) ||
+        (atoi(dither_value) < DITHER_DISABLE)) {
+        m_dither_config = DITHER_ALL_COLORSPACE;
+    } else {
+        m_dither_config = is_platform_tp10capture_supported() ? (dither_type)atoi(dither_value) : DITHER_ALL_COLORSPACE;
+    }
+
+    DEBUG_PRINT_HIGH("Dither config is %d", m_dither_config);
     m_color_space = EXCEPT_BT2020;
 }
 
@@ -3925,6 +3943,16 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             eRet = OMX_ErrorNone;
             break;
         }
+        case OMX_QTIIndexParamDitherControl:
+        {
+            VALIDATE_OMX_PARAM_DATA(paramData, QOMX_VIDEO_DITHER_CONTROL);
+            DEBUG_PRINT_LOW("get_parameter: QOMX_VIDEO_DITHER_CONTROL");
+            QOMX_VIDEO_DITHER_CONTROL *pParam =
+                (QOMX_VIDEO_DITHER_CONTROL *) paramData;
+            pParam->eDitherType = (QOMX_VIDEO_DITHERTYPE) m_dither_config;
+            eRet = OMX_ErrorNone;
+            break;
+        }
         default: {
                  DEBUG_PRINT_ERROR("get_parameter: unknown param %08x", paramIndex);
                  eRet =OMX_ErrorUnsupportedIndex;
@@ -5107,7 +5135,22 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             }
             break;
         }
-
+        case OMX_QTIIndexParamDitherControl:
+        {
+            VALIDATE_OMX_PARAM_DATA(paramData, QOMX_VIDEO_DITHER_CONTROL);
+            DEBUG_PRINT_LOW("set_parameter: OMX_QTIIndexParamDitherControl");
+            QOMX_VIDEO_DITHER_CONTROL *pParam = (QOMX_VIDEO_DITHER_CONTROL *)paramData;
+            DEBUG_PRINT_LOW("set_parameter: Dither Config from client is: %d", pParam->eDitherType);
+            if (( pParam->eDitherType < QOMX_DITHER_DISABLE ) ||
+                ( pParam->eDitherType > QOMX_DITHER_ALL_COLORSPACE)) {
+                DEBUG_PRINT_ERROR("set_parameter: DitherType outside the range");
+                eRet = OMX_ErrorBadParameter;
+                break;
+            }
+            m_dither_config = is_platform_tp10capture_supported() ? (dither_type)pParam->eDitherType : DITHER_ALL_COLORSPACE;
+            DEBUG_PRINT_LOW("set_parameter: Final Dither Config is: %d", m_dither_config);
+            break;
+        }
         default: {
                  DEBUG_PRINT_ERROR("Setparameter: unknown param %d", paramIndex);
                  eRet = OMX_ErrorUnsupportedIndex;
