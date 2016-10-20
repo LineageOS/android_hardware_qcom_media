@@ -4317,9 +4317,14 @@ bool venc_dev::venc_fill_buf(void *buffer, void *pmem_data_buf,unsigned index,un
     buf.flags = 0;
 
     if (venc_handle->is_secure_session()) {
-        output_metabuffer *meta_buf = (output_metabuffer *)(bufhdr->pBuffer);
-        native_handle_t *handle_t = meta_buf->nh;
-        plane[0].length = handle_t->data[3];
+        if (venc_handle->allocate_native_handle) {
+            native_handle_t *handle_t = (native_handle_t *)(bufhdr->pBuffer);
+            plane[0].length = handle_t->data[3];
+        } else {
+            output_metabuffer *meta_buf = (output_metabuffer *)(bufhdr->pBuffer);
+            native_handle_t *handle_t = meta_buf->nh;
+            plane[0].length = handle_t->data[3];
+        }
     }
 
     if (mBatchSize) {
