@@ -1889,10 +1889,6 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                         if(hier_b_enabled && m_state == OMX_StateLoaded) {
                             DEBUG_PRINT_INFO("B-frames setting is supported if HierB is enabled");
                         }
-                        else {
-                            DEBUG_PRINT_HIGH("Dynamically changing B-frames not supported");
-                            return OMX_ErrorUnsupportedSetting;
-                        }
                     }
                     if (handle->venc_set_config(configData, (OMX_INDEXTYPE) QOMX_IndexConfigVideoIntraperiod) != true) {
                         DEBUG_PRINT_ERROR("ERROR: Setting QOMX_IndexConfigVideoIntraperiod failed");
