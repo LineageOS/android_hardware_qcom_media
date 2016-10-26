@@ -628,6 +628,9 @@ enum OMX_QCOM_EXTN_INDEXTYPE
 
     /*"OMX.google.android.index.describeHDRStaticInfo"*/
     OMX_QTIIndexConfigDescribeHDRColorInfo = 0x7F000067,
+
+    /* Configure to disable PQ*/
+    OMX_QTIIndexParamDisablePQ = 0x7F000068,
 };
 
 /**
@@ -1649,6 +1652,12 @@ typedef struct QOMX_ENABLETYPE {
     OMX_VERSIONTYPE nVersion;
     OMX_BOOL bEnable;
 } QOMX_ENABLETYPE;
+
+typedef struct QOMX_DISABLETYPE {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_BOOL bDisable;
+} QOMX_DISABLETYPE;
 
 typedef enum QOMX_VIDEO_EVENTS {
     OMX_EventIndexsettingChanged = OMX_EventVendorStartUnused
