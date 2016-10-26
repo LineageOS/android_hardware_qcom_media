@@ -49,6 +49,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstddef>
 #include <cutils/atomic.h>
 #include <qdMetaData.h>
+#include <color_metadata.h>
 
 static ptrdiff_t x;
 
@@ -691,13 +692,21 @@ class omx_vdec: public qc_omx_component
         void convert_color_space_info(OMX_U32 primaries, OMX_U32 range,
             OMX_U32 transfer, OMX_U32 matrix, ColorSpace_t *color_space,
             ColorAspects *aspects);
-        bool handle_color_space_info(void *data, unsigned int buf_index);
+        bool handle_color_space_info(void *data,
+                                     ColorSpace_t *color_space,
+                                     ColorMetaData* color_mdata,
+                                     bool& set_color_aspects_only);
         void set_colorspace_in_handle(ColorSpace_t color, unsigned int buf_index);
         void print_debug_color_aspects(ColorAspects *aspects, const char *prefix);
         void print_debug_hdr_color_info(HDRStaticInfo *hdr_info, const char *prefix);
-        bool handle_content_light_level_info(void* data);
-        bool handle_mastering_display_color_info(void* data);
+        void print_debug_hdr_color_info_mdata(ColorMetaData* color_mdata);
+        bool handle_content_light_level_info(void* data, ContentLightLevel* light_level_mdata);
+        bool handle_mastering_display_color_info(void* data, MasteringDisplay* mastering_display_mdata);
         void print_debug_extradata(OMX_OTHER_EXTRADATATYPE *extra);
+        void set_colormetadata_in_handle(ColorMetaData *color_mdata, unsigned int buf_index);
+        void prepare_color_aspects_metadata(OMX_U32 primaries, OMX_U32 range,
+                                            OMX_U32 transfer, OMX_U32 matrix,
+                                            ColorMetaData *color_mdata);
 #ifdef _MSM8974_
         void append_interlace_extradata(OMX_OTHER_EXTRADATATYPE *extra,
                 OMX_U32 interlaced_format_type);
@@ -1025,6 +1034,7 @@ class omx_vdec: public qc_omx_component
         DescribeHDRStaticInfoParams m_internal_hdr_info;
         bool m_change_client_hdr_info;
         pthread_mutex_t m_hdr_info_client_lock;
+        ColorMetaData m_color_mdata;
 
         OMX_U32 operating_frame_rate;
         uint8_t m_need_turbo;
