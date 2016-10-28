@@ -31,6 +31,11 @@ AC_ARG_ENABLE([target-msm8953],
                 [Enable conditional compile for target msm8953 [default=no]]),
         [target_msm8953="${enableval}"])
 
+AC_ARG_ENABLE([target-msm8996],
+        AC_HELP_STRING([--enable-target-msm8996],
+                [Enable conditional compile for target msm8996 [default=no]]),
+        [target_msm8996="${enableval}"])
+
 AC_ARG_ENABLE([target-msm8610],
         AC_HELP_STRING([--enable-target-msm8610],
                 [Enable conditional compile for target msm8610 [default=no]]),
@@ -133,6 +138,7 @@ AC_ARG_WITH([glib-lib-dir],
         [CPPFLAGS="$CPPFLAGS -I$withval"])
 
 AM_CONDITIONAL(TARGET_MSM8953, [test "x$target_msm8953" = "xyes"])
+AM_CONDITIONAL(TARGET_MSM8996, [test "x$target_msm8996" = "xyes"])
 AM_CONDITIONAL(TARGET_MSM8610, [test "x$target_msm8610" = "xyes"])
 AM_CONDITIONAL(TARGET_MSM8226, [test "x$target_msm8226" = "xyes"])
 AM_CONDITIONAL(TARGETS_THAT_SUPPORT_UBWC, [test "x$targets_that_support_ubwc" = "xyes"])

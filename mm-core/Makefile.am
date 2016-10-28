@@ -50,6 +50,10 @@ if TARGET_MSM8953
 TARGET_REGISTRY = msm8953
 endif
 
+if TARGET_MSM8996
+TARGET_REGISTRY = msm8996
+endif
+
 c_sources +=src/${TARGET_REGISTRY}/registry_table_android.c
 
 lib_LTLIBRARIES = libOmxCore.la
