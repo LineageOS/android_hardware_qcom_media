@@ -1792,11 +1792,12 @@ int omx_vdec::update_resolution(int width, int height, int stride, int scan_line
     drv_ctx.video_resolution.frame_width = width;
     drv_ctx.video_resolution.scan_lines = scan_lines;
     drv_ctx.video_resolution.stride = stride;
-    if(!is_down_scalar_enabled) {
-        rectangle.nLeft = 0;
-        rectangle.nTop = 0;
-        rectangle.nWidth = drv_ctx.video_resolution.frame_width;
-        rectangle.nHeight = drv_ctx.video_resolution.frame_height;
+
+    if (!is_down_scalar_enabled) {
+        rectangle.nLeft = m_extradata_info.output_crop_rect.nLeft;
+        rectangle.nTop = m_extradata_info.output_crop_rect.nTop;
+        rectangle.nWidth = m_extradata_info.output_crop_rect.nWidth;
+        rectangle.nHeight = m_extradata_info.output_crop_rect.nHeight;
     }
     return format_changed;
 }
@@ -2376,7 +2377,12 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
                     fdesc.pixelformat, fdesc.flags);
             fdesc.index++;
         }
+        m_extradata_info.output_crop_rect.nLeft = 0;
+        m_extradata_info.output_crop_rect.nTop = 0;
+        m_extradata_info.output_crop_rect.nWidth = 320;
+        m_extradata_info.output_crop_rect.nHeight = 240;
         update_resolution(320, 240, 320, 240);
+
         fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
         fmt.fmt.pix_mp.height = drv_ctx.video_resolution.frame_height;
         fmt.fmt.pix_mp.width = drv_ctx.video_resolution.frame_width;
@@ -4002,6 +4008,11 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                            rectangle.nWidth = portDefn->format.video.nFrameWidth;
                                            rectangle.nHeight = portDefn->format.video.nFrameHeight;
 
+                                           m_extradata_info.output_crop_rect.nLeft = 0;
+                                           m_extradata_info.output_crop_rect.nTop = 0;
+                                           m_extradata_info.output_crop_rect.nWidth = rectangle.nWidth;
+                                           m_extradata_info.output_crop_rect.nHeight = rectangle.nHeight;
+
                                            eRet = is_video_session_supported();
                                            if (eRet)
                                                break;
@@ -4165,6 +4176,12 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                                        "for adaptive-playback/smooth-streaming",
                                                        (unsigned int)frameWidth, (unsigned int)frameHeight);
                                            }
+
+                                           m_extradata_info.output_crop_rect.nLeft = 0;
+                                           m_extradata_info.output_crop_rect.nTop = 0;
+                                           m_extradata_info.output_crop_rect.nWidth = frameWidth;
+                                           m_extradata_info.output_crop_rect.nHeight = frameHeight;
+
                                            update_resolution(frameWidth, frameHeight,
                                                    frameWidth, frameHeight);
                                            eRet = is_video_session_supported();
@@ -8783,6 +8800,15 @@ int omx_vdec::async_message_process (void *context, void* message)
                            vdec_msg->msgdata.output_frame.framesize.bottom = plane[0].reserved[3] + plane[0].reserved[5];
                            vdec_msg->msgdata.output_frame.picsize.frame_width = plane[0].reserved[6];
                            vdec_msg->msgdata.output_frame.picsize.frame_height = plane[0].reserved[7];
+
+                           /* Copy these values back to OMX internal variables to make both handlign same*/
+
+                           omx->m_extradata_info.output_crop_rect.nLeft = vdec_msg->msgdata.output_frame.framesize.left;
+                           omx->m_extradata_info.output_crop_rect.nTop = vdec_msg->msgdata.output_frame.framesize.top;
+                           omx->m_extradata_info.output_crop_rect.nWidth = vdec_msg->msgdata.output_frame.framesize.right;
+                           omx->m_extradata_info.output_crop_rect.nHeight = vdec_msg->msgdata.output_frame.framesize.bottom;
+                           omx->m_extradata_info.output_width = vdec_msg->msgdata.output_frame.picsize.frame_width;
+                           omx->m_extradata_info.output_height = vdec_msg->msgdata.output_frame.picsize.frame_height;
                        }
                    }
 
@@ -12665,6 +12691,11 @@ OMX_ERRORTYPE omx_vdec::enable_adaptive_playback(unsigned long nMaxFrameWidth,
      min_res_buf_count = drv_ctx.op_buf.mincount;
      DEBUG_PRINT_LOW("enable adaptive - upper limit buffer count = %lu for HxW %ux%u",
                      min_res_buf_count, m_decoder_capability.min_height, m_decoder_capability.min_width);
+
+     m_extradata_info.output_crop_rect.nLeft = 0;
+     m_extradata_info.output_crop_rect.nTop = 0;
+     m_extradata_info.output_crop_rect.nWidth = m_smoothstreaming_width;
+     m_extradata_info.output_crop_rect.nHeight = m_smoothstreaming_height;
 
      update_resolution(m_smoothstreaming_width, m_smoothstreaming_height,
                        m_smoothstreaming_width, m_smoothstreaming_height);
