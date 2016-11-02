@@ -2483,7 +2483,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
 #ifdef _PQ_
                 m_pq.pConfig.a_qp.roi_enabled = (OMX_U32)true;
                 allocate_extradata(&m_pq.roi_extradata_info, ION_FLAG_CACHED);
-                m_pq.configure();
+                m_pq.configure(m_sVenc_cfg.input_width, m_sVenc_cfg.input_height);
 #endif // _PQ_
                 break;
             }
@@ -3971,14 +3971,16 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
     }
 
 #ifdef _PQ_
-    if (!streaming[OUTPUT_PORT] && !m_pq.is_pq_force_disable) {
-        /*
-         * This is the place where all parameters for deciding
-         * PQ enablement are available. Evaluate PQ for the final time.
-         */
+    if (!streaming[OUTPUT_PORT]) {
         m_pq.is_YUV_format_uncertain = false;
-        m_pq.reinit(m_sVenc_cfg.inputformat);
-        venc_try_enable_pq();
+        if(venc_check_for_pq()) {
+            /*
+             * This is the place where all parameters for deciding
+             * PQ enablement are available. Evaluate PQ for the final time.
+             */
+            m_pq.reinit(m_sVenc_cfg.inputformat);
+            venc_configure_pq();
+        }
     }
 #endif // _PQ_
 
@@ -4132,10 +4134,12 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
             }
 
 #ifdef _PQ_
-            if (!streaming[OUTPUT_PORT] && !m_pq.is_pq_force_disable) {
+            if (!streaming[OUTPUT_PORT]) {
                 m_pq.is_YUV_format_uncertain = false;
-                m_pq.reinit(m_sVenc_cfg.inputformat);
-                venc_try_enable_pq();
+                if(venc_check_for_pq()) {
+                    m_pq.reinit(m_sVenc_cfg.inputformat);
+                    venc_configure_pq();
+                }
             }
 #endif // _PQ_
 
@@ -7783,7 +7787,7 @@ venc_dev::venc_dev_vqzip::~venc_dev_vqzip()
 #endif
 
 #ifdef _PQ_
-void venc_dev::venc_try_enable_pq(void)
+bool venc_dev::venc_check_for_pq(void)
 {
     bool rc_mode_supported = false;
     bool codec_supported = false;
@@ -7838,20 +7842,22 @@ void venc_dev::venc_try_enable_pq(void)
 
     m_pq.is_pq_enabled = enable;
 
-    if (enable) {
-        venc_set_extradata(OMX_ExtraDataEncoderOverrideQPInfo, (OMX_BOOL)enable);
-        extradata |= enable;
+    return enable;
+}
 
-        m_pq.pConfig.algo = ADAPTIVE_QP;
-        m_pq.pConfig.height = m_sVenc_cfg.input_height;
-        m_pq.pConfig.width = m_sVenc_cfg.input_width;
-        m_pq.pConfig.mb_height = 16;
-        m_pq.pConfig.mb_width = 16;
-        m_pq.pConfig.a_qp.pq_enabled = enable;
-        m_pq.pConfig.stride = VENUS_Y_STRIDE(COLOR_FMT_NV12, m_sVenc_cfg.input_width);
-        m_pq.configure();
-    }
+void venc_dev::venc_configure_pq()
+{
+    venc_set_extradata(OMX_ExtraDataEncoderOverrideQPInfo, (OMX_BOOL)true);
+    extradata |= true;
+    m_pq.configure(m_sVenc_cfg.input_width, m_sVenc_cfg.input_height);
     return;
+}
+
+void venc_dev::venc_try_enable_pq(void)
+{
+    if(venc_check_for_pq()) {
+        venc_configure_pq();
+    }
 }
 
 venc_dev::venc_dev_pq::venc_dev_pq()
@@ -7969,7 +7975,6 @@ bool venc_dev::venc_dev_pq::reinit(unsigned long format)
                                 " reinitializing PQ lib", format, configured_format);
         deinit();
         status = init(format);
-        get_caps();
     } else {
         // ignore if new format is same as configured
     }
@@ -8025,9 +8030,16 @@ bool venc_dev::venc_dev_pq::is_color_format_supported(unsigned long format)
     return support;
 }
 
-int venc_dev::venc_dev_pq::configure()
+int venc_dev::venc_dev_pq::configure(unsigned long width, unsigned long height)
 {
     if (mPQHandle) {
+        pConfig.algo = ADAPTIVE_QP;
+        pConfig.height = height;
+        pConfig.width = width;
+        pConfig.mb_height = 16;
+        pConfig.mb_width = 16;
+        pConfig.a_qp.pq_enabled = true;
+        pConfig.stride = VENUS_Y_STRIDE(COLOR_FMT_NV12, pConfig.width);
         pConfig.a_qp.gain = 1.0397;
         pConfig.a_qp.offset = 14.427;
         if (pConfig.a_qp.roi_enabled) {

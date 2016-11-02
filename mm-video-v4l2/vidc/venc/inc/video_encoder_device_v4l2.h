@@ -404,7 +404,7 @@ class venc_dev
                 bool init(unsigned long);
                 void deinit();
                 void get_caps();
-                int configure();
+                int configure(unsigned long width, unsigned long height);
                 bool is_pq_handle_valid();
                 bool is_color_format_supported(unsigned long);
                 bool reinit(unsigned long);
@@ -429,6 +429,8 @@ class venc_dev
                 unsigned long configured_format;
         };
         venc_dev_pq m_pq;
+        bool venc_check_for_pq(void);
+        void venc_configure_pq(void);
         void venc_try_enable_pq(void);
 #endif
         struct venc_debug_cap m_debug;
