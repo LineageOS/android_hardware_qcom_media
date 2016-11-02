@@ -50,6 +50,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <qdMetaData.h>
 
+#define ATRACE_TAG ATRACE_TAG_VIDEO
+#include <utils/Trace.h>
+
 #define YUV_STATS_LIBRARY_NAME "libgpustats.so" // UBWC case: use GPU library
 
 #define ALIGN(x, to_align) ((((unsigned long) x) + (to_align - 1)) & ~(to_align - 1))
@@ -880,7 +883,7 @@ int venc_dev::venc_set_format(int format)
     return rc;
 }
 
-OMX_ERRORTYPE venc_dev::allocate_extradata(struct extradata_buffer_info *extradata_info)
+OMX_ERRORTYPE venc_dev::allocate_extradata(struct extradata_buffer_info *extradata_info, int flags)
 {
     if (extradata_info->allocated) {
         DEBUG_PRINT_HIGH("2nd allocation return for port = %d",extradata_info->port_index);
@@ -901,7 +904,7 @@ OMX_ERRORTYPE venc_dev::allocate_extradata(struct extradata_buffer_info *extrada
         extradata_info->ion.ion_device_fd = venc_handle->alloc_map_ion_memory(
                 extradata_info->size,
                 &extradata_info->ion.ion_alloc_data,
-                &extradata_info->ion.fd_ion_data, 0);
+                &extradata_info->ion.fd_ion_data, flags);
 
 
         if (extradata_info->ion.ion_device_fd < 0) {
@@ -2480,7 +2483,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 }
 #ifdef _PQ_
                 m_pq.pConfig.a_qp.roi_enabled = (OMX_U32)true;
-                allocate_extradata(&m_pq.roi_extradata_info);
+                allocate_extradata(&m_pq.roi_extradata_info, ION_FLAG_CACHED);
                 m_pq.configure();
 #endif // _PQ_
                 break;
@@ -3440,7 +3443,7 @@ bool venc_dev::venc_use_buf(void *buf_addr, unsigned port,unsigned index)
         extra_idx = EXTRADATA_IDX(num_input_planes);
 
         if ((num_input_planes > 1) && (extra_idx)) {
-            rc = allocate_extradata(&input_extradata_info);
+            rc = allocate_extradata(&input_extradata_info, ION_FLAG_CACHED);
 
             if (rc)
                 DEBUG_PRINT_ERROR("Failed to allocate extradata: %d\n", rc);
@@ -3485,7 +3488,7 @@ if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
         extra_idx = EXTRADATA_IDX(num_output_planes);
 
         if ((num_output_planes > 1) && (extra_idx)) {
-            rc = allocate_extradata(&output_extradata_info);
+            rc = allocate_extradata(&output_extradata_info, 0);
 
             if (rc)
                 DEBUG_PRINT_ERROR("Failed to allocate extradata: %d", rc);
@@ -7876,6 +7879,7 @@ bool venc_dev::venc_dev_pq::init(unsigned long format)
             break;
     }
 
+    ATRACE_BEGIN("PQ init");
     if (status) {
         mLibHandle = dlopen(YUV_STATS_LIBRARY_NAME, RTLD_NOW);
         if (mLibHandle) {
@@ -7906,6 +7910,7 @@ bool venc_dev::venc_dev_pq::init(unsigned long format)
 
         }
     }
+    ATRACE_END();
 
     if (!status && mLibHandle) {
         if (mLibHandle)
@@ -8043,7 +8048,7 @@ int venc_dev::venc_dev_pq::fill_pq_stats(struct v4l2_buffer buf,
                 mPQHandle, is_pq_enabled);
         return 0;
     }
-
+    ATRACE_BEGIN("PQ Compute Stats");
     input.fd =  buf.m.planes[0].reserved[0];
     input.data_offset =  buf.m.planes[0].data_offset;
     input.alloc_len =  buf.m.planes[0].length;
@@ -8070,7 +8075,7 @@ int venc_dev::venc_dev_pq::fill_pq_stats(struct v4l2_buffer buf,
         DEBUG_PRINT_HIGH("Output fd = %d, data_offset = %d", output.fd, output.data_offset);
         mPQComputeStats(mPQHandle, &input, NULL, &output, NULL, NULL);
     }
-
+    ATRACE_END();
     DEBUG_PRINT_HIGH("PQ data length = %d", output.filled_len);
     return output.filled_len;
 }
