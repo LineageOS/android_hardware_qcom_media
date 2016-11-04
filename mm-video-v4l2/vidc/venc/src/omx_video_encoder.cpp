@@ -36,7 +36,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifdef _ANDROID_
 #include <cutils/properties.h>
 #endif
-#ifndef _ANDROID_
+#ifdef _USE_GLIB_
 #include <glib.h>
 #define strlcpy g_strlcpy
 #endif
