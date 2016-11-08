@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2016, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2017, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -2245,6 +2245,15 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                 VALIDATE_OMX_PARAM_DATA(configData, OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE);
                 DEBUG_PRINT_ERROR("Setting/modifying Temporal layers at run-time is not supported !");
                 return OMX_ErrorUnsupportedSetting;
+            }
+        case OMX_QcomIndexConfigPerfLevel:
+            {
+                VALIDATE_OMX_PARAM_DATA(configData, OMX_QCOM_VIDEO_CONFIG_PERF_LEVEL);
+                if (!handle->venc_set_config(configData,
+                        (OMX_INDEXTYPE)OMX_QcomIndexConfigPerfLevel)) {
+                    DEBUG_PRINT_ERROR("Failed to set perf level");
+                    return OMX_ErrorUnsupportedSetting;
+                }
             }
         default:
             DEBUG_PRINT_ERROR("ERROR: unsupported index %d", (int) configIndex);
