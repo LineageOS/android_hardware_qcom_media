@@ -6396,6 +6396,7 @@ bool venc_dev::venc_set_perf_level(QOMX_VIDEO_PERF_LEVEL ePerfLevel)
         control.value = V4L2_CID_MPEG_VIDC_PERF_LEVEL_TURBO;
         break;
     default:
+        control.value = V4L2_CID_MPEG_VIDC_PERF_LEVEL_NOMINAL;
         status = false;
         break;
     }
@@ -6410,6 +6411,8 @@ bool venc_dev::venc_set_perf_level(QOMX_VIDEO_PERF_LEVEL ePerfLevel)
         }
 
         DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
+        DEBUG_PRINT_INFO("Requested perf level : %s",
+                ePerfLevel == OMX_QCOM_PerfLevelTurbo ? "turbo" : "nominal");
     }
     return status;
 }
