@@ -50,6 +50,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <qdMetaData.h>
 
+#define ATRACE_TAG ATRACE_TAG_VIDEO
+#include <utils/Trace.h>
+
 #define YUV_STATS_LIBRARY_NAME "libgpustats.so" // UBWC case: use GPU library
 
 #define ALIGN(x, to_align) ((((unsigned long) x) + (to_align - 1)) & ~(to_align - 1))
@@ -254,14 +257,13 @@ venc_dev::venc_dev(class omx_venc *venc_class)
         is_csc_enabled = 0;
     }
 
-    is_pq_force_disable = 0;
 #ifdef _PQ_
     property_get("vidc.enc.disable.pq", property_value, "0");
     if(!(strncmp(property_value, "1", PROPERTY_VALUE_MAX)) ||
         !(strncmp(property_value, "true", PROPERTY_VALUE_MAX))) {
-        is_pq_force_disable = 1;
+        m_pq.is_pq_force_disable = 1;
     } else {
-        is_pq_force_disable = 0;
+        m_pq.is_pq_force_disable = 0;
     }
 #endif // _PQ_
 
@@ -880,7 +882,7 @@ int venc_dev::venc_set_format(int format)
     return rc;
 }
 
-OMX_ERRORTYPE venc_dev::allocate_extradata(struct extradata_buffer_info *extradata_info)
+OMX_ERRORTYPE venc_dev::allocate_extradata(struct extradata_buffer_info *extradata_info, int flags)
 {
     if (extradata_info->allocated) {
         DEBUG_PRINT_HIGH("2nd allocation return for port = %d",extradata_info->port_index);
@@ -901,7 +903,7 @@ OMX_ERRORTYPE venc_dev::allocate_extradata(struct extradata_buffer_info *extrada
         extradata_info->ion.ion_device_fd = venc_handle->alloc_map_ion_memory(
                 extradata_info->size,
                 &extradata_info->ion.ion_alloc_data,
-                &extradata_info->ion.fd_ion_data, 0);
+                &extradata_info->ion.fd_ion_data, flags);
 
 
         if (extradata_info->ion.ion_device_fd < 0) {
@@ -1409,7 +1411,7 @@ bool venc_dev::venc_open(OMX_U32 codec)
     }
 
 #ifdef _PQ_
-    if (codec == OMX_VIDEO_CodingAVC && !is_pq_force_disable) {
+    if (codec == OMX_VIDEO_CodingAVC && !m_pq.is_pq_force_disable) {
         m_pq.init(V4L2_DEFAULT_OUTPUT_COLOR_FMT);
         m_pq.get_caps();
     }
@@ -2480,7 +2482,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 }
 #ifdef _PQ_
                 m_pq.pConfig.a_qp.roi_enabled = (OMX_U32)true;
-                allocate_extradata(&m_pq.roi_extradata_info);
+                allocate_extradata(&m_pq.roi_extradata_info, ION_FLAG_CACHED);
                 m_pq.configure();
 #endif // _PQ_
                 break;
@@ -2502,6 +2504,16 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                     DEBUG_PRINT_ERROR("set_param: Failed to configure temporal layers");
                     return false;
                 }
+                break;
+            }
+        case OMX_QTIIndexParamDisablePQ:
+            {
+                QOMX_DISABLETYPE * pParam = (QOMX_DISABLETYPE *)paramData;
+                DEBUG_PRINT_LOW("venc_set_param: OMX_QTIIndexParamDisablePQ: %d", pParam->bDisable);
+#ifdef _PQ_
+                if (pParam->bDisable)
+                    m_pq.is_pq_force_disable = true;
+#endif
                 break;
             }
         case OMX_IndexParamVideoSliceFMO:
@@ -3440,7 +3452,7 @@ bool venc_dev::venc_use_buf(void *buf_addr, unsigned port,unsigned index)
         extra_idx = EXTRADATA_IDX(num_input_planes);
 
         if ((num_input_planes > 1) && (extra_idx)) {
-            rc = allocate_extradata(&input_extradata_info);
+            rc = allocate_extradata(&input_extradata_info, ION_FLAG_CACHED);
 
             if (rc)
                 DEBUG_PRINT_ERROR("Failed to allocate extradata: %d\n", rc);
@@ -3485,7 +3497,7 @@ if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
         extra_idx = EXTRADATA_IDX(num_output_planes);
 
         if ((num_output_planes > 1) && (extra_idx)) {
-            rc = allocate_extradata(&output_extradata_info);
+            rc = allocate_extradata(&output_extradata_info, 0);
 
             if (rc)
                 DEBUG_PRINT_ERROR("Failed to allocate extradata: %d", rc);
@@ -3959,7 +3971,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
     }
 
 #ifdef _PQ_
-    if (!streaming[OUTPUT_PORT] && !is_pq_force_disable) {
+    if (!streaming[OUTPUT_PORT] && !m_pq.is_pq_force_disable) {
         /*
          * This is the place where all parameters for deciding
          * PQ enablement are available. Evaluate PQ for the final time.
@@ -4120,7 +4132,7 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
             }
 
 #ifdef _PQ_
-            if (!streaming[OUTPUT_PORT] && !is_pq_force_disable) {
+            if (!streaming[OUTPUT_PORT] && !m_pq.is_pq_force_disable) {
                 m_pq.is_YUV_format_uncertain = false;
                 m_pq.reinit(m_sVenc_cfg.inputformat);
                 venc_try_enable_pq();
@@ -7810,7 +7822,7 @@ void venc_dev::venc_try_enable_pq(void)
 
     /* Add future PQ conditions here */
 
-    enable = (!is_pq_force_disable   &&
+    enable = (!m_pq.is_pq_force_disable   &&
                codec_supported       &&
                rc_mode_supported     &&
                resolution_supported  &&
@@ -7821,7 +7833,7 @@ void venc_dev::venc_try_enable_pq(void)
                is_pq_handle_valid);
 
     DEBUG_PRINT_HIGH("PQ Condition : Force disable = %d Codec = %d, RC = %d, RES = %d, FPS = %d, YUV = %d, Non - Secure = %d, PQ lib = %d Non - VPE = %d PQ enable = %d",
-            is_pq_force_disable, codec_supported, rc_mode_supported, resolution_supported, frame_rate_supported, yuv_format_supported,
+            m_pq.is_pq_force_disable, codec_supported, rc_mode_supported, resolution_supported, frame_rate_supported, yuv_format_supported,
             is_non_secure_session, is_pq_handle_valid, is_non_vpe_session, enable);
 
     m_pq.is_pq_enabled = enable;
@@ -7852,6 +7864,7 @@ venc_dev::venc_dev_pq::venc_dev_pq()
     mPQConfigure = NULL;
     mPQComputeStats = NULL;
     configured_format = 0;
+    is_pq_force_disable = 0;
     pthread_mutex_init(&lock, NULL);
 }
 
@@ -7876,6 +7889,7 @@ bool venc_dev::venc_dev_pq::init(unsigned long format)
             break;
     }
 
+    ATRACE_BEGIN("PQ init");
     if (status) {
         mLibHandle = dlopen(YUV_STATS_LIBRARY_NAME, RTLD_NOW);
         if (mLibHandle) {
@@ -7906,6 +7920,7 @@ bool venc_dev::venc_dev_pq::init(unsigned long format)
 
         }
     }
+    ATRACE_END();
 
     if (!status && mLibHandle) {
         if (mLibHandle)
@@ -8043,7 +8058,7 @@ int venc_dev::venc_dev_pq::fill_pq_stats(struct v4l2_buffer buf,
                 mPQHandle, is_pq_enabled);
         return 0;
     }
-
+    ATRACE_BEGIN("PQ Compute Stats");
     input.fd =  buf.m.planes[0].reserved[0];
     input.data_offset =  buf.m.planes[0].data_offset;
     input.alloc_len =  buf.m.planes[0].length;
@@ -8070,7 +8085,7 @@ int venc_dev::venc_dev_pq::fill_pq_stats(struct v4l2_buffer buf,
         DEBUG_PRINT_HIGH("Output fd = %d, data_offset = %d", output.fd, output.data_offset);
         mPQComputeStats(mPQHandle, &input, NULL, &output, NULL, NULL);
     }
-
+    ATRACE_END();
     DEBUG_PRINT_HIGH("PQ data length = %d", output.filled_len);
     return output.filled_len;
 }

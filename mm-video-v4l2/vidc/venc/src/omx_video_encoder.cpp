@@ -36,7 +36,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifdef _ANDROID_
 #include <cutils/properties.h>
 #endif
-#ifndef _ANDROID_
+#ifdef _USE_GLIB_
 #include <glib.h>
 #define strlcpy g_strlcpy
 #endif
@@ -1718,6 +1718,13 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 memcpy(&m_sConfigTemporalLayers.nBitrateRatios[0],
                         &m_sParamTemporalLayers.nBitrateRatios[0],
                         OMX_VIDEO_ANDROID_MAXTEMPORALLAYERS * sizeof(OMX_U32));
+                break;
+            }
+        case OMX_QTIIndexParamDisablePQ:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_DISABLETYPE);
+                handle->venc_set_param(paramData,
+                        (OMX_INDEXTYPE)OMX_QTIIndexParamDisablePQ);
                 break;
             }
         case OMX_IndexParamVideoSliceFMO:

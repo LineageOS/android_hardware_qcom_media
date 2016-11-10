@@ -397,6 +397,7 @@ class venc_dev
                 venc_dev_pq();
                 ~venc_dev_pq();
                 bool is_pq_enabled;
+                bool is_pq_force_disable;
                 bool is_YUV_format_uncertain;
                 pthread_mutex_t lock;
                 struct extradata_buffer_info roi_extradata_info;
@@ -457,7 +458,7 @@ class venc_dev
         bool async_thread_created;
         bool async_thread_force_stop;
         class omx_venc *venc_handle;
-        OMX_ERRORTYPE allocate_extradata(struct extradata_buffer_info *extradata_info);
+        OMX_ERRORTYPE allocate_extradata(struct extradata_buffer_info *extradata_info, int flags);
         void free_extradata_all();
         void free_extradata(struct extradata_buffer_info *extradata_info);
         int append_mbi_extradata(void *, struct msm_vidc_extradata_header*);
@@ -469,7 +470,6 @@ class venc_dev
         bool is_gralloc_source_ubwc;
         bool is_camera_source_ubwc;
         bool is_csc_enabled;
-        bool is_pq_force_disable;
         OMX_U32 fd_list[64];
 
     private:

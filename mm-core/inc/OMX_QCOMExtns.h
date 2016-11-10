@@ -326,6 +326,7 @@ enum OMX_QCOM_COLOR_FORMATTYPE
     QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed,
     QOMX_COLOR_Format32bitRGBA8888,
     QOMX_COLOR_Format32bitRGBA8888Compressed,
+    QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed,
     QOMX_COLOR_FormatAndroidOpaque = (OMX_COLOR_FORMATTYPE) OMX_COLOR_FormatVendorStartUnused  + 0x789,
 };
 
@@ -628,6 +629,9 @@ enum OMX_QCOM_EXTN_INDEXTYPE
 
     /*"OMX.google.android.index.describeHDRStaticInfo"*/
     OMX_QTIIndexConfigDescribeHDRColorInfo = 0x7F000067,
+
+    /* Configure to disable PQ*/
+    OMX_QTIIndexParamDisablePQ = 0x7F000068,
 };
 
 /**
@@ -1649,6 +1653,12 @@ typedef struct QOMX_ENABLETYPE {
     OMX_VERSIONTYPE nVersion;
     OMX_BOOL bEnable;
 } QOMX_ENABLETYPE;
+
+typedef struct QOMX_DISABLETYPE {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_BOOL bDisable;
+} QOMX_DISABLETYPE;
 
 typedef enum QOMX_VIDEO_EVENTS {
     OMX_EventIndexsettingChanged = OMX_EventVendorStartUnused
