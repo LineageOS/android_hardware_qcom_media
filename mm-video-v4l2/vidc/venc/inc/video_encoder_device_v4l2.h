@@ -32,6 +32,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OMX_Types.h"
 #include "OMX_Core.h"
 #include "OMX_VideoExt.h"
+#include "QComOMXMetadata.h"
 #include "OMX_QCOMExtns.h"
 #include "qc_omx_component.h"
 #ifdef _VQZIP_
@@ -628,16 +629,6 @@ class venc_dev
             int mBufMap[64];  // Map with slots for each buffer
             size_t mNumPending;
 
-          public:
-            // utility methods to parse entities in batch
-            // payload format for batch of 3
-            //| fd0 | fd1 | fd2 | off0 | off1 | off2 | len0 | len1 | len2 | csc0 | csc1 | csc2 | dTS0 | dTS1 | dTS2|
-            static inline int getFdAt(native_handle_t *, int index);
-            static inline int getOffsetAt(native_handle_t *, int index);
-            static inline int getSizeAt(native_handle_t *, int index);
-            static inline int getUsageAt(native_handle_t *, int index);
-            static inline int getColorFormatAt(native_handle_t *, int index);
-            static inline int getTimeStampAt(native_handle_t *, int index);
         };
         BatchInfo mBatchInfo;
 };

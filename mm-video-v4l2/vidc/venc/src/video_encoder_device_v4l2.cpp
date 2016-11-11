@@ -3742,17 +3742,9 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         struct v4l2_format fmt;
                         OMX_COLOR_FORMATTYPE color_format = (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
 
-                        if (!mBatchSize && hnd->numFds + hnd->numInts > 5) {
-                            color_format = (OMX_COLOR_FORMATTYPE)hnd->data[5];
-                        } else if (mBatchSize) {
-                            color_format = (OMX_COLOR_FORMATTYPE)BatchInfo::getColorFormatAt(hnd, 0);
-                        }
-
-                        if (!mBatchSize && hnd->numFds + hnd->numInts > 3) {
-                            usage = hnd->data[3];
-                        } else if (mBatchSize) {
-                            usage = BatchInfo::getUsageAt(hnd, 0);
-                        }
+                        color_format = (OMX_COLOR_FORMATTYPE)MetaBufferUtil::getIntAt(hnd, 0, MetaBufferUtil::INT_COLORFORMAT);
+                        usage = MetaBufferUtil::getIntAt(hnd, 0, MetaBufferUtil::INT_USAGE);
+                        usage = usage > 0 ? usage : 0;
 
                         memset(&fmt, 0, sizeof(fmt));
                         if (usage & private_handle_t::PRIV_FLAGS_ITU_R_709 ||
@@ -3784,7 +3776,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                             buf.flags = V4L2_MSM_BUF_FLAG_YUV_601_709_CLAMP;
                         }
 
-                        if (!venc_set_color_format(color_format)) {
+                        if (color_format > 0 && !venc_set_color_format(color_format)) {
                             DEBUG_PRINT_ERROR("Failed setting color format in Camerasource %lx", m_sVenc_cfg.inputformat);
                             return false;
                         }
@@ -3798,20 +3790,24 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                     // Setting batch mode is sticky. We do not expect camera to change
                     // between batch and normal modes at runtime.
                     if (mBatchSize) {
-                        if ((unsigned)hnd->numFds != mBatchSize) {
+                        if ((unsigned int)MetaBufferUtil::getBatchSize(hnd) != mBatchSize) {
                             DEBUG_PRINT_ERROR("Don't support dynamic batch sizes (changed from %d->%d)",
-                                    mBatchSize, hnd->numFds);
+                                    mBatchSize, MetaBufferUtil::getBatchSize(hnd));
                             return false;
                         }
 
                         return venc_empty_batch ((OMX_BUFFERHEADERTYPE*)buffer, index);
                     }
 
-                    if (hnd->numFds + hnd->numInts > 2) {
-                        plane[0].data_offset = hnd->data[1];
-                        plane[0].length = hnd->data[2];
-                        plane[0].bytesused = hnd->data[2];
+                    int offset = MetaBufferUtil::getIntAt(hnd, 0, MetaBufferUtil::INT_OFFSET);
+                    int length = MetaBufferUtil::getIntAt(hnd, 0, MetaBufferUtil::INT_SIZE);
+                    if (offset < 0 || length < 0) {
+                        DEBUG_PRINT_ERROR("Invalid meta buffer handle!");
+                        return false;
                     }
+                    plane[0].data_offset = offset;
+                    plane[0].length = length;
+                    plane[0].bytesused = length;
                     DEBUG_PRINT_LOW("venc_empty_buf: camera buf: fd = %d filled %d of %d flag 0x%x format 0x%lx",
                             fd, plane[0].bytesused, plane[0].length, buf.flags, m_sVenc_cfg.inputformat);
                 } else if (meta_buf->buffer_type == kMetadataBufferTypeGrallocSource) {
@@ -4059,12 +4055,12 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
                 if (!hnd) {
                     DEBUG_PRINT_ERROR("venc_empty_batch: invalid handle !");
                     return false;
-                } else if (hnd->numFds > kMaxBuffersInBatch) {
+                } else if (MetaBufferUtil::getBatchSize(hnd) > kMaxBuffersInBatch) {
                     DEBUG_PRINT_ERROR("venc_empty_batch: Too many buffers (%d) in batch. "
-                            "Max = %d", hnd->numFds, kMaxBuffersInBatch);
+                            "Max = %d", MetaBufferUtil::getBatchSize(hnd), kMaxBuffersInBatch);
                     status = false;
                 }
-                DEBUG_PRINT_LOW("venc_empty_batch: Batch of %d bufs", hnd->numFds);
+                DEBUG_PRINT_LOW("venc_empty_batch: Batch of %d bufs", MetaBufferUtil::getBatchSize(hnd));
             } else {
                 DEBUG_PRINT_ERROR("Batch supported for CameraSource buffers only !");
                 status = false;
@@ -4080,7 +4076,7 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
 
     if (status) {
         OMX_TICKS bufTimeStamp = 0ll;
-        int numBufs = hnd->numFds;
+        int numBufs = MetaBufferUtil::getBatchSize(hnd);
         int v4l2Ids[kMaxBuffersInBatch] = {-1};
         for (int i = 0; i < numBufs; ++i) {
             v4l2Ids[i] = mBatchInfo.registerBuffer(index);
@@ -4101,11 +4097,11 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
             buf.index = (unsigned)v4l2Id;
             buf.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
             buf.memory = V4L2_MEMORY_USERPTR;
-            plane[0].reserved[0] = BatchInfo::getFdAt(hnd, i);
+            plane[0].reserved[0] = MetaBufferUtil::getFdAt(hnd, i);
             plane[0].reserved[1] = 0;
-            plane[0].data_offset = BatchInfo::getOffsetAt(hnd, i);
+            plane[0].data_offset = MetaBufferUtil::getIntAt(hnd, i, MetaBufferUtil::INT_OFFSET);
             plane[0].m.userptr = (unsigned long)meta_buf;
-            plane[0].length = plane[0].bytesused = BatchInfo::getSizeAt(hnd, i);
+            plane[0].length = plane[0].bytesused = MetaBufferUtil::getIntAt(hnd, i, MetaBufferUtil::INT_SIZE);
             buf.m.planes = plane;
             buf.length = num_input_planes;
 
@@ -4154,7 +4150,7 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
             }
 
             // timestamp differences from camera are in nano-seconds
-            bufTimeStamp = bufhdr->nTimeStamp + BatchInfo::getTimeStampAt(hnd, i) / 1000;
+            bufTimeStamp = bufhdr->nTimeStamp + MetaBufferUtil::getIntAt(hnd, i, MetaBufferUtil::INT_TIMESTAMP) / 1000;
 
             DEBUG_PRINT_LOW(" Q Batch [%d of %d] : buf=%p fd=%d len=%d TS=%lld",
                 i, numBufs, bufhdr, plane[0].reserved[0], plane[0].length, bufTimeStamp);
@@ -7662,40 +7658,6 @@ bool venc_dev::BatchInfo::isPending(int bufferId) {
     for(; existsId < kMaxBufs && mBufMap[existsId] != bufferId; ++existsId);
     pthread_mutex_unlock(&mLock);
     return existsId < kMaxBufs;
-}
-
-int venc_dev::BatchInfo::getFdAt(native_handle_t *hnd, int index) {
-    int fd = hnd && index < hnd->numFds ? hnd->data[index] : -1;
-    return fd;
-}
-
-int venc_dev::BatchInfo::getOffsetAt(native_handle_t *hnd, int index) {
-    int off = hnd && index < hnd->numInts ? hnd->data[hnd->numFds + index] : -1;
-    return off;
-}
-
-int venc_dev::BatchInfo::getSizeAt(native_handle_t *hnd, int index) {
-    int size = hnd && (index + hnd->numFds) < hnd->numInts ?
-            hnd->data[2*hnd->numFds + index] : -1;
-    return size;
-}
-
-int venc_dev::BatchInfo::getUsageAt(native_handle_t *hnd, int index) {
-    int usage = hnd && (index + 2*hnd->numFds) < hnd->numInts ?
-            hnd->data[3*hnd->numFds + index] : 0;
-    return usage;
-}
-
-int venc_dev::BatchInfo::getColorFormatAt(native_handle_t *hnd, int index) {
-    int usage = hnd && (index + 4*hnd->numFds) < hnd->numInts ?
-            hnd->data[5*hnd->numFds + index] : 0;
-    return usage;
-}
-
-int venc_dev::BatchInfo::getTimeStampAt(native_handle_t *hnd, int index) {
-    int size = hnd && (index + 3*hnd->numFds) < hnd->numInts ?
-            hnd->data[4*hnd->numFds + index] : -1;
-    return size;
 }
 
 #ifdef _VQZIP_
