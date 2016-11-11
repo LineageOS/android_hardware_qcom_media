@@ -3990,6 +3990,8 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
 
     handle_input_extradata(buf);
 
+    VIDC_TRACE_INT_LOW("ETB-TS", bufhdr->nTimeStamp / 1000);
+
     if (bufhdr->nFlags & OMX_BUFFERFLAG_EOS)
         buf.flags |= V4L2_QCOM_BUF_FLAG_EOS;
 
@@ -4160,6 +4162,8 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
                 i, numBufs, bufhdr, plane[0].reserved[0], plane[0].length, bufTimeStamp);
             buf.timestamp.tv_sec = bufTimeStamp / 1000000;
             buf.timestamp.tv_usec = (bufTimeStamp % 1000000);
+
+            VIDC_TRACE_INT_LOW("ETB-TS", bufTimeStamp / 1000);
 
             rc = ioctl(m_nDriver_fd, VIDIOC_QBUF, &buf);
             if (rc) {

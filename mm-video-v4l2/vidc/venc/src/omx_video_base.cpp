@@ -1301,6 +1301,7 @@ bool omx_video::execute_output_flush(void)
 
         if (ident == OMX_COMPONENT_GENERATE_FTB ) {
             pending_output_buffers++;
+            VIDC_TRACE_INT_LOW("FTB-pending", pending_output_buffers);
             fill_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p2);
         } else if (ident == OMX_COMPONENT_GENERATE_FBD) {
             fill_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p1);
@@ -1343,6 +1344,7 @@ bool omx_video::execute_input_flush(void)
         m_etb_q.pop_entry(&p1,&p2,&ident);
         if (ident == OMX_COMPONENT_GENERATE_ETB) {
             pending_input_buffers++;
+            VIDC_TRACE_INT_LOW("ETB-pending", pending_input_buffers);
             empty_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p2);
         } else if (ident == OMX_COMPONENT_GENERATE_EBD) {
             empty_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p1);
@@ -1405,6 +1407,7 @@ bool omx_video::execute_flush_all(void)
         m_etb_q.pop_entry(&p1,&p2,&ident);
         if (ident == OMX_COMPONENT_GENERATE_ETB) {
             pending_input_buffers++;
+            VIDC_TRACE_INT_LOW("ETB-pending", pending_input_buffers);
             empty_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p2);
         } else if (ident == OMX_COMPONENT_GENERATE_EBD) {
             empty_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p1);
@@ -1436,6 +1439,7 @@ bool omx_video::execute_flush_all(void)
 
         if (ident == OMX_COMPONENT_GENERATE_FTB ) {
             pending_output_buffers++;
+            VIDC_TRACE_INT_LOW("FTB-pending", pending_output_buffers);
             fill_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p2);
         } else if (ident == OMX_COMPONENT_GENERATE_FBD) {
             fill_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p1);
@@ -3793,6 +3797,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
 OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
         OMX_IN OMX_BUFFERHEADERTYPE* buffer)
 {
+    VIDC_TRACE_NAME_HIGH("ETB");
     (void)hComp;
     OMX_U8 *pmem_data_buf = NULL;
     int push_cnt = 0;
@@ -3865,6 +3870,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
     }
 
     pending_input_buffers++;
+    VIDC_TRACE_INT_LOW("ETB-pending", pending_input_buffers);
     if (input_flush_progress == true) {
         post_event ((unsigned long)buffer,0,
                 OMX_COMPONENT_GENERATE_EBD);
@@ -3964,6 +3970,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
         post_event ((unsigned long)buffer,0,OMX_COMPONENT_GENERATE_EBD);
         /*Generate an async error and move to invalid state*/
         pending_input_buffers--;
+        VIDC_TRACE_INT_LOW("ETB-pending", pending_input_buffers);
         if (hw_overload) {
             return OMX_ErrorInsufficientResources;
         }
@@ -4041,6 +4048,7 @@ OMX_ERRORTYPE  omx_video::fill_this_buffer_proxy(
         OMX_IN OMX_HANDLETYPE        hComp,
         OMX_IN OMX_BUFFERHEADERTYPE* bufferAdd)
 {
+    VIDC_TRACE_NAME_HIGH("FTB");
     (void)hComp;
     OMX_U8 *pmem_data_buf = NULL;
     OMX_ERRORTYPE nRet = OMX_ErrorNone;
@@ -4053,6 +4061,7 @@ OMX_ERRORTYPE  omx_video::fill_this_buffer_proxy(
     }
 
     pending_output_buffers++;
+    VIDC_TRACE_INT_LOW("FTB-pending", pending_output_buffers);
     /*Return back the output buffer to client*/
     if ( m_sOutPortDef.bEnabled != OMX_TRUE || output_flush_progress == true) {
         DEBUG_PRINT_LOW("o/p port is Disabled or Flush in Progress");
@@ -4070,6 +4079,7 @@ OMX_ERRORTYPE  omx_video::fill_this_buffer_proxy(
         DEBUG_PRINT_ERROR("ERROR: dev_fill_buf() Failed");
         post_event ((unsigned long)bufferAdd,0,OMX_COMPONENT_GENERATE_FBD);
         pending_output_buffers--;
+        VIDC_TRACE_INT_LOW("FTB-pending", pending_output_buffers);
         return OMX_ErrorBadParameter;
     }
 
@@ -4440,6 +4450,7 @@ bool omx_video::release_input_done(void)
 OMX_ERRORTYPE omx_video::fill_buffer_done(OMX_HANDLETYPE hComp,
         OMX_BUFFERHEADERTYPE * buffer)
 {
+    VIDC_TRACE_NAME_HIGH("FBD");
 #ifdef _MSM8974_
     int index = buffer - m_out_mem_ptr;
 #endif
@@ -4450,6 +4461,9 @@ OMX_ERRORTYPE omx_video::fill_buffer_done(OMX_HANDLETYPE hComp,
     }
 
     pending_output_buffers--;
+    VIDC_TRACE_INT_LOW("FTB-pending", pending_output_buffers);
+    VIDC_TRACE_INT_LOW("FBD-TS", buffer->nTimeStamp / 1000);
+    VIDC_TRACE_INT_LOW("FBD-size", buffer->nFilledLen);
 
     if (secure_session && m_pCallbacks.FillBufferDone) {
         if (buffer->nFilledLen > 0)
@@ -4493,6 +4507,7 @@ OMX_ERRORTYPE omx_video::fill_buffer_done(OMX_HANDLETYPE hComp,
 OMX_ERRORTYPE omx_video::empty_buffer_done(OMX_HANDLETYPE         hComp,
         OMX_BUFFERHEADERTYPE* buffer)
 {
+    VIDC_TRACE_NAME_HIGH("EBD");
     int buffer_index  = -1;
 
     buffer_index = buffer - ((mUseProxyColorFormat && !mUsesColorConversion) ? meta_buffer_hdr : m_inp_mem_ptr);
@@ -4504,6 +4519,7 @@ OMX_ERRORTYPE omx_video::empty_buffer_done(OMX_HANDLETYPE         hComp,
     }
 
     pending_input_buffers--;
+    VIDC_TRACE_INT_LOW("ETB-pending", pending_input_buffers);
 
     if (mUseProxyColorFormat &&
         (buffer_index >= 0 && (buffer_index < (int)m_sInPortDef.nBufferCountActual))) {
@@ -5051,6 +5067,7 @@ void omx_video::print_debug_color_aspects(ColorAspects *aspects, const char *pre
 OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
         OMX_IN OMX_BUFFERHEADERTYPE* buffer)
 {
+    VIDC_TRACE_NAME_LOW("ETB-Opaque");
     unsigned nBufIndex = 0;
     OMX_ERRORTYPE ret = OMX_ErrorNone;
     VideoGrallocMetadata *media_buffer; // This method primarily assumes gralloc-metadata
@@ -5416,5 +5433,6 @@ OMX_ERRORTYPE omx_video::push_empty_eos_buffer(OMX_HANDLETYPE hComp,
     //buffer is sent to the the encoder
     m_pCallbacks.EmptyBufferDone(hComp, m_app_data, buffer);
     --pending_input_buffers;
+    VIDC_TRACE_INT_LOW("ETB-pending", pending_input_buffers);
     return retVal;
 }
