@@ -8503,21 +8503,35 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
         }
 
         // add current framerate to gralloc meta data
-        if (buffer->nFilledLen > 0 && m_drc_enable && m_enable_android_native_buffers && m_out_mem_ptr) {
-            //If valid fps was received, directly send it to display for the 1st fbd.
-            //Otherwise, calculate fps using fbd timestamps,
-            //  when received 2 fbds, send a coarse fps,
-            //  when received 30 fbds, update fps again as it should be
-            //  more accurate than the one when only 2 fbds received.
-            //For other frames, set value 0 to inform that refresh rate has no update
+        if ((buffer->nFilledLen > 0) && m_enable_android_native_buffers && m_out_mem_ptr) {
+            // If valid fps was received, directly send it to display for the 1st fbd.
+            // Otherwise, calculate fps using fbd timestamps
             float refresh_rate = m_fps_prev;
             if (m_fps_received) {
                 if (1 == proc_frms) {
                     refresh_rate = m_fps_received / (float)(1<<16);
                 }
             } else {
-                if (2 == proc_frms || 30 == proc_frms) {
-                    refresh_rate = drv_ctx.frame_rate.fps_numerator / (float) drv_ctx.frame_rate.fps_denominator;
+                // check if dynamic refresh rate change feature enabled or not
+                if (m_drc_enable) {
+                    // set coarse fps when 2 fbds received and
+                    // set fps again when 30 fbds received as it should be
+                    // more accurate than the one set when only 2 fbds received.
+                    if (2 == proc_frms || 30 == proc_frms) {
+                        if (drv_ctx.frame_rate.fps_denominator) {
+                            refresh_rate = drv_ctx.frame_rate.fps_numerator /
+                                    (float) drv_ctx.frame_rate.fps_denominator;
+                        }
+                    }
+                } else {
+                    // calculate and set refresh rate for every frame from second frame onwards
+                    // display will assume the default refresh rate for first frame (which is 60 fps)
+                    if (m_fps_prev) {
+                        if (drv_ctx.frame_rate.fps_denominator) {
+                            refresh_rate = drv_ctx.frame_rate.fps_numerator /
+                                    (float) drv_ctx.frame_rate.fps_denominator;
+                        }
+                    }
                 }
             }
             if (refresh_rate > 60) {
