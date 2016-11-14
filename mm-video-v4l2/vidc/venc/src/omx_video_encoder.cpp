@@ -1732,6 +1732,13 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                         OMX_VIDEO_ANDROID_MAXTEMPORALLAYERS * sizeof(OMX_U32));
                 break;
             }
+        case OMX_QTIIndexParamDisablePQ:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_DISABLETYPE);
+                handle->venc_set_param(paramData,
+                        (OMX_INDEXTYPE)OMX_QTIIndexParamDisablePQ);
+                break;
+            }
         case OMX_IndexParamVideoSliceFMO:
         default:
             {
