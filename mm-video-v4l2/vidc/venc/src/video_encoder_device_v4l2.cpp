@@ -372,6 +372,12 @@ void* venc_dev::async_venc_message_thread (void *input)
                 if (v4l2_buf.flags & V4L2_BUF_FLAG_KEYFRAME)
                     venc_msg.buf.flags |= OMX_BUFFERFLAG_SYNCFRAME;
 
+                if (v4l2_buf.flags & V4L2_BUF_FLAG_PFRAME) {
+                    venc_msg.buf.flags |= OMX_VIDEO_PictureTypeP;
+                } else if (v4l2_buf.flags & V4L2_BUF_FLAG_BFRAME) {
+                    venc_msg.buf.flags |= OMX_VIDEO_PictureTypeB;
+                }
+
                 if (v4l2_buf.flags & V4L2_QCOM_BUF_FLAG_CODECCONFIG)
                     venc_msg.buf.flags |= OMX_BUFFERFLAG_CODECCONFIG;
 
