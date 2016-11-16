@@ -60,6 +60,8 @@ ifeq ($(call is-board-platform-in-list, $(MASTER_SIDE_CP_TARGET_LIST)),true)
 libmm-vdec-def += -DMASTER_SIDE_CP
 endif
 
+libmm-vdec-def += -D_QUERY_DISP_RES_
+
 include $(CLEAR_VARS)
 
 # Common Includes
@@ -111,7 +113,7 @@ LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-vdec-add-dep)
 
 LOCAL_PRELINK_MODULE    := false
-LOCAL_SHARED_LIBRARIES  := liblog libutils libbinder libcutils libdl
+LOCAL_SHARED_LIBRARIES  := liblog libutils libbinder libcutils libdl libqdutils
 
 LOCAL_SHARED_LIBRARIES  += libqdMetaData
 
