@@ -510,6 +510,9 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     /* Enable VQZIP SEI NAL type */
     OMX_QTIIndexParamVQZIPSEIType = 0x7F000053,
 
+    /* Custom extension provided to IMS-VT to set meta-mode */
+    OMX_QTIIndexParamIMSVTVideoMetaBufferMode = 0x7F00005C,
+
 };
 
 /**
