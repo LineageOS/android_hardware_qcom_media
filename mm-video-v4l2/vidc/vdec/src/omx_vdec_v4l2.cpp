@@ -253,19 +253,27 @@ void* async_message_thread (void *input)
                 }
             } else if (dqevent.type == V4L2_EVENT_MSM_VIDC_FLUSH_DONE) {
                 struct vdec_msginfo vdec_msg;
-                vdec_msg.msgcode=VDEC_MSG_RESP_FLUSH_INPUT_DONE;
+                uint32_t flush_type = *(uint32_t *)dqevent.u.data;
+                // Old driver doesn't send flushType information.
+                // To make this backward compatible fallback to old approach
+                // if the flush_type is not present.
                 vdec_msg.status_code=VDEC_S_SUCCESS;
-                DEBUG_PRINT_HIGH("VIDC Input Flush Done Recieved");
-                if (omx->async_message_process(input,&vdec_msg) < 0) {
-                    DEBUG_PRINT_HIGH("async_message_thread Exited");
-                    break;
+                if (!flush_type || (flush_type & V4L2_QCOM_CMD_FLUSH_OUTPUT)) {
+                    vdec_msg.msgcode=VDEC_MSG_RESP_FLUSH_INPUT_DONE;
+                    DEBUG_PRINT_HIGH("VIDC Input Flush Done Recieved");
+                    if (omx->async_message_process(input,&vdec_msg) < 0) {
+                        DEBUG_PRINT_HIGH("async_message_thread Exited");
+                        break;
+                    }
                 }
-                vdec_msg.msgcode=VDEC_MSG_RESP_FLUSH_OUTPUT_DONE;
-                vdec_msg.status_code=VDEC_S_SUCCESS;
-                DEBUG_PRINT_HIGH("VIDC Output Flush Done Recieved");
-                if (omx->async_message_process(input,&vdec_msg) < 0) {
-                    DEBUG_PRINT_HIGH("async_message_thread Exited");
-                    break;
+
+                if (!flush_type || (flush_type & V4L2_QCOM_CMD_FLUSH_CAPTURE)) {
+                    vdec_msg.msgcode=VDEC_MSG_RESP_FLUSH_OUTPUT_DONE;
+                    DEBUG_PRINT_HIGH("VIDC Output Flush Done Recieved");
+                    if (omx->async_message_process(input,&vdec_msg) < 0) {
+                        DEBUG_PRINT_HIGH("async_message_thread Exited");
+                        break;
+                    }
                 }
             } else if (dqevent.type == V4L2_EVENT_MSM_VIDC_HW_OVERLOAD) {
                 struct vdec_msginfo vdec_msg;
