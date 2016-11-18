@@ -55,14 +55,19 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <media/msm_media_info.h>
 #include <sys/eventfd.h>
 
-#ifndef _ANDROID_
+#if !defined(_ANDROID_) || defined(SYS_IOCTL)
 #include <sys/ioctl.h>
 #include <sys/mman.h>
-#endif //_ANDROID_
+#endif
 
 #ifdef _ANDROID_
 #include <cutils/properties.h>
 #undef USE_EGL_IMAGE_GPU
+#endif
+
+#ifdef _USE_GLIB_
+#include <glib.h>
+#define strlcpy g_strlcpy
 #endif
 
 #include <qdMetaData.h>
