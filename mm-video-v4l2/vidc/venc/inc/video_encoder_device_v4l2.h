@@ -443,6 +443,7 @@ class venc_dev
         void venc_clip_luma_chroma(int fd, OMX_U32 offset, OMX_U32 size);
         bool venc_set_layer_bitrates(QOMX_EXTNINDEX_VIDEO_HYBRID_HP_MODE* hpmode);
         bool venc_set_colorspace(OMX_U32 primaries, OMX_U32 range, OMX_U32 transfer_chars, OMX_U32 matrix_coeffs);
+        bool venc_set_iframesize_type(QOMX_VIDEO_IFRAMESIZE_TYPE type);
 
 #ifdef MAX_RES_1080P
         OMX_U32 pmem_free();
