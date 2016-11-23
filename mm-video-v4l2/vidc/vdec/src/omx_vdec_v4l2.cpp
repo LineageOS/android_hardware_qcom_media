@@ -559,7 +559,7 @@ bool is_platform_tp10capture_supported()
 {
     char platform_name[PROPERTY_VALUE_MAX] = {0};
     property_get("ro.board.platform", platform_name, "0");
-    if (!strncmp(platform_name, "msmcobalt", 9)) {
+    if (!strncmp(platform_name, "msm8998", 9)) {
         DEBUG_PRINT_HIGH("TP10 on capture port is supported");
         return true;
     }
