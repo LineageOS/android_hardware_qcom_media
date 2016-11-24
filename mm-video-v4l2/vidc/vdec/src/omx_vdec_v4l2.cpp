@@ -634,6 +634,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     allocate_native_handle(false),
     m_other_extradata(NULL),
     m_profile(0),
+    m_need_turbo(0),
     client_set_fps(false),
     stereo_output_mode(HAL_NO_3D),
     m_last_rendered_TS(-1),
@@ -1612,6 +1613,7 @@ void omx_vdec::process_event_cb(void *ctxt, unsigned char id)
                                         if (p2 == OMX_IndexParamPortDefinition) {
                                             DEBUG_PRINT_HIGH("Rxd PORT_RECONFIG: OMX_IndexParamPortDefinition");
                                             pThis->in_reconfig = true;
+                                            pThis->m_need_turbo &= ~TURBO_MODE_HIGH_FPS;
                                         }  else if (p2 == OMX_IndexConfigCommonOutputCrop) {
                                             DEBUG_PRINT_HIGH("Rxd PORT_RECONFIG: OMX_IndexConfigCommonOutputCrop");
 
@@ -2160,7 +2162,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
     drv_ctx.frame_rate.fps_numerator = DEFAULT_FPS;
     drv_ctx.frame_rate.fps_denominator = 1;
     operating_frame_rate = DEFAULT_FPS;
-    high_fps = false;
     m_poll_efd = eventfd(0, 0);
     if (m_poll_efd < 0) {
         DEBUG_PRINT_ERROR("Failed to create event fd(%s)", strerror(errno));
@@ -5292,15 +5293,16 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
         struct v4l2_control control;
 
         DEBUG_PRINT_LOW("Set perf level: %d", perf->ePerfLevel);
-
         control.id = V4L2_CID_MPEG_VIDC_SET_PERF_LEVEL;
 
         switch (perf->ePerfLevel) {
             case OMX_QCOM_PerfLevelNominal:
                 control.value = V4L2_CID_MPEG_VIDC_PERF_LEVEL_NOMINAL;
+                m_need_turbo &= ~TURBO_MODE_CLIENT_REQUESTED;
                 break;
             case OMX_QCOM_PerfLevelTurbo:
                 control.value = V4L2_CID_MPEG_VIDC_PERF_LEVEL_TURBO;
+                m_need_turbo |= TURBO_MODE_CLIENT_REQUESTED;
                 break;
             default:
                 ret = OMX_ErrorUnsupportedSetting;
@@ -8770,7 +8772,7 @@ int omx_vdec::async_message_process (void *context, void* message)
                    if (omxhdr->nFilledLen)
                        omx->prev_n_filled_len = omxhdr->nFilledLen;
 
-                   if (omxhdr && omxhdr->nFilledLen && !omx->high_fps) {
+                   if (omxhdr && omxhdr->nFilledLen && !omx->m_need_turbo) {
                         omx->request_perf_level(VIDC_NOMINAL);
                    }
                    if (omx->output_use_buffer && omxhdr->pBuffer &&
@@ -8803,7 +8805,7 @@ int omx_vdec::async_message_process (void *context, void* message)
             omx->m_reconfig_height = vdec_msg->msgdata.output_frame.picsize.frame_height;
             omx->post_event (OMX_CORE_OUTPUT_PORT_INDEX, OMX_IndexParamPortDefinition,
                     OMX_COMPONENT_GENERATE_PORT_RECONFIG);
-            if (!omx->high_fps) {
+            if (!omx->m_need_turbo) {
                 omx->request_perf_level(VIDC_NOMINAL);
             }
             break;
@@ -9758,7 +9760,7 @@ OMX_ERRORTYPE omx_vdec::get_buffer_req(vdec_allocatorproperty *buffer_prop)
         if (increase_output && fps_above_180 &&
             output_capability == V4L2_PIX_FMT_H264 &&
             is_res_1080p_or_below) {
-            high_fps = true;
+            m_need_turbo |= TURBO_MODE_HIGH_FPS;
             DEBUG_PRINT_LOW("High fps - fps = %d operating_rate = %d", fps, operating_frame_rate);
             DEBUG_PRINT_LOW("getbufreq[output]: Increase buffer count (%d) to (%d) to support high fps",
                             bufreq.count, bufreq.count + 10);
