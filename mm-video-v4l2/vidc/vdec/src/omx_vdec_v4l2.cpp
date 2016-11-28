@@ -7749,12 +7749,13 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
 
     rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_QBUF, &buf);
     if (rc) {
-        /*TODO: How to handle this case */
         buffer->nFilledLen = 0;
-        DEBUG_PRINT_ERROR("Failed to qbuf to driver, send FTB back to client");
+        DEBUG_PRINT_ERROR("Failed to qbuf to driver, error %s", strerror(errno));
         m_cb.FillBufferDone(hComp, m_app_data, buffer);
+        return OMX_ErrorHardware;
     }
-return OMX_ErrorNone;
+
+    return OMX_ErrorNone;
 }
 
 /* ======================================================================
