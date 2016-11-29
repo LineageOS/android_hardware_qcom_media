@@ -3434,6 +3434,9 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
             } else if (profileLevelType->nProfileIndex == 1) {
                 profileLevelType->eProfile = OMX_VIDEO_HEVCProfileMain10;
                 profileLevelType->eLevel   = OMX_VIDEO_HEVCMainTierLevel51;
+            } else if (profileLevelType->nProfileIndex == 2) {
+                profileLevelType->eProfile = OMX_VIDEO_HEVCProfileMain10HDR10;
+                profileLevelType->eLevel   = OMX_VIDEO_HEVCMainTierLevel51;
             } else {
                 DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoProfileLevelQuerySupported nProfileIndex ret NoMore %u",
                         (unsigned int)profileLevelType->nProfileIndex);
