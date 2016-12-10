@@ -3771,16 +3771,22 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         DEBUG_PRINT_ERROR("ERROR: venc_etb: handle is NULL");
                         return false;
                     }
+                    int usage = 0;
+                    usage = MetaBufferUtil::getIntAt(hnd, 0, MetaBufferUtil::INT_USAGE);
+                    usage = usage > 0 ? usage : 0;
+
+                    if ((usage & private_handle_t::PRIV_FLAGS_ITU_R_601_FR)
+                            && (is_csc_enabled)) {
+                        buf.flags |= V4L2_MSM_BUF_FLAG_YUV_601_709_CLAMP;
+                    }
 
                     if (!streaming[OUTPUT_PORT] && !(m_sVenc_cfg.inputformat == V4L2_PIX_FMT_RGB32 ||
                         m_sVenc_cfg.inputformat == V4L2_PIX_FMT_RGBA8888_UBWC)) {
-                        int usage = 0;
+
                         struct v4l2_format fmt;
                         OMX_COLOR_FORMATTYPE color_format = (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
 
                         color_format = (OMX_COLOR_FORMATTYPE)MetaBufferUtil::getIntAt(hnd, 0, MetaBufferUtil::INT_COLORFORMAT);
-                        usage = MetaBufferUtil::getIntAt(hnd, 0, MetaBufferUtil::INT_USAGE);
-                        usage = usage > 0 ? usage : 0;
 
                         memset(&fmt, 0, sizeof(fmt));
                         if (usage & private_handle_t::PRIV_FLAGS_ITU_R_709 ||
@@ -3790,10 +3796,17 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         }
                         if (usage & private_handle_t::PRIV_FLAGS_ITU_R_601_FR) {
                             if (is_csc_enabled) {
-                                buf.flags = V4L2_MSM_BUF_FLAG_YUV_601_709_CLAMP;
-                                fmt.fmt.pix_mp.colorspace = V4L2_COLORSPACE_REC709;
-                                venc_set_colorspace(MSM_VIDC_BT709_5, 1,
-                                        MSM_VIDC_TRANSFER_BT709_5, MSM_VIDC_MATRIX_BT_709_5);
+                                struct v4l2_control control;
+                                control.id = V4L2_CID_MPEG_VIDC_VIDEO_VPE_CSC;
+                                control.value = V4L2_CID_MPEG_VIDC_VIDEO_VPE_CSC_ENABLE;
+                                if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
+                                    DEBUG_PRINT_ERROR("venc_empty_buf: Failed to set VPE CSC for 601_to_709");
+                                } else {
+                                    DEBUG_PRINT_INFO("venc_empty_buf: Will convert 601-FR to 709");
+                                    fmt.fmt.pix_mp.colorspace = V4L2_COLORSPACE_REC709;
+                                    venc_set_colorspace(MSM_VIDC_BT709_5, 1,
+                                            MSM_VIDC_TRANSFER_BT709_5, MSM_VIDC_MATRIX_BT_709_5);
+                                }
                             } else {
                                 venc_set_colorspace(MSM_VIDC_BT601_6_525, 1,
                                         MSM_VIDC_TRANSFER_601_6_525, MSM_VIDC_MATRIX_601_6_525);
@@ -3806,10 +3819,6 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         fmt.fmt.pix_mp.width = m_sVenc_cfg.input_width;
                         if (usage & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED) {
                             m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV12_UBWC;
-                        }
-
-                        if (usage & private_handle_t::PRIV_FLAGS_ITU_R_709) {
-                            buf.flags = V4L2_MSM_BUF_FLAG_YUV_601_709_CLAMP;
                         }
 
                         if (color_format > 0 && !venc_set_color_format(color_format)) {
@@ -4129,6 +4138,7 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
         }
         for (int i = 0; i < numBufs; ++i) {
             int v4l2Id = v4l2Ids[i];
+            int usage = 0;
 
             memset(&buf, 0, sizeof(buf));
             memset(&plane, 0, sizeof(plane));
@@ -4144,6 +4154,14 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
             plane[0].length = plane[0].bytesused = MetaBufferUtil::getIntAt(hnd, i, MetaBufferUtil::INT_SIZE);
             buf.m.planes = plane;
             buf.length = num_input_planes;
+
+            usage = MetaBufferUtil::getIntAt(hnd, i, MetaBufferUtil::INT_USAGE);
+            usage = usage > 0 ? usage : 0;
+
+            if ((usage & private_handle_t::PRIV_FLAGS_ITU_R_601_FR)
+                    && (is_csc_enabled)) {
+                buf.flags |= V4L2_MSM_BUF_FLAG_YUV_601_709_CLAMP;
+            }
 
             extra_idx = EXTRADATA_IDX(num_input_planes);
 
