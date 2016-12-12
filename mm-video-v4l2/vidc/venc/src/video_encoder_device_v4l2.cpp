@@ -922,12 +922,13 @@ bool venc_dev::handle_output_extradata(void *buffer, int index)
             }
             case MSM_VIDC_EXTRADATA_METADATA_LTR:
             {
-                *p_extra->data = *p_extradata->data;
                 p_extra->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) + p_extradata->data_size, 4);
                 p_extra->nVersion.nVersion = OMX_SPEC_VERSION;
                 p_extra->nPortIndex = OMX_DirOutput;
                 p_extra->eType = (OMX_EXTRADATATYPE) OMX_ExtraDataVideoLTRInfo;
                 p_extra->nDataSize = p_extradata->data_size;
+                memcpy(p_extra->data, p_extradata->data, p_extradata->data_size);
+                DEBUG_PRINT_LOW("LTRInfo Extradata = 0x%x", *((OMX_U32 *)p_extra->data));
                 break;
             }
             case MSM_VIDC_EXTRADATA_NONE:
@@ -2364,6 +2365,19 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
 
                 if (venc_set_extradata(OMX_ExtraDataVideoEncoderMBInfo, extra_data) == false) {
                     DEBUG_PRINT_ERROR("ERROR: Setting OMX_ExtraDataVideoEncoderMBInfo failed");
+                    return false;
+                }
+
+                extradata = true;
+                break;
+            }
+        case OMX_ExtraDataVideoLTRInfo:
+            {
+                DEBUG_PRINT_LOW("venc_set_param: OMX_ExtraDataVideoLTRInfo");
+                OMX_BOOL extra_data =  *(OMX_BOOL *)(paramData);
+
+                if (venc_set_extradata(OMX_ExtraDataVideoLTRInfo, extra_data) == false) {
+                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_ExtraDataVideoLTRInfo failed");
                     return false;
                 }
 
@@ -4652,6 +4666,9 @@ bool venc_dev::venc_set_extradata(OMX_U32 extra_data, OMX_BOOL enable)
             break;
         case OMX_ExtraDataEncoderOverrideQPInfo:
             control.value = V4L2_MPEG_VIDC_EXTRADATA_PQ_INFO;
+            break;
+        case OMX_ExtraDataVideoLTRInfo:
+            control.value = V4L2_MPEG_VIDC_EXTRADATA_LTR;
             break;
         default:
             DEBUG_PRINT_ERROR("Unrecognized extradata index 0x%x", (unsigned int)extra_data);
