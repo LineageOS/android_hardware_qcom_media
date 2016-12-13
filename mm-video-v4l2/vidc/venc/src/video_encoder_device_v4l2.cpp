@@ -675,6 +675,16 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
             DEBUG_PRINT_LOW("VQZIP SEI Found ");
             input_extradata_info.vqzip_sei_found = true;
             break;
+        case OMX_ExtraDataFrameInfo:
+        {
+            OMX_QCOM_EXTRADATA_FRAMEINFO *frame_info = NULL;
+            frame_info = (OMX_QCOM_EXTRADATA_FRAMEINFO *)(p_extra->data);
+            if (frame_info->ePicType == OMX_VIDEO_PictureTypeI) {
+                if (venc_set_intra_vop_refresh((OMX_BOOL)true) == false)
+                    DEBUG_PRINT_ERROR("%s Error in requesting I Frame ", __func__);
+            }
+            break;
+        }
         default:
             DEBUG_PRINT_HIGH("Unknown Extradata 0x%x", (OMX_QCOM_EXTRADATATYPE)p_extra->eType);
             break;
@@ -5842,15 +5852,13 @@ bool venc_dev::venc_set_intra_vop_refresh(OMX_BOOL intra_vop_refresh)
         int rc;
         control.id = V4L2_CID_MPEG_VIDC_VIDEO_REQUEST_IFRAME;
         control.value = 1;
-       DEBUG_PRINT_ERROR("Calling IOCTL set control for id=%x, val=%d", control.id, control.value);
-        rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
+        rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
         if (rc) {
-           DEBUG_PRINT_ERROR("Failed to set Intra Frame Request control");
+            DEBUG_PRINT_ERROR("Failed to set Intra Frame Request control");
             return false;
         }
-
-       DEBUG_PRINT_ERROR("Success IOCTL set control for id=%x, value=%d", control.id, control.value);
+        DEBUG_PRINT_HIGH("Success IOCTL set control for id=%x, value=%d", control.id, control.value);
     } else {
         DEBUG_PRINT_ERROR("ERROR: VOP Refresh is False, no effect");
     }
