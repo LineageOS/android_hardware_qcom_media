@@ -559,15 +559,41 @@ int venc_dev::append_mbi_extradata(void *dst, struct msm_vidc_extradata_header* 
     return mbi->nDataSize + sizeof(*mbi);
 }
 
+inline int get_yuv_size(unsigned long fmt, int width, int height) {
+    unsigned int y_stride, uv_stride, y_sclines,
+                uv_sclines, y_plane, uv_plane;
+    unsigned int y_ubwc_plane = 0, uv_ubwc_plane = 0;
+    unsigned size = 0;
+
+    y_stride = VENUS_Y_STRIDE(fmt, width);
+    uv_stride = VENUS_UV_STRIDE(fmt, width);
+    y_sclines = VENUS_Y_SCANLINES(fmt, height);
+    uv_sclines = VENUS_UV_SCANLINES(fmt, height);
+
+    switch (fmt) {
+        case COLOR_FMT_NV12:
+            y_plane = y_stride * y_sclines;
+            uv_plane = uv_stride * uv_sclines;
+            size = MSM_MEDIA_ALIGN(y_plane + uv_plane, 4096);
+            break;
+         default:
+            break;
+    }
+    return size;
+}
+
 bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
 {
     OMX_OTHER_EXTRADATATYPE *p_extra = NULL;
-    unsigned int consumed_len = 0, index = 0;
-    int enable = 0, i = 0;
-    int height = 0, width = 0;
+    unsigned int consumed_len = 0, filled_len = 0;
+    unsigned int yuv_size = 0, index = 0;
+    int enable = 0, i = 0, size = 0;
+    unsigned char *pVirt = NULL;
+    int height = m_sVenc_cfg.input_height;
+    int width = m_sVenc_cfg.input_width;
     OMX_TICKS nTimeStamp = buf.timestamp.tv_sec * 1000000 + buf.timestamp.tv_usec;
     int fd = buf.m.planes[0].reserved[0];
-    bool unknown_extradata = false;
+    bool vqzip_sei_found = false;
 
     if (!EXTRADATA_IDX(num_input_planes)) {
         DEBUG_PRINT_LOW("Input extradata not enabled");
@@ -579,182 +605,174 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
         return false;
     }
 
-    /*
-     * At this point encoder component doesn't know where the extradata is
-     * located in YUV buffer. For all practical usecases, decoder appends
-     * extradata after nFilledLen which is calcualted as 32 aligned height
-     * and width * 3 / 2. Hence start looking for extradata from this point.
-     */
-
     DEBUG_PRINT_HIGH("Processing Extradata for Buffer = %lld", nTimeStamp); // Useful for debugging
 
-    height = ALIGN(m_sVenc_cfg.input_height, 32);
-    width = ALIGN(m_sVenc_cfg.input_width, 32);
+    if (m_sVenc_cfg.inputformat == V4L2_PIX_FMT_NV12 || m_sVenc_cfg.inputformat == V4L2_PIX_FMT_NV21) {
+        size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12, width, height);
+        yuv_size = get_yuv_size(COLOR_FMT_NV12, width, height);
+        pVirt = (unsigned char *)mmap(NULL, size, PROT_READ|PROT_WRITE,MAP_SHARED, fd, 0);
+        if (pVirt == MAP_FAILED) {
+            DEBUG_PRINT_ERROR("%s Failed to mmap",__func__);
+            return false;
+        }
+        p_extra = (OMX_OTHER_EXTRADATATYPE *) ((unsigned long)(pVirt + yuv_size + 3)&(~3));
+    }
 
     index = venc_get_index_from_fd(input_extradata_info.m_ion_dev,fd);
-
-    unsigned char *pVirt;
-    int size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12, width, height);
-    pVirt= (unsigned char *)mmap(NULL, size, PROT_READ|PROT_WRITE,MAP_SHARED, fd, 0);
-
-    p_extra = (OMX_OTHER_EXTRADATATYPE *) ((unsigned long)(pVirt + ((width * height * 3) / 2) + 3)&(~3));
     char *p_extradata = input_extradata_info.uaddr + index * input_extradata_info.buffer_size;
     OMX_OTHER_EXTRADATATYPE *data = (struct OMX_OTHER_EXTRADATATYPE *)p_extradata;
     memset((void *)(data), 0, (input_extradata_info.buffer_size)); // clear stale data in current buffer
-    if (p_extra) {
-        bool vqzip_sei_found = false;
 
-        while ((consumed_len < input_extradata_info.buffer_size)
-            && (p_extra->eType != (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_NONE)
-            && !unknown_extradata) {
-            DEBUG_PRINT_LOW("Extradata Type = 0x%x", (OMX_QCOM_EXTRADATATYPE)p_extra->eType);
-            switch ((OMX_QCOM_EXTRADATATYPE)p_extra->eType) {
-            case OMX_ExtraDataFrameDimension:
-            {
-                struct msm_vidc_extradata_index *payload;
-                OMX_QCOM_EXTRADATA_FRAMEDIMENSION *framedimension_format;
-                data->nSize = (sizeof(OMX_OTHER_EXTRADATATYPE) + sizeof(struct msm_vidc_extradata_index) + 3)&(~3);
-                data->nVersion.nVersion = OMX_SPEC_VERSION;
-                data->nPortIndex = 0;
-                data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_INDEX;
-                data->nDataSize = sizeof(struct msm_vidc_input_crop_payload);
-                framedimension_format = (OMX_QCOM_EXTRADATA_FRAMEDIMENSION *)p_extra->data;
-                payload = (struct msm_vidc_extradata_index *)(data->data);
-                payload->type = (msm_vidc_extradata_type)MSM_VIDC_EXTRADATA_INPUT_CROP;
-                payload->input_crop.left = framedimension_format->nDecWidth;
-                payload->input_crop.top = framedimension_format->nDecHeight;
-                payload->input_crop.width = framedimension_format->nActualWidth;
-                payload->input_crop.height = framedimension_format->nActualHeight;
-                DEBUG_PRINT_LOW("Height = %d Width = %d Actual Height = %d Actual Width = %d",
-                    framedimension_format->nDecWidth, framedimension_format->nDecHeight,
-                    framedimension_format->nActualWidth, framedimension_format->nActualHeight);
-                data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
-                break;
-            }
-            case OMX_ExtraDataQP:
-            {
-                OMX_QCOM_EXTRADATA_QP * qp_payload = NULL;
-                struct msm_vidc_frame_qp_payload *payload;
-                data->nSize = (sizeof(OMX_OTHER_EXTRADATATYPE) + sizeof(struct msm_vidc_frame_qp_payload) + 3)&(~3);
-                data->nVersion.nVersion = OMX_SPEC_VERSION;
-                data->nPortIndex = 0;
-                data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_FRAME_QP;
-                data->nDataSize = sizeof(struct  msm_vidc_frame_qp_payload);
-                qp_payload = (OMX_QCOM_EXTRADATA_QP *)p_extra->data;
-                payload = (struct  msm_vidc_frame_qp_payload *)(data->data);
-                payload->frame_qp = qp_payload->nQP;
-                DEBUG_PRINT_LOW("Frame QP = %d", payload->frame_qp);
-                data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
-                break;
-            }
-            case OMX_ExtraDataVQZipSEI:
-                DEBUG_PRINT_LOW("VQZIP SEI Found ");
-                input_extradata_info.vqzip_sei_found = true;
-                break;
-            default:
-                unknown_extradata = true;
-                break;
-            }
-            if (!unknown_extradata) {
-                consumed_len += p_extra->nSize;
-                p_extra = (OMX_OTHER_EXTRADATATYPE *)((char *)p_extra + p_extra->nSize);
-            } else  {
-                DEBUG_PRINT_HIGH(" Unknown Extradata. Exiting parsing ");
-                break;
-            }
+    while (p_extra && (consumed_len + sizeof(OMX_OTHER_EXTRADATATYPE)) <= (size - yuv_size)
+        && (consumed_len + p_extra->nSize) <= (size - yuv_size)
+        && (filled_len + sizeof(OMX_OTHER_EXTRADATATYPE) <= input_extradata_info.buffer_size)
+        && (filled_len + p_extra->nSize <= input_extradata_info.buffer_size)
+        && (p_extra->eType != (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_NONE)) {
+
+        DEBUG_PRINT_LOW("Extradata Type = 0x%x", (OMX_QCOM_EXTRADATATYPE)p_extra->eType);
+        switch ((OMX_QCOM_EXTRADATATYPE)p_extra->eType) {
+        case OMX_ExtraDataFrameDimension:
+        {
+            struct msm_vidc_extradata_index *payload;
+            OMX_QCOM_EXTRADATA_FRAMEDIMENSION *framedimension_format;
+            data->nSize = (sizeof(OMX_OTHER_EXTRADATATYPE) + sizeof(struct msm_vidc_extradata_index) + 3)&(~3);
+            data->nVersion.nVersion = OMX_SPEC_VERSION;
+            data->nPortIndex = 0;
+            data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_INDEX;
+            data->nDataSize = sizeof(struct msm_vidc_input_crop_payload);
+            framedimension_format = (OMX_QCOM_EXTRADATA_FRAMEDIMENSION *)p_extra->data;
+            payload = (struct msm_vidc_extradata_index *)(data->data);
+            payload->type = (msm_vidc_extradata_type)MSM_VIDC_EXTRADATA_INPUT_CROP;
+            payload->input_crop.left = framedimension_format->nDecWidth;
+            payload->input_crop.top = framedimension_format->nDecHeight;
+            payload->input_crop.width = framedimension_format->nActualWidth;
+            payload->input_crop.height = framedimension_format->nActualHeight;
+            DEBUG_PRINT_LOW("Height = %d Width = %d Actual Height = %d Actual Width = %d",
+                framedimension_format->nDecWidth, framedimension_format->nDecHeight,
+                framedimension_format->nActualWidth, framedimension_format->nActualHeight);
+            filled_len += data->nSize;
+            data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
+            break;
+        }
+        case OMX_ExtraDataQP:
+        {
+            OMX_QCOM_EXTRADATA_QP * qp_payload = NULL;
+            struct msm_vidc_frame_qp_payload *payload;
+            data->nSize = (sizeof(OMX_OTHER_EXTRADATATYPE) + sizeof(struct msm_vidc_frame_qp_payload) + 3)&(~3);
+            data->nVersion.nVersion = OMX_SPEC_VERSION;
+            data->nPortIndex = 0;
+            data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_FRAME_QP;
+            data->nDataSize = sizeof(struct  msm_vidc_frame_qp_payload);
+            qp_payload = (OMX_QCOM_EXTRADATA_QP *)p_extra->data;
+            payload = (struct  msm_vidc_frame_qp_payload *)(data->data);
+            payload->frame_qp = qp_payload->nQP;
+            DEBUG_PRINT_LOW("Frame QP = %d", payload->frame_qp);
+            filled_len += data->nSize;
+            data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
+            break;
+        }
+        case OMX_ExtraDataVQZipSEI:
+            DEBUG_PRINT_LOW("VQZIP SEI Found ");
+            input_extradata_info.vqzip_sei_found = true;
+            break;
+        default:
+            DEBUG_PRINT_HIGH("Unknown Extradata 0x%x", (OMX_QCOM_EXTRADATATYPE)p_extra->eType);
+            break;
         }
 
-        /*
-         * Below code is based on these points.
-         * 1) _PQ_ not defined :
-         *     a) Send data to Venus as ROI.
-         *     b) ROI enabled : Processed under unlocked context.
-         *     c) ROI disabled : Nothing to fill.
-         *     d) pq enabled : Not possible.
-         * 2) _PQ_ defined, but pq is not enabled :
-         *     a) Send data to Venus as ROI.
-         *     b) ROI enabled and dirty : Copy the data to Extradata buffer here
-         *     b) ROI enabled and no dirty : Nothing to fill
-         *     d) ROI disabled : Nothing to fill
-         * 3) _PQ_ defined and pq is enabled :
-         *     a) Send data to Venus as PQ.
-         *     b) ROI enabled and dirty : Copy the ROI contents to pq_roi buffer
-         *     c) ROI enabled and no dirty : pq_roi is already memset. Hence nothing to do here
-         *     d) ROI disabled : Just PQ data will be filled by GPU.
-         * 4) Normal ROI handling is in #else part as PQ can introduce delays.
-         *     By this time if client sets next ROI, then we shouldn't process new ROI here.
-         */
+        consumed_len += p_extra->nSize;
+        p_extra = (OMX_OTHER_EXTRADATATYPE *)((char *)p_extra + p_extra->nSize);
+    }
+
+    /*
+       * Below code is based on these points.
+       * 1) _PQ_ not defined :
+       *     a) Send data to Venus as ROI.
+       *     b) ROI enabled : Processed under unlocked context.
+       *     c) ROI disabled : Nothing to fill.
+       *     d) pq enabled : Not possible.
+       * 2) _PQ_ defined, but pq is not enabled :
+       *     a) Send data to Venus as ROI.
+       *     b) ROI enabled and dirty : Copy the data to Extradata buffer here
+       *     b) ROI enabled and no dirty : Nothing to fill
+       *     d) ROI disabled : Nothing to fill
+       * 3) _PQ_ defined and pq is enabled :
+       *     a) Send data to Venus as PQ.
+       *     b) ROI enabled and dirty : Copy the ROI contents to pq_roi buffer
+       *     c) ROI enabled and no dirty : pq_roi is already memset. Hence nothing to do here
+       *     d) ROI disabled : Just PQ data will be filled by GPU.
+       * 4) Normal ROI handling is in #else part as PQ can introduce delays.
+       *     By this time if client sets next ROI, then we shouldn't process new ROI here.
+       */
 
 #ifdef _PQ_
-        pthread_mutex_lock(&m_pq.lock);
-        if (m_pq.is_pq_enabled) {
-            if (roi.dirty) {
-                struct msm_vidc_roi_qp_payload *roiData =
-                    (struct msm_vidc_roi_qp_payload *)(m_pq.roi_extradata_info.uaddr);
-                roiData->upper_qp_offset = roi.info.nUpperQpOffset;
-                roiData->lower_qp_offset = roi.info.nLowerQpOffset;
-                roiData->b_roi_info = roi.info.bUseRoiInfo;
-                roiData->mbi_info_size = roi.info.nRoiMBInfoSize;
-                DEBUG_PRINT_HIGH("Using PQ + ROI QP map: Enable = %d", roiData->b_roi_info);
-                memcpy(roiData->data, roi.info.pRoiMBInfo, roi.info.nRoiMBInfoSize);
-                roi.dirty = false;
-            }
-            consumed_len += sizeof(msm_vidc_extradata_header) - sizeof(unsigned int);
-            data->nDataSize = m_pq.fill_pq_stats(buf, consumed_len);
-            data->nSize = ALIGN(sizeof(msm_vidc_extradata_header) +  data->nDataSize, 4);
-            data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_PQ_INFO;
-        } else {
-            data->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) +
-                    sizeof(struct msm_vidc_roi_qp_payload) +
-                    roi.info.nRoiMBInfoSize - 2 * sizeof(unsigned int), 4);
-            data->nVersion.nVersion = OMX_SPEC_VERSION;
-            data->nPortIndex = 0;
-            data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_ROI_QP;
-            data->nDataSize = sizeof(struct msm_vidc_roi_qp_payload);
-
+    pthread_mutex_lock(&m_pq.lock);
+    if (m_pq.is_pq_enabled) {
+        if (roi.dirty) {
             struct msm_vidc_roi_qp_payload *roiData =
-                (struct msm_vidc_roi_qp_payload *)(data->data);
+                (struct msm_vidc_roi_qp_payload *)(m_pq.roi_extradata_info.uaddr);
             roiData->upper_qp_offset = roi.info.nUpperQpOffset;
             roiData->lower_qp_offset = roi.info.nLowerQpOffset;
             roiData->b_roi_info = roi.info.bUseRoiInfo;
             roiData->mbi_info_size = roi.info.nRoiMBInfoSize;
-            DEBUG_PRINT_HIGH("Using ROI QP map: Enable = %d", roiData->b_roi_info);
+            DEBUG_PRINT_HIGH("Using PQ + ROI QP map: Enable = %d", roiData->b_roi_info);
             memcpy(roiData->data, roi.info.pRoiMBInfo, roi.info.nRoiMBInfoSize);
             roi.dirty = false;
         }
-        pthread_mutex_unlock(&m_pq.lock);
-        data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
-#else // _PQ_
-        if (roi.dirty) {
-            data->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) +
+        filled_len += sizeof(msm_vidc_extradata_header) - sizeof(unsigned int);
+        data->nDataSize = m_pq.fill_pq_stats(buf, filled_len);
+        data->nSize = ALIGN(sizeof(msm_vidc_extradata_header) +  data->nDataSize, 4);
+        data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_PQ_INFO;
+    } else {
+        data->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) +
                 sizeof(struct msm_vidc_roi_qp_payload) +
                 roi.info.nRoiMBInfoSize - 2 * sizeof(unsigned int), 4);
-            data->nVersion.nVersion = OMX_SPEC_VERSION;
-            data->nPortIndex = 0;
-            data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_ROI_QP;
-            data->nDataSize = sizeof(struct msm_vidc_roi_qp_payload);
-
-            struct msm_vidc_roi_qp_payload *roiData =
+        data->nVersion.nVersion = OMX_SPEC_VERSION;
+        data->nPortIndex = 0;
+        data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_ROI_QP;
+        data->nDataSize = sizeof(struct msm_vidc_roi_qp_payload);
+        struct msm_vidc_roi_qp_payload *roiData =
                 (struct msm_vidc_roi_qp_payload *)(data->data);
-            roiData->upper_qp_offset = roi.info.nUpperQpOffset;
-            roiData->lower_qp_offset = roi.info.nLowerQpOffset;
-            roiData->b_roi_info = roi.info.bUseRoiInfo;
-            roiData->mbi_info_size = roi.info.nRoiMBInfoSize;
-            DEBUG_PRINT_HIGH("Using ROI QP map: Enable = %d", roiData->b_roi_info);
-            memcpy(roiData->data, roi.info.pRoiMBInfo, roi.info.nRoiMBInfoSize);
-
-            roi.dirty = false;
-            data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
-        }
+        roiData->upper_qp_offset = roi.info.nUpperQpOffset;
+        roiData->lower_qp_offset = roi.info.nLowerQpOffset;
+        roiData->b_roi_info = roi.info.bUseRoiInfo;
+        roiData->mbi_info_size = roi.info.nRoiMBInfoSize;
+        DEBUG_PRINT_HIGH("Using ROI QP map: Enable = %d", roiData->b_roi_info);
+        memcpy(roiData->data, roi.info.pRoiMBInfo, roi.info.nRoiMBInfoSize);
+        roi.dirty = false;
+    }
+    pthread_mutex_unlock(&m_pq.lock);
+    data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
+#else // _PQ_
+    if (roi.dirty) {
+        data->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) +
+            sizeof(struct msm_vidc_roi_qp_payload) +
+            roi.info.nRoiMBInfoSize - 2 * sizeof(unsigned int), 4);
+        data->nVersion.nVersion = OMX_SPEC_VERSION;
+        data->nPortIndex = 0;
+        data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_ROI_QP;
+        data->nDataSize = sizeof(struct msm_vidc_roi_qp_payload);
+        struct msm_vidc_roi_qp_payload *roiData =
+                (struct msm_vidc_roi_qp_payload *)(data->data);
+        roiData->upper_qp_offset = roi.info.nUpperQpOffset;
+        roiData->lower_qp_offset = roi.info.nLowerQpOffset;
+        roiData->b_roi_info = roi.info.bUseRoiInfo;
+        roiData->mbi_info_size = roi.info.nRoiMBInfoSize;
+        DEBUG_PRINT_HIGH("Using ROI QP map: Enable = %d", roiData->b_roi_info);
+        memcpy(roiData->data, roi.info.pRoiMBInfo, roi.info.nRoiMBInfoSize);
+        roi.dirty = false;
+        data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
+    }
 #endif // _PQ_
 
 #ifdef _VQZIP_
     if (vqzip_sei_info.enabled && !input_extradata_info.vqzip_sei_found) {
         DEBUG_PRINT_ERROR("VQZIP is enabled, But no VQZIP SEI found. Rejecting the session");
-        munmap(pVirt, size);
+        if (pVirt)
+            munmap(pVirt, size);
         return false;
     }
-    if (vqzip_sei_info.enabled) {
+    if (vqzip_sei_info.enabled && pVirt) {
         data->nSize = (sizeof(OMX_OTHER_EXTRADATATYPE) +  sizeof(struct VQZipStats) + 3)&(~3);
         data->nVersion.nVersion = OMX_SPEC_VERSION;
         data->nPortIndex = 0;
@@ -764,15 +782,15 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
         data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
     }
 #endif
-
         data->nSize = sizeof(OMX_OTHER_EXTRADATATYPE);
         data->nVersion.nVersion = OMX_SPEC_VERSION;
         data->eType = OMX_ExtraDataNone;
         data->nDataSize = 0;
         data->data[0] = 0;
 
-    }
-    munmap(pVirt, size);
+    if (pVirt)
+        munmap(pVirt, size);
+
     return true;
 }
 
@@ -1707,6 +1725,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
     struct v4l2_format fmt;
     struct v4l2_requestbuffers bufreq;
     int ret;
+    bool isCBR;
 
     switch ((int)index) {
         case OMX_IndexParamPortDefinition:
@@ -2514,6 +2533,23 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 if (pParam->bDisable)
                     m_pq.is_pq_force_disable = true;
 #endif
+                break;
+            }
+        case OMX_QTIIndexParamIframeSizeType:
+            {
+                QOMX_VIDEO_IFRAMESIZE* pParam =
+                    (QOMX_VIDEO_IFRAMESIZE *)paramData;
+                isCBR = rate_ctrl.rcmode == V4L2_CID_MPEG_VIDC_VIDEO_RATE_CONTROL_CBR_VFR ||
+                    rate_ctrl.rcmode == V4L2_CID_MPEG_VIDC_VIDEO_RATE_CONTROL_CBR_CFR;
+                if (!isCBR) {
+                    DEBUG_PRINT_ERROR("venc_set_param: OMX_QTIIndexParamIframeSizeType not allowed for this configuration isCBR(%d)",
+                        isCBR);
+                    return OMX_ErrorUnsupportedSetting;
+                }
+                if (!venc_set_iframesize_type(pParam->eType)) {
+                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamIframeSizeType failed");
+                    return OMX_ErrorUnsupportedSetting;
+                }
                 break;
             }
         case OMX_IndexParamVideoSliceFMO:
@@ -3735,16 +3771,22 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         DEBUG_PRINT_ERROR("ERROR: venc_etb: handle is NULL");
                         return false;
                     }
+                    int usage = 0;
+                    usage = MetaBufferUtil::getIntAt(hnd, 0, MetaBufferUtil::INT_USAGE);
+                    usage = usage > 0 ? usage : 0;
+
+                    if ((usage & private_handle_t::PRIV_FLAGS_ITU_R_601_FR)
+                            && (is_csc_enabled)) {
+                        buf.flags |= V4L2_MSM_BUF_FLAG_YUV_601_709_CLAMP;
+                    }
 
                     if (!streaming[OUTPUT_PORT] && !(m_sVenc_cfg.inputformat == V4L2_PIX_FMT_RGB32 ||
                         m_sVenc_cfg.inputformat == V4L2_PIX_FMT_RGBA8888_UBWC)) {
-                        int usage = 0;
+
                         struct v4l2_format fmt;
                         OMX_COLOR_FORMATTYPE color_format = (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
 
                         color_format = (OMX_COLOR_FORMATTYPE)MetaBufferUtil::getIntAt(hnd, 0, MetaBufferUtil::INT_COLORFORMAT);
-                        usage = MetaBufferUtil::getIntAt(hnd, 0, MetaBufferUtil::INT_USAGE);
-                        usage = usage > 0 ? usage : 0;
 
                         memset(&fmt, 0, sizeof(fmt));
                         if (usage & private_handle_t::PRIV_FLAGS_ITU_R_709 ||
@@ -3754,10 +3796,17 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         }
                         if (usage & private_handle_t::PRIV_FLAGS_ITU_R_601_FR) {
                             if (is_csc_enabled) {
-                                buf.flags = V4L2_MSM_BUF_FLAG_YUV_601_709_CLAMP;
-                                fmt.fmt.pix_mp.colorspace = V4L2_COLORSPACE_REC709;
-                                venc_set_colorspace(MSM_VIDC_BT709_5, 1,
-                                        MSM_VIDC_TRANSFER_BT709_5, MSM_VIDC_MATRIX_BT_709_5);
+                                struct v4l2_control control;
+                                control.id = V4L2_CID_MPEG_VIDC_VIDEO_VPE_CSC;
+                                control.value = V4L2_CID_MPEG_VIDC_VIDEO_VPE_CSC_ENABLE;
+                                if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
+                                    DEBUG_PRINT_ERROR("venc_empty_buf: Failed to set VPE CSC for 601_to_709");
+                                } else {
+                                    DEBUG_PRINT_INFO("venc_empty_buf: Will convert 601-FR to 709");
+                                    fmt.fmt.pix_mp.colorspace = V4L2_COLORSPACE_REC709;
+                                    venc_set_colorspace(MSM_VIDC_BT709_5, 1,
+                                            MSM_VIDC_TRANSFER_BT709_5, MSM_VIDC_MATRIX_BT_709_5);
+                                }
                             } else {
                                 venc_set_colorspace(MSM_VIDC_BT601_6_525, 1,
                                         MSM_VIDC_TRANSFER_601_6_525, MSM_VIDC_MATRIX_601_6_525);
@@ -3770,10 +3819,6 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         fmt.fmt.pix_mp.width = m_sVenc_cfg.input_width;
                         if (usage & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED) {
                             m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV12_UBWC;
-                        }
-
-                        if (usage & private_handle_t::PRIV_FLAGS_ITU_R_709) {
-                            buf.flags = V4L2_MSM_BUF_FLAG_YUV_601_709_CLAMP;
                         }
 
                         if (color_format > 0 && !venc_set_color_format(color_format)) {
@@ -3987,6 +4032,8 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
     plane[0].reserved[1] = 0;
     buf.m.planes = plane;
     buf.length = num_input_planes;
+    buf.timestamp.tv_sec = bufhdr->nTimeStamp / 1000000;
+    buf.timestamp.tv_usec = (bufhdr->nTimeStamp % 1000000);
 
     handle_input_extradata(buf);
 
@@ -3995,8 +4042,6 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
     if (bufhdr->nFlags & OMX_BUFFERFLAG_EOS)
         buf.flags |= V4L2_QCOM_BUF_FLAG_EOS;
 
-    buf.timestamp.tv_sec = bufhdr->nTimeStamp / 1000000;
-    buf.timestamp.tv_usec = (bufhdr->nTimeStamp % 1000000);
     if (m_debug.in_buffer_log) {
         venc_input_log_buffers(bufhdr, fd, plane[0].data_offset, m_sVenc_cfg.inputformat);
     }
@@ -4093,6 +4138,7 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
         }
         for (int i = 0; i < numBufs; ++i) {
             int v4l2Id = v4l2Ids[i];
+            int usage = 0;
 
             memset(&buf, 0, sizeof(buf));
             memset(&plane, 0, sizeof(plane));
@@ -4108,6 +4154,14 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
             plane[0].length = plane[0].bytesused = MetaBufferUtil::getIntAt(hnd, i, MetaBufferUtil::INT_SIZE);
             buf.m.planes = plane;
             buf.length = num_input_planes;
+
+            usage = MetaBufferUtil::getIntAt(hnd, i, MetaBufferUtil::INT_USAGE);
+            usage = usage > 0 ? usage : 0;
+
+            if ((usage & private_handle_t::PRIV_FLAGS_ITU_R_601_FR)
+                    && (is_csc_enabled)) {
+                buf.flags |= V4L2_MSM_BUF_FLAG_YUV_601_709_CLAMP;
+            }
 
             extra_idx = EXTRADATA_IDX(num_input_planes);
 
@@ -4233,9 +4287,14 @@ bool venc_dev::venc_fill_buf(void *buffer, void *pmem_data_buf,unsigned index,un
     buf.flags = 0;
 
     if (venc_handle->is_secure_session()) {
-        output_metabuffer *meta_buf = (output_metabuffer *)(bufhdr->pBuffer);
-        native_handle_t *handle_t = meta_buf->nh;
-        plane[0].length = handle_t->data[3];
+        if (venc_handle->allocate_native_handle) {
+            native_handle_t *handle_t = (native_handle_t *)(bufhdr->pBuffer);
+            plane[0].length = handle_t->data[3];
+        } else {
+            output_metabuffer *meta_buf = (output_metabuffer *)(bufhdr->pBuffer);
+            native_handle_t *handle_t = meta_buf->nh;
+            plane[0].length = handle_t->data[3];
+        }
     }
 
     if (mBatchSize) {
@@ -4362,22 +4421,17 @@ int venc_dev::venc_get_index_from_fd(OMX_U32 ion_fd, OMX_U32 buffer_fd)
 
 bool venc_dev::venc_set_vqzip_sei_type(OMX_BOOL enable)
 {
-    struct v4l2_control sei_control, yuvstats_control;
+    struct v4l2_control sei_control = {0,0}, yuvstats_control = {0,0};
 
     DEBUG_PRINT_HIGH("Set VQZIP SEI: %d", enable);
     sei_control.id = V4L2_CID_MPEG_VIDC_VIDEO_VQZIP_SEI;
     yuvstats_control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
 
-    if (ioctl(m_nDriver_fd, VIDIOC_G_CTRL, &yuvstats_control) < 0) {
-        DEBUG_PRINT_HIGH("Non-Fatal: Request to set VQZIP failed");
-    }
-
     if(enable) {
         sei_control.value = V4L2_CID_MPEG_VIDC_VIDEO_VQZIP_SEI_ENABLE;
-        yuvstats_control.value |= V4L2_MPEG_VIDC_EXTRADATA_YUV_STATS;
+        yuvstats_control.value = V4L2_MPEG_VIDC_EXTRADATA_YUV_STATS;
     } else {
         sei_control.value = V4L2_CID_MPEG_VIDC_VIDEO_VQZIP_SEI_DISABLE;
-        yuvstats_control.value &= ~V4L2_MPEG_VIDC_EXTRADATA_YUV_STATS;
     }
 
     if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &sei_control) < 0) {
@@ -6549,6 +6603,37 @@ bool venc_dev::venc_set_low_latency(OMX_BOOL enable)
     return true;
 }
 
+bool venc_dev::venc_set_iframesize_type(QOMX_VIDEO_IFRAMESIZE_TYPE type)
+{
+    struct v4l2_control control;
+    control.id = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_TYPE;
+
+    switch (type) {
+        case QOMX_IFRAMESIZE_DEFAULT:
+            control.value = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_DEFAULT;
+            break;
+        case QOMX_IFRAMESIZE_MEDIUM:
+            control.value = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_MEDIUM;
+            break;
+        case QOMX_IFRAMESIZE_HUGE:
+            control.value = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_HUGE;
+            break;
+        case QOMX_IFRAMESIZE_UNLIMITED:
+            control.value = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_UNLIMITED;
+            break;
+        default:
+            DEBUG_PRINT_INFO("Unknown Iframe Size found setting it to default");
+            control.value = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_DEFAULT;
+    }
+
+    if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
+        DEBUG_PRINT_ERROR("Failed to set iframe size hint");
+        return false;
+    }
+
+    return true;
+}
+
 bool venc_dev::venc_set_baselayerid(OMX_U32 baseid)
 {
     struct v4l2_control control;
@@ -7777,6 +7862,8 @@ bool venc_dev::venc_check_for_pq(void)
     frame_rate_supported =
         (m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) <=
         (m_pq.caps.max_mb_per_sec / ((m_sVenc_cfg.input_height * m_sVenc_cfg.input_width) / 256));
+
+    frame_rate_supported = (((operating_rate >> 16) > 0) && ((operating_rate >> 16) < 5)) ? false : frame_rate_supported;
 
     yuv_format_supported = ((m_sVenc_cfg.inputformat == V4L2_PIX_FMT_NV12 && (m_pq.caps.color_formats & BIT(COLOR_FMT_NV12)))
             || (m_sVenc_cfg.inputformat == V4L2_PIX_FMT_NV21 && (m_pq.caps.color_formats & BIT(COLOR_FMT_NV21)))

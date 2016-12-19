@@ -76,6 +76,11 @@ AC_ARG_ENABLE([master-side-cp-target-list],
                 [Enable conditional compile for target master_side_cp_target_list [default=no]]),
         [master_side_cp_target_list="${enableval}"])
 
+AC_ARG_ENABLE([targets-that-use-hevc-adsp-heap],
+        AC_HELP_STRING([-targets-that-use-hevc-adsp-heap],
+                [Enable conditional compile for target target-uses-ion [default=no]]),
+        [targets_that_use_hevc_adsp_heap="${enableval}"])
+
 AC_ARG_ENABLE([use-glib],
         AC_HELP_STRING([--enable-use-glib],
                 [Enable conditional compile for use glib [default=no]]),
@@ -170,5 +175,6 @@ AC_CONFIG_FILES([ \
         mm-video-v4l2/Makefile \
         mm-video-v4l2/vidc/Makefile \
         mm-video-v4l2/vidc/venc/Makefile \
+        mm-video-v4l2/vidc/vdec/Makefile \
         ])
 AC_OUTPUT

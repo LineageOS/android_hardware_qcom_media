@@ -55,14 +55,19 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <media/msm_media_info.h>
 #include <sys/eventfd.h>
 
-#ifndef _ANDROID_
+#if !defined(_ANDROID_) || defined(SYS_IOCTL)
 #include <sys/ioctl.h>
 #include <sys/mman.h>
-#endif //_ANDROID_
+#endif
 
 #ifdef _ANDROID_
 #include <cutils/properties.h>
 #undef USE_EGL_IMAGE_GPU
+#endif
+
+#ifdef _USE_GLIB_
+#include <glib.h>
+#define strlcpy g_strlcpy
 #endif
 
 #include <qdMetaData.h>
@@ -253,19 +258,27 @@ void* async_message_thread (void *input)
                 }
             } else if (dqevent.type == V4L2_EVENT_MSM_VIDC_FLUSH_DONE) {
                 struct vdec_msginfo vdec_msg;
-                vdec_msg.msgcode=VDEC_MSG_RESP_FLUSH_INPUT_DONE;
+                uint32_t flush_type = *(uint32_t *)dqevent.u.data;
+                // Old driver doesn't send flushType information.
+                // To make this backward compatible fallback to old approach
+                // if the flush_type is not present.
                 vdec_msg.status_code=VDEC_S_SUCCESS;
-                DEBUG_PRINT_HIGH("VIDC Input Flush Done Recieved");
-                if (omx->async_message_process(input,&vdec_msg) < 0) {
-                    DEBUG_PRINT_HIGH("async_message_thread Exited");
-                    break;
+                if (!flush_type || (flush_type & V4L2_QCOM_CMD_FLUSH_OUTPUT)) {
+                    vdec_msg.msgcode=VDEC_MSG_RESP_FLUSH_INPUT_DONE;
+                    DEBUG_PRINT_HIGH("VIDC Input Flush Done Recieved");
+                    if (omx->async_message_process(input,&vdec_msg) < 0) {
+                        DEBUG_PRINT_HIGH("async_message_thread Exited");
+                        break;
+                    }
                 }
-                vdec_msg.msgcode=VDEC_MSG_RESP_FLUSH_OUTPUT_DONE;
-                vdec_msg.status_code=VDEC_S_SUCCESS;
-                DEBUG_PRINT_HIGH("VIDC Output Flush Done Recieved");
-                if (omx->async_message_process(input,&vdec_msg) < 0) {
-                    DEBUG_PRINT_HIGH("async_message_thread Exited");
-                    break;
+
+                if (!flush_type || (flush_type & V4L2_QCOM_CMD_FLUSH_CAPTURE)) {
+                    vdec_msg.msgcode=VDEC_MSG_RESP_FLUSH_OUTPUT_DONE;
+                    DEBUG_PRINT_HIGH("VIDC Output Flush Done Recieved");
+                    if (omx->async_message_process(input,&vdec_msg) < 0) {
+                        DEBUG_PRINT_HIGH("async_message_thread Exited");
+                        break;
+                    }
                 }
             } else if (dqevent.type == V4L2_EVENT_MSM_VIDC_HW_OVERLOAD) {
                 struct vdec_msginfo vdec_msg;
@@ -661,6 +674,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     allocate_native_handle(false),
     m_other_extradata(NULL),
     m_profile(0),
+    m_need_turbo(0),
     client_set_fps(false),
     stereo_output_mode(HAL_NO_3D),
     m_last_rendered_TS(-1),
@@ -773,6 +787,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     memset(&m_internal_color_space, 0, sizeof(DescribeColorAspectsParams));
     memset(&m_client_hdr_info, 0, sizeof(DescribeHDRStaticInfoParams));
     memset(&m_internal_hdr_info, 0, sizeof(DescribeHDRStaticInfoParams));
+    memset(&m_color_mdata, 0, sizeof(ColorMetaData));
     m_demux_entries = 0;
     msg_thread_id = 0;
     async_thread_id = 0;
@@ -1709,6 +1724,7 @@ void omx_vdec::process_event_cb(void *ctxt, unsigned char id)
                                         if (p2 == OMX_IndexParamPortDefinition) {
                                             DEBUG_PRINT_HIGH("Rxd PORT_RECONFIG: OMX_IndexParamPortDefinition");
                                             pThis->in_reconfig = true;
+                                            pThis->m_need_turbo &= ~TURBO_MODE_HIGH_FPS;
                                         }  else if (p2 == OMX_IndexConfigCommonOutputCrop) {
                                             DEBUG_PRINT_HIGH("Rxd PORT_RECONFIG: OMX_IndexConfigCommonOutputCrop");
 
@@ -2261,7 +2277,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
     drv_ctx.frame_rate.fps_numerator = DEFAULT_FPS;
     drv_ctx.frame_rate.fps_denominator = 1;
     operating_frame_rate = DEFAULT_FPS;
-    high_fps = false;
     m_poll_efd = eventfd(0, 0);
     if (m_poll_efd < 0) {
         DEBUG_PRINT_ERROR("Failed to create event fd(%s)", strerror(errno));
@@ -2864,9 +2879,13 @@ OMX_ERRORTYPE  omx_vdec::send_command_proxy(OMX_IN OMX_HANDLETYPE hComp,
             if (eState == OMX_StateLoaded) {
                 if (release_done()) {
                     /*
-                       Since error is None , we will post an event at the end
-                       of this function definition
+                     * Since error is None , we will post an event at the end
+                     * of this function definition
+                     * Reset buffer requirements here to ensure setting buffer requirement
+                     * when component move to executing state from loaded state via Idle.
                      */
+                    drv_ctx.op_buf.buffer_size = 0;
+                    drv_ctx.op_buf.actualcount = 0;
                     DEBUG_PRINT_LOW("send_command_proxy(): Idle-->Loaded");
                 } else {
                     DEBUG_PRINT_LOW("send_command_proxy(): Idle-->Loaded-Pending");
@@ -3521,6 +3540,9 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
                 profileLevelType->eLevel   = OMX_VIDEO_HEVCMainTierLevel51;
             } else if (profileLevelType->nProfileIndex == 1) {
                 profileLevelType->eProfile = OMX_VIDEO_HEVCProfileMain10;
+                profileLevelType->eLevel   = OMX_VIDEO_HEVCMainTierLevel51;
+            } else if (profileLevelType->nProfileIndex == 2) {
+                profileLevelType->eProfile = OMX_VIDEO_HEVCProfileMain10HDR10;
                 profileLevelType->eLevel   = OMX_VIDEO_HEVCMainTierLevel51;
             } else {
                 DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoProfileLevelQuerySupported nProfileIndex ret NoMore %u",
@@ -5476,15 +5498,16 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
         struct v4l2_control control;
 
         DEBUG_PRINT_LOW("Set perf level: %d", perf->ePerfLevel);
-
         control.id = V4L2_CID_MPEG_VIDC_SET_PERF_LEVEL;
 
         switch (perf->ePerfLevel) {
             case OMX_QCOM_PerfLevelNominal:
                 control.value = V4L2_CID_MPEG_VIDC_PERF_LEVEL_NOMINAL;
+                m_need_turbo &= ~TURBO_MODE_CLIENT_REQUESTED;
                 break;
             case OMX_QCOM_PerfLevelTurbo:
                 control.value = V4L2_CID_MPEG_VIDC_PERF_LEVEL_TURBO;
+                m_need_turbo |= TURBO_MODE_CLIENT_REQUESTED;
                 break;
             default:
                 ret = OMX_ErrorUnsupportedSetting;
@@ -7188,6 +7211,13 @@ OMX_ERRORTYPE  omx_vdec::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
     if ((eRet == OMX_ErrorNone) &&
             (BITMASK_PRESENT(&m_flags ,OMX_COMPONENT_LOADING_PENDING))) {
         if (release_done()) {
+            /*
+             * Reset buffer requirements here to ensure setting buffer requirement
+             * when component move to executing state from loaded state via idle.
+             */
+            drv_ctx.op_buf.buffer_size = 0;
+            drv_ctx.op_buf.actualcount = 0;
+
             // Send the callback now
             BITMASK_CLEAR((&m_flags),OMX_COMPONENT_LOADING_PENDING);
             post_event(OMX_CommandStateSet, OMX_StateLoaded,
@@ -7749,12 +7779,13 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
 
     rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_QBUF, &buf);
     if (rc) {
-        /*TODO: How to handle this case */
         buffer->nFilledLen = 0;
-        DEBUG_PRINT_ERROR("Failed to qbuf to driver, send FTB back to client");
+        DEBUG_PRINT_ERROR("Failed to qbuf to driver, error %s", strerror(errno));
         m_cb.FillBufferDone(hComp, m_app_data, buffer);
+        return OMX_ErrorHardware;
     }
-return OMX_ErrorNone;
+
+    return OMX_ErrorNone;
 }
 
 /* ======================================================================
@@ -9029,7 +9060,7 @@ int omx_vdec::async_message_process (void *context, void* message)
                    if (omxhdr->nFilledLen)
                        omx->prev_n_filled_len = omxhdr->nFilledLen;
 
-                   if (omxhdr && omxhdr->nFilledLen && !omx->high_fps) {
+                   if (omxhdr && omxhdr->nFilledLen && !omx->m_need_turbo) {
                         omx->request_perf_level(VIDC_NOMINAL);
                    }
                    if (omx->output_use_buffer && omxhdr->pBuffer &&
@@ -9062,7 +9093,7 @@ int omx_vdec::async_message_process (void *context, void* message)
             omx->m_reconfig_height = vdec_msg->msgdata.output_frame.picsize.frame_height;
             omx->post_event (OMX_CORE_OUTPUT_PORT_INDEX, OMX_IndexParamPortDefinition,
                     OMX_COMPONENT_GENERATE_PORT_RECONFIG);
-            if (!omx->high_fps) {
+            if (!omx->m_need_turbo) {
                 omx->request_perf_level(VIDC_NOMINAL);
             }
             break;
@@ -10017,7 +10048,7 @@ OMX_ERRORTYPE omx_vdec::get_buffer_req(vdec_allocatorproperty *buffer_prop)
         if (increase_output && fps_above_180 &&
             output_capability == V4L2_PIX_FMT_H264 &&
             is_res_1080p_or_below) {
-            high_fps = true;
+            m_need_turbo |= TURBO_MODE_HIGH_FPS;
             DEBUG_PRINT_LOW("High fps - fps = %d operating_rate = %d", fps, operating_frame_rate);
             DEBUG_PRINT_LOW("getbufreq[output]: Increase buffer count (%d) to (%d) to support high fps",
                             bufreq.count, bufreq.count + 10);
@@ -10663,12 +10694,31 @@ void omx_vdec::print_debug_color_aspects(ColorAspects *aspects, const char *pref
                 prefix, aspects->mPrimaries, aspects->mRange, aspects->mTransfer, aspects->mMatrixCoeffs);
 }
 
-bool omx_vdec::handle_color_space_info(void *data, unsigned int buf_index)
+void omx_vdec::prepare_color_aspects_metadata(OMX_U32 primaries, OMX_U32 range,
+                                              OMX_U32 transfer, OMX_U32 matrix,
+                                              ColorMetaData *color_mdata)
 {
-    ColorSpace_t color_space = ITU_R_601;
+
+    /* ColorAspects in qdMetaData */
+    color_mdata->colorPrimaries = (enum ColorPrimaries) primaries;
+    color_mdata->range = (enum ColorRange)range;
+    color_mdata->transfer = (enum GammaTransfer)transfer;
+    color_mdata->matrixCoefficients = (enum MatrixCoEfficients)matrix;
+}
+
+bool omx_vdec::handle_color_space_info(void *data,
+                                       ColorSpace_t *color_space,
+                                       ColorMetaData *color_mdata,
+                                       bool& set_color_aspects_only)
+{
     ColorAspects tempAspects;
     memset(&tempAspects, 0x0, sizeof(ColorAspects));
     ColorAspects *aspects = &tempAspects;
+
+    /* Set default ColorAspects */
+    prepare_color_aspects_metadata(ColorPrimaries_BT601_6_625, Range_Full,
+                                           Transfer_SMPTE_170M, MatrixCoEff_BT601_6_625,
+                                           color_mdata);
 
     switch(output_capability) {
         case V4L2_PIX_FMT_MPEG2:
@@ -10683,9 +10733,13 @@ bool omx_vdec::handle_color_space_info(void *data, unsigned int buf_index)
 
                     convert_color_space_info(seqdisp_payload->color_primaries, 1,
                             seqdisp_payload->transfer_char, seqdisp_payload->matrix_coeffs,
-                            &color_space,aspects);
+                            color_space,aspects);
                     m_disp_hor_size = seqdisp_payload->disp_width;
                     m_disp_vert_size = seqdisp_payload->disp_height;
+                    set_color_aspects_only = true;
+                    prepare_color_aspects_metadata(seqdisp_payload->color_primaries, 1,
+                                                    seqdisp_payload->transfer_char, seqdisp_payload->matrix_coeffs,
+                                                    color_mdata);
                 }
             }
             break;
@@ -10703,7 +10757,13 @@ bool omx_vdec::handle_color_space_info(void *data, unsigned int buf_index)
                             display_info_payload->video_full_range_flag,
                             display_info_payload->transfer_characteristics,
                             display_info_payload->matrix_coefficients,
-                            &color_space,aspects);
+                            color_space,aspects);
+                    set_color_aspects_only = true;
+                    prepare_color_aspects_metadata(display_info_payload->color_primaries,
+                                                   display_info_payload->video_full_range_flag,
+                                                   display_info_payload->transfer_characteristics,
+                                                   display_info_payload->matrix_coefficients,
+                                                   color_mdata);
                 }
             }
             break;
@@ -10723,7 +10783,13 @@ bool omx_vdec::handle_color_space_info(void *data, unsigned int buf_index)
                             1,
                             vc1_seq_disp_payload->transfer_char,
                             vc1_seq_disp_payload->matrix_coeffs,
-                            &color_space,aspects);
+                            color_space,aspects);
+                    set_color_aspects_only = true;
+                    prepare_color_aspects_metadata(vc1_seq_disp_payload->color_primaries,
+                                                   1,
+                                                   vc1_seq_disp_payload->transfer_char,
+                                                   vc1_seq_disp_payload->matrix_coeffs,
+                                                   color_mdata);
                 }
             }
             break;
@@ -10731,12 +10797,12 @@ bool omx_vdec::handle_color_space_info(void *data, unsigned int buf_index)
             {
                 struct msm_vidc_vpx_colorspace_payload *vpx_color_space_payload;
                 vpx_color_space_payload = (struct msm_vidc_vpx_colorspace_payload*)data;
-
+                set_color_aspects_only = false;
                 /* Refer VP8 Data Format in latest VP8 spec and Decoding Guide November 2011
                  * to understand this code */
 
                 if (vpx_color_space_payload->color_space == 0) {
-                    color_space = ITU_R_601;
+                    *color_space = ITU_R_601;
                 } else {
                     DEBUG_PRINT_ERROR("Unsupported Color space for VP8");
                     break;
@@ -10747,7 +10813,7 @@ bool omx_vdec::handle_color_space_info(void *data, unsigned int buf_index)
             {
                 struct msm_vidc_vpx_colorspace_payload *vpx_color_space_payload;
                 vpx_color_space_payload = (struct msm_vidc_vpx_colorspace_payload*)data;
-
+                set_color_aspects_only = false;
                 /* Refer VP9 Spec @ VP9 Bitstream & Decoding Process Specification - v0.6 31st March 2016
                  * to understand this code */
 
@@ -10759,7 +10825,7 @@ bool omx_vdec::handle_color_space_info(void *data, unsigned int buf_index)
                         aspects->mRange = m_client_color_space.sAspects.mRange;
                         break;
                     case MSM_VIDC_CS_BT_709:
-                        color_space = ITU_R_709;
+                        *color_space = ITU_R_709;
                         aspects->mMatrixCoeffs = ColorAspects::MatrixBT709_5;
                         aspects->mTransfer = ColorAspects::TransferSMPTE170M;
                         aspects->mPrimaries =  ColorAspects::PrimariesBT709_5;
@@ -10803,10 +10869,7 @@ bool omx_vdec::handle_color_space_info(void *data, unsigned int buf_index)
         default:
             break;
     }
-    if (m_enable_android_native_buffers) {
-        DEBUG_PRINT_HIGH("setMetaData for Color Space = 0x%x (601=%u FR=%u 709=%u)", color_space, ITU_R_601, ITU_R_601_FR, ITU_R_709);
-        set_colorspace_in_handle(color_space, buf_index);
-    }
+
     print_debug_color_aspects(aspects, "Bitstream");
 
     if (m_internal_color_space.sAspects.mPrimaries != aspects->mPrimaries ||
@@ -10815,6 +10878,11 @@ bool omx_vdec::handle_color_space_info(void *data, unsigned int buf_index)
             m_internal_color_space.sAspects.mRange != aspects->mRange) {
         memcpy(&(m_internal_color_space.sAspects), aspects, sizeof(ColorAspects));
         m_internal_color_space.bDataSpaceChanged = OMX_TRUE;
+
+        m_color_mdata.colorPrimaries = color_mdata->colorPrimaries;
+        m_color_mdata.range = color_mdata->range;
+        m_color_mdata.transfer = color_mdata->transfer;
+        m_color_mdata.matrixCoefficients = color_mdata->matrixCoefficients;
 
         DEBUG_PRINT_HIGH("Initiating PORT Reconfig due to Color Aspects Change");
         print_debug_color_aspects(&(m_internal_color_space.sAspects), "Internal");
@@ -10859,12 +10927,41 @@ void omx_vdec::print_debug_hdr_color_info(HDRStaticInfo *hdr_info, const char *p
 
 }
 
+void omx_vdec::print_debug_hdr_color_info_mdata(ColorMetaData* color_mdata)
+{
+    DEBUG_PRINT_LOW("setMetaData COLOR_METADATA : color_primaries = %u, range = %u, transfer = %u, matrix = %u",
+                    color_mdata->colorPrimaries, color_mdata->range,
+                    color_mdata->transfer, color_mdata->matrixCoefficients);
+
+    for(uint8_t i = 0; i < 3; i++) {
+        for(uint8_t j = 0; j < 2; j++) {
+            DEBUG_PRINT_LOW("setMetadata COLOR_METADATA : rgbPrimaries[%d][%d] = %d", i, j, color_mdata->masteringDisplayInfo.primaries.rgbPrimaries[i][j]);
+        }
+    }
+
+    DEBUG_PRINT_LOW("setMetadata COLOR_METADATA : whitepoint[0] = %d whitepoint[1] = %d",
+                    color_mdata->masteringDisplayInfo.primaries.whitePoint[0],
+                    color_mdata->masteringDisplayInfo.primaries.whitePoint[1]);
+
+    DEBUG_PRINT_LOW("setMetadata COLOR_METADATA : maxDispLum = %d minDispLum = %d",
+                    color_mdata->masteringDisplayInfo.maxDisplayLuminance,
+                    color_mdata->masteringDisplayInfo.minDisplayLuminance);
+
+    DEBUG_PRINT_LOW("setMetadata COLOR_METADATA : maxCLL = %d maxFLL = %d",
+                    color_mdata->contentLightLevel.maxContentLightLevel,
+                    color_mdata->contentLightLevel.minPicAverageLightLevel);
 
 
-bool omx_vdec::handle_content_light_level_info(void* data)
+}
+
+bool omx_vdec::handle_content_light_level_info(void* data, ContentLightLevel* light_level_mdata)
 {
     struct msm_vidc_content_light_level_sei_payload *light_level_payload =
         (msm_vidc_content_light_level_sei_payload*)(data);
+
+    light_level_mdata->lightLevelSEIEnabled = true;
+    light_level_mdata->maxContentLightLevel = light_level_payload->nMaxContentLight;
+    light_level_mdata->minPicAverageLightLevel = light_level_payload->nMaxPicAverageLight;
 
     if ((m_internal_hdr_info.sInfo.sType1.mMaxContentLightLevel != light_level_payload->nMaxContentLight) ||
         (m_internal_hdr_info.sInfo.sType1.mMaxFrameAverageLightLevel != light_level_payload->nMaxPicAverageLight)) {
@@ -10875,14 +10972,24 @@ bool omx_vdec::handle_content_light_level_info(void* data)
     return false;
 }
 
-bool omx_vdec::handle_mastering_display_color_info(void* data)
+bool omx_vdec::handle_mastering_display_color_info(void* data, MasteringDisplay* mastering_display_mdata)
 {
     struct msm_vidc_mastering_display_colour_sei_payload *mastering_display_payload =
         (msm_vidc_mastering_display_colour_sei_payload*)(data);
     HDRStaticInfo* hdr_info = &m_internal_hdr_info.sInfo;
     bool internal_disp_changed_flag = false;
 
-    internal_disp_changed_flag  = (hdr_info->sType1.mR.x != mastering_display_payload->nDisplayPrimariesX[0]) ||
+    mastering_display_mdata->colorVolumeSEIEnabled = true;
+    for (uint8_t i = 0; i < 3; i++) {
+        mastering_display_mdata->primaries.rgbPrimaries[i][0] = mastering_display_payload->nDisplayPrimariesX[i];
+        mastering_display_mdata->primaries.rgbPrimaries[i][1] = mastering_display_payload->nDisplayPrimariesY[i];
+    }
+    mastering_display_mdata->primaries.whitePoint[0] = mastering_display_payload->nWhitePointX;
+    mastering_display_mdata->primaries.whitePoint[1] = mastering_display_payload->nWhitePointY;
+    mastering_display_mdata->maxDisplayLuminance = mastering_display_payload->nMaxDisplayMasteringLuminance;
+    mastering_display_mdata->minDisplayLuminance = mastering_display_payload->nMinDisplayMasteringLuminance;
+
+    internal_disp_changed_flag |= (hdr_info->sType1.mR.x != mastering_display_payload->nDisplayPrimariesX[0]) ||
         (hdr_info->sType1.mR.y != mastering_display_payload->nDisplayPrimariesY[0]);
     internal_disp_changed_flag |= (hdr_info->sType1.mG.x != mastering_display_payload->nDisplayPrimariesX[1]) ||
         (hdr_info->sType1.mG.y != mastering_display_payload->nDisplayPrimariesY[1]);
@@ -10917,6 +11024,19 @@ bool omx_vdec::handle_mastering_display_color_info(void* data)
     return internal_disp_changed_flag;
 }
 
+void omx_vdec::set_colormetadata_in_handle(ColorMetaData *color_mdata, unsigned int buf_index)
+{
+    private_handle_t *private_handle = NULL;
+    if (buf_index < drv_ctx.op_buf.actualcount &&
+        buf_index < MAX_NUM_INPUT_OUTPUT_BUFFERS &&
+        native_buffer[buf_index].privatehandle) {
+        private_handle = native_buffer[buf_index].privatehandle;
+    }
+    if (private_handle) {
+        setMetaData(private_handle, COLOR_METADATA, (void*)color_mdata);
+    }
+}
+
 void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
 {
     OMX_OTHER_EXTRADATATYPE *p_extra = NULL, *p_sei = NULL, *p_vui = NULL, *p_client_extra = NULL;
@@ -10930,6 +11050,11 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
     int enable = OMX_InterlaceFrameProgressive;
     bool internal_hdr_info_changed_flag = false;
     bool color_event = false;
+    ColorMetaData color_mdata;
+    memset(&color_mdata, 0x0, sizeof(ColorMetaData));
+    bool set_disp_color_aspects_only = false;
+    ColorSpace_t color_space = ITU_R_601;
+
     if (output_flush_progress)
         return;
 
@@ -11129,7 +11254,7 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                 case MSM_VIDC_EXTRADATA_VUI_DISPLAY_INFO:
                 case MSM_VIDC_EXTRADATA_VC1_SEQDISP:
                 case MSM_VIDC_EXTRADATA_VPX_COLORSPACE_INFO:
-                    color_event = handle_color_space_info((void *)data->data, buf_index);
+                    color_event = handle_color_space_info((void *)data->data, &color_space, &color_mdata, set_disp_color_aspects_only);
                     break;
                 case MSM_VIDC_EXTRADATA_S3D_FRAME_PACKING:
                     struct msm_vidc_s3d_frame_packing_payload *s3d_frame_packing_payload;
@@ -11211,10 +11336,13 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                     }
                     break;
                 case MSM_VIDC_EXTRADATA_CONTENT_LIGHT_LEVEL_SEI:
-                    internal_hdr_info_changed_flag |= handle_content_light_level_info((void*)data->data);
+
+                    internal_hdr_info_changed_flag |= handle_content_light_level_info((void*)data->data,
+                                                                                      &(color_mdata.contentLightLevel));
                     break;
                 case MSM_VIDC_EXTRADATA_MASTERING_DISPLAY_COLOUR_SEI:
-                    internal_hdr_info_changed_flag |= handle_mastering_display_color_info((void*)data->data);
+                    internal_hdr_info_changed_flag |= handle_mastering_display_color_info((void*)data->data,
+                                                                                          &(color_mdata.masteringDisplayInfo));
                     break;
                 default:
                     DEBUG_PRINT_LOW("Unrecognized extradata");
@@ -11226,13 +11354,13 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
         if (client_extradata & OMX_FRAMEINFO_EXTRADATA) {
             p_buf_hdr->nFlags |= OMX_BUFFERFLAG_EXTRADATA;
             append_frame_info_extradata(p_extra,
-                    num_conceal_MB, ((struct vdec_output_frameinfo *)p_buf_hdr->pOutputPortPrivate)->pic_type, frame_rate,
+                    num_conceal_MB, recovery_sei_flags, ((struct vdec_output_frameinfo *)p_buf_hdr->pOutputPortPrivate)->pic_type, frame_rate,
                     time_stamp, panscan_payload,&((struct vdec_output_frameinfo *)
                         p_buf_hdr->pOutputPortPrivate)->aspect_ratio_info);
             p_extra = (OMX_OTHER_EXTRADATATYPE *) (((OMX_U8 *) p_extra) + ALIGN(p_extra->nSize, 4));
             if (p_client_extra) {
                 append_frame_info_extradata(p_client_extra,
-                        num_conceal_MB, ((struct vdec_output_frameinfo *)p_buf_hdr->pOutputPortPrivate)->pic_type, frame_rate,
+                        num_conceal_MB, recovery_sei_flags, ((struct vdec_output_frameinfo *)p_buf_hdr->pOutputPortPrivate)->pic_type, frame_rate,
                         time_stamp, panscan_payload,&((struct vdec_output_frameinfo *)
                             p_buf_hdr->pOutputPortPrivate)->aspect_ratio_info);
                 p_client_extra = (OMX_OTHER_EXTRADATATYPE *) (((OMX_U8 *) p_client_extra) + ALIGN(p_client_extra->nSize, 4));
@@ -11250,6 +11378,7 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
         if(internal_hdr_info_changed_flag) {
             print_debug_hdr_color_info(&(m_internal_hdr_info.sInfo), "Internal");
             print_debug_hdr_color_info(&(m_client_hdr_info.sInfo), "Client");
+            memcpy(&m_color_mdata, &color_mdata, sizeof(ColorMetaData));
             auto_lock lock(m_hdr_info_client_lock);
             m_change_client_hdr_info = true;
             if(!color_event) {
@@ -11257,6 +11386,16 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                 post_event(OMX_CORE_OUTPUT_PORT_INDEX,
                            OMX_QTIIndexConfigDescribeHDRColorInfo,
                            OMX_COMPONENT_GENERATE_PORT_RECONFIG);
+            }
+        }
+
+        if (m_enable_android_native_buffers) {
+            if (set_disp_color_aspects_only) {
+                print_debug_hdr_color_info_mdata(&m_color_mdata);
+                set_colormetadata_in_handle(&m_color_mdata, buf_index);
+            } else {
+                DEBUG_PRINT_HIGH("setMetaData for Color Space = 0x%x (601=%u FR=%u 709=%u)", color_space, ITU_R_601, ITU_R_601_FR, ITU_R_709);
+                set_colorspace_in_handle(color_space, buf_index);
             }
         }
 
@@ -11508,6 +11647,7 @@ void omx_vdec::print_debug_extradata(OMX_OTHER_EXTRADATATYPE *extra)
                 "           Interlace Type: %d\n"
                 " Pan Scan Total Frame Num: %u\n"
                 "   Concealed Macro Blocks: %u\n"
+                "        Recovery SEI Flag: %u\n"
                 "               frame rate: %u\n"
                 "               Time Stamp: %llu\n"
                 "           Aspect Ratio X: %u\n"
@@ -11516,6 +11656,7 @@ void omx_vdec::print_debug_extradata(OMX_OTHER_EXTRADATATYPE *extra)
                 fminfo->interlaceType,
                 (unsigned int)fminfo->panScan.numWindows,
                 (unsigned int)fminfo->nConcealedMacroblocks,
+                (unsigned int)fminfo->nRecoverySeiFlag,
                 (unsigned int)fminfo->nFrameRate,
                 fminfo->nTimeStamp,
                 (unsigned int)fminfo->aspectRatio.aspectRatioX,
@@ -11695,7 +11836,7 @@ void omx_vdec::fill_aspect_ratio_info(
 }
 
 void omx_vdec::append_frame_info_extradata(OMX_OTHER_EXTRADATATYPE *extra,
-        OMX_U32 num_conceal_mb, OMX_U32 picture_type, OMX_U32 frame_rate,
+        OMX_U32 num_conceal_mb, OMX_U32 recovery_sei_flag, OMX_U32 picture_type, OMX_U32 frame_rate,
         OMX_TICKS time_stamp, struct msm_vidc_panscan_window_payload *panscan_payload,
         struct vdec_aspectratioinfo *aspect_ratio_info)
 {
@@ -11731,6 +11872,7 @@ void omx_vdec::append_frame_info_extradata(OMX_OTHER_EXTRADATATYPE *extra,
         frame_info->interlaceType = OMX_QCOM_InterlaceFrameProgressive;
     memset(&frame_info->aspectRatio, 0, sizeof(frame_info->aspectRatio));
     frame_info->nConcealedMacroblocks = num_conceal_mb;
+    frame_info->nRecoverySeiFlag = recovery_sei_flag;
     frame_info->nFrameRate = frame_rate;
     frame_info->nTimeStamp = time_stamp;
     frame_info->panScan.numWindows = 0;
