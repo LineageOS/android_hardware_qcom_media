@@ -641,6 +641,8 @@ enum OMX_QCOM_EXTN_INDEXTYPE
 
     /* use av-timer ticks as timestamp (used by VT-client) */
     OMX_QTIIndexParamEnableAVTimerTimestamps = 0x7F000071,
+
+    OMX_QcomIndexParamAUDelimiter = 0x7F000072,
 };
 
 /**
@@ -1105,6 +1107,18 @@ typedef struct OMX_QCOM_VIDEO_CONFIG_H264_AUD
    OMX_VERSIONTYPE nVersion;/** OMX specification version information */
    OMX_BOOL bEnable;        /** Enable/disable the setting */
 } OMX_QCOM_VIDEO_CONFIG_H264_AUD;
+
+/**
+ * This structure describes the parameters for the
+ * OMX_QcomIndexParamAUDelimiter extension.  It enables/disables
+ * the AU delimiters in the stream.
+ */
+typedef struct OMX_QCOM_VIDEO_CONFIG_AUD
+{
+   OMX_U32 nSize;           /** Size of the structure in bytes */
+   OMX_VERSIONTYPE nVersion;/** OMX specification version information */
+   OMX_BOOL bEnable;        /** Enable/disable the setting */
+} OMX_QCOM_VIDEO_CONFIG_AUD;
 
 typedef enum QOMX_VIDEO_PERF_LEVEL
 {
