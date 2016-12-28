@@ -82,6 +82,6 @@ libOmxVenc_la_SOURCES = $(sources)
 libOmxVenc_la_CFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) -fPIC
 #libOmxVenc_la_LDLIBS = ../libc2d2colorconvert/libc2dcolorconvert.la
 #libOmxVenc_la_LIBADD  = ../../../mm-core/libOmxCore.la
-libOmxVenc_la_LDFLAGS = -lstdc++ -lpthread -llog -lutils -lbinder -lcutils -lglib-2.0 -lbase -ldl -lpthread -shared
-# -lqdMetaData  -lc2d2 -lgui -lOmxCore -lgpustats -ldl -lpthread
+libOmxVenc_la_LDFLAGS = -lstdc++ -lpthread -llog -lutils -lbinder -lcutils -lglib-2.0 -lbase -ldl -lpthread -shared -lqdMetaData
+#  -lc2d2 -lgui -lOmxCore -lgpustats -ldl -lpthread
 libOmxVenc_la_LDFLAGS += -version-info 0
