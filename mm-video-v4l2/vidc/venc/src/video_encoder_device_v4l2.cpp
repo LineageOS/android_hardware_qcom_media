@@ -602,7 +602,7 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
 
     if (!input_extradata_info.uaddr) {
         DEBUG_PRINT_ERROR("Extradata buffers not allocated\n");
-        return false;
+        return true;
     }
 
     DEBUG_PRINT_HIGH("Processing Extradata for Buffer = %lld", nTimeStamp); // Useful for debugging
@@ -675,6 +675,16 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
             DEBUG_PRINT_LOW("VQZIP SEI Found ");
             input_extradata_info.vqzip_sei_found = true;
             break;
+        case OMX_ExtraDataFrameInfo:
+        {
+            OMX_QCOM_EXTRADATA_FRAMEINFO *frame_info = NULL;
+            frame_info = (OMX_QCOM_EXTRADATA_FRAMEINFO *)(p_extra->data);
+            if (frame_info->ePicType == OMX_VIDEO_PictureTypeI) {
+                if (venc_set_intra_vop_refresh((OMX_BOOL)true) == false)
+                    DEBUG_PRINT_ERROR("%s Error in requesting I Frame ", __func__);
+            }
+            break;
+        }
         default:
             DEBUG_PRINT_HIGH("Unknown Extradata 0x%x", (OMX_QCOM_EXTRADATATYPE)p_extra->eType);
             break;
@@ -770,7 +780,7 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
         DEBUG_PRINT_ERROR("VQZIP is enabled, But no VQZIP SEI found. Rejecting the session");
         if (pVirt)
             munmap(pVirt, size);
-        return false;
+        return false; //This should be treated as fatal error
     }
     if (vqzip_sei_info.enabled && pVirt) {
         data->nSize = (sizeof(OMX_OTHER_EXTRADATATYPE) +  sizeof(struct VQZipStats) + 3)&(~3);
@@ -1605,6 +1615,7 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
                 bufreq.count);
             bufreq.count = 9;
         }
+
         if (m_sVenc_cfg.input_height * m_sVenc_cfg.input_width >= 3840*2160) {
             DEBUG_PRINT_LOW("Increasing buffer count = %d to 11", bufreq.count);
             bufreq.count = 11;
@@ -4035,8 +4046,10 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
     buf.timestamp.tv_sec = bufhdr->nTimeStamp / 1000000;
     buf.timestamp.tv_usec = (bufhdr->nTimeStamp % 1000000);
 
-    handle_input_extradata(buf);
-
+    if (!handle_input_extradata(buf)) {
+        DEBUG_PRINT_ERROR("%s Failed to handle input extradata", __func__);
+        return false;
+    }
     VIDC_TRACE_INT_LOW("ETB-TS", bufhdr->nTimeStamp / 1000);
 
     if (bufhdr->nFlags & OMX_BUFFERFLAG_EOS)
@@ -4195,8 +4208,10 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
             }
 #endif // _PQ_
 
-            handle_input_extradata(buf);
-
+            if (!handle_input_extradata(buf)) {
+                DEBUG_PRINT_ERROR("%s Failed to handle input extradata", __func__);
+                return false;
+            }
             rc = ioctl(m_nDriver_fd, VIDIOC_PREPARE_BUF, &buf);
             if (rc)
                 DEBUG_PRINT_LOW("VIDIOC_PREPARE_BUF Failed");
@@ -5842,15 +5857,13 @@ bool venc_dev::venc_set_intra_vop_refresh(OMX_BOOL intra_vop_refresh)
         int rc;
         control.id = V4L2_CID_MPEG_VIDC_VIDEO_REQUEST_IFRAME;
         control.value = 1;
-       DEBUG_PRINT_ERROR("Calling IOCTL set control for id=%x, val=%d", control.id, control.value);
-        rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
+        rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
         if (rc) {
-           DEBUG_PRINT_ERROR("Failed to set Intra Frame Request control");
+            DEBUG_PRINT_ERROR("Failed to set Intra Frame Request control");
             return false;
         }
-
-       DEBUG_PRINT_ERROR("Success IOCTL set control for id=%x, value=%d", control.id, control.value);
+        DEBUG_PRINT_HIGH("Success IOCTL set control for id=%x, value=%d", control.id, control.value);
     } else {
         DEBUG_PRINT_ERROR("ERROR: VOP Refresh is False, no effect");
     }

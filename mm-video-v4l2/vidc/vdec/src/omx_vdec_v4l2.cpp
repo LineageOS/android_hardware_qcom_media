@@ -2042,7 +2042,10 @@ int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
     int buf_index = 0;
     char *temp = NULL;
 
-    if (m_debug.out_buffer_log && !m_debug.outfile && buffer->nFilledLen) {
+    if (!(m_debug.out_buffer_log || m_debug.out_meta_buffer_log) || !buffer || !buffer->nFilledLen)
+        return 0;
+
+    if (m_debug.out_buffer_log && !m_debug.outfile) {
         snprintf(m_debug.outfile_name, OMX_MAX_STRINGNAME_SIZE, "%s/output_%d_%d_%p.yuv",
                 m_debug.log_loc, drv_ctx.video_resolution.frame_width, drv_ctx.video_resolution.frame_height, this);
         m_debug.outfile = fopen (m_debug.outfile_name, "ab");
@@ -2053,8 +2056,7 @@ int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
         }
     }
 
-    if (m_debug.out_meta_buffer_log && !m_debug.out_ymeta_file && !m_debug.out_uvmeta_file
-        && buffer->nFilledLen) {
+    if (m_debug.out_meta_buffer_log && !m_debug.out_ymeta_file && !m_debug.out_uvmeta_file) {
         snprintf(m_debug.out_ymetafile_name, OMX_MAX_STRINGNAME_SIZE, "%s/output_%d_%d_%p.ymeta",
                 m_debug.log_loc, drv_ctx.video_resolution.frame_width, drv_ctx.video_resolution.frame_height, this);
         snprintf(m_debug.out_uvmetafile_name, OMX_MAX_STRINGNAME_SIZE, "%s/output_%d_%d_%p.uvmeta",
@@ -2068,9 +2070,6 @@ int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
             return -1;
         }
     }
-
-    if ((!m_debug.outfile && !m_debug.out_ymeta_file) || !buffer || !buffer->nFilledLen)
-        return 0;
 
     buf_index = buffer - m_out_mem_ptr;
     temp = (char *)drv_ctx.ptr_outputbuffer[buf_index].bufferaddr;
@@ -2117,7 +2116,7 @@ int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
                 temp += uv_meta_stride;
             }
         }
-    } else if (drv_ctx.output_format == VDEC_YUV_FORMAT_NV12) {
+    } else if (m_debug.outfile && drv_ctx.output_format == VDEC_YUV_FORMAT_NV12) {
         int stride = drv_ctx.video_resolution.stride;
         int scanlines = drv_ctx.video_resolution.scan_lines;
         if (m_smoothstreaming_mode) {
@@ -5070,25 +5069,35 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             OMX_QTI_VIDEO_PARAM_VQZIP_SEI_TYPE *pParam =
                 (OMX_QTI_VIDEO_PARAM_VQZIP_SEI_TYPE *)paramData;
                 DEBUG_PRINT_LOW("Enable VQZIP SEI: %d", pParam->bEnable);
+
             eRet = enable_extradata(OMX_VQZIPSEI_EXTRADATA, false,
                 ((QOMX_ENABLETYPE *)paramData)->bEnable);
             if (eRet != OMX_ErrorNone) {
                 DEBUG_PRINT_ERROR("ERROR: Failed to set SEI Extradata");
                 eRet = OMX_ErrorBadParameter;
                 client_extradata = client_extradata & ~OMX_VQZIPSEI_EXTRADATA;
-            } else {
-                eRet = enable_extradata(OMX_QP_EXTRADATA, false,
+                break;
+            }
+            eRet = enable_extradata(OMX_QP_EXTRADATA, false,
                     ((QOMX_ENABLETYPE *)paramData)->bEnable);
-                if (eRet != OMX_ErrorNone) {
-                    DEBUG_PRINT_ERROR("ERROR: Failed to set QP Extradata");
-                    eRet = OMX_ErrorBadParameter;
-                    client_extradata = client_extradata & ~OMX_VQZIPSEI_EXTRADATA;
-                    client_extradata = client_extradata & ~OMX_QP_EXTRADATA;
-                }
+            if (eRet != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("ERROR: Failed to set QP Extradata");
+                eRet = OMX_ErrorBadParameter;
+                client_extradata = client_extradata & ~OMX_VQZIPSEI_EXTRADATA;
+                client_extradata = client_extradata & ~OMX_QP_EXTRADATA;
+                break;
+            }
+            eRet = enable_extradata(OMX_FRAMEINFO_EXTRADATA, false,
+                        ((QOMX_ENABLETYPE *)paramData)->bEnable);
+            if (eRet != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("ERROR: Failed to set FrameInfo Extradata");
+                eRet = OMX_ErrorBadParameter;
+                client_extradata = client_extradata & ~OMX_VQZIPSEI_EXTRADATA;
+                client_extradata = client_extradata & ~OMX_QP_EXTRADATA;
+                client_extradata = client_extradata & ~OMX_FRAMEINFO_EXTRADATA;
             }
             break;
         }
-
         case OMX_QTIIndexParamPassInputBufferFd:
         {
             VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
@@ -6306,6 +6315,7 @@ OMX_ERRORTYPE omx_vdec::free_input_buffer(OMX_BUFFERHEADERTYPE *bufferHdr)
 #ifdef USE_ION
             free_ion_memory(&drv_ctx.ip_buf_ion_info[index]);
 #endif
+            m_in_alloc_cnt--;
         }
     }
 
