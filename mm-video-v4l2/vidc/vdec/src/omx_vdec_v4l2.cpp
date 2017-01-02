@@ -741,6 +741,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     memset(&m_internal_color_space, 0, sizeof(DescribeColorAspectsParams));
     memset(&m_client_hdr_info, 0, sizeof(DescribeHDRStaticInfoParams));
     memset(&m_internal_hdr_info, 0, sizeof(DescribeHDRStaticInfoParams));
+    memset(&m_color_mdata, 0, sizeof(ColorMetaData));
     m_demux_entries = 0;
     msg_thread_id = 0;
     async_thread_id = 0;
@@ -10457,12 +10458,31 @@ void omx_vdec::print_debug_color_aspects(ColorAspects *aspects, const char *pref
                 prefix, aspects->mPrimaries, aspects->mRange, aspects->mTransfer, aspects->mMatrixCoeffs);
 }
 
-bool omx_vdec::handle_color_space_info(void *data, unsigned int buf_index)
+void omx_vdec::prepare_color_aspects_metadata(OMX_U32 primaries, OMX_U32 range,
+                                              OMX_U32 transfer, OMX_U32 matrix,
+                                              ColorMetaData *color_mdata)
 {
-    ColorSpace_t color_space = ITU_R_601;
+
+    /* ColorAspects in qdMetaData */
+    color_mdata->colorPrimaries = (enum ColorPrimaries) primaries;
+    color_mdata->range = (enum ColorRange)range;
+    color_mdata->transfer = (enum GammaTransfer)transfer;
+    color_mdata->matrixCoefficients = (enum MatrixCoEfficients)matrix;
+}
+
+bool omx_vdec::handle_color_space_info(void *data,
+                                       ColorSpace_t *color_space,
+                                       ColorMetaData *color_mdata,
+                                       bool& set_color_aspects_only)
+{
     ColorAspects tempAspects;
     memset(&tempAspects, 0x0, sizeof(ColorAspects));
     ColorAspects *aspects = &tempAspects;
+
+    /* Set default ColorAspects */
+    prepare_color_aspects_metadata(ColorPrimaries_BT601_6_625, Range_Full,
+                                           Transfer_SMPTE_170M, MatrixCoEff_BT601_6_625,
+                                           color_mdata);
 
     switch(output_capability) {
         case V4L2_PIX_FMT_MPEG2:
@@ -10477,9 +10497,13 @@ bool omx_vdec::handle_color_space_info(void *data, unsigned int buf_index)
 
                     convert_color_space_info(seqdisp_payload->color_primaries, 1,
                             seqdisp_payload->transfer_char, seqdisp_payload->matrix_coeffs,
-                            &color_space,aspects);
+                            color_space,aspects);
                     m_disp_hor_size = seqdisp_payload->disp_width;
                     m_disp_vert_size = seqdisp_payload->disp_height;
+                    set_color_aspects_only = true;
+                    prepare_color_aspects_metadata(seqdisp_payload->color_primaries, 1,
+                                                    seqdisp_payload->transfer_char, seqdisp_payload->matrix_coeffs,
+                                                    color_mdata);
                 }
             }
             break;
@@ -10497,7 +10521,13 @@ bool omx_vdec::handle_color_space_info(void *data, unsigned int buf_index)
                             display_info_payload->video_full_range_flag,
                             display_info_payload->transfer_characteristics,
                             display_info_payload->matrix_coefficients,
-                            &color_space,aspects);
+                            color_space,aspects);
+                    set_color_aspects_only = true;
+                    prepare_color_aspects_metadata(display_info_payload->color_primaries,
+                                                   display_info_payload->video_full_range_flag,
+                                                   display_info_payload->transfer_characteristics,
+                                                   display_info_payload->matrix_coefficients,
+                                                   color_mdata);
                 }
             }
             break;
@@ -10517,7 +10547,13 @@ bool omx_vdec::handle_color_space_info(void *data, unsigned int buf_index)
                             1,
                             vc1_seq_disp_payload->transfer_char,
                             vc1_seq_disp_payload->matrix_coeffs,
-                            &color_space,aspects);
+                            color_space,aspects);
+                    set_color_aspects_only = true;
+                    prepare_color_aspects_metadata(vc1_seq_disp_payload->color_primaries,
+                                                   1,
+                                                   vc1_seq_disp_payload->transfer_char,
+                                                   vc1_seq_disp_payload->matrix_coeffs,
+                                                   color_mdata);
                 }
             }
             break;
@@ -10525,12 +10561,12 @@ bool omx_vdec::handle_color_space_info(void *data, unsigned int buf_index)
             {
                 struct msm_vidc_vpx_colorspace_payload *vpx_color_space_payload;
                 vpx_color_space_payload = (struct msm_vidc_vpx_colorspace_payload*)data;
-
+                set_color_aspects_only = false;
                 /* Refer VP8 Data Format in latest VP8 spec and Decoding Guide November 2011
                  * to understand this code */
 
                 if (vpx_color_space_payload->color_space == 0) {
-                    color_space = ITU_R_601;
+                    *color_space = ITU_R_601;
                 } else {
                     DEBUG_PRINT_ERROR("Unsupported Color space for VP8");
                     break;
@@ -10541,7 +10577,7 @@ bool omx_vdec::handle_color_space_info(void *data, unsigned int buf_index)
             {
                 struct msm_vidc_vpx_colorspace_payload *vpx_color_space_payload;
                 vpx_color_space_payload = (struct msm_vidc_vpx_colorspace_payload*)data;
-
+                set_color_aspects_only = false;
                 /* Refer VP9 Spec @ VP9 Bitstream & Decoding Process Specification - v0.6 31st March 2016
                  * to understand this code */
 
@@ -10553,7 +10589,7 @@ bool omx_vdec::handle_color_space_info(void *data, unsigned int buf_index)
                         aspects->mRange = m_client_color_space.sAspects.mRange;
                         break;
                     case MSM_VIDC_CS_BT_709:
-                        color_space = ITU_R_709;
+                        *color_space = ITU_R_709;
                         aspects->mMatrixCoeffs = ColorAspects::MatrixBT709_5;
                         aspects->mTransfer = ColorAspects::TransferSMPTE170M;
                         aspects->mPrimaries =  ColorAspects::PrimariesBT709_5;
@@ -10597,10 +10633,7 @@ bool omx_vdec::handle_color_space_info(void *data, unsigned int buf_index)
         default:
             break;
     }
-    if (m_enable_android_native_buffers) {
-        DEBUG_PRINT_HIGH("setMetaData for Color Space = 0x%x (601=%u FR=%u 709=%u)", color_space, ITU_R_601, ITU_R_601_FR, ITU_R_709);
-        set_colorspace_in_handle(color_space, buf_index);
-    }
+
     print_debug_color_aspects(aspects, "Bitstream");
 
     if (m_internal_color_space.sAspects.mPrimaries != aspects->mPrimaries ||
@@ -10609,6 +10642,11 @@ bool omx_vdec::handle_color_space_info(void *data, unsigned int buf_index)
             m_internal_color_space.sAspects.mRange != aspects->mRange) {
         memcpy(&(m_internal_color_space.sAspects), aspects, sizeof(ColorAspects));
         m_internal_color_space.bDataSpaceChanged = OMX_TRUE;
+
+        m_color_mdata.colorPrimaries = color_mdata->colorPrimaries;
+        m_color_mdata.range = color_mdata->range;
+        m_color_mdata.transfer = color_mdata->transfer;
+        m_color_mdata.matrixCoefficients = color_mdata->matrixCoefficients;
 
         DEBUG_PRINT_HIGH("Initiating PORT Reconfig due to Color Aspects Change");
         print_debug_color_aspects(&(m_internal_color_space.sAspects), "Internal");
@@ -10653,12 +10691,41 @@ void omx_vdec::print_debug_hdr_color_info(HDRStaticInfo *hdr_info, const char *p
 
 }
 
+void omx_vdec::print_debug_hdr_color_info_mdata(ColorMetaData* color_mdata)
+{
+    DEBUG_PRINT_LOW("setMetaData COLOR_METADATA : color_primaries = %u, range = %u, transfer = %u, matrix = %u",
+                    color_mdata->colorPrimaries, color_mdata->range,
+                    color_mdata->transfer, color_mdata->matrixCoefficients);
+
+    for(uint8_t i = 0; i < 3; i++) {
+        for(uint8_t j = 0; j < 2; j++) {
+            DEBUG_PRINT_LOW("setMetadata COLOR_METADATA : rgbPrimaries[%d][%d] = %d", i, j, color_mdata->masteringDisplayInfo.primaries.rgbPrimaries[i][j]);
+        }
+    }
+
+    DEBUG_PRINT_LOW("setMetadata COLOR_METADATA : whitepoint[0] = %d whitepoint[1] = %d",
+                    color_mdata->masteringDisplayInfo.primaries.whitePoint[0],
+                    color_mdata->masteringDisplayInfo.primaries.whitePoint[1]);
+
+    DEBUG_PRINT_LOW("setMetadata COLOR_METADATA : maxDispLum = %d minDispLum = %d",
+                    color_mdata->masteringDisplayInfo.maxDisplayLuminance,
+                    color_mdata->masteringDisplayInfo.minDisplayLuminance);
+
+    DEBUG_PRINT_LOW("setMetadata COLOR_METADATA : maxCLL = %d maxFLL = %d",
+                    color_mdata->contentLightLevel.maxContentLightLevel,
+                    color_mdata->contentLightLevel.minPicAverageLightLevel);
 
 
-bool omx_vdec::handle_content_light_level_info(void* data)
+}
+
+bool omx_vdec::handle_content_light_level_info(void* data, ContentLightLevel* light_level_mdata)
 {
     struct msm_vidc_content_light_level_sei_payload *light_level_payload =
         (msm_vidc_content_light_level_sei_payload*)(data);
+
+    light_level_mdata->lightLevelSEIEnabled = true;
+    light_level_mdata->maxContentLightLevel = light_level_payload->nMaxContentLight;
+    light_level_mdata->minPicAverageLightLevel = light_level_payload->nMaxPicAverageLight;
 
     if ((m_internal_hdr_info.sInfo.sType1.mMaxContentLightLevel != light_level_payload->nMaxContentLight) ||
         (m_internal_hdr_info.sInfo.sType1.mMaxFrameAverageLightLevel != light_level_payload->nMaxPicAverageLight)) {
@@ -10669,14 +10736,24 @@ bool omx_vdec::handle_content_light_level_info(void* data)
     return false;
 }
 
-bool omx_vdec::handle_mastering_display_color_info(void* data)
+bool omx_vdec::handle_mastering_display_color_info(void* data, MasteringDisplay* mastering_display_mdata)
 {
     struct msm_vidc_mastering_display_colour_sei_payload *mastering_display_payload =
         (msm_vidc_mastering_display_colour_sei_payload*)(data);
     HDRStaticInfo* hdr_info = &m_internal_hdr_info.sInfo;
     bool internal_disp_changed_flag = false;
 
-    internal_disp_changed_flag  = (hdr_info->sType1.mR.x != mastering_display_payload->nDisplayPrimariesX[0]) ||
+    mastering_display_mdata->colorVolumeSEIEnabled = true;
+    for (uint8_t i = 0; i < 3; i++) {
+        mastering_display_mdata->primaries.rgbPrimaries[i][0] = mastering_display_payload->nDisplayPrimariesX[i];
+        mastering_display_mdata->primaries.rgbPrimaries[i][1] = mastering_display_payload->nDisplayPrimariesY[i];
+    }
+    mastering_display_mdata->primaries.whitePoint[0] = mastering_display_payload->nWhitePointX;
+    mastering_display_mdata->primaries.whitePoint[1] = mastering_display_payload->nWhitePointY;
+    mastering_display_mdata->maxDisplayLuminance = mastering_display_payload->nMaxDisplayMasteringLuminance;
+    mastering_display_mdata->minDisplayLuminance = mastering_display_payload->nMinDisplayMasteringLuminance;
+
+    internal_disp_changed_flag |= (hdr_info->sType1.mR.x != mastering_display_payload->nDisplayPrimariesX[0]) ||
         (hdr_info->sType1.mR.y != mastering_display_payload->nDisplayPrimariesY[0]);
     internal_disp_changed_flag |= (hdr_info->sType1.mG.x != mastering_display_payload->nDisplayPrimariesX[1]) ||
         (hdr_info->sType1.mG.y != mastering_display_payload->nDisplayPrimariesY[1]);
@@ -10706,6 +10783,19 @@ bool omx_vdec::handle_mastering_display_color_info(void* data)
     return internal_disp_changed_flag;
 }
 
+void omx_vdec::set_colormetadata_in_handle(ColorMetaData *color_mdata, unsigned int buf_index)
+{
+    private_handle_t *private_handle = NULL;
+    if (buf_index < drv_ctx.op_buf.actualcount &&
+        buf_index < MAX_NUM_INPUT_OUTPUT_BUFFERS &&
+        native_buffer[buf_index].privatehandle) {
+        private_handle = native_buffer[buf_index].privatehandle;
+    }
+    if (private_handle) {
+        setMetaData(private_handle, COLOR_METADATA, (void*)color_mdata);
+    }
+}
+
 void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
 {
     OMX_OTHER_EXTRADATATYPE *p_extra = NULL, *p_sei = NULL, *p_vui = NULL, *p_client_extra = NULL;
@@ -10719,6 +10809,11 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
     int enable = OMX_InterlaceFrameProgressive;
     bool internal_hdr_info_changed_flag = false;
     bool color_event = false;
+    ColorMetaData color_mdata;
+    memset(&color_mdata, 0x0, sizeof(ColorMetaData));
+    bool set_disp_color_aspects_only = false;
+    ColorSpace_t color_space = ITU_R_601;
+
     if (output_flush_progress)
         return;
 
@@ -10918,7 +11013,7 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                 case MSM_VIDC_EXTRADATA_VUI_DISPLAY_INFO:
                 case MSM_VIDC_EXTRADATA_VC1_SEQDISP:
                 case MSM_VIDC_EXTRADATA_VPX_COLORSPACE_INFO:
-                    color_event = handle_color_space_info((void *)data->data, buf_index);
+                    color_event = handle_color_space_info((void *)data->data, &color_space, &color_mdata, set_disp_color_aspects_only);
                     break;
                 case MSM_VIDC_EXTRADATA_S3D_FRAME_PACKING:
                     struct msm_vidc_s3d_frame_packing_payload *s3d_frame_packing_payload;
@@ -11000,10 +11095,13 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                     }
                     break;
                 case MSM_VIDC_EXTRADATA_CONTENT_LIGHT_LEVEL_SEI:
-                    internal_hdr_info_changed_flag |= handle_content_light_level_info((void*)data->data);
+
+                    internal_hdr_info_changed_flag |= handle_content_light_level_info((void*)data->data,
+                                                                                      &(color_mdata.contentLightLevel));
                     break;
                 case MSM_VIDC_EXTRADATA_MASTERING_DISPLAY_COLOUR_SEI:
-                    internal_hdr_info_changed_flag |= handle_mastering_display_color_info((void*)data->data);
+                    internal_hdr_info_changed_flag |= handle_mastering_display_color_info((void*)data->data,
+                                                                                          &(color_mdata.masteringDisplayInfo));
                     break;
                 default:
                     DEBUG_PRINT_LOW("Unrecognized extradata");
@@ -11039,6 +11137,7 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
         if(internal_hdr_info_changed_flag) {
             print_debug_hdr_color_info(&(m_internal_hdr_info.sInfo), "Internal");
             print_debug_hdr_color_info(&(m_client_hdr_info.sInfo), "Client");
+            memcpy(&m_color_mdata, &color_mdata, sizeof(ColorMetaData));
             auto_lock lock(m_hdr_info_client_lock);
             m_change_client_hdr_info = true;
             if(!color_event) {
@@ -11046,6 +11145,16 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                 post_event(OMX_CORE_OUTPUT_PORT_INDEX,
                            OMX_QTIIndexConfigDescribeHDRColorInfo,
                            OMX_COMPONENT_GENERATE_PORT_RECONFIG);
+            }
+        }
+
+        if (m_enable_android_native_buffers) {
+            if (set_disp_color_aspects_only) {
+                print_debug_hdr_color_info_mdata(&m_color_mdata);
+                set_colormetadata_in_handle(&m_color_mdata, buf_index);
+            } else {
+                DEBUG_PRINT_HIGH("setMetaData for Color Space = 0x%x (601=%u FR=%u 709=%u)", color_space, ITU_R_601, ITU_R_601_FR, ITU_R_709);
+                set_colorspace_in_handle(color_space, buf_index);
             }
         }
 
