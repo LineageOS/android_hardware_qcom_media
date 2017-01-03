@@ -774,6 +774,11 @@ class omx_video: public qc_omx_component
         char m_platform[OMX_MAX_STRINGNAME_SIZE];
 
         bool m_buffer_freed;
+        bool profile_mode;
+        int profile_frame_count;
+        OMX_U64 profile_start_time;
+        OMX_U64 profile_last_time;
+        bool profile_etb();
 };
 
 #endif // __OMX_VIDEO_BASE_H__
