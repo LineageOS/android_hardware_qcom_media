@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2016, Linux Foundation. All rights reserved.
+Copyright (c) 2010-2017, Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -2124,6 +2124,19 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     eRet = OMX_ErrorHardware;
                 }
                 memcpy(pLayerInfo, &m_sParamTemporalLayers, sizeof(m_sParamTemporalLayers));
+                break;
+            }
+        case OMX_QTIIndexParamDisablePQ:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_DISABLETYPE);
+                OMX_BOOL pq_status;
+                QOMX_DISABLETYPE *pParam =
+                        reinterpret_cast<QOMX_DISABLETYPE*>(paramData);
+                if (!dev_get_pq_status(&pq_status)) {
+                    DEBUG_PRINT_ERROR("Failed to get PQ status");
+                    eRet = OMX_ErrorHardware;
+                }
+                pParam->bDisable = pq_status ? OMX_FALSE : OMX_TRUE;
                 break;
             }
         case OMX_IndexParamVideoSliceFMO:

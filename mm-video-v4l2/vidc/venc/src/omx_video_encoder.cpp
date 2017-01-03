@@ -2494,6 +2494,10 @@ bool omx_venc::dev_get_temporal_layer_caps(OMX_U32 *nMaxLayers,
     return handle->venc_get_temporal_layer_caps(nMaxLayers, nMaxBLayers);
 }
 
+bool omx_venc::dev_get_pq_status(OMX_BOOL *pq_status) {
+    return handle->venc_get_pq_status(pq_status);
+}
+
 bool omx_venc::dev_loaded_start()
 {
     return handle->venc_loaded_start();
