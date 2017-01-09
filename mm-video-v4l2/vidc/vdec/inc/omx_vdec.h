@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010 - 2016, The Linux Foundation. All rights reserved.
+Copyright (c) 2010 - 2017, The Linux Foundation. All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -1065,6 +1065,7 @@ class omx_vdec: public qc_omx_component
         bool is_thulium_v1;
         bool m_disable_ubwc_mode;
         bool m_disable_split_mode;
+        bool m_enable_downscalar;
         OMX_U32 m_downscalar_width;
         OMX_U32 m_downscalar_height;
         int decide_downscalar();
