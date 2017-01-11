@@ -703,6 +703,7 @@ class omx_video: public qc_omx_component
         uint64_t m_flags;
         uint64_t m_etb_count;
         uint64_t m_fbd_count;
+        OMX_TICKS m_etb_timestamp;
 #ifdef _ANDROID_
         // Heap pointer to frame buffers
         sp<MemoryHeapBase>    m_heap_ptr;

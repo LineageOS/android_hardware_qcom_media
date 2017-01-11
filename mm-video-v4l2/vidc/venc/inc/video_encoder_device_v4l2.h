@@ -48,6 +48,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <linux/videodev2.h>
 #include <media/msm_vidc.h>
 #include <poll.h>
+#include <list>
 
 #define TIMEOUT 5*60*1000
 #define BIT(num) (1 << (num))
@@ -608,11 +609,15 @@ class venc_dev
         bool is_thulium_v1;
         bool camera_mode_enabled;
         OMX_BOOL low_latency_mode;
-        struct {
+        struct roidata {
             bool dirty;
+            OMX_TICKS timestamp;
             OMX_QTI_VIDEO_CONFIG_ROIINFO info;
-        } roi;
-
+        };
+        bool m_roi_enabled;
+        pthread_mutex_t m_roilock;
+        std::list<roidata> m_roilist;
+        void get_roi_for_timestamp(struct roidata &roi, OMX_TICKS timestamp);
         bool venc_empty_batch (OMX_BUFFERHEADERTYPE *buf, unsigned index);
         static const int kMaxBuffersInBatch = 16;
         unsigned int mBatchSize;
