@@ -10327,7 +10327,7 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
     } else if (1 == portDefn->nPortIndex) {
         unsigned int buf_size = 0;
         int ret = 0;
-       if (!is_down_scalar_enabled) {
+       if (in_reconfig && !is_down_scalar_enabled) {
            fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
            ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_FMT, &fmt);
            fmt.fmt.pix_mp.pixelformat = capture_capability;
