@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2016, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2017, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -4463,8 +4463,8 @@ bool venc_dev::venc_set_vqzip_sei_type(OMX_BOOL enable)
         DEBUG_PRINT_HIGH("Non-Fatal: Request to set YUVSTATS failed");
     }
 #ifdef _VQZIP_
-    vqzip.pConfig.nWidth = ALIGN(m_sVenc_cfg.input_width, 16);
-    vqzip.pConfig.nHeight = ALIGN(m_sVenc_cfg.input_height, 16);
+    vqzip.pConfig.nWidth = m_sVenc_cfg.input_width;
+    vqzip.pConfig.nHeight = m_sVenc_cfg.input_height;
     vqzip.init();
     vqzip_sei_info.enabled = true;
 #endif
