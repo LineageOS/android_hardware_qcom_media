@@ -1493,7 +1493,6 @@ void omx_vdec::process_event_cb(void *ctxt, unsigned char id)
                                     if (release_buffers(pThis, VDEC_BUFFER_TYPE_OUTPUT))
                                         DEBUG_PRINT_HIGH("Failed to release output buffers");
                                     OMX_ERRORTYPE eRet1 = pThis->get_buffer_req(&pThis->drv_ctx.op_buf);
-                                    pThis->in_reconfig = false;
                                     if (eRet !=  OMX_ErrorNone) {
                                         DEBUG_PRINT_ERROR("set_buffer_req failed eRet = %d",eRet);
                                         pThis->omx_report_error();
@@ -1507,6 +1506,7 @@ void omx_vdec::process_event_cb(void *ctxt, unsigned char id)
                                 DEBUG_PRINT_HIGH("OMX_CommandPortEnable complete for port [%lu]", p2);
                                 pThis->m_cb.EventHandler(&pThis->m_cmp, pThis->m_app_data,\
                                         OMX_EventCmdComplete, p1, p2, NULL );
+                                pThis->in_reconfig = false;
                                 break;
 
                             default:
