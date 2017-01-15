@@ -1143,6 +1143,7 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             }
 #ifdef _ANDROID_ICS_
         case OMX_QcomIndexParamVideoMetaBufferMode:
+        case OMX_QTIIndexParamIMSVTVideoMetaBufferMode:
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, StoreMetaDataInBuffersParams);
                 StoreMetaDataInBuffersParams *pParam =
