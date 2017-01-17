@@ -9543,9 +9543,6 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
     bool internal_hdr_info_changed_flag = false;
     bool color_event = false;
 
-    if (output_flush_progress)
-        return;
-
     int buf_index = p_buf_hdr - m_out_mem_ptr;
     if (buf_index >= drv_ctx.extradata_info.count) {
         DEBUG_PRINT_ERROR("handle_extradata: invalid index(%d) max(%d)",
