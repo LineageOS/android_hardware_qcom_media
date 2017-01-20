@@ -1,4 +1,8 @@
-ifeq ($(call my-dir)/$(TARGET_BOARD_PLATFORM),$(call project-path-for,qcom-media))
+ifeq ($(QCOM_HARDWARE_VARIANT),)
+    QCOM_HARDWARE_VARIANT := $(TARGET_BOARD_PLATFORM)
+endif
+
+ifeq ($(call my-dir)/$(QCOM_HARDWARE_VARIANT),$(call project-path-for,qcom-media))
 
 # TODO:  Find a better way to separate build configs for ADP vs non-ADP devices
 ifneq ($(TARGET_BOARD_AUTO),true)
