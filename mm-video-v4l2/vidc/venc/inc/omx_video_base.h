@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2016, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2017, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -167,6 +167,10 @@ struct output_metabuffer {
     native_handle_t *nh;
 };
 
+typedef struct encoder_meta_buffer_payload_type {
+    char data[sizeof(LEGACY_CAM_METADATA_TYPE) + sizeof(int)];
+} encoder_meta_buffer_payload_type;
+
 // OMX video class
 class omx_video: public qc_omx_component
 {
@@ -174,7 +178,7 @@ class omx_video: public qc_omx_component
 #ifdef _ANDROID_ICS_
         bool meta_mode_enable;
         bool c2d_opened;
-        LEGACY_CAM_METADATA_TYPE meta_buffers[MAX_NUM_INPUT_BUFFERS];
+        encoder_meta_buffer_payload_type meta_buffers[MAX_NUM_INPUT_BUFFERS];
         OMX_BUFFERHEADERTYPE *opaque_buffer_hdr[MAX_NUM_INPUT_BUFFERS];
         bool get_syntaxhdr_enable;
         OMX_BUFFERHEADERTYPE  *psource_frame;
