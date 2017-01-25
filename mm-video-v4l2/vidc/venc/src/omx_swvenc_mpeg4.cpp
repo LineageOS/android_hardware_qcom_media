@@ -436,17 +436,15 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
             {
                 m_pipe_in = fds[0];
                 m_pipe_out = fds[1];
-            }
-        }
 
-        if (pthread_create(&msg_thread_id,0, enc_message_thread, this) < 0)
-        {
-            eRet = OMX_ErrorInsufficientResources;
-            msg_thread_created = false;
-        }
-        else
-        {
-            msg_thread_created = true;
+                if (pthread_create(&msg_thread_id,0, message_thread_enc, this) < 0) {
+                    eRet = OMX_ErrorInsufficientResources;
+                    msg_thread_created = false;
+                }
+                else {
+                    msg_thread_created = true;
+                }
+            }
         }
     }
 

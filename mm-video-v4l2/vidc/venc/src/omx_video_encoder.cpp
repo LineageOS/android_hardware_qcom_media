@@ -587,21 +587,29 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
             if (eRet == OMX_ErrorNone) {
                 m_pipe_in = fds[0];
                 m_pipe_out = fds[1];
+
+                msg_thread_created = true;
+                r = pthread_create(&msg_thread_id,0, enc_message_thread, this);
+                if (r < 0) {
+                    DEBUG_PRINT_ERROR("ERROR: message_thread_enc thread creation failed");
+                    eRet = OMX_ErrorInsufficientResources;
+                    msg_thread_created = false;
+                } else {
+                    async_thread_created = true;
+                    r = pthread_create(&async_thread_id,0, venc_dev::async_venc_message_thread, this);
+                    if (r < 0) {
+                        DEBUG_PRINT_ERROR("ERROR: venc_dev::async_venc_message_thread thread creation failed");
+                        eRet = OMX_ErrorInsufficientResources;
+                        async_thread_created = false;
+
+                        msg_thread_stop = true;
+                        pthread_join(msg_thread_id,NULL);
+                        msg_thread_created = false;
+
+                    } else
+                        dev_set_message_thread_id(async_thread_id);
+                }
             }
-        }
-        msg_thread_created = true;
-        r = pthread_create(&msg_thread_id,0, enc_message_thread, this);
-        if (r < 0) {
-            eRet = OMX_ErrorInsufficientResources;
-            msg_thread_created = false;
-        } else {
-            async_thread_created = true;
-            r = pthread_create(&async_thread_id,0, venc_dev::async_venc_message_thread, this);
-            if (r < 0) {
-                eRet = OMX_ErrorInsufficientResources;
-                async_thread_created = false;
-            } else
-                dev_set_message_thread_id(async_thread_id);
         }
     }
 
