@@ -3526,7 +3526,8 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE         
         met_error = true;
     } else if (media_buffer) {
         if (media_buffer->buffer_type != LEGACY_CAM_SOURCE &&
-          media_buffer->buffer_type != kMetadataBufferTypeGrallocSource) {
+          media_buffer->buffer_type != kMetadataBufferTypeGrallocSource &&
+          media_buffer->buffer_type != kMetadataBufferTypeNativeHandleSource) {
           met_error = true;
       } else {
         if(media_buffer->buffer_type == LEGACY_CAM_SOURCE)
@@ -4572,7 +4573,8 @@ void omx_video::omx_release_meta_buffer(OMX_BUFFERHEADERTYPE *buffer)
       media_ptr = (LEGACY_CAM_METADATA_TYPE *) buffer->pBuffer;
       if(media_ptr && media_ptr->meta_handle)
       {
-        if(media_ptr->buffer_type == LEGACY_CAM_SOURCE &&
+        if((media_ptr->buffer_type == LEGACY_CAM_SOURCE ||
+           media_ptr->buffer_type == kMetadataBufferTypeNativeHandleSource) &&
            media_ptr->meta_handle->numFds == 1 &&
            media_ptr->meta_handle->numInts == 2) {
           Input_pmem.fd = media_ptr->meta_handle->data[0];
