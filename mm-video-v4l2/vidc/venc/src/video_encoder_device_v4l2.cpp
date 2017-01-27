@@ -2721,7 +2721,8 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                 }
             } else if (!color_format) {
 
-                if (meta_buf->buffer_type == kMetadataBufferTypeCameraSource) {
+                if ((meta_buf->buffer_type == kMetadataBufferTypeCameraSource) ||
+                        (meta_buf->buffer_type == kMetadataBufferTypeNativeHandleSource)) {
                     native_handle_t *hnd = (native_handle_t*)meta_buf->meta_handle;
                     // Setting batch mode is sticky. We do not expect camera to change
                     // between batch and normal modes at runtime.
