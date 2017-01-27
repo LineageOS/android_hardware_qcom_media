@@ -4713,11 +4713,11 @@ bool venc_dev::venc_enable_initial_qp(QOMX_EXTNINDEX_VIDEO_INITIALQP* initqp)
     struct v4l2_ext_control ctrl[4];
     struct v4l2_ext_controls controls;
 
-    ctrl[0].id = V4L2_CID_MPEG_VIDC_VIDEO_I_FRAME_QP;
+    ctrl[0].id = V4L2_CID_MPEG_VIDC_VIDEO_INITIAL_I_FRAME_QP;
     ctrl[0].value = initqp->nQpI;
-    ctrl[1].id = V4L2_CID_MPEG_VIDC_VIDEO_P_FRAME_QP;
+    ctrl[1].id = V4L2_CID_MPEG_VIDC_VIDEO_INITIAL_P_FRAME_QP;
     ctrl[1].value = initqp->nQpP;
-    ctrl[2].id = V4L2_CID_MPEG_VIDC_VIDEO_B_FRAME_QP;
+    ctrl[2].id = V4L2_CID_MPEG_VIDC_VIDEO_INITIAL_B_FRAME_QP;
     ctrl[2].value = initqp->nQpB;
     ctrl[3].id = V4L2_CID_MPEG_VIDC_VIDEO_ENABLE_INITIAL_QP;
     ctrl[3].value = initqp->bEnableInitQp;
@@ -4827,8 +4827,22 @@ bool venc_dev::venc_set_session_qp(OMX_U32 i_frame_qp, OMX_U32 p_frame_qp,OMX_U3
 {
     int rc;
     struct v4l2_control control;
-
-    control.id = V4L2_CID_MPEG_VIDEO_H264_I_FRAME_QP;
+    switch (m_sVenc_cfg.codectype) {
+        case V4L2_PIX_FMT_VP8:
+            control.id = V4L2_CID_MPEG_VIDEO_VPX_I_FRAME_QP;
+            break;
+        case V4L2_PIX_FMT_HEVC:
+        case V4L2_PIX_FMT_H264:
+            control.id = V4L2_CID_MPEG_VIDEO_H264_I_FRAME_QP;
+            break;
+        case V4L2_PIX_FMT_H263:
+        case V4L2_PIX_FMT_MPEG4:
+            control.id = V4L2_CID_MPEG_VIDEO_H263_I_FRAME_QP;
+            break;
+        default:
+            DEBUG_PRINT_ERROR("Session QP set for invalid codec");
+            return false;
+    }
     control.value = i_frame_qp;
 
     DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
@@ -4842,7 +4856,22 @@ bool venc_dev::venc_set_session_qp(OMX_U32 i_frame_qp, OMX_U32 p_frame_qp,OMX_U3
     DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
     session_qp.iframeqp = control.value;
 
-    control.id = V4L2_CID_MPEG_VIDEO_H264_P_FRAME_QP;
+    switch (m_sVenc_cfg.codectype) {
+        case V4L2_PIX_FMT_VP8:
+            control.id = V4L2_CID_MPEG_VIDEO_VPX_P_FRAME_QP;
+            break;
+        case V4L2_PIX_FMT_HEVC:
+        case V4L2_PIX_FMT_H264:
+            control.id = V4L2_CID_MPEG_VIDEO_H264_P_FRAME_QP;
+            break;
+        case V4L2_PIX_FMT_H263:
+        case V4L2_PIX_FMT_MPEG4:
+            control.id = V4L2_CID_MPEG_VIDEO_H263_P_FRAME_QP;
+            break;
+        default:
+            DEBUG_PRINT_ERROR("Session QP set for invalid codec");
+            return false;
+    }
     control.value = p_frame_qp;
 
     DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
@@ -4857,24 +4886,39 @@ bool venc_dev::venc_set_session_qp(OMX_U32 i_frame_qp, OMX_U32 p_frame_qp,OMX_U3
 
     session_qp.pframeqp = control.value;
 
-    if ((codec_profile.profile == V4L2_MPEG_VIDEO_H264_PROFILE_MAIN) ||
-            (codec_profile.profile == V4L2_MPEG_VIDEO_H264_PROFILE_HIGH)) {
-
-        control.id = V4L2_CID_MPEG_VIDEO_H264_B_FRAME_QP;
-        control.value = b_frame_qp;
-
-        DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
-        rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-
-        if (rc) {
-            DEBUG_PRINT_ERROR("Failed to set control");
-            return false;
-        }
-
-        DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
-
-        session_qp.bframeqp = control.value;
+    //VP8 Doesn't Support B frames, If client tries to send QP value for B frames for VP8 error out.
+    if ((m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8 || !((codec_profile.profile == V4L2_MPEG_VIDEO_H264_PROFILE_MAIN) ||
+                (codec_profile.profile == V4L2_MPEG_VIDEO_H264_PROFILE_HIGH))) && b_frame_qp) {
+        DEBUG_PRINT_ERROR("%s: Invalid configuration for B Frame setting", __func__);
+        return false;
     }
+
+    switch (m_sVenc_cfg.codectype) {
+    case V4L2_PIX_FMT_HEVC:
+    case V4L2_PIX_FMT_H264:
+        control.id = V4L2_CID_MPEG_VIDEO_H264_B_FRAME_QP;
+        break;
+    case V4L2_PIX_FMT_H263:
+    case V4L2_PIX_FMT_MPEG4:
+        control.id = V4L2_CID_MPEG_VIDEO_H263_B_FRAME_QP;
+        break;
+    default:
+        DEBUG_PRINT_ERROR("Session QP set for invalid codec");
+        return false;
+    }
+    control.value = b_frame_qp;
+
+    DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
+    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
+
+    if (rc) {
+        DEBUG_PRINT_ERROR("Failed to set control");
+        return false;
+    }
+
+    DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
+
+    session_qp.bframeqp = control.value;
 
     return true;
 }
@@ -4886,10 +4930,22 @@ bool venc_dev::venc_set_session_qp_range(OMX_U32 min_qp, OMX_U32 max_qp)
 
     if ((min_qp >= session_qp_range.minqp) && (max_qp <= session_qp_range.maxqp)) {
 
-        if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8)
-            control.id = V4L2_CID_MPEG_VIDC_VIDEO_VP8_MIN_QP;
-        else
-            control.id = V4L2_CID_MPEG_VIDEO_H264_MIN_QP;
+        switch (m_sVenc_cfg.codectype) {
+            case V4L2_PIX_FMT_VP8:
+                control.id = V4L2_CID_MPEG_VIDEO_VPX_MIN_QP;
+                break;
+            case V4L2_PIX_FMT_HEVC:
+            case V4L2_PIX_FMT_H264:
+                control.id = V4L2_CID_MPEG_VIDEO_H264_MIN_QP;
+                break;
+            case V4L2_PIX_FMT_H263:
+            case V4L2_PIX_FMT_MPEG4:
+                control.id = V4L2_CID_MPEG_VIDEO_MPEG4_MIN_QP;
+                break;
+            default:
+                DEBUG_PRINT_ERROR("QP range set for invalid codec");
+                return false;
+        }
         control.value = min_qp;
 
         DEBUG_PRINT_LOW("Calling IOCTL set MIN_QP control id=%d, val=%d",
@@ -4900,10 +4956,22 @@ bool venc_dev::venc_set_session_qp_range(OMX_U32 min_qp, OMX_U32 max_qp)
             return false;
         }
 
-        if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8)
-            control.id = V4L2_CID_MPEG_VIDC_VIDEO_VP8_MAX_QP;
-        else
-            control.id = V4L2_CID_MPEG_VIDEO_H264_MAX_QP;
+        switch (m_sVenc_cfg.codectype) {
+            case V4L2_PIX_FMT_VP8:
+                control.id = V4L2_CID_MPEG_VIDEO_VPX_MAX_QP;
+                break;
+            case V4L2_PIX_FMT_HEVC:
+            case V4L2_PIX_FMT_H264:
+                control.id = V4L2_CID_MPEG_VIDEO_H264_MAX_QP;
+                break;
+            case V4L2_PIX_FMT_H263:
+            case V4L2_PIX_FMT_MPEG4:
+                control.id = V4L2_CID_MPEG_VIDEO_MPEG4_MAX_QP;
+                break;
+            default:
+                DEBUG_PRINT_ERROR("QP range set for invalid codec");
+                return false;
+        }
         control.value = max_qp;
 
         DEBUG_PRINT_LOW("Calling IOCTL set MAX_QP control id=%d, val=%d",
