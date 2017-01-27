@@ -484,6 +484,7 @@ class omx_vdec: public qc_omx_component
         int  m_pipe_out;
         pthread_t msg_thread_id;
         pthread_t async_thread_id;
+        int etb_count,ebd_count;
         bool is_component_secure();
         void buf_ref_add(long fd, OMX_U32 offset);
         void buf_ref_remove(long fd, OMX_U32 offset);
