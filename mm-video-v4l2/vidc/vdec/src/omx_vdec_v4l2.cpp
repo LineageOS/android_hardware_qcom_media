@@ -148,8 +148,6 @@ extern "C" {
 #define SECURE_FLAGS_OUTPUT_BUFFER ION_SECURE
 #endif
 
-#define LUMINANCE_DIV_FACTOR 10000.0
-
 static OMX_U32 maxSmoothStreamingWidth = 1920;
 static OMX_U32 maxSmoothStreamingHeight = 1088;
 
@@ -10776,12 +10774,7 @@ bool omx_vdec::handle_mastering_display_color_info(void* data, MasteringDisplay*
     internal_disp_changed_flag |= (hdr_info->sType1.mW.x != mastering_display_payload->nWhitePointX) ||
         (hdr_info->sType1.mW.y != mastering_display_payload->nWhitePointY);
 
-    /* Maximum Display Luminance from the bitstream is in 0.0001 cd/m2 while the HDRStaticInfo extension
-       requires it in cd/m2, so dividing by 10000 and rounding the value after division
-    */
-    uint16_t max_display_luminance_cd_m2 =
-        static_cast<int>((mastering_display_payload->nMaxDisplayMasteringLuminance / LUMINANCE_DIV_FACTOR) + 0.5);
-    internal_disp_changed_flag |= (hdr_info->sType1.mMaxDisplayLuminance != max_display_luminance_cd_m2) ||
+    internal_disp_changed_flag != (hdr_info->sType1.mMaxDisplayLuminance != mastering_display_payload->nMaxDisplayMasteringLuminance) ||
         (hdr_info->sType1.mMinDisplayLuminance != mastering_display_payload->nMinDisplayMasteringLuminance);
 
     if (internal_disp_changed_flag) {
@@ -10794,7 +10787,7 @@ bool omx_vdec::handle_mastering_display_color_info(void* data, MasteringDisplay*
         hdr_info->sType1.mW.x = mastering_display_payload->nWhitePointX;
         hdr_info->sType1.mW.y = mastering_display_payload->nWhitePointY;
 
-        hdr_info->sType1.mMaxDisplayLuminance = max_display_luminance_cd_m2;
+        hdr_info->sType1.mMaxDisplayLuminance = mastering_display_payload->nMaxDisplayMasteringLuminance;
         hdr_info->sType1.mMinDisplayLuminance = mastering_display_payload->nMinDisplayMasteringLuminance;
     }
 
