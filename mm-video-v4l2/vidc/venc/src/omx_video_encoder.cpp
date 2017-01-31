@@ -1384,8 +1384,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                         break;
                     }
                 }
-
-#ifndef _MSM8974_
                 else if (pParam->nIndex == (OMX_INDEXTYPE)OMX_ExtraDataVideoLTRInfo) {
                     if (pParam->nPortIndex == PORT_INDEX_OUT) {
                         if (pParam->bEnabled == OMX_TRUE)
@@ -1400,7 +1398,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                         break;
                     }
                 }
-#endif
                 else {
                     DEBUG_PRINT_ERROR("set_parameter: unsupported extrdata index (%x)",
                             pParam->nIndex);
@@ -2492,6 +2489,10 @@ bool omx_venc::dev_get_batch_size(OMX_U32 *size)
 bool omx_venc::dev_get_temporal_layer_caps(OMX_U32 *nMaxLayers,
         OMX_U32 *nMaxBLayers) {
     return handle->venc_get_temporal_layer_caps(nMaxLayers, nMaxBLayers);
+}
+
+bool omx_venc::dev_get_pq_status(OMX_BOOL *pq_status) {
+    return handle->venc_get_pq_status(pq_status);
 }
 
 bool omx_venc::dev_loaded_start()
