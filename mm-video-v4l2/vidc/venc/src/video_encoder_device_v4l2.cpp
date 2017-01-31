@@ -6876,6 +6876,18 @@ bool venc_dev::venc_h264_transform_8x8(OMX_BOOL enable)
     return true;
 }
 
+bool venc_dev::venc_get_pq_status(OMX_BOOL *pq_status) {
+
+    if (pq_status == NULL) {
+        return false;
+    }
+    *pq_status = OMX_FALSE;
+#ifdef _PQ_
+    *pq_status = m_pq.is_pq_force_disable ? OMX_FALSE : OMX_TRUE;
+#endif // _PQ_
+    return true;
+}
+
 bool venc_dev::venc_get_temporal_layer_caps(OMX_U32 *nMaxLayers,
         OMX_U32 *nMaxBLayers) {
 
