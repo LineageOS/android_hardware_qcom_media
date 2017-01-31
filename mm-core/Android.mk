@@ -12,38 +12,10 @@ OMXCORE_CFLAGS += -U_ENABLE_QC_MSG_LOG_
 #             Figure out the targets
 #===============================================================================
 
-ifeq ($(TARGET_BOARD_PLATFORM),msm7627a)
-MM_CORE_TARGET = 7627A
-else ifeq ($(TARGET_BOARD_PLATFORM),msm7630_surf)
-MM_CORE_TARGET = 7630
-else ifeq ($(TARGET_BOARD_PLATFORM),msm8660)
-MM_CORE_TARGET = 8660
-#Comment out following line to disable drm.play component
-OMXCORE_CFLAGS += -DENABLE_DRMPLAY
-else ifeq ($(TARGET_BOARD_PLATFORM),msm8960)
-MM_CORE_TARGET = 8960
-else ifeq ($(TARGET_BOARD_PLATFORM),msm8974)
-MM_CORE_TARGET = 8974
-else ifeq ($(TARGET_BOARD_PLATFORM),msm8610)
-MM_CORE_TARGET = 8610
-else ifeq ($(TARGET_BOARD_PLATFORM),msm8226)
-MM_CORE_TARGET = 8226
-else ifeq ($(TARGET_BOARD_PLATFORM),msm8916)
-MM_CORE_TARGET = 8916
-else ifeq ($(TARGET_BOARD_PLATFORM),msm8909)
-MM_CORE_TARGET = 8909
+ifeq ($(TARGET_BOARD_PLATFORM),msm8998)
+MM_CORE_TARGET = msm8998
 else ifeq ($(TARGET_BOARD_PLATFORM),msm8937)
 MM_CORE_TARGET = 8937
-else ifeq ($(TARGET_BOARD_PLATFORM),apq8084)
-MM_CORE_TARGET = 8084
-else ifeq ($(TARGET_BOARD_PLATFORM),mpq8092)
-MM_CORE_TARGET = 8092
-else ifeq ($(TARGET_BOARD_PLATFORM),msm8992)
-MM_CORE_TARGET = msm8992
-else ifeq ($(TARGET_BOARD_PLATFORM),msm8994)
-MM_CORE_TARGET = msm8994
-else ifeq ($(TARGET_BOARD_PLATFORM),msm8996)
-MM_CORE_TARGET = msm8996
 else ifeq ($(TARGET_BOARD_PLATFORM),msm8952)
 MM_CORE_TARGET = 8952
 else ifeq ($(TARGET_BOARD_PLATFORM),msm8953)

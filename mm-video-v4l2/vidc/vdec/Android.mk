@@ -117,11 +117,7 @@ LOCAL_SHARED_LIBRARIES  := liblog libutils libbinder libcutils libdl libqdutils
 
 LOCAL_SHARED_LIBRARIES  += libqdMetaData
 
-LOCAL_SRC_FILES         := src/frameparser.cpp
-LOCAL_SRC_FILES         += src/h264_utils.cpp
-LOCAL_SRC_FILES         += src/ts_parser.cpp
-LOCAL_SRC_FILES         += src/mp4_utils.cpp
-LOCAL_SRC_FILES         += src/hevc_utils.cpp
+LOCAL_SRC_FILES         := src/ts_parser.cpp
 LOCAL_STATIC_LIBRARIES  := libOmxVidcCommon
 LOCAL_SRC_FILES         += src/omx_vdec_v4l2.cpp
 

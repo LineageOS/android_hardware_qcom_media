@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2016, Linux Foundation. All rights reserved.
+Copyright (c) 2010-2017, Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -4496,15 +4496,6 @@ OMX_ERRORTYPE omx_video::fill_buffer_done(OMX_HANDLETYPE hComp,
             m_fbd_count++;
         m_pCallbacks.FillBufferDone (hComp,m_app_data,buffer);
         return OMX_ErrorNone;
-    }
-    if(!secure_session) {
-        extra_data_handle.create_extra_data(buffer);
-#ifndef _MSM8974_
-        if (buffer->nFlags & OMX_BUFFERFLAG_EXTRADATA) {
-            DEBUG_PRINT_LOW("parsing extradata");
-            extra_data_handle.parse_extra_data(buffer);
-        }
-#endif
     }
 
     /* For use buffer we need to copy the data */

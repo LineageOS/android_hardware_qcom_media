@@ -73,6 +73,7 @@ extern "C" {
 #include <utils/Log.h>
 }
 #include <linux/videodev2.h>
+#define VALID_TS(ts)      ((ts < LLONG_MAX)? true : false)
 #include <poll.h>
 #include "hevc_utils.h"
 #define TIMEOUT 5000
@@ -100,11 +101,6 @@ extern "C" {
 #include "qc_omx_component.h"
 #include <linux/msm_vidc_dec.h>
 #include <media/msm_vidc.h>
-#include "frameparser.h"
-#ifdef MAX_RES_1080P
-#include "mp4_utils.h"
-#endif
-#include "extra_data_handler.h"
 #include "ts_parser.h"
 #include "vidc_color_converter.h"
 #include "vidc_debug.h"
@@ -251,6 +247,29 @@ enum turbo_mode {
     TURBO_MODE_HIGH_FPS = 0x2,
     TURBO_MODE_MAX = 0xFF
 };
+
+
+class perf_metrics
+{
+    public:
+        perf_metrics() :
+            start_time(0),
+            proc_time(0),
+            active(false) {
+            };
+        ~perf_metrics() {};
+        void start();
+        void stop();
+        void end(OMX_U32 units_cntr = 0);
+        void reset();
+        OMX_U64 processing_time_us();
+    private:
+        inline OMX_U64 get_act_time();
+        OMX_U64 start_time;
+        OMX_U64 proc_time;
+        bool active;
+};
+
 
 #ifdef USE_ION
 struct vdec_ion {
@@ -924,10 +943,6 @@ class omx_vdec: public qc_omx_component
         OMX_VENDOR_EXTRADATATYPE            m_vendor_config;
 
         /*Variables for arbitrary Byte parsing support*/
-        frame_parse m_frame_parser;
-        h264_stream_parser *h264_parser;
-        MP4_Utils mp4_headerparser;
-        HEVC_Utils m_hevc_utils;
 
         omx_cmd_queue m_input_pending_q;
         omx_cmd_queue m_input_free_q;
@@ -938,7 +953,6 @@ class omx_vdec: public qc_omx_component
         OMX_BUFFERHEADERTYPE  *m_inp_heap_ptr;
         OMX_BUFFERHEADERTYPE  **m_phdr_pmem_ptr;
         unsigned int m_heap_inp_bm_count;
-        codec_type codec_type_parse;
         bool first_frame_meta;
         unsigned frame_count;
         unsigned nal_count;
@@ -1002,7 +1016,6 @@ class omx_vdec: public qc_omx_component
             int offset;
         };
         meta_buffer meta_buff;
-        extra_data_handler extra_data_handle;
         OMX_PARAM_PORTDEFINITIONTYPE m_port_def;
         OMX_QCOM_FRAME_PACK_ARRANGEMENT m_frame_pack_arrangement;
         omx_time_stamp_reorder time_stamp_dts;

@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2016, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2017, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -2022,7 +2022,6 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                     VALIDATE_OMX_PARAM_DATA(configData, OMX_QCOM_FRAME_PACK_ARRANGEMENT);
                     OMX_QCOM_FRAME_PACK_ARRANGEMENT *configFmt =
                         (OMX_QCOM_FRAME_PACK_ARRANGEMENT *) configData;
-                    extra_data_handle.set_frame_pack_data(configFmt);
                 } else {
                     DEBUG_PRINT_ERROR("ERROR: FramePackingData not supported for non AVC compression");
                 }
