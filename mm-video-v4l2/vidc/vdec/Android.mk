@@ -21,19 +21,11 @@ libmm-vdec-def += -UINPUT_BUFFER_LOG
 libmm-vdec-def += -UOUTPUT_BUFFER_LOG
 libmm-vdec-def += -Wno-parentheses
 libmm-vdec-def += -D_ANDROID_ICS_
-libmm-vdec-def += -D_MSM8974_
 libmm-vdec-def += -DPROCESS_EXTRADATA_IN_OUTPUT_PORT
-libmm-vdec-def += -DMAX_RES_1080P
-libmm-vdec-def += -DMAX_RES_1080P_EBI
 
-TARGETS_THAT_USE_HEVC_ADSP_HEAP := msm8226 msm8974
 TARGETS_THAT_HAVE_VENUS_HEVC := apq8084 msm8994 msm8996
 TARGETS_THAT_SUPPORT_UBWC := msm8996 msm8953 msm8998 sdm660
 TARGETS_THAT_NEED_SW_VDEC := msm8937
-
-ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_USE_HEVC_ADSP_HEAP)),true)
-libmm-vdec-def += -D_HEVC_USE_ADSP_HEAP_
-endif
 
 ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_HAVE_VENUS_HEVC)),true)
 libmm-vdec-def += -DVENUS_HEVC
@@ -41,7 +33,6 @@ endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),msm8610)
 libmm-vdec-def += -DSMOOTH_STREAMING_DISABLED
-libmm-vdec-def += -DH264_PROFILE_LEVEL_CHECK
 endif
 
 ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_UBWC)),true)

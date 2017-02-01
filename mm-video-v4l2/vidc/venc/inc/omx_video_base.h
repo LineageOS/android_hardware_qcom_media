@@ -84,21 +84,7 @@ class VideoHeap : public MemoryHeapBase
 
 #ifdef USE_ION
 static const char* MEM_DEVICE = "/dev/ion";
-#if defined(MAX_RES_720P) && !defined(_MSM8974_)
-#define MEM_HEAP_ID ION_CAMERA_HEAP_ID
-#else
-#ifdef _MSM8974_
 #define MEM_HEAP_ID ION_IOMMU_HEAP_ID
-#else
-#define MEM_HEAP_ID ION_CP_MM_HEAP_ID
-#endif
-#endif
-#elif MAX_RES_720P
-static const char* MEM_DEVICE = "/dev/pmem_adsp";
-#elif MAX_RES_1080P_EBI
-static const char* MEM_DEVICE  = "/dev/pmem_adsp";
-#elif MAX_RES_1080P
-static const char* MEM_DEVICE = "/dev/pmem_smipool";
 #else
 #error MEM_DEVICE cannot be determined.
 #endif
@@ -514,9 +500,7 @@ class omx_video: public qc_omx_component
         bool execute_omx_flush(OMX_U32);
         bool execute_output_flush(void);
         bool execute_input_flush(void);
-#ifdef _MSM8974_
         bool execute_flush_all(void);
-#endif
         OMX_ERRORTYPE empty_buffer_done(OMX_HANDLETYPE hComp,
                 OMX_BUFFERHEADERTYPE * buffer);
 

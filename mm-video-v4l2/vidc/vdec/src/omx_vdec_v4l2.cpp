@@ -3122,9 +3122,7 @@ OMX_ERRORTYPE  omx_vdec::send_command_proxy(OMX_IN OMX_HANDLETYPE hComp,
     } else if (cmd == OMX_CommandFlush) {
         DEBUG_PRINT_HIGH("send_command_proxy(): OMX_CommandFlush issued"
                 "with param1: %u", (unsigned int)param1);
-#ifdef _MSM8974_
         send_codec_config();
-#endif
         if (cmd == OMX_CommandFlush && (param1 == OMX_CORE_INPUT_PORT_INDEX ||
                     param1 == OMX_ALL)) {
             if (android_atomic_add(0, &m_queued_codec_config_count) > 0) {
@@ -12026,7 +12024,6 @@ void omx_vdec::buf_ref_remove()
     }
 }
 
-#ifdef _MSM8974_
 void omx_vdec::send_codec_config() {
     if (codec_config_flag) {
         unsigned long p1 = 0; // Parameter - 1
@@ -12059,7 +12056,6 @@ void omx_vdec::send_codec_config() {
         pthread_mutex_unlock(&m_lock);
     }
 }
-#endif
 
 omx_vdec::perf_control::perf_control()
 {

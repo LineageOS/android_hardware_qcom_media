@@ -577,7 +577,6 @@ class venc_dev
         OMX_ERRORTYPE venc_set_temporal_layers_internal();
         bool venc_set_iframesize_type(QOMX_VIDEO_IFRAMESIZE_TYPE type);
 
-#ifdef MAX_RES_1080P
         OMX_U32 pmem_free();
         OMX_U32 pmem_allocate(OMX_U32 size, OMX_U32 alignment, OMX_U32 count);
         OMX_U32 venc_allocate_recon_buffers();
@@ -590,7 +589,6 @@ class venc_dev
             x = x + 1;
             return x;
         }
-#endif
         int metadatamode;
         bool streaming[MAX_PORT];
         bool extradata;

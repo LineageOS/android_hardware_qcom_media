@@ -54,13 +54,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 static ptrdiff_t x;
 
 #ifdef _ANDROID_
-#ifdef MAX_RES_720P
-#define LOG_TAG "OMX-VDEC-720P"
-#elif MAX_RES_1080P
 #define LOG_TAG "OMX-VDEC-1080P"
-#else
-#define LOG_TAG "OMX-VDEC"
-#endif
 
 #ifdef USE_ION
 #include <linux/msm_ion.h>
@@ -101,6 +95,8 @@ extern "C" {
 #include "qc_omx_component.h"
 #include <linux/msm_vidc_dec.h>
 #include <media/msm_vidc.h>
+#include "frameparser.h"
+#include "mp4_utils.h"
 #include "ts_parser.h"
 #include "vidc_color_converter.h"
 #include "vidc_debug.h"
@@ -279,7 +275,6 @@ struct vdec_ion {
 };
 #endif
 
-#ifdef _MSM8974_
 struct extradata_buffer_info {
     unsigned long buffer_size;
     char* uaddr;
@@ -289,7 +284,6 @@ struct extradata_buffer_info {
     struct vdec_ion ion;
 #endif
 };
-#endif
 
 struct video_driver_context {
     int video_driver_fd;
@@ -317,10 +311,8 @@ struct video_driver_context {
     char kind[128];
     bool idr_only_decoding;
     unsigned disable_dmx;
-#ifdef _MSM8974_
     struct extradata_buffer_info extradata_info;
     int num_planes;
-#endif
 };
 
 struct video_decoder_capability {
@@ -488,12 +480,10 @@ class omx_vdec: public qc_omx_component
         void complete_pending_buffer_done_cbs();
         struct video_driver_context drv_ctx;
         int m_poll_efd;
-#ifdef _MSM8974_
         OMX_ERRORTYPE allocate_extradata();
         void free_extradata();
         int update_resolution(int width, int height, int stride, int scan_lines);
         OMX_ERRORTYPE is_video_session_supported();
-#endif
         int  m_pipe_in;
         int  m_pipe_out;
         pthread_t msg_thread_id;
@@ -597,13 +587,11 @@ class omx_vdec: public qc_omx_component
             VC1_AP = 2
         };
 
-#ifdef _MSM8974_
         enum v4l2_ports {
             CAPTURE_PORT,
             OUTPUT_PORT,
             MAX_PORT
         };
-#endif
 
         struct omx_event {
             unsigned long param1;
@@ -740,7 +728,6 @@ class omx_vdec: public qc_omx_component
         void prepare_color_aspects_metadata(OMX_U32 primaries, OMX_U32 range,
                                             OMX_U32 transfer, OMX_U32 matrix,
                                             ColorMetaData *color_mdata);
-#ifdef _MSM8974_
         void append_interlace_extradata(OMX_OTHER_EXTRADATATYPE *extra,
                 OMX_U32 interlaced_format_type);
         OMX_ERRORTYPE enable_extradata(OMX_U64 requested_extradata, bool is_internal,
@@ -753,11 +740,6 @@ class omx_vdec: public qc_omx_component
                 OMX_TICKS time_stamp,
                 struct msm_vidc_panscan_window_payload *panscan_payload,
                 struct vdec_aspectratioinfo *aspect_ratio_info);
-#else
-        void append_interlace_extradata(OMX_OTHER_EXTRADATATYPE *extra,
-                OMX_U32 interlaced_format_type, OMX_U32 buf_index);
-        OMX_ERRORTYPE enable_extradata(OMX_U32 requested_extradata, bool enable = true);
-#endif
         void append_frame_info_extradata(OMX_OTHER_EXTRADATATYPE *extra,
                 OMX_U32 num_conceal_mb,
                 OMX_U32 recovery_sei_flag,
@@ -816,12 +798,10 @@ class omx_vdec: public qc_omx_component
             return x;
         }
 
-#ifdef MAX_RES_1080P
         OMX_ERRORTYPE vdec_alloc_h264_mv();
         void vdec_dealloc_h264_mv();
         OMX_ERRORTYPE vdec_alloc_meta_buffers();
         void vdec_dealloc_meta_buffers();
-#endif
 
         inline void omx_report_error () {
             if (m_cb.EventHandler && !m_error_propogated && m_state != OMX_StateLoaded) {
@@ -1027,7 +1007,6 @@ class omx_vdec: public qc_omx_component
         OMX_QCOM_EXTRADATA_FRAMEINFO *m_extradata;
         OMX_OTHER_EXTRADATATYPE *m_other_extradata;
         bool codec_config_flag;
-#ifdef _MSM8974_
         int capture_capability;
         int output_capability;
         bool streaming[MAX_PORT];
@@ -1036,7 +1015,6 @@ class omx_vdec: public qc_omx_component
         OMX_U32 prev_n_filled_len;
         bool is_down_scalar_enabled;
         bool m_force_down_scalar;
-#endif
         struct custom_buffersize {
             OMX_U32 input_buffersize;
         } m_custom_buffersize;
@@ -1146,16 +1124,12 @@ class omx_vdec: public qc_omx_component
                     return cache_ops(index, ION_IOC_CLEAN_INV_CACHES);
                 }
         };
-#if  defined (_MSM8960_) || defined (_MSM8974_)
         allocate_color_convert_buf client_buffers;
-#endif
         struct video_decoder_capability m_decoder_capability;
         struct debug_cap m_debug;
         int log_input_buffers(const char *, int);
         int log_output_buffers(OMX_BUFFERHEADERTYPE *);
-#ifdef _MSM8974_
         void send_codec_config();
-#endif
         OMX_TICKS m_last_rendered_TS;
         volatile int32_t m_queued_codec_config_count;
         OMX_U32 current_perf_level;
@@ -1311,7 +1285,6 @@ class omx_vdec: public qc_omx_component
         client_extradata_info m_client_extradata_info;
 };
 
-#ifdef _MSM8974_
 enum instance_state {
     MSM_VIDC_CORE_UNINIT_DONE = 0x0001,
     MSM_VIDC_CORE_INIT,
@@ -1335,7 +1308,5 @@ enum vidc_resposes_id {
     MSM_VIDC_DECODER_FLUSH_DONE = 0x11,
     MSM_VIDC_DECODER_EVENT_CHANGE,
 };
-
-#endif // _MSM8974_
 
 #endif // __OMX_VDEC_H__
