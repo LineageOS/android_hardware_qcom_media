@@ -59,9 +59,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define H264_SUPPORTED_WIDTH (480)
 #define H264_SUPPORTED_HEIGHT (368)
 
-#define MPEG4_SUPPORTED_WIDTH (480)
-#define MPEG4_SUPPORTED_HEIGHT (368)
-
 #define VC1_SP_MP_START_CODE        0xC5000000
 #define VC1_SP_MP_START_CODE_MASK   0xFF000000
 #define VC1_AP_START_CODE           0x00000100
@@ -1623,22 +1620,6 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     eRet = OMX_ErrorBadPortIndex;
                 }
 
-                break;
-            }
-        case OMX_IndexParamVideoMpeg4:
-            {
-                VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_MPEG4TYPE);
-                OMX_VIDEO_PARAM_MPEG4TYPE* pParam = (OMX_VIDEO_PARAM_MPEG4TYPE*)paramData;
-                DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoMpeg4");
-                memcpy(pParam, &m_sParamMPEG4, sizeof(m_sParamMPEG4));
-                break;
-            }
-        case OMX_IndexParamVideoH263:
-            {
-                VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_H263TYPE);
-                OMX_VIDEO_PARAM_H263TYPE* pParam = (OMX_VIDEO_PARAM_H263TYPE*)paramData;
-                DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoH263");
-                memcpy(pParam, &m_sParamH263, sizeof(m_sParamH263));
                 break;
             }
         case OMX_IndexParamVideoAvc:
@@ -4094,48 +4075,9 @@ OMX_ERRORTYPE  omx_video::component_role_enum(OMX_IN OMX_HANDLETYPE hComp,
 {
     (void)hComp;
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
-    if (!strncmp((char*)m_nkind, "OMX.qcom.video.decoder.mpeg4",OMX_MAX_STRINGNAME_SIZE)) {
-        if ((0 == index) && role) {
-            strlcpy((char *)role, "video_decoder.mpeg4",OMX_MAX_STRINGNAME_SIZE);
-            DEBUG_PRINT_LOW("component_role_enum: role %s",role);
-        } else {
-            eRet = OMX_ErrorNoMore;
-        }
-    } else if (!strncmp((char*)m_nkind, "OMX.qcom.video.decoder.h263",OMX_MAX_STRINGNAME_SIZE)) {
-        if ((0 == index) && role) {
-            strlcpy((char *)role, "video_decoder.h263",OMX_MAX_STRINGNAME_SIZE);
-            DEBUG_PRINT_LOW("component_role_enum: role %s",role);
-        } else {
-            DEBUG_PRINT_ERROR("ERROR: No more roles");
-            eRet = OMX_ErrorNoMore;
-        }
-    } else if (!strncmp((char*)m_nkind, "OMX.qcom.video.decoder.avc",OMX_MAX_STRINGNAME_SIZE)) {
+    if (!strncmp((char*)m_nkind, "OMX.qcom.video.decoder.avc",OMX_MAX_STRINGNAME_SIZE)) {
         if ((0 == index) && role) {
             strlcpy((char *)role, "video_decoder.avc",OMX_MAX_STRINGNAME_SIZE);
-            DEBUG_PRINT_LOW("component_role_enum: role %s",role);
-        } else {
-            DEBUG_PRINT_ERROR("ERROR: No more roles");
-            eRet = OMX_ErrorNoMore;
-        }
-    } else if (!strncmp((char*)m_nkind, "OMX.qcom.video.decoder.vc1",OMX_MAX_STRINGNAME_SIZE)) {
-        if ((0 == index) && role) {
-            strlcpy((char *)role, "video_decoder.vc1",OMX_MAX_STRINGNAME_SIZE);
-            DEBUG_PRINT_LOW("component_role_enum: role %s",role);
-        } else {
-            DEBUG_PRINT_ERROR("ERROR: No more roles");
-            eRet = OMX_ErrorNoMore;
-        }
-    }
-    if (!strncmp((char*)m_nkind, "OMX.qcom.video.encoder.mpeg4",OMX_MAX_STRINGNAME_SIZE)) {
-        if ((0 == index) && role) {
-            strlcpy((char *)role, "video_encoder.mpeg4",OMX_MAX_STRINGNAME_SIZE);
-            DEBUG_PRINT_LOW("component_role_enum: role %s",role);
-        } else {
-            eRet = OMX_ErrorNoMore;
-        }
-    } else if (!strncmp((char*)m_nkind, "OMX.qcom.video.encoder.h263",OMX_MAX_STRINGNAME_SIZE)) {
-        if ((0 == index) && role) {
-            strlcpy((char *)role, "video_encoder.h263",OMX_MAX_STRINGNAME_SIZE);
             DEBUG_PRINT_LOW("component_role_enum: role %s",role);
         } else {
             DEBUG_PRINT_ERROR("ERROR: No more roles");
@@ -4561,25 +4503,6 @@ OMX_ERRORTYPE omx_video::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVE
             } else {
                 DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoProfileLevelQuerySupported nProfileIndex ret NoMore %u",
                         (unsigned int)profileLevelType->nProfileIndex);
-                eRet = OMX_ErrorNoMore;
-            }
-        } else if (m_sOutPortDef.format.video.eCompressionFormat == OMX_VIDEO_CodingH263) {
-            if (profileLevelType->nProfileIndex == 0) {
-                profileLevelType->eProfile = OMX_VIDEO_H263ProfileBaseline;
-                profileLevelType->eLevel   = OMX_VIDEO_H263Level70;
-            } else {
-                DEBUG_PRINT_ERROR("get_parameter: OMX_IndexParamVideoProfileLevelQuerySupported nProfileIndex ret NoMore %u", (unsigned int)profileLevelType->nProfileIndex);
-                eRet = OMX_ErrorNoMore;
-            }
-        } else if (m_sOutPortDef.format.video.eCompressionFormat == OMX_VIDEO_CodingMPEG4) {
-            if (profileLevelType->nProfileIndex == 0) {
-                profileLevelType->eProfile = OMX_VIDEO_MPEG4ProfileSimple;
-                profileLevelType->eLevel   = OMX_VIDEO_MPEG4Level5;
-            } else if (profileLevelType->nProfileIndex == 1) {
-                profileLevelType->eProfile = OMX_VIDEO_MPEG4ProfileAdvancedSimple;
-                profileLevelType->eLevel   = OMX_VIDEO_MPEG4Level5;
-            } else {
-                DEBUG_PRINT_ERROR("get_parameter: OMX_IndexParamVideoProfileLevelQuerySupported nProfileIndex ret NoMore %u", (unsigned int)profileLevelType->nProfileIndex);
                 eRet = OMX_ErrorNoMore;
             }
         } else if (m_sOutPortDef.format.video.eCompressionFormat == OMX_VIDEO_CodingVP8) {

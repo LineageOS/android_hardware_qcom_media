@@ -100,21 +100,6 @@ char output_extradata_filename [] = "/data/misc/media/extradata";
 #define DEFAULT_WIDTH_ALIGNMENT 128
 #define DEFAULT_HEIGHT_ALIGNMENT 32
 
-#define VC1_SP_MP_START_CODE        0xC5000000
-#define VC1_SP_MP_START_CODE_MASK   0xFF000000
-#define VC1_AP_SEQ_START_CODE       0x0F010000
-#define VC1_STRUCT_C_PROFILE_MASK   0xF0
-#define VC1_STRUCT_B_LEVEL_MASK     0xE0000000
-#define VC1_SIMPLE_PROFILE          0
-#define VC1_MAIN_PROFILE            1
-#define VC1_ADVANCE_PROFILE         3
-#define VC1_SIMPLE_PROFILE_LOW_LEVEL  0
-#define VC1_SIMPLE_PROFILE_MED_LEVEL  2
-#define VC1_STRUCT_C_LEN            4
-#define VC1_STRUCT_C_POS            8
-#define VC1_STRUCT_A_POS            12
-#define VC1_STRUCT_B_POS            24
-#define VC1_SEQ_LAYER_SIZE          36
 #define POLL_TIMEOUT 0x7fffffff
 
 #define MEM_DEVICE "/dev/ion"
@@ -654,6 +639,8 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     first_buffer(NULL),
     first_frame_size (0),
     m_device_file_ptr(NULL),
+    h264_last_au_ts(LLONG_MAX),
+    h264_last_au_flags(0),
     m_disp_hor_size(0),
     m_disp_vert_size(0),
     prev_ts(LLONG_MAX),
@@ -1997,27 +1984,15 @@ OMX_ERRORTYPE omx_vdec::is_video_session_supported()
 int omx_vdec::log_input_buffers(const char *buffer_addr, int buffer_len)
 {
     if (m_debug.in_buffer_log && !m_debug.infile) {
-        if(!strncmp(drv_ctx.kind,"OMX.qcom.video.decoder.mpeg4", OMX_MAX_STRINGNAME_SIZE)) {
-           snprintf(m_debug.infile_name, OMX_MAX_STRINGNAME_SIZE, "%s/input_dec_%d_%d_%p.m4v",
-                   m_debug.log_loc, drv_ctx.video_resolution.frame_width, drv_ctx.video_resolution.frame_height, this);
-        } else if(!strncmp(drv_ctx.kind,"OMX.qcom.video.decoder.mpeg2", OMX_MAX_STRINGNAME_SIZE)) {
+        if(!strncmp(drv_ctx.kind,"OMX.qcom.video.decoder.mpeg2", OMX_MAX_STRINGNAME_SIZE)) {
                 snprintf(m_debug.infile_name, OMX_MAX_STRINGNAME_SIZE, "%s/input_dec_%d_%d_%p.mpg", m_debug.log_loc,
                         drv_ctx.video_resolution.frame_width, drv_ctx.video_resolution.frame_height, this);
-        } else if(!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.h263", OMX_MAX_STRINGNAME_SIZE)) {
-                snprintf(m_debug.infile_name, OMX_MAX_STRINGNAME_SIZE, "%s/input_dec_%d_%d_%p.263",
-                        m_debug.log_loc, drv_ctx.video_resolution.frame_width, drv_ctx.video_resolution.frame_height, this);
         } else if(!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.avc", OMX_MAX_STRINGNAME_SIZE) ||
                     !strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.mvc", OMX_MAX_STRINGNAME_SIZE)) {
                 snprintf(m_debug.infile_name, OMX_MAX_STRINGNAME_SIZE, "%s/input_dec_%d_%d_%p.264",
                         m_debug.log_loc, drv_ctx.video_resolution.frame_width, drv_ctx.video_resolution.frame_height, this);
         } else if(!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.hevc", OMX_MAX_STRINGNAME_SIZE)) {
                 snprintf(m_debug.infile_name, OMX_MAX_STRINGNAME_SIZE, "%s/input_dec_%d_%d_%p.265",
-                        m_debug.log_loc, drv_ctx.video_resolution.frame_width, drv_ctx.video_resolution.frame_height, this);
-        } else if(!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.vc1", OMX_MAX_STRINGNAME_SIZE)) {
-                snprintf(m_debug.infile_name, OMX_MAX_STRINGNAME_SIZE, "%s/input_dec_%d_%d_%p.vc1",
-                        m_debug.log_loc, drv_ctx.video_resolution.frame_width, drv_ctx.video_resolution.frame_height, this);
-        } else if(!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.wmv", OMX_MAX_STRINGNAME_SIZE)) {
-                snprintf(m_debug.infile_name, OMX_MAX_STRINGNAME_SIZE, "%s/input_dec_%d_%d_%p.vc1",
                         m_debug.log_loc, drv_ctx.video_resolution.frame_width, drv_ctx.video_resolution.frame_height, this);
         } else if(!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.vp8", OMX_MAX_STRINGNAME_SIZE)) {
                 snprintf(m_debug.infile_name, OMX_MAX_STRINGNAME_SIZE, "%s/input_dec_%d_%d_%p.ivf",
@@ -2026,7 +2001,7 @@ int omx_vdec::log_input_buffers(const char *buffer_addr, int buffer_len)
                 snprintf(m_debug.infile_name, OMX_MAX_STRINGNAME_SIZE, "%s/input_dec_%d_%d_%p.ivf",
                         m_debug.log_loc, drv_ctx.video_resolution.frame_width, drv_ctx.video_resolution.frame_height, this);
         } else {
-               snprintf(m_debug.infile_name, OMX_MAX_STRINGNAME_SIZE, "%s/input_dec_%d_%d_%p.divx",
+               snprintf(m_debug.infile_name, OMX_MAX_STRINGNAME_SIZE, "%s/input_dec_%d_%d_%p.bin",
                         m_debug.log_loc, drv_ctx.video_resolution.frame_width, drv_ctx.video_resolution.frame_height, this);
         }
         m_debug.infile = fopen (m_debug.infile_name, "ab");
@@ -2291,21 +2266,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         secure_mode = true;
         arbitrary_bytes = false;
         role = (OMX_STRING)"OMX.qcom.video.decoder.hevc";
-    } else if (!strncmp(role, "OMX.qcom.video.decoder.vc1.secure",
-                OMX_MAX_STRINGNAME_SIZE)) {
-        secure_mode = true;
-        arbitrary_bytes = false;
-        role = (OMX_STRING)"OMX.qcom.video.decoder.vc1";
-    } else if (!strncmp(role, "OMX.qcom.video.decoder.wmv.secure",
-                OMX_MAX_STRINGNAME_SIZE)) {
-        secure_mode = true;
-        arbitrary_bytes = false;
-        role = (OMX_STRING)"OMX.qcom.video.decoder.wmv";
-    } else if (!strncmp(role, "OMX.qcom.video.decoder.mpeg4.secure",
-                OMX_MAX_STRINGNAME_SIZE)) {
-        secure_mode = true;
-        arbitrary_bytes = false;
-        role = (OMX_STRING)"OMX.qcom.video.decoder.mpeg4";
     } else if (!strncmp(role, "OMX.qcom.video.decoder.vp9.secure",
                 OMX_MAX_STRINGNAME_SIZE)) {
         secure_mode = true;
@@ -2353,16 +2313,7 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
     // Copy the role information which provides the decoder kind
     strlcpy(drv_ctx.kind,role,128);
 
-    if (!strncmp(drv_ctx.kind,"OMX.qcom.video.decoder.mpeg4",\
-                OMX_MAX_STRINGNAME_SIZE)) {
-        strlcpy((char *)m_cRole, "video_decoder.mpeg4",\
-                OMX_MAX_STRINGNAME_SIZE);
-        drv_ctx.timestamp_adjust = true;
-        drv_ctx.decoder_format = VDEC_CODECTYPE_MPEG4;
-        eCompressionFormat = OMX_VIDEO_CodingMPEG4;
-        output_capability=V4L2_PIX_FMT_MPEG4;
-        /*Initialize Start Code for MPEG4*/
-    } else if (!strncmp(drv_ctx.kind,"OMX.qcom.video.decoder.mpeg2",\
+    if (!strncmp(drv_ctx.kind,"OMX.qcom.video.decoder.mpeg2",\
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_decoder.mpeg2",\
                 OMX_MAX_STRINGNAME_SIZE);
@@ -2370,38 +2321,8 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         output_capability = V4L2_PIX_FMT_MPEG2;
         eCompressionFormat = OMX_VIDEO_CodingMPEG2;
         /*Initialize Start Code for MPEG2*/
-    } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.h263",\
-                OMX_MAX_STRINGNAME_SIZE)) {
-        strlcpy((char *)m_cRole, "video_decoder.h263",OMX_MAX_STRINGNAME_SIZE);
-        DEBUG_PRINT_LOW("H263 Decoder selected");
-        drv_ctx.decoder_format = VDEC_CODECTYPE_H263;
-        eCompressionFormat = OMX_VIDEO_CodingH263;
-        output_capability = V4L2_PIX_FMT_H263;
-    } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.divx311",\
-                OMX_MAX_STRINGNAME_SIZE)) {
-        strlcpy((char *)m_cRole, "video_decoder.divx",OMX_MAX_STRINGNAME_SIZE);
-        DEBUG_PRINT_LOW ("DIVX 311 Decoder selected");
-        drv_ctx.decoder_format = VDEC_CODECTYPE_DIVX_3;
-        output_capability = V4L2_PIX_FMT_DIVX_311;
-        eCompressionFormat = (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingDivx;
-    } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.divx4",\
-                OMX_MAX_STRINGNAME_SIZE)) {
-        strlcpy((char *)m_cRole, "video_decoder.divx",OMX_MAX_STRINGNAME_SIZE);
-        DEBUG_PRINT_ERROR ("DIVX 4 Decoder selected");
-        drv_ctx.decoder_format = VDEC_CODECTYPE_DIVX_4;
-        output_capability = V4L2_PIX_FMT_DIVX;
-        eCompressionFormat = (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingDivx;
-        codec_ambiguous = true;
-
-    } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.divx",\
-                OMX_MAX_STRINGNAME_SIZE)) {
-        strlcpy((char *)m_cRole, "video_decoder.divx",OMX_MAX_STRINGNAME_SIZE);
-        DEBUG_PRINT_ERROR ("DIVX 5/6 Decoder selected");
-        drv_ctx.decoder_format = VDEC_CODECTYPE_DIVX_6;
-        output_capability = V4L2_PIX_FMT_DIVX;
-        eCompressionFormat = (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingDivx;
-        codec_ambiguous = true;
-
+        codec_type_parse = CODEC_TYPE_MPEG2;
+        m_frame_parser.init_start_codes(codec_type_parse);
     } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.avc",\
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_decoder.avc",OMX_MAX_STRINGNAME_SIZE);
@@ -2424,18 +2345,10 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         drv_ctx.decoder_format = VDEC_CODECTYPE_HEVC;
         output_capability = V4L2_PIX_FMT_HEVC;
         eCompressionFormat = (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingHevc;
-    } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.vc1",\
-                OMX_MAX_STRINGNAME_SIZE)) {
-        strlcpy((char *)m_cRole, "video_decoder.vc1",OMX_MAX_STRINGNAME_SIZE);
-        drv_ctx.decoder_format = VDEC_CODECTYPE_VC1;
-        eCompressionFormat = OMX_VIDEO_CodingWMV;
-        output_capability = V4L2_PIX_FMT_VC1_ANNEX_G;
-    } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.wmv",\
-                OMX_MAX_STRINGNAME_SIZE)) {
-        strlcpy((char *)m_cRole, "video_decoder.vc1",OMX_MAX_STRINGNAME_SIZE);
-        drv_ctx.decoder_format = VDEC_CODECTYPE_VC1_RCV;
-        eCompressionFormat = OMX_VIDEO_CodingWMV;
-        output_capability = V4L2_PIX_FMT_VC1_ANNEX_L;
+
+        codec_type_parse = CODEC_TYPE_HEVC;
+        m_frame_parser.init_start_codes(codec_type_parse);
+        m_frame_parser.init_nal_length(nal_length);
     } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.vp8",    \
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_decoder.vp8",OMX_MAX_STRINGNAME_SIZE);
@@ -2525,27 +2438,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
             return OMX_ErrorInsufficientResources;
         }
         DEBUG_PRINT_HIGH("Set Format was successful");
-        if (codec_ambiguous) {
-            if (output_capability == V4L2_PIX_FMT_DIVX) {
-                struct v4l2_control divx_ctrl;
-
-                if (drv_ctx.decoder_format == VDEC_CODECTYPE_DIVX_4) {
-                    divx_ctrl.value = V4L2_MPEG_VIDC_VIDEO_DIVX_FORMAT_4;
-                } else if (drv_ctx.decoder_format == VDEC_CODECTYPE_DIVX_5) {
-                    divx_ctrl.value = V4L2_MPEG_VIDC_VIDEO_DIVX_FORMAT_5;
-                } else {
-                    divx_ctrl.value = V4L2_MPEG_VIDC_VIDEO_DIVX_FORMAT_6;
-                }
-
-                divx_ctrl.id = V4L2_CID_MPEG_VIDC_VIDEO_DIVX_FORMAT;
-                ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &divx_ctrl);
-                if (ret) {
-                    DEBUG_PRINT_ERROR("Failed to set divx version");
-                }
-            } else {
-                DEBUG_PRINT_ERROR("Codec should not be ambiguous");
-            }
-        }
 
         property_get("persist.vidc.dec.conceal_color", property_value, DEFAULT_CONCEAL_COLOR);
         m_conceal_color= atoi(property_value);
@@ -3520,27 +3412,6 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
                         (unsigned int)profileLevelType->nProfileIndex);
                 eRet = OMX_ErrorNoMore;
             }
-        } else if ((!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.h263",OMX_MAX_STRINGNAME_SIZE))) {
-            if (profileLevelType->nProfileIndex == 0) {
-                profileLevelType->eProfile = OMX_VIDEO_H263ProfileBaseline;
-                profileLevelType->eLevel   = OMX_VIDEO_H263Level70;
-            } else {
-                DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoProfileLevelQuerySupported nProfileIndex ret NoMore %u",
-                                (unsigned int)profileLevelType->nProfileIndex);
-                eRet = OMX_ErrorNoMore;
-            }
-        } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.mpeg4",OMX_MAX_STRINGNAME_SIZE)) {
-            if (profileLevelType->nProfileIndex == 0) {
-                profileLevelType->eProfile = OMX_VIDEO_MPEG4ProfileSimple;
-                profileLevelType->eLevel   = OMX_VIDEO_MPEG4Level5;
-            } else if (profileLevelType->nProfileIndex == 1) {
-                profileLevelType->eProfile = OMX_VIDEO_MPEG4ProfileAdvancedSimple;
-                profileLevelType->eLevel   = OMX_VIDEO_MPEG4Level5;
-            } else {
-                DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoProfileLevelQuerySupported nProfileIndex ret NoMore %u",
-                                (unsigned int)profileLevelType->nProfileIndex);
-                eRet = OMX_ErrorNoMore;
-            }
         } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.vp8",OMX_MAX_STRINGNAME_SIZE) ||
                 !strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.vp9",OMX_MAX_STRINGNAME_SIZE)) {
             eRet = OMX_ErrorNoMore;
@@ -3758,16 +3629,6 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                      paramIndex);
                              break;
                          }
-        case OMX_IndexParamVideoH263: {
-                              DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoH263 %08x",
-                                      paramIndex);
-                              break;
-                          }
-        case OMX_IndexParamVideoMpeg4: {
-                               DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoMpeg4 %08x",
-                                       paramIndex);
-                               break;
-                           }
         case OMX_IndexParamVideoMpeg2: {
                                DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoMpeg2 %08x",
                                        paramIndex);
@@ -4508,45 +4369,12 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                           DEBUG_PRINT_ERROR("Setparameter: unknown Index %s", comp_role->cRole);
                                           eRet = OMX_ErrorUnsupportedSetting;
                                       }
-                                  } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.mpeg4", OMX_MAX_STRINGNAME_SIZE)) {
-                                      if (!strncmp((const char*)comp_role->cRole, "video_decoder.mpeg4", OMX_MAX_STRINGNAME_SIZE)) {
-                                          strlcpy((char*)m_cRole, "video_decoder.mpeg4", OMX_MAX_STRINGNAME_SIZE);
-                                      } else {
-                                          DEBUG_PRINT_ERROR("Setparameter: unknown Index %s", comp_role->cRole);
-                                          eRet = OMX_ErrorUnsupportedSetting;
-                                      }
-                                  } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.h263", OMX_MAX_STRINGNAME_SIZE)) {
-                                      if (!strncmp((const char*)comp_role->cRole, "video_decoder.h263", OMX_MAX_STRINGNAME_SIZE)) {
-                                          strlcpy((char*)m_cRole, "video_decoder.h263", OMX_MAX_STRINGNAME_SIZE);
-                                      } else {
-                                          DEBUG_PRINT_ERROR("Setparameter: unknown Index %s", comp_role->cRole);
-                                          eRet =OMX_ErrorUnsupportedSetting;
-                                      }
                                   } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.mpeg2", OMX_MAX_STRINGNAME_SIZE)) {
                                       if (!strncmp((const char*)comp_role->cRole, "video_decoder.mpeg2", OMX_MAX_STRINGNAME_SIZE)) {
                                           strlcpy((char*)m_cRole, "video_decoder.mpeg2", OMX_MAX_STRINGNAME_SIZE);
                                       } else {
                                           DEBUG_PRINT_ERROR("Setparameter: unknown Index %s", comp_role->cRole);
                                           eRet = OMX_ErrorUnsupportedSetting;
-                                      }
-                                  } else if ((!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.divx", OMX_MAX_STRINGNAME_SIZE)) ||
-                                          (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.divx311", OMX_MAX_STRINGNAME_SIZE)) ||
-                                          (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.divx4", OMX_MAX_STRINGNAME_SIZE))
-                                        ) {
-                                      if (!strncmp((const char*)comp_role->cRole, "video_decoder.divx", OMX_MAX_STRINGNAME_SIZE)) {
-                                          strlcpy((char*)m_cRole, "video_decoder.divx", OMX_MAX_STRINGNAME_SIZE);
-                                      } else {
-                                          DEBUG_PRINT_ERROR("Setparameter: unknown Index %s", comp_role->cRole);
-                                          eRet =OMX_ErrorUnsupportedSetting;
-                                      }
-                                  } else if ( (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.vc1", OMX_MAX_STRINGNAME_SIZE)) ||
-                                          (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.wmv", OMX_MAX_STRINGNAME_SIZE))
-                                        ) {
-                                      if (!strncmp((const char*)comp_role->cRole, "video_decoder.vc1", OMX_MAX_STRINGNAME_SIZE)) {
-                                          strlcpy((char*)m_cRole, "video_decoder.vc1", OMX_MAX_STRINGNAME_SIZE);
-                                      } else {
-                                          DEBUG_PRINT_ERROR("Setparameter: unknown Index %s", comp_role->cRole);
-                                          eRet =OMX_ErrorUnsupportedSetting;
                                       }
                                   } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.vp8", OMX_MAX_STRINGNAME_SIZE)) {
                                       if (!strncmp((const char*)comp_role->cRole, "video_decoder.vp8", OMX_MAX_STRINGNAME_SIZE) ||
@@ -4622,16 +4450,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                      paramIndex);
                              break;
                         }
-        case OMX_IndexParamVideoH263: {
-                              DEBUG_PRINT_LOW("set_parameter: OMX_IndexParamVideoH263 %d",
-                                      paramIndex);
-                              break;
-                          }
-        case OMX_IndexParamVideoMpeg4: {
-                               DEBUG_PRINT_LOW("set_parameter: OMX_IndexParamVideoMpeg4 %d",
-                                       paramIndex);
-                               break;
-                           }
         case OMX_IndexParamVideoMpeg2: {
                                DEBUG_PRINT_LOW("set_parameter: OMX_IndexParamVideoMpeg2 %d",
                                        paramIndex);
@@ -7993,38 +7811,11 @@ OMX_ERRORTYPE  omx_vdec::component_role_enum(OMX_IN OMX_HANDLETYPE hComp,
     (void) hComp;
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
 
-    if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.mpeg4",OMX_MAX_STRINGNAME_SIZE)) {
-        if ((0 == index) && role) {
-            strlcpy((char *)role, "video_decoder.mpeg4",OMX_MAX_STRINGNAME_SIZE);
-            DEBUG_PRINT_LOW("component_role_enum: role %s",role);
-        } else {
-            eRet = OMX_ErrorNoMore;
-        }
-    }
     if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.mpeg2",OMX_MAX_STRINGNAME_SIZE)) {
         if ((0 == index) && role) {
             strlcpy((char *)role, "video_decoder.mpeg2",OMX_MAX_STRINGNAME_SIZE);
             DEBUG_PRINT_LOW("component_role_enum: role %s",role);
         } else {
-            eRet = OMX_ErrorNoMore;
-        }
-    } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.h263",OMX_MAX_STRINGNAME_SIZE)) {
-        if ((0 == index) && role) {
-            strlcpy((char *)role, "video_decoder.h263",OMX_MAX_STRINGNAME_SIZE);
-            DEBUG_PRINT_LOW("component_role_enum: role %s",role);
-        } else {
-            DEBUG_PRINT_LOW("No more roles");
-            eRet = OMX_ErrorNoMore;
-        }
-    }
-
-    else if ((!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.divx",OMX_MAX_STRINGNAME_SIZE)) ||
-            (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.divx311",OMX_MAX_STRINGNAME_SIZE))) {
-        if ((0 == index) && role) {
-            strlcpy((char *)role, "video_decoder.divx",OMX_MAX_STRINGNAME_SIZE);
-            DEBUG_PRINT_LOW("component_role_enum: role %s",role);
-        } else {
-            DEBUG_PRINT_LOW("No more roles");
             eRet = OMX_ErrorNoMore;
         }
     } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.avc",OMX_MAX_STRINGNAME_SIZE)) {
@@ -8047,16 +7838,6 @@ OMX_ERRORTYPE  omx_vdec::component_role_enum(OMX_IN OMX_HANDLETYPE hComp,
         if ((0 == index) && role) {
             strlcpy((char *)role, "video_decoder.hevc", OMX_MAX_STRINGNAME_SIZE);
             DEBUG_PRINT_LOW("component_role_enum: role %s", role);
-        } else {
-            DEBUG_PRINT_LOW("No more roles");
-            eRet = OMX_ErrorNoMore;
-        }
-    } else if ( (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.vc1",OMX_MAX_STRINGNAME_SIZE)) ||
-            (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.wmv",OMX_MAX_STRINGNAME_SIZE))
-          ) {
-        if ((0 == index) && role) {
-            strlcpy((char *)role, "video_decoder.vc1",OMX_MAX_STRINGNAME_SIZE);
-            DEBUG_PRINT_LOW("component_role_enum: role %s",role);
         } else {
             DEBUG_PRINT_LOW("No more roles");
             eRet = OMX_ErrorNoMore;
@@ -9037,6 +8818,638 @@ int omx_vdec::async_message_process (void *context, void* message)
     return rc;
 }
 
+OMX_ERRORTYPE omx_vdec::empty_this_buffer_proxy_arbitrary (
+        OMX_HANDLETYPE hComp,
+        OMX_BUFFERHEADERTYPE *buffer
+        )
+{
+    unsigned address,p2,id;
+    DEBUG_PRINT_LOW("Empty this arbitrary");
+
+    if (buffer == NULL) {
+        return OMX_ErrorBadParameter;
+    }
+    DEBUG_PRINT_LOW("ETBProxyArb: bufhdr = %p, bufhdr->pBuffer = %p", buffer, buffer->pBuffer);
+    DEBUG_PRINT_LOW("ETBProxyArb: nFilledLen %u, flags %u, timestamp %lld",
+            (unsigned int)buffer->nFilledLen, (unsigned int)buffer->nFlags, buffer->nTimeStamp);
+
+    /* return zero length and not an EOS buffer */
+    /* return buffer if input flush in progress */
+    if ((input_flush_progress == true) || ((buffer->nFilledLen == 0) &&
+                ((buffer->nFlags & OMX_BUFFERFLAG_EOS) == 0))) {
+        DEBUG_PRINT_HIGH("return zero legth buffer or flush in progress");
+        m_cb.EmptyBufferDone (hComp,m_app_data,buffer);
+        return OMX_ErrorNone;
+    }
+
+    if (psource_frame == NULL) {
+        DEBUG_PRINT_LOW("Set Buffer as source Buffer %p time stamp %lld",buffer,buffer->nTimeStamp);
+        psource_frame = buffer;
+        DEBUG_PRINT_LOW("Try to Push One Input Buffer ");
+        push_input_buffer (hComp);
+    } else {
+        DEBUG_PRINT_LOW("Push the source buffer into pendingq %p",buffer);
+        if (!m_input_pending_q.insert_entry((unsigned long)buffer, (unsigned)NULL,
+                    (unsigned)NULL)) {
+            return OMX_ErrorBadParameter;
+        }
+    }
+
+    if (codec_config_flag && !(buffer->nFlags & OMX_BUFFERFLAG_CODECCONFIG)) {
+        codec_config_flag = false;
+    }
+    return OMX_ErrorNone;
+}
+
+OMX_ERRORTYPE omx_vdec::push_input_buffer (OMX_HANDLETYPE hComp)
+{
+    unsigned long address,p2,id;
+    OMX_ERRORTYPE ret = OMX_ErrorNone;
+
+    if (pdest_frame == NULL || psource_frame == NULL) {
+        /*Check if we have a destination buffer*/
+        if (pdest_frame == NULL) {
+            DEBUG_PRINT_LOW("Get a Destination buffer from the queue");
+            if (m_input_free_q.m_size) {
+                m_input_free_q.pop_entry(&address,&p2,&id);
+                pdest_frame = (OMX_BUFFERHEADERTYPE *)address;
+                pdest_frame->nFilledLen = 0;
+                pdest_frame->nTimeStamp = LLONG_MAX;
+                DEBUG_PRINT_LOW("Address of Pmem Buffer %p",pdest_frame);
+            }
+        }
+
+        /*Check if we have a destination buffer*/
+        if (psource_frame == NULL) {
+            DEBUG_PRINT_LOW("Get a source buffer from the queue");
+            if (m_input_pending_q.m_size) {
+                m_input_pending_q.pop_entry(&address,&p2,&id);
+                psource_frame = (OMX_BUFFERHEADERTYPE *)address;
+                DEBUG_PRINT_LOW("Next source Buffer %p time stamp %lld",psource_frame,
+                        psource_frame->nTimeStamp);
+                DEBUG_PRINT_LOW("Next source Buffer flag %u length %u",
+                        (unsigned int)psource_frame->nFlags, (unsigned int)psource_frame->nFilledLen);
+
+            }
+        }
+
+    }
+
+    while ((pdest_frame != NULL) && (psource_frame != NULL)) {
+        switch (codec_type_parse) {
+            case CODEC_TYPE_MPEG2:
+                ret =  push_input_sc_codec(hComp);
+                break;
+            case CODEC_TYPE_H264:
+                ret = push_input_h264(hComp);
+                break;
+            case CODEC_TYPE_HEVC:
+                ret = push_input_hevc(hComp);
+                break;
+            default:
+                break;
+        }
+        if (ret != OMX_ErrorNone) {
+            DEBUG_PRINT_ERROR("Pushing input Buffer Failed");
+            omx_report_error ();
+            break;
+        }
+    }
+
+    return ret;
+}
+
+OMX_ERRORTYPE omx_vdec::push_input_sc_codec(OMX_HANDLETYPE hComp)
+{
+    OMX_U32 partial_frame = 1;
+    OMX_BOOL generate_ebd = OMX_TRUE;
+    unsigned long address = 0, p2 = 0, id = 0;
+
+    DEBUG_PRINT_LOW("Start Parsing the bit stream address %p TimeStamp %lld",
+            psource_frame,psource_frame->nTimeStamp);
+    if (m_frame_parser.parse_sc_frame(psource_frame,
+                pdest_frame,&partial_frame) == -1) {
+        DEBUG_PRINT_ERROR("Error In Parsing Return Error");
+        return OMX_ErrorBadParameter;
+    }
+
+    if (partial_frame == 0) {
+        DEBUG_PRINT_LOW("Frame size %u source %p frame count %d",
+                (unsigned int)pdest_frame->nFilledLen,psource_frame,frame_count);
+
+
+        DEBUG_PRINT_LOW("TimeStamp updated %lld", pdest_frame->nTimeStamp);
+        /*First Parsed buffer will have only header Hence skip*/
+        if (frame_count == 0) {
+            DEBUG_PRINT_LOW("H263/MPEG4 Codec First Frame ");
+
+            frame_count++;
+        } else {
+            pdest_frame->nFlags &= ~OMX_BUFFERFLAG_EOS;
+            if (pdest_frame->nFilledLen) {
+                /*Push the frame to the Decoder*/
+                if (empty_this_buffer_proxy(hComp,pdest_frame) != OMX_ErrorNone) {
+                    return OMX_ErrorBadParameter;
+                }
+                frame_count++;
+                pdest_frame = NULL;
+
+                if (m_input_free_q.m_size) {
+                    m_input_free_q.pop_entry(&address,&p2,&id);
+                    pdest_frame = (OMX_BUFFERHEADERTYPE *) address;
+                    pdest_frame->nFilledLen = 0;
+                }
+            } else if (!(psource_frame->nFlags & OMX_BUFFERFLAG_EOS)) {
+                DEBUG_PRINT_ERROR("Zero len buffer return back to POOL");
+                m_input_free_q.insert_entry((unsigned long) pdest_frame, (unsigned)NULL,
+                        (unsigned)NULL);
+                pdest_frame = NULL;
+            }
+        }
+    } else {
+        DEBUG_PRINT_LOW("Not a Complete Frame %u", (unsigned int)pdest_frame->nFilledLen);
+        /*Check if Destination Buffer is full*/
+        if (pdest_frame->nAllocLen ==
+                pdest_frame->nFilledLen + pdest_frame->nOffset) {
+            DEBUG_PRINT_ERROR("ERROR:Frame Not found though Destination Filled");
+            return OMX_ErrorStreamCorrupt;
+        }
+    }
+
+    if (psource_frame->nFilledLen == 0) {
+        if (psource_frame->nFlags & OMX_BUFFERFLAG_EOS) {
+            if (pdest_frame) {
+                pdest_frame->nFlags |= psource_frame->nFlags;
+                pdest_frame->nTimeStamp = psource_frame->nTimeStamp;
+                DEBUG_PRINT_LOW("Frame Found start Decoding Size =%u TimeStamp = %lld",
+                        (unsigned int)pdest_frame->nFilledLen,pdest_frame->nTimeStamp);
+                DEBUG_PRINT_LOW("Found a frame size = %u number = %d",
+                        (unsigned int)pdest_frame->nFilledLen,frame_count++);
+                /*Push the frame to the Decoder*/
+                if (empty_this_buffer_proxy(hComp,pdest_frame) != OMX_ErrorNone) {
+                    return OMX_ErrorBadParameter;
+                }
+                frame_count++;
+                pdest_frame = NULL;
+            } else {
+                DEBUG_PRINT_LOW("Last frame in else dest addr") ;
+                generate_ebd = OMX_FALSE;
+            }
+        }
+        if (generate_ebd) {
+            DEBUG_PRINT_LOW("Buffer Consumed return back to client %p",psource_frame);
+            m_cb.EmptyBufferDone (hComp,m_app_data,psource_frame);
+            psource_frame = NULL;
+
+            if (m_input_pending_q.m_size) {
+                DEBUG_PRINT_LOW("Pull Next source Buffer %p",psource_frame);
+                m_input_pending_q.pop_entry(&address,&p2,&id);
+                psource_frame = (OMX_BUFFERHEADERTYPE *) address;
+                DEBUG_PRINT_LOW("Next source Buffer %p time stamp %lld",psource_frame,
+                        psource_frame->nTimeStamp);
+                DEBUG_PRINT_LOW("Next source Buffer flag %u length %u",
+                        (unsigned int)psource_frame->nFlags, (unsigned int)psource_frame->nFilledLen);
+            }
+        }
+    }
+    return OMX_ErrorNone;
+}
+
+OMX_ERRORTYPE omx_vdec::push_input_h264 (OMX_HANDLETYPE hComp)
+{
+    OMX_U32 partial_frame = 1;
+    unsigned long address = 0, p2 = 0, id = 0;
+    OMX_BOOL isNewFrame = OMX_FALSE;
+    OMX_BOOL generate_ebd = OMX_TRUE;
+
+    if (h264_scratch.pBuffer == NULL) {
+        DEBUG_PRINT_ERROR("ERROR:H.264 Scratch Buffer not allocated");
+        return OMX_ErrorBadParameter;
+    }
+    DEBUG_PRINT_LOW("Pending h264_scratch.nFilledLen %u "
+            "look_ahead_nal %d", (unsigned int)h264_scratch.nFilledLen, look_ahead_nal);
+    DEBUG_PRINT_LOW("Pending pdest_frame->nFilledLen %u",(unsigned int)pdest_frame->nFilledLen);
+    if (h264_scratch.nFilledLen && look_ahead_nal) {
+        look_ahead_nal = false;
+        if ((pdest_frame->nAllocLen - pdest_frame->nFilledLen) >=
+                h264_scratch.nFilledLen) {
+            memcpy ((pdest_frame->pBuffer + pdest_frame->nFilledLen),
+                    h264_scratch.pBuffer,h264_scratch.nFilledLen);
+            pdest_frame->nFilledLen += h264_scratch.nFilledLen;
+            DEBUG_PRINT_LOW("Copy the previous NAL (h264 scratch) into Dest frame");
+            h264_scratch.nFilledLen = 0;
+        } else {
+            DEBUG_PRINT_ERROR("Error:1: Destination buffer overflow for H264");
+            return OMX_ErrorBadParameter;
+        }
+    }
+
+    /* If an empty input is queued with EOS, do not coalesce with the destination-frame yet, as this may result
+       in EOS flag getting associated with the destination
+    */
+    if (!psource_frame->nFilledLen && (psource_frame->nFlags & OMX_BUFFERFLAG_EOS) &&
+            pdest_frame->nFilledLen) {
+        DEBUG_PRINT_HIGH("delay ETB for 'empty buffer with EOS'");
+        generate_ebd = OMX_FALSE;
+    }
+
+    if (nal_length == 0) {
+        DEBUG_PRINT_LOW("Zero NAL, hence parse using start code");
+        if (m_frame_parser.parse_sc_frame(psource_frame,
+                    &h264_scratch,&partial_frame) == -1) {
+            DEBUG_PRINT_ERROR("Error In Parsing Return Error");
+            return OMX_ErrorBadParameter;
+        }
+    } else {
+        DEBUG_PRINT_LOW("Non-zero NAL length clip, hence parse with NAL size %d ",nal_length);
+        if (m_frame_parser.parse_h264_nallength(psource_frame,
+                    &h264_scratch,&partial_frame) == -1) {
+            DEBUG_PRINT_ERROR("Error In Parsing NAL size, Return Error");
+            return OMX_ErrorBadParameter;
+        }
+    }
+
+    if (partial_frame == 0) {
+        if (nal_count == 0 && h264_scratch.nFilledLen == 0) {
+            DEBUG_PRINT_LOW("First NAL with Zero Length, hence Skip");
+            nal_count++;
+            h264_scratch.nTimeStamp = psource_frame->nTimeStamp;
+            h264_scratch.nFlags = psource_frame->nFlags;
+        } else {
+            DEBUG_PRINT_LOW("Parsed New NAL Length = %u",(unsigned int)h264_scratch.nFilledLen);
+            if (h264_scratch.nFilledLen) {
+                h264_parser->parse_nal((OMX_U8*)h264_scratch.pBuffer, h264_scratch.nFilledLen,
+                        NALU_TYPE_SPS);
+#ifndef PROCESS_EXTRADATA_IN_OUTPUT_PORT
+                if (client_extradata & OMX_TIMEINFO_EXTRADATA)
+                    h264_parser->parse_nal((OMX_U8*)h264_scratch.pBuffer,
+                            h264_scratch.nFilledLen, NALU_TYPE_SEI);
+                else if (client_extradata & OMX_FRAMEINFO_EXTRADATA)
+                    // If timeinfo is present frame info from SEI is already processed
+                    h264_parser->parse_nal((OMX_U8*)h264_scratch.pBuffer,
+                            h264_scratch.nFilledLen, NALU_TYPE_SEI);
+#endif
+                m_frame_parser.mutils->isNewFrame(&h264_scratch, 0, isNewFrame);
+                nal_count++;
+                if (VALID_TS(h264_last_au_ts) && !VALID_TS(pdest_frame->nTimeStamp)) {
+                    pdest_frame->nTimeStamp = h264_last_au_ts;
+                    pdest_frame->nFlags = h264_last_au_flags;
+#ifdef PANSCAN_HDLR
+                    if (client_extradata & OMX_FRAMEINFO_EXTRADATA)
+                        h264_parser->update_panscan_data(h264_last_au_ts);
+#endif
+                }
+                if (m_frame_parser.mutils->nalu_type == NALU_TYPE_NON_IDR ||
+                        m_frame_parser.mutils->nalu_type == NALU_TYPE_IDR) {
+                    h264_last_au_ts = h264_scratch.nTimeStamp;
+                    h264_last_au_flags = h264_scratch.nFlags;
+#ifndef PROCESS_EXTRADATA_IN_OUTPUT_PORT
+                    if (client_extradata & OMX_TIMEINFO_EXTRADATA) {
+                        OMX_S64 ts_in_sei = h264_parser->process_ts_with_sei_vui(h264_last_au_ts);
+                        if (!VALID_TS(h264_last_au_ts))
+                            h264_last_au_ts = ts_in_sei;
+                    }
+#endif
+                } else
+                    h264_last_au_ts = LLONG_MAX;
+            }
+
+            if (!isNewFrame) {
+                if ( (pdest_frame->nAllocLen - pdest_frame->nFilledLen) >=
+                        h264_scratch.nFilledLen) {
+                    DEBUG_PRINT_LOW("Not a NewFrame Copy into Dest len %u",
+                            (unsigned int)h264_scratch.nFilledLen);
+                    memcpy ((pdest_frame->pBuffer + pdest_frame->nFilledLen),
+                            h264_scratch.pBuffer,h264_scratch.nFilledLen);
+                    pdest_frame->nFilledLen += h264_scratch.nFilledLen;
+                    if (m_frame_parser.mutils->nalu_type == NALU_TYPE_EOSEQ)
+                        pdest_frame->nFlags |= QOMX_VIDEO_BUFFERFLAG_EOSEQ;
+                    h264_scratch.nFilledLen = 0;
+                } else {
+                    DEBUG_PRINT_LOW("Error:2: Destination buffer overflow for H264");
+                    return OMX_ErrorBadParameter;
+                }
+            } else if(h264_scratch.nFilledLen) {
+                look_ahead_nal = true;
+                DEBUG_PRINT_LOW("Frame Found start Decoding Size =%u TimeStamp = %llu",
+                        (unsigned int)pdest_frame->nFilledLen,pdest_frame->nTimeStamp);
+                DEBUG_PRINT_LOW("Found a frame size = %u number = %d",
+                        (unsigned int)pdest_frame->nFilledLen,frame_count++);
+
+                if (pdest_frame->nFilledLen == 0) {
+                    DEBUG_PRINT_LOW("Copy the Current Frame since and push it");
+                    look_ahead_nal = false;
+                    if ( (pdest_frame->nAllocLen - pdest_frame->nFilledLen) >=
+                            h264_scratch.nFilledLen) {
+                        memcpy ((pdest_frame->pBuffer + pdest_frame->nFilledLen),
+                                h264_scratch.pBuffer,h264_scratch.nFilledLen);
+                        pdest_frame->nFilledLen += h264_scratch.nFilledLen;
+                        h264_scratch.nFilledLen = 0;
+                    } else {
+                        DEBUG_PRINT_ERROR("Error:3: Destination buffer overflow for H264");
+                        return OMX_ErrorBadParameter;
+                    }
+                } else {
+                    if (psource_frame->nFilledLen || h264_scratch.nFilledLen) {
+                        DEBUG_PRINT_LOW("Reset the EOS Flag");
+                        pdest_frame->nFlags &= ~OMX_BUFFERFLAG_EOS;
+                    }
+                    /*Push the frame to the Decoder*/
+                    if (empty_this_buffer_proxy(hComp,pdest_frame) != OMX_ErrorNone) {
+                        return OMX_ErrorBadParameter;
+                    }
+                    //frame_count++;
+                    pdest_frame = NULL;
+                    if (m_input_free_q.m_size) {
+                        m_input_free_q.pop_entry(&address,&p2,&id);
+                        pdest_frame = (OMX_BUFFERHEADERTYPE *) address;
+                        DEBUG_PRINT_LOW("Pop the next pdest_buffer %p",pdest_frame);
+                        pdest_frame->nFilledLen = 0;
+                        pdest_frame->nFlags = 0;
+                        pdest_frame->nTimeStamp = LLONG_MAX;
+                    }
+                }
+            }
+        }
+    } else {
+        DEBUG_PRINT_LOW("Not a Complete Frame, pdest_frame->nFilledLen %u", (unsigned int)pdest_frame->nFilledLen);
+        /*Check if Destination Buffer is full*/
+        if (h264_scratch.nAllocLen ==
+                h264_scratch.nFilledLen + h264_scratch.nOffset) {
+            DEBUG_PRINT_ERROR("ERROR: Frame Not found though Destination Filled");
+            return OMX_ErrorStreamCorrupt;
+        }
+    }
+
+    if (!psource_frame->nFilledLen) {
+        DEBUG_PRINT_LOW("Buffer Consumed return source %p back to client",psource_frame);
+
+        if (psource_frame->nFlags & OMX_BUFFERFLAG_EOS) {
+            if (pdest_frame) {
+                DEBUG_PRINT_LOW("EOS Reached Pass Last Buffer");
+                if ( (pdest_frame->nAllocLen - pdest_frame->nFilledLen) >=
+                        h264_scratch.nFilledLen) {
+                    if(pdest_frame->nFilledLen == 0) {
+                        /* No residual frame from before, send whatever
+                         * we have left */
+                        memcpy((pdest_frame->pBuffer + pdest_frame->nFilledLen),
+                                h264_scratch.pBuffer, h264_scratch.nFilledLen);
+                        pdest_frame->nFilledLen += h264_scratch.nFilledLen;
+                        h264_scratch.nFilledLen = 0;
+                        pdest_frame->nTimeStamp = h264_scratch.nTimeStamp;
+                    } else {
+                        m_frame_parser.mutils->isNewFrame(&h264_scratch, 0, isNewFrame);
+                        if(!isNewFrame) {
+                            /* Have a residual frame, but we know that the
+                             * AU in this frame is belonging to whatever
+                             * frame we had left over.  So append it */
+                             memcpy ((pdest_frame->pBuffer + pdest_frame->nFilledLen),
+                                     h264_scratch.pBuffer,h264_scratch.nFilledLen);
+                             pdest_frame->nFilledLen += h264_scratch.nFilledLen;
+                             h264_scratch.nFilledLen = 0;
+                             if (h264_last_au_ts != LLONG_MAX)
+                                 pdest_frame->nTimeStamp = h264_last_au_ts;
+                        } else {
+                            /* Completely new frame, let's just push what
+                             * we have now.  The resulting EBD would trigger
+                             * another push */
+                            generate_ebd = OMX_FALSE;
+                            pdest_frame->nTimeStamp = h264_last_au_ts;
+                            h264_last_au_ts = h264_scratch.nTimeStamp;
+                        }
+                    }
+                } else {
+                    DEBUG_PRINT_ERROR("ERROR:4: Destination buffer overflow for H264");
+                    return OMX_ErrorBadParameter;
+                }
+
+                /* Iff we coalesced two buffers, inherit the flags of both bufs */
+                if(generate_ebd == OMX_TRUE) {
+                     pdest_frame->nFlags = h264_scratch.nFlags | psource_frame->nFlags;
+                }
+
+                DEBUG_PRINT_LOW("pdest_frame->nFilledLen =%u TimeStamp = %llu",
+                        (unsigned int)pdest_frame->nFilledLen,pdest_frame->nTimeStamp);
+                DEBUG_PRINT_LOW("Push AU frame number %d to driver", frame_count++);
+#ifndef PROCESS_EXTRADATA_IN_OUTPUT_PORT
+                if (client_extradata & OMX_TIMEINFO_EXTRADATA) {
+                    OMX_S64 ts_in_sei = h264_parser->process_ts_with_sei_vui(pdest_frame->nTimeStamp);
+                    if (!VALID_TS(pdest_frame->nTimeStamp))
+                        pdest_frame->nTimeStamp = ts_in_sei;
+                }
+#endif
+                /*Push the frame to the Decoder*/
+                if (empty_this_buffer_proxy(hComp,pdest_frame) != OMX_ErrorNone) {
+                    return OMX_ErrorBadParameter;
+                }
+                frame_count++;
+                pdest_frame = NULL;
+            } else {
+                DEBUG_PRINT_LOW("Last frame in else dest addr %p size %u",
+                        pdest_frame, (unsigned int)h264_scratch.nFilledLen);
+                generate_ebd = OMX_FALSE;
+            }
+        }
+    }
+    if (generate_ebd && !psource_frame->nFilledLen) {
+        m_cb.EmptyBufferDone (hComp,m_app_data,psource_frame);
+        psource_frame = NULL;
+        if (m_input_pending_q.m_size) {
+            DEBUG_PRINT_LOW("Pull Next source Buffer %p",psource_frame);
+            m_input_pending_q.pop_entry(&address,&p2,&id);
+            psource_frame = (OMX_BUFFERHEADERTYPE *) address;
+            DEBUG_PRINT_LOW("Next source Buffer flag %u src length %u",
+                    (unsigned int)psource_frame->nFlags, (unsigned int)psource_frame->nFilledLen);
+        }
+    }
+    return OMX_ErrorNone;
+}
+
+OMX_ERRORTYPE copy_buffer(OMX_BUFFERHEADERTYPE* pDst, OMX_BUFFERHEADERTYPE* pSrc)
+{
+    OMX_ERRORTYPE rc = OMX_ErrorNone;
+    if ((pDst->nAllocLen - pDst->nFilledLen) >= pSrc->nFilledLen) {
+        memcpy((pDst->pBuffer + pDst->nFilledLen), pSrc->pBuffer, pSrc->nFilledLen);
+        if (pDst->nTimeStamp == LLONG_MAX) {
+            pDst->nTimeStamp = pSrc->nTimeStamp;
+            DEBUG_PRINT_LOW("Assign Dst nTimeStamp = %lld", pDst->nTimeStamp);
+        }
+        pDst->nFilledLen += pSrc->nFilledLen;
+        pSrc->nFilledLen = 0;
+    } else {
+        DEBUG_PRINT_ERROR("Error: Destination buffer overflow");
+        rc = OMX_ErrorBadParameter;
+    }
+    return rc;
+}
+
+OMX_ERRORTYPE omx_vdec::push_input_hevc(OMX_HANDLETYPE hComp)
+{
+    OMX_U32 partial_frame = 1;
+    unsigned long address,p2,id;
+    OMX_BOOL isNewFrame = OMX_FALSE;
+    OMX_BOOL generate_ebd = OMX_TRUE;
+    OMX_ERRORTYPE rc = OMX_ErrorNone;
+    if (h264_scratch.pBuffer == NULL) {
+        DEBUG_PRINT_ERROR("ERROR:Hevc Scratch Buffer not allocated");
+        return OMX_ErrorBadParameter;
+    }
+
+    DEBUG_PRINT_LOW("h264_scratch.nFilledLen %u has look_ahead_nal %d \
+            pdest_frame nFilledLen %u nTimeStamp %lld",
+            (unsigned int)h264_scratch.nFilledLen, look_ahead_nal, (unsigned int)pdest_frame->nFilledLen, pdest_frame->nTimeStamp);
+
+    if (h264_scratch.nFilledLen && look_ahead_nal) {
+        look_ahead_nal = false;
+        rc = copy_buffer(pdest_frame, &h264_scratch);
+        if (rc != OMX_ErrorNone) {
+            return rc;
+        }
+    }
+
+    if (nal_length == 0) {
+        if (m_frame_parser.parse_sc_frame(psource_frame,
+                    &h264_scratch,&partial_frame) == -1) {
+            DEBUG_PRINT_ERROR("Error In Parsing Return Error");
+            return OMX_ErrorBadParameter;
+        }
+    } else {
+        DEBUG_PRINT_LOW("Non-zero NAL length clip, hence parse with NAL size %d",nal_length);
+        if (m_frame_parser.parse_h264_nallength(psource_frame,
+                    &h264_scratch,&partial_frame) == -1) {
+            DEBUG_PRINT_ERROR("Error In Parsing NAL size, Return Error");
+            return OMX_ErrorBadParameter;
+        }
+    }
+
+    if (partial_frame == 0) {
+        if (nal_count == 0 && h264_scratch.nFilledLen == 0) {
+            DEBUG_PRINT_LOW("First NAL with Zero Length, hence Skip");
+            nal_count++;
+            h264_scratch.nTimeStamp = psource_frame->nTimeStamp;
+            h264_scratch.nFlags = psource_frame->nFlags;
+        } else {
+            DEBUG_PRINT_LOW("Parsed New NAL Length = %u", (unsigned int)h264_scratch.nFilledLen);
+            if (h264_scratch.nFilledLen) {
+                m_hevc_utils.isNewFrame(&h264_scratch, 0, isNewFrame);
+                nal_count++;
+            }
+
+            if (!isNewFrame) {
+                DEBUG_PRINT_LOW("Not a new frame, copy h264_scratch nFilledLen %u \
+                        nTimestamp %lld, pdest_frame nFilledLen %u nTimestamp %lld",
+                        (unsigned int)h264_scratch.nFilledLen, h264_scratch.nTimeStamp,
+                        (unsigned int)pdest_frame->nFilledLen, pdest_frame->nTimeStamp);
+                rc = copy_buffer(pdest_frame, &h264_scratch);
+                if (rc != OMX_ErrorNone) {
+                    return rc;
+                }
+            } else {
+                look_ahead_nal = true;
+                if (pdest_frame->nFilledLen == 0) {
+                    look_ahead_nal = false;
+                    DEBUG_PRINT_LOW("dest nation buffer empty, copy scratch buffer");
+                    rc = copy_buffer(pdest_frame, &h264_scratch);
+                    if (rc != OMX_ErrorNone) {
+                        return OMX_ErrorBadParameter;
+                    }
+                } else {
+                    if (psource_frame->nFilledLen || h264_scratch.nFilledLen) {
+                        pdest_frame->nFlags &= ~OMX_BUFFERFLAG_EOS;
+                    }
+                    DEBUG_PRINT_LOW("FrameDetected # %d pdest_frame nFilledLen %u \
+                            nTimeStamp %lld, look_ahead_nal in h264_scratch \
+                            nFilledLen %u nTimeStamp %lld",
+                            frame_count++, (unsigned int)pdest_frame->nFilledLen,
+                            pdest_frame->nTimeStamp, (unsigned int)h264_scratch.nFilledLen,
+                            h264_scratch.nTimeStamp);
+                    if (empty_this_buffer_proxy(hComp, pdest_frame) != OMX_ErrorNone) {
+                        return OMX_ErrorBadParameter;
+                    }
+                    pdest_frame = NULL;
+                    if (m_input_free_q.m_size) {
+                        m_input_free_q.pop_entry(&address, &p2, &id);
+                        pdest_frame = (OMX_BUFFERHEADERTYPE *) address;
+                        DEBUG_PRINT_LOW("pop the next pdest_buffer %p", pdest_frame);
+                        pdest_frame->nFilledLen = 0;
+                        pdest_frame->nFlags = 0;
+                        pdest_frame->nTimeStamp = LLONG_MAX;
+                    }
+                }
+            }
+        }
+    } else {
+        DEBUG_PRINT_LOW("psource_frame is partial nFilledLen %u nTimeStamp %lld, \
+                pdest_frame nFilledLen %u nTimeStamp %lld, h264_scratch \
+                nFilledLen %u nTimeStamp %lld",
+                (unsigned int)psource_frame->nFilledLen, psource_frame->nTimeStamp,
+                (unsigned int)pdest_frame->nFilledLen, pdest_frame->nTimeStamp,
+                (unsigned int)h264_scratch.nFilledLen, h264_scratch.nTimeStamp);
+
+        if (h264_scratch.nAllocLen ==
+                h264_scratch.nFilledLen + h264_scratch.nOffset) {
+            DEBUG_PRINT_ERROR("ERROR: Frame Not found though Destination Filled");
+            return OMX_ErrorStreamCorrupt;
+        }
+    }
+
+    if (!psource_frame->nFilledLen) {
+        DEBUG_PRINT_LOW("Buffer Consumed return source %p back to client", psource_frame);
+        if (psource_frame->nFlags & OMX_BUFFERFLAG_EOS) {
+            if (pdest_frame) {
+                DEBUG_PRINT_LOW("EOS Reached Pass Last Buffer");
+                rc = copy_buffer(pdest_frame, &h264_scratch);
+                if ( rc != OMX_ErrorNone ) {
+                    return rc;
+                }
+                pdest_frame->nTimeStamp = h264_scratch.nTimeStamp;
+                pdest_frame->nFlags = h264_scratch.nFlags | psource_frame->nFlags;
+                DEBUG_PRINT_LOW("Push EOS frame number:%d nFilledLen =%u TimeStamp = %lld",
+                        frame_count, (unsigned int)pdest_frame->nFilledLen, pdest_frame->nTimeStamp);
+                if (empty_this_buffer_proxy(hComp, pdest_frame) != OMX_ErrorNone) {
+                    return OMX_ErrorBadParameter;
+                }
+                frame_count++;
+                pdest_frame = NULL;
+            } else {
+                DEBUG_PRINT_LOW("Last frame in else dest addr %p size %u",
+                        pdest_frame, (unsigned int)h264_scratch.nFilledLen);
+                generate_ebd = OMX_FALSE;
+            }
+        }
+    }
+
+    if (generate_ebd && !psource_frame->nFilledLen) {
+        m_cb.EmptyBufferDone (hComp, m_app_data, psource_frame);
+        psource_frame = NULL;
+        if (m_input_pending_q.m_size) {
+            m_input_pending_q.pop_entry(&address, &p2, &id);
+            psource_frame = (OMX_BUFFERHEADERTYPE *)address;
+            DEBUG_PRINT_LOW("Next source Buffer flag %u nFilledLen %u, nTimeStamp %lld",
+                    (unsigned int)psource_frame->nFlags, (unsigned int)psource_frame->nFilledLen, psource_frame->nTimeStamp);
+        }
+    }
+    return OMX_ErrorNone;
+}
+
+#ifndef USE_ION
+bool omx_vdec::align_pmem_buffers(int pmem_fd, OMX_U32 buffer_size,
+        OMX_U32 alignment)
+{
+    struct pmem_allocation allocation;
+    allocation.size = buffer_size;
+    allocation.align = clip2(alignment);
+    if (allocation.align < 4096) {
+        allocation.align = 4096;
+    }
+    if (ioctl(pmem_fd, PMEM_ALLOCATE_ALIGNED, &allocation) < 0) {
+        DEBUG_PRINT_ERROR("Aligment(%u) failed with pmem driver Sz(%lu)",
+                allocation.align, allocation.size);
+        return false;
+    }
+    return true;
+}
+#endif
 #ifdef USE_ION
 int omx_vdec::alloc_map_ion_memory(OMX_U32 buffer_size,
         OMX_U32 alignment, struct ion_allocation_data *alloc_data,
@@ -10000,32 +10413,6 @@ bool omx_vdec::handle_color_space_info(void *data,
                 }
             }
             break;
-        case V4L2_PIX_FMT_VC1_ANNEX_G:
-        case V4L2_PIX_FMT_VC1_ANNEX_L:
-            {
-                struct msm_vidc_vc1_seqdisp_payload *vc1_seq_disp_payload;
-                vc1_seq_disp_payload = (struct msm_vidc_vc1_seqdisp_payload*)data;
-
-                /* Refer VC-1 Spec @ SMPTE Draft Standard for Television Date: 2005-08-23
-                 * SMPTE 421M to understand this code */
-
-                if (m_enable_android_native_buffers &&
-                        vc1_seq_disp_payload->color_primaries) {
-
-                    convert_color_space_info(vc1_seq_disp_payload->color_primaries,
-                            1,
-                            vc1_seq_disp_payload->transfer_char,
-                            vc1_seq_disp_payload->matrix_coeffs,
-                            color_space,aspects);
-                    set_color_aspects_only = true;
-                    prepare_color_aspects_metadata(vc1_seq_disp_payload->color_primaries,
-                                                   1,
-                                                   vc1_seq_disp_payload->transfer_char,
-                                                   vc1_seq_disp_payload->matrix_coeffs,
-                                                   color_mdata);
-                }
-            }
-            break;
         case V4L2_PIX_FMT_VP8:
             {
                 struct msm_vidc_vpx_colorspace_payload *vpx_color_space_payload;
@@ -10485,7 +10872,6 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                     break;
                 case MSM_VIDC_EXTRADATA_MPEG2_SEQDISP:
                 case MSM_VIDC_EXTRADATA_VUI_DISPLAY_INFO:
-                case MSM_VIDC_EXTRADATA_VC1_SEQDISP:
                 case MSM_VIDC_EXTRADATA_VPX_COLORSPACE_INFO:
                     color_event = handle_color_space_info((void *)data->data, &color_space, &color_mdata, set_disp_color_aspects_only);
                     break;
@@ -10789,10 +11175,6 @@ OMX_ERRORTYPE omx_vdec::enable_extradata(OMX_U64 requested_extradata,
                 case V4L2_PIX_FMT_VP8:
                 case V4L2_PIX_FMT_VP9:
                     control.value = V4L2_MPEG_VIDC_EXTRADATA_VPX_COLORSPACE;
-                    break;
-                case V4L2_PIX_FMT_VC1_ANNEX_G:
-                case V4L2_PIX_FMT_VC1_ANNEX_L:
-                    control.value = V4L2_MPEG_VIDC_EXTRADATA_VC1_SEQDISP;
                     break;
                 default:
                     DEBUG_PRINT_HIGH("Don't support Disp info for this codec : %s", drv_ctx.kind);
