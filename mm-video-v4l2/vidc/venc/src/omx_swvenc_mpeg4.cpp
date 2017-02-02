@@ -2049,16 +2049,6 @@ bool omx_venc::dev_get_capability_ltrcount
     RETURN(false);
 }
 
-bool omx_venc::dev_get_performance_level(OMX_U32 *perflevel)
-{
-    ENTER_FUNC();
-
-    (void)perflevel;
-    DEBUG_PRINT_ERROR("Get performance level is not supported");
-
-    RETURN(false);
-}
-
 bool omx_venc::dev_get_vui_timing_info(OMX_U32 *enabled)
 {
     ENTER_FUNC();

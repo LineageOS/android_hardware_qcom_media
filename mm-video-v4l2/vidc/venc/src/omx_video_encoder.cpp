@@ -1433,16 +1433,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 break;
 
            }
-        case OMX_QcomIndexParamPerfLevel:
-            {
-                VALIDATE_OMX_PARAM_DATA(paramData, OMX_QCOM_VIDEO_PARAM_PERF_LEVEL);
-                if (!handle->venc_set_param(paramData,
-                            (OMX_INDEXTYPE) OMX_QcomIndexParamPerfLevel)) {
-                    DEBUG_PRINT_ERROR("ERROR: Setting performance level");
-                    return OMX_ErrorUnsupportedSetting;
-                }
-                break;
-            }
         case OMX_QcomIndexParamH264VUITimingInfo:
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, OMX_QCOM_VIDEO_PARAM_VUI_TIMING_INFO);
@@ -2244,11 +2234,6 @@ bool omx_venc::dev_get_capability_ltrcount(OMX_U32 *min, OMX_U32 *max, OMX_U32 *
     (void) step_size;
     DEBUG_PRINT_ERROR("Get Capability LTR Count is not supported");
     return false;
-}
-
-bool omx_venc::dev_get_performance_level(OMX_U32 *perflevel)
-{
-    return handle->venc_get_performance_level(perflevel);
 }
 
 bool omx_venc::dev_get_vui_timing_info(OMX_U32 *enabled)

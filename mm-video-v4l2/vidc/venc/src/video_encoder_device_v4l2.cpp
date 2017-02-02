@@ -1365,16 +1365,6 @@ bool venc_dev::venc_open(OMX_U32 codec)
             DEBUG_PRINT_ERROR("Failed to set V4L2_CID_MPEG_VIDC_VIDEO_NUM_P_FRAME\n");
     }
 
-    property_get("vidc.debug.turbo", property_value, "0");
-    if (atoi(property_value)) {
-        DEBUG_PRINT_HIGH("Turbo mode debug property enabled");
-        control.id = V4L2_CID_MPEG_VIDC_SET_PERF_LEVEL;
-        control.value = V4L2_CID_MPEG_VIDC_PERF_LEVEL_TURBO;
-        if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
-            DEBUG_PRINT_ERROR("Failed to set turbo mode");
-        }
-    }
-
 #ifdef _PQ_
     if (codec == OMX_VIDEO_CodingAVC && !m_pq.is_pq_force_disable) {
         m_pq.init(V4L2_DEFAULT_OUTPUT_COLOR_FMT);
@@ -2235,19 +2225,6 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 }
                 break;
            }
-        case OMX_QcomIndexParamPerfLevel:
-            {
-                OMX_QCOM_VIDEO_PARAM_PERF_LEVEL *pParam =
-                        (OMX_QCOM_VIDEO_PARAM_PERF_LEVEL *)paramData;
-                DEBUG_PRINT_LOW("Set perf level: %d", pParam->ePerfLevel);
-                if (!venc_set_perf_level(pParam->ePerfLevel)) {
-                    DEBUG_PRINT_ERROR("ERROR: Failed to set perf level to %d", pParam->ePerfLevel);
-                    return false;
-                } else {
-                    performance_level.perflevel = (unsigned int) pParam->ePerfLevel;
-                }
-                break;
-            }
         case OMX_QcomIndexParamH264VUITimingInfo:
             {
                 OMX_QCOM_VIDEO_PARAM_VUI_TIMING_INFO *pParam =
@@ -2626,19 +2603,6 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                     }
                 }  else {
                     DEBUG_PRINT_ERROR("ERROR: Invalid Port Index for OMX_QcomIndexConfigVideoLTRMark");
-                }
-                break;
-            }
-        case OMX_QcomIndexConfigPerfLevel:
-            {
-                OMX_QCOM_VIDEO_CONFIG_PERF_LEVEL *perf =
-                        (OMX_QCOM_VIDEO_CONFIG_PERF_LEVEL *)configData;
-                DEBUG_PRINT_LOW("Set perf level: %d", perf->ePerfLevel);
-                if (!venc_set_perf_level(perf->ePerfLevel)) {
-                    DEBUG_PRINT_ERROR("ERROR: Failed to set perf level to %d", perf->ePerfLevel);
-                    return false;
-                } else {
-                    performance_level.perflevel = (unsigned int) perf->ePerfLevel;
                 }
                 break;
             }
@@ -3268,8 +3232,6 @@ void venc_dev::venc_config_print()
                 hybrid_hp.nTemporalLayerBitrateRatio[4], hybrid_hp.nTemporalLayerBitrateRatio[5]);
     }
 
-    DEBUG_PRINT_HIGH("ENC_CONFIG: Performace level: %d", performance_level.perflevel);
-
     DEBUG_PRINT_HIGH("ENC_CONFIG: VUI timing info enabled: %d", vui_timing_info.enabled);
 
     DEBUG_PRINT_HIGH("ENC_CONFIG: Peak bitrate: %d", peak_bitrate.peakbitrate);
@@ -3519,17 +3481,6 @@ bool venc_dev::venc_color_align(OMX_BUFFERHEADERTYPE *buffer,
     }
 
     return true;
-}
-
-bool venc_dev::venc_get_performance_level(OMX_U32 *perflevel)
-{
-    if (!perflevel) {
-        DEBUG_PRINT_ERROR("Null pointer error");
-        return false;
-    } else {
-        *perflevel = performance_level.perflevel;
-        return true;
-    }
 }
 
 bool venc_dev::venc_get_vui_timing_info(OMX_U32 *enabled)
@@ -6150,39 +6101,6 @@ bool venc_dev::venc_set_ratectrl_cfg(OMX_VIDEO_CONTROLRATETYPE eControlRate)
     }
 #endif
 
-    return status;
-}
-
-bool venc_dev::venc_set_perf_level(QOMX_VIDEO_PERF_LEVEL ePerfLevel)
-{
-    bool status = true;
-    struct v4l2_control control;
-    int rc = 0;
-    control.id = V4L2_CID_MPEG_VIDC_SET_PERF_LEVEL;
-
-    switch (ePerfLevel) {
-    case OMX_QCOM_PerfLevelNominal:
-        control.value = V4L2_CID_MPEG_VIDC_PERF_LEVEL_NOMINAL;
-        break;
-    case OMX_QCOM_PerfLevelTurbo:
-        control.value = V4L2_CID_MPEG_VIDC_PERF_LEVEL_TURBO;
-        break;
-    default:
-        status = false;
-        break;
-    }
-
-    if (status) {
-        DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
-        rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-
-        if (rc) {
-            DEBUG_PRINT_ERROR("Failed to set control for id=%d, val=%d", control.id, control.value);
-            return false;
-        }
-
-        DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
-    }
     return status;
 }
 

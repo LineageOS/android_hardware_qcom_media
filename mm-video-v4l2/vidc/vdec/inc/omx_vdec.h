@@ -231,18 +231,6 @@ enum port_indexes {
     OMX_CORE_INPUT_PORT_INDEX        =0,
     OMX_CORE_OUTPUT_PORT_INDEX       =1
 };
-enum vidc_perf_level {
-    VIDC_SVS = 0,
-    VIDC_NOMINAL = 1,
-    VIDC_TURBO = 2
-};
-
-enum turbo_mode {
-    TURBO_MODE_NONE = 0x0,
-    TURBO_MODE_CLIENT_REQUESTED = 0x1,
-    TURBO_MODE_HIGH_FPS = 0x2,
-    TURBO_MODE_MAX = 0xFF
-};
 
 
 class perf_metrics
@@ -494,7 +482,6 @@ class omx_vdec: public qc_omx_component
         OMX_BUFFERHEADERTYPE* get_omx_output_buffer_header(int index);
         OMX_ERRORTYPE set_dpb(bool is_split_mode, int dpb_color_format);
         OMX_ERRORTYPE decide_dpb_buffer_mode(bool split_opb_dpb_with_same_color_fmt);
-        void request_perf_level(enum vidc_perf_level perf_level);
         int dpb_bit_depth;
         bool async_thread_force_stop;
         volatile bool message_thread_stop;
@@ -1047,7 +1034,6 @@ class omx_vdec: public qc_omx_component
         ColorMetaData m_color_mdata;
 
         OMX_U32 operating_frame_rate;
-        uint8_t m_need_turbo;
 
         OMX_U32 m_smoothstreaming_width;
         OMX_U32 m_smoothstreaming_height;

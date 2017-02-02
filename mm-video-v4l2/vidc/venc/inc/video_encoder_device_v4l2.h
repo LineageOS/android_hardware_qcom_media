@@ -220,10 +220,6 @@ struct msm_venc_ltrinfo {
     unsigned int count;
 };
 
-struct msm_venc_perf_level {
-    unsigned int perflevel;
-};
-
 struct msm_venc_vui_timing_info {
     unsigned int enabled;
 };
@@ -351,7 +347,6 @@ class venc_dev
         bool venc_is_video_session_supported(unsigned long width, unsigned long height);
         bool venc_color_align(OMX_BUFFERHEADERTYPE *buffer, OMX_U32 width,
                         OMX_U32 height);
-        bool venc_get_performance_level(OMX_U32 *perflevel);
         bool venc_get_vui_timing_info(OMX_U32 *enabled);
         bool venc_get_vqzip_sei_info(OMX_U32 *enabled);
         bool venc_get_peak_bitrate(OMX_U32 *peakbitrate);
@@ -502,7 +497,6 @@ class venc_dev
         struct msm_venc_idrperiod           idrperiod;
         struct msm_venc_slice_delivery      slice_mode;
         struct msm_venc_hierlayers          hier_layers;
-        struct msm_venc_perf_level          performance_level;
         struct msm_venc_vui_timing_info     vui_timing_info;
         struct msm_venc_vqzip_sei_info      vqzip_sei_info;
         struct msm_venc_peak_bitrate        peak_bitrate;
@@ -546,7 +540,6 @@ class venc_dev
         bool venc_set_inband_video_header(OMX_BOOL enable);
         bool venc_set_au_delimiter(OMX_BOOL enable);
         bool venc_set_hier_layers(QOMX_VIDEO_HIERARCHICALCODINGTYPE type, OMX_U32 num_layers);
-        bool venc_set_perf_level(QOMX_VIDEO_PERF_LEVEL ePerfLevel);
         bool venc_set_vui_timing_info(OMX_BOOL enable);
         bool venc_set_peak_bitrate(OMX_U32 nPeakBitrate);
         bool venc_set_searchrange();

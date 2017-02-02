@@ -1947,21 +1947,6 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 memcpy(mbi_mode, &m_sMBIStatistics, sizeof(m_sMBIStatistics));
                 break;
             }
-        case OMX_QcomIndexParamPerfLevel:
-            {
-                VALIDATE_OMX_PARAM_DATA(paramData, OMX_QCOM_VIDEO_PARAM_PERF_LEVEL);
-                OMX_U32 perflevel;
-                OMX_QCOM_VIDEO_PARAM_PERF_LEVEL *pParam =
-                    reinterpret_cast<OMX_QCOM_VIDEO_PARAM_PERF_LEVEL*>(paramData);
-                DEBUG_PRINT_LOW("get_parameter: OMX_QcomIndexParamPerfLevel");
-                if (!dev_get_performance_level(&perflevel)) {
-                    DEBUG_PRINT_ERROR("Invalid entry returned from get_performance_level %d",
-                        pParam->ePerfLevel);
-                } else {
-                    pParam->ePerfLevel = (QOMX_VIDEO_PERF_LEVEL)perflevel;
-                }
-                break;
-            }
         case OMX_QcomIndexParamH264VUITimingInfo:
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, OMX_QCOM_VIDEO_PARAM_VUI_TIMING_INFO);
@@ -2178,21 +2163,6 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
                memcpy(pParam, &m_sConfigVp8ReferenceFrame, sizeof(m_sConfigVp8ReferenceFrame));
                break;
            }
-        case OMX_QcomIndexConfigPerfLevel:
-            {
-                VALIDATE_OMX_PARAM_DATA(configData, OMX_QCOM_VIDEO_CONFIG_PERF_LEVEL);
-                OMX_U32 perflevel;
-                OMX_QCOM_VIDEO_CONFIG_PERF_LEVEL *pParam =
-                    reinterpret_cast<OMX_QCOM_VIDEO_CONFIG_PERF_LEVEL*>(configData);
-                DEBUG_PRINT_LOW("get_config: OMX_QcomIndexConfigPerfLevel");
-                if (!dev_get_performance_level(&perflevel)) {
-                    DEBUG_PRINT_ERROR("Invalid entry returned from get_performance_level %d",
-                        pParam->ePerfLevel);
-                } else {
-                    pParam->ePerfLevel = (QOMX_VIDEO_PERF_LEVEL)perflevel;
-                }
-                break;
-            }
        case OMX_QcomIndexConfigNumHierPLayers:
            {
                 VALIDATE_OMX_PARAM_DATA(configData, QOMX_EXTNINDEX_VIDEO_HIER_P_LAYERS);
