@@ -109,7 +109,7 @@ libmm-vdec-def += -DMAX_H264_LEVEL_52
 endif
 
 # Hypervisor
-ifneq (,$(filter $(MACHINE), "8x96quinhyp" "8x96redhyp"))
+ifneq (,$(filter $(MACHINE), "8x96autogvmquin" "8x96autogvmred"))
 libmm-vdec-def += -D_HYPERVISOR_
 endif
 # ---------------------------------------------------------------------------------
