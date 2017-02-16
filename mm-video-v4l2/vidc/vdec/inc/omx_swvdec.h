@@ -45,7 +45,6 @@
 #include <semaphore.h>
 
 #include <linux/msm_ion.h>
-#include <linux/msm_vidc_dec.h>
 
 #include "qc_omx_component.h"
 

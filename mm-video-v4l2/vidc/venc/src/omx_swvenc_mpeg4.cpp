@@ -1726,23 +1726,6 @@ OMX_U32 omx_venc::dev_start(void)
    RETURN(0);
 }
 
-OMX_U32 omx_venc::dev_flush(unsigned port)
-{
-   ENTER_FUNC();
-   SWVENC_STATUS Ret;
-
-   (void)port;
-   Ret = swvenc_flush(m_hSwVenc);
-   if (Ret != SWVENC_S_SUCCESS)
-   {
-      DEBUG_PRINT_ERROR("%s, swvenc_flush failed (%d)",
-        __FUNCTION__, Ret);
-      RETURN(-1);
-   }
-
-   RETURN(0);
-}
-
 OMX_U32 omx_venc::dev_start_done(void)
 {
    ENTER_FUNC();

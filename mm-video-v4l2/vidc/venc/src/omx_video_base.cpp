@@ -1278,11 +1278,6 @@ bool omx_video::execute_output_flush(void)
     }
 
     pthread_mutex_unlock(&m_lock);
-    /*Check if there are buffers with the Driver*/
-    if (dev_flush(PORT_INDEX_OUT)) {
-        DEBUG_PRINT_ERROR("ERROR: o/p dev_flush() Failed");
-        return false;
-    }
 
     return bRet;
 }
@@ -1338,11 +1333,6 @@ bool omx_video::execute_input_flush(void)
         }
     }
     pthread_mutex_unlock(&m_lock);
-    /*Check if there are buffers with the Driver*/
-    if (dev_flush(PORT_INDEX_IN)) {
-        DEBUG_PRINT_ERROR("ERROR: i/p dev_flush() Failed");
-        return false;
-    }
 
     return bRet;
 }
@@ -1416,11 +1406,6 @@ bool omx_video::execute_flush_all(void)
 
     pthread_mutex_unlock(&m_lock);
 
-    /*Check if there are buffers with the Driver*/
-    if (dev_flush(PORT_INDEX_BOTH)) {
-        DEBUG_PRINT_ERROR("ERROR: dev_flush() Failed");
-        return false;
-    }
     return bRet;
 }
 
@@ -1746,23 +1731,6 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 break;
             }
 
-        case OMX_QcomIndexParamVideoQPRange:
-            {
-                VALIDATE_OMX_PARAM_DATA(paramData, OMX_QCOM_VIDEO_PARAM_QPRANGETYPE);
-                OMX_QCOM_VIDEO_PARAM_QPRANGETYPE *qp_range = (OMX_QCOM_VIDEO_PARAM_QPRANGETYPE*) paramData;
-                DEBUG_PRINT_LOW("get_parameter: OMX_QcomIndexParamVideoQPRange");
-                memcpy(qp_range, &m_sSessionQPRange, sizeof(m_sSessionQPRange));
-                break;
-            }
-
-        case OMX_QcomIndexParamVideoIPBQPRange:
-            {
-                OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE *qp_range = (OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE*) paramData;
-                DEBUG_PRINT_LOW("get_parameter: OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE");
-                memcpy(qp_range, &m_sSessionIPBQPRange, sizeof(m_sSessionIPBQPRange));
-                break;
-            }
-
         case OMX_IndexParamVideoErrorCorrection:
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_ERRORCORRECTIONTYPE);
@@ -1841,7 +1809,7 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 } else if (pParam->nIndex == (OMX_INDEXTYPE)OMX_ExtraDataVideoLTRInfo) {
                     if (pParam->nPortIndex == PORT_INDEX_OUT) {
                         pParam->bEnabled =
-                            (OMX_BOOL)(m_sExtraData & VEN_EXTRADATA_LTRINFO);
+                            (OMX_BOOL)(m_sExtraData & VENC_EXTRADATA_LTRINFO);
                         DEBUG_PRINT_HIGH("LTR Info extradata %d", pParam->bEnabled);
                     } else {
                         DEBUG_PRINT_ERROR("get_parameter: LTR information is "
@@ -1939,14 +1907,6 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 memcpy(hierp, &m_sHierLayers, sizeof(m_sHierLayers));
                 break;
             }
-         case OMX_QcomIndexParamMBIStatisticsMode:
-            {
-                VALIDATE_OMX_PARAM_DATA(paramData, OMX_QOMX_VIDEO_MBI_STATISTICS);
-                OMX_QOMX_VIDEO_MBI_STATISTICS* mbi_mode = (OMX_QOMX_VIDEO_MBI_STATISTICS*) paramData;
-                DEBUG_PRINT_LOW("get_parameter: OMX_QcomIndexParamMBIStatisticsMode");
-                memcpy(mbi_mode, &m_sMBIStatistics, sizeof(m_sMBIStatistics));
-                break;
-            }
         case OMX_QcomIndexParamH264VUITimingInfo:
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, OMX_QCOM_VIDEO_PARAM_VUI_TIMING_INFO);
@@ -1992,14 +1952,6 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 }
                 break;
             }
-         case QOMX_IndexParamVideoInitialQp:
-            {
-                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_EXTNINDEX_VIDEO_INITIALQP);
-                 QOMX_EXTNINDEX_VIDEO_INITIALQP* initqp =
-                     reinterpret_cast<QOMX_EXTNINDEX_VIDEO_INITIALQP *>(paramData);
-                     memcpy(initqp, &m_sParamInitqp, sizeof(m_sParamInitqp));
-                break;
-            }
          case OMX_QcomIndexParamBatchSize:
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, OMX_PARAM_U32TYPE);
@@ -2034,14 +1986,6 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 memcpy(pParam, &m_sSar, sizeof(m_sSar));
                 break;
             }
-        case OMX_QTIIndexParamLowLatencyMode:
-           {
-               VALIDATE_OMX_PARAM_DATA(paramData, QOMX_EXTNINDEX_VIDEO_VENC_LOW_LATENCY_MODE);
-               QOMX_EXTNINDEX_VIDEO_VENC_LOW_LATENCY_MODE * pParam =
-                   reinterpret_cast<QOMX_EXTNINDEX_VIDEO_VENC_LOW_LATENCY_MODE *>(paramData);
-                memcpy(pParam, &m_slowLatencyMode, sizeof(m_slowLatencyMode));
-                break;
-           }
         case OMX_IndexParamAndroidVideoTemporalLayering:
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE);
@@ -2347,11 +2291,6 @@ OMX_ERRORTYPE  omx_video::get_extension_index(OMX_IN OMX_HANDLETYPE      hComp,
 
     if (extn_equals(paramName, "OMX.QCOM.index.param.video.InputBatch")) {
         *indexType = (OMX_INDEXTYPE)OMX_QcomIndexParamBatchSize;
-        return OMX_ErrorNone;
-    }
-
-    if (extn_equals(paramName, "OMX.QTI.index.param.video.LowLatency")) {
-        *indexType = (OMX_INDEXTYPE)OMX_QTIIndexParamLowLatencyMode;
         return OMX_ErrorNone;
     }
 

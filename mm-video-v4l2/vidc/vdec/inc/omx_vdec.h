@@ -93,10 +93,7 @@ extern "C" {
 #include "OMX_VideoExt.h"
 #include "OMX_IndexExt.h"
 #include "qc_omx_component.h"
-#include <linux/msm_vidc_dec.h>
 #include <media/msm_vidc.h>
-#include "frameparser.h"
-#include "mp4_utils.h"
 #include "ts_parser.h"
 #include "vidc_color_converter.h"
 #include "vidc_debug.h"
@@ -191,6 +188,7 @@ class VideoHeap : public MemoryHeapBase
 #define OMX_BITSINFO_EXTRADATA  0x01000000
 #define OMX_VQZIPSEI_EXTRADATA  0x02000000
 #define OMX_OUTPUTCROP_EXTRADATA 0x04000000
+#define OMX_MB_ERROR_MAP_EXTRADATA 0x08000000
 
 #define OMX_VUI_DISPLAY_INFO_EXTRADATA  0x08000000
 #define OMX_MPEG2_SEQDISP_INFO_EXTRADATA 0x10000000
@@ -218,6 +216,38 @@ class VideoHeap : public MemoryHeapBase
             sizeof(OMX_QCOM_EXTRADATA_VQZIPSEI) + 3)&(~3))
 #define OMX_USERDATA_EXTRADATA_SIZE ((sizeof(OMX_OTHER_EXTRADATATYPE) +\
             + 3)&(~3))
+
+/* STATUS CODES */
+/* Base value for status codes */
+#define VDEC_S_BASE	0x40000000
+/* Success */
+#define VDEC_S_SUCCESS	(VDEC_S_BASE)
+/* General failure */
+#define VDEC_S_EFAIL	(VDEC_S_BASE + 1)
+/* Fatal irrecoverable  failure. Need to  tear down session. */
+#define VDEC_S_EFATAL   (VDEC_S_BASE + 2)
+/* Error with input bistream */
+#define VDEC_S_INPUT_BITSTREAM_ERR (VDEC_S_BASE + 3)
+
+#define VDEC_MSG_BASE	0x0000000
+/* Codes to identify asynchronous message responses and events that driver
+  wants to communicate to the app.*/
+#define VDEC_MSG_RESP_INPUT_BUFFER_DONE	(VDEC_MSG_BASE + 1)
+#define VDEC_MSG_RESP_OUTPUT_BUFFER_DONE	(VDEC_MSG_BASE + 2)
+#define VDEC_MSG_RESP_INPUT_FLUSHED	(VDEC_MSG_BASE + 3)
+#define VDEC_MSG_RESP_OUTPUT_FLUSHED	(VDEC_MSG_BASE + 4)
+#define VDEC_MSG_RESP_FLUSH_INPUT_DONE	(VDEC_MSG_BASE + 5)
+#define VDEC_MSG_RESP_FLUSH_OUTPUT_DONE	(VDEC_MSG_BASE + 6)
+#define VDEC_MSG_RESP_START_DONE	(VDEC_MSG_BASE + 7)
+#define VDEC_MSG_RESP_STOP_DONE	(VDEC_MSG_BASE + 8)
+#define VDEC_MSG_RESP_PAUSE_DONE	(VDEC_MSG_BASE + 9)
+#define VDEC_MSG_RESP_RESUME_DONE	(VDEC_MSG_BASE + 10)
+#define VDEC_MSG_EVT_CONFIG_CHANGED	(VDEC_MSG_BASE + 11)
+#define VDEC_MSG_EVT_HW_ERROR	(VDEC_MSG_BASE + 12)
+#define VDEC_MSG_EVT_INFO_FIELD_DROPPED	(VDEC_MSG_BASE + 13)
+#define VDEC_MSG_EVT_HW_OVERLOAD	(VDEC_MSG_BASE + 14)
+#define VDEC_MSG_EVT_MAX_CLIENTS	(VDEC_MSG_BASE + 15)
+#define VDEC_MSG_EVT_HW_UNSUPPORTED	(VDEC_MSG_BASE + 16)
 
 //  Define next macro with required values to enable default extradata,
 //    VDEC_EXTRADATA_MB_ERROR_MAP
@@ -254,6 +284,137 @@ class perf_metrics
         bool active;
 };
 
+enum vdec_codec {
+	VDEC_CODECTYPE_H264 = 0x1,
+	VDEC_CODECTYPE_H263 = 0x2,
+	VDEC_CODECTYPE_MPEG4 = 0x3,
+	VDEC_CODECTYPE_DIVX_3 = 0x4,
+	VDEC_CODECTYPE_DIVX_4 = 0x5,
+	VDEC_CODECTYPE_DIVX_5 = 0x6,
+	VDEC_CODECTYPE_DIVX_6 = 0x7,
+	VDEC_CODECTYPE_XVID = 0x8,
+	VDEC_CODECTYPE_MPEG1 = 0x9,
+	VDEC_CODECTYPE_MPEG2 = 0xa,
+	VDEC_CODECTYPE_VC1 = 0xb,
+	VDEC_CODECTYPE_VC1_RCV = 0xc,
+	VDEC_CODECTYPE_HEVC = 0xd,
+	VDEC_CODECTYPE_MVC = 0xe,
+	VDEC_CODECTYPE_VP8 = 0xf,
+	VDEC_CODECTYPE_VP9 = 0x10,
+};
+
+enum vdec_output_fromat {
+	VDEC_YUV_FORMAT_NV12 = 0x1,
+	VDEC_YUV_FORMAT_TILE_4x2 = 0x2,
+	VDEC_YUV_FORMAT_NV12_UBWC = 0x3,
+	VDEC_YUV_FORMAT_NV12_TP10_UBWC = 0x4
+};
+
+enum vdec_interlaced_format {
+	VDEC_InterlaceFrameProgressive = 0x1,
+	VDEC_InterlaceInterleaveFrameTopFieldFirst = 0x2,
+	VDEC_InterlaceInterleaveFrameBottomFieldFirst = 0x4
+};
+
+enum vdec_output_order {
+	VDEC_ORDER_DISPLAY = 0x1,
+	VDEC_ORDER_DECODE = 0x2
+};
+
+struct vdec_framesize {
+	uint32_t   left;
+	uint32_t   top;
+	uint32_t   right;
+	uint32_t   bottom;
+};
+
+struct vdec_picsize {
+	uint32_t frame_width;
+	uint32_t frame_height;
+	uint32_t stride;
+	uint32_t scan_lines;
+};
+
+enum vdec_buffer {
+	VDEC_BUFFER_TYPE_INPUT,
+	VDEC_BUFFER_TYPE_OUTPUT
+};
+
+struct vdec_allocatorproperty {
+	enum vdec_buffer buffer_type;
+	uint32_t mincount;
+	uint32_t maxcount;
+	uint32_t actualcount;
+	size_t buffer_size;
+	uint32_t alignment;
+	uint32_t buf_poolid;
+	size_t meta_buffer_size;
+};
+
+struct vdec_bufferpayload {
+	void *bufferaddr;
+	size_t buffer_len;
+	int pmem_fd;
+	size_t offset;
+	size_t mmaped_size;
+};
+
+enum vdec_picture {
+	PICTURE_TYPE_I,
+	PICTURE_TYPE_P,
+	PICTURE_TYPE_B,
+	PICTURE_TYPE_BI,
+	PICTURE_TYPE_SKIP,
+	PICTURE_TYPE_IDR,
+	PICTURE_TYPE_UNKNOWN
+};
+
+struct vdec_aspectratioinfo {
+	uint32_t aspect_ratio;
+	uint32_t par_width;
+	uint32_t par_height;
+};
+
+struct vdec_sep_metadatainfo {
+	void *metabufaddr;
+	uint32_t size;
+	int fd;
+	int offset;
+	uint32_t buffer_size;
+};
+
+struct vdec_output_frameinfo {
+	void *bufferaddr;
+	size_t offset;
+	size_t len;
+	uint32_t flags;
+	int64_t time_stamp;
+	enum vdec_picture pic_type;
+	void *client_data;
+	void *input_frame_clientdata;
+	struct vdec_picsize picsize;
+	struct vdec_framesize framesize;
+	enum vdec_interlaced_format interlaced_format;
+	struct vdec_aspectratioinfo aspect_ratio_info;
+	struct vdec_sep_metadatainfo metadata_info;
+};
+
+union vdec_msgdata {
+	struct vdec_output_frameinfo output_frame;
+	void *input_frame_clientdata;
+};
+
+struct vdec_msginfo {
+	uint32_t status_code;
+	uint32_t msgcode;
+	union vdec_msgdata msgdata;
+	size_t msgdatasize;
+};
+
+struct vdec_framerate {
+	unsigned long fps_denominator;
+	unsigned long fps_numerator;
+};
 
 #ifdef USE_ION
 struct vdec_ion {
@@ -671,16 +832,6 @@ class omx_vdec: public qc_omx_component
                 OMX_BUFFERHEADERTYPE * buffer);
         OMX_ERRORTYPE empty_this_buffer_proxy(OMX_HANDLETYPE       hComp,
                 OMX_BUFFERHEADERTYPE *buffer);
-
-        OMX_ERRORTYPE empty_this_buffer_proxy_arbitrary(OMX_HANDLETYPE hComp,
-                OMX_BUFFERHEADERTYPE *buffer
-                );
-
-        OMX_ERRORTYPE push_input_buffer (OMX_HANDLETYPE hComp);
-        OMX_ERRORTYPE push_input_sc_codec (OMX_HANDLETYPE hComp);
-        OMX_ERRORTYPE push_input_h264 (OMX_HANDLETYPE hComp);
-        OMX_ERRORTYPE push_input_hevc (OMX_HANDLETYPE hComp);
-        OMX_ERRORTYPE push_input_vc1 (OMX_HANDLETYPE hComp);
 
         OMX_ERRORTYPE fill_this_buffer_proxy(OMX_HANDLETYPE       hComp,
                 OMX_BUFFERHEADERTYPE *buffer);

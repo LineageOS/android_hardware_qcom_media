@@ -154,7 +154,6 @@ struct msm_venc_dbcfg {
 
 struct msm_venc_intrarefresh {
     unsigned long    irmode;
-    unsigned long    mbcount;
 };
 
 struct msm_venc_multiclicecfg {
@@ -318,7 +317,6 @@ class venc_dev
         unsigned venc_stop(void);
         unsigned venc_pause(void);
         unsigned venc_start(void);
-        unsigned venc_flush(unsigned);
 #ifdef _ANDROID_ICS_
         bool venc_set_meta_mode(bool);
 #endif
@@ -515,7 +513,6 @@ class venc_dev
         bool venc_set_ratectrl_cfg(OMX_VIDEO_CONTROLRATETYPE eControlRate);
         bool venc_set_session_qp(OMX_U32 i_frame_qp, OMX_U32 p_frame_qp,OMX_U32 b_frame_qp);
         bool venc_set_session_qp_range(OMX_U32 min_qp, OMX_U32 max_qp);
-        bool venc_set_session_qp_range_packed(OMX_U32 min_qp, OMX_U32 max_qp);
         bool venc_set_encode_framerate(OMX_U32 encode_framerate, OMX_U32 config);
         bool venc_set_intra_vop_refresh(OMX_BOOL intra_vop_refresh);
         bool venc_set_color_format(OMX_COLOR_FORMATTYPE color_format);
@@ -523,7 +520,7 @@ class venc_dev
         bool venc_set_multislice_cfg(OMX_INDEXTYPE codec, OMX_U32 slicesize);
         bool venc_set_entropy_config(OMX_BOOL enable, OMX_U32 i_cabac_level);
         bool venc_set_inloop_filter(OMX_VIDEO_AVCLOOPFILTERTYPE loop_filter);
-        bool venc_set_intra_refresh (OMX_VIDEO_INTRAREFRESHTYPE intrarefresh, OMX_U32 nMBs);
+        bool venc_set_intra_refresh (OMX_VIDEO_INTRAREFRESHTYPE intrarefresh);
         bool venc_set_error_resilience(OMX_VIDEO_PARAM_ERRORCORRECTIONTYPE* error_resilience);
         bool venc_set_voptiming_cfg(OMX_U32 nTimeIncRes);
         void venc_config_print();
@@ -532,20 +529,15 @@ class venc_dev
         bool venc_set_idr_period(OMX_U32 nPFrames, OMX_U32 nIDRPeriod);
         bool venc_reconfig_reqbufs();
         bool venc_set_vpe_rotation(OMX_S32 rotation_angle);
-        bool venc_set_deinterlace(OMX_U32 enable);
         bool venc_set_ltrmode(OMX_U32 enable, OMX_U32 count);
-        bool venc_enable_initial_qp(QOMX_EXTNINDEX_VIDEO_INITIALQP* initqp);
         bool venc_set_useltr(OMX_U32 frameIdx);
         bool venc_set_markltr(OMX_U32 frameIdx);
         bool venc_set_inband_video_header(OMX_BOOL enable);
-        bool venc_set_au_delimiter(OMX_BOOL enable);
         bool venc_set_hier_layers(QOMX_VIDEO_HIERARCHICALCODINGTYPE type, OMX_U32 num_layers);
         bool venc_set_vui_timing_info(OMX_BOOL enable);
         bool venc_set_peak_bitrate(OMX_U32 nPeakBitrate);
         bool venc_set_searchrange();
         bool venc_set_vpx_error_resilience(OMX_BOOL enable);
-        bool venc_set_perf_mode(OMX_U32 mode);
-        bool venc_set_mbi_statistics_mode(OMX_U32 mode);
         bool venc_set_vqzip_sei_type(OMX_BOOL enable);
         bool venc_set_hybrid_hierp(QOMX_EXTNINDEX_VIDEO_HYBRID_HP_MODE* hhp);
         bool venc_set_batch_size(OMX_U32 size);
@@ -597,7 +589,6 @@ class venc_dev
         int supported_rc_modes;
         bool is_thulium_v1;
         bool camera_mode_enabled;
-        OMX_BOOL low_latency_mode;
         struct {
             bool dirty;
             OMX_QTI_VIDEO_CONFIG_ROIINFO info;
