@@ -20,6 +20,12 @@ AM_CPPFLAGS += -UOUTPUT_BUFFER_LOG
 AM_CPPFLAGS += -Werror
 AM_CPPFLAGS += -D_ANDROID_ICS_
 AM_CPPFLAGS += -D_MSM8974_
+
+#Hypervisor
+if TARGET_HYPERVISOR
+AM_CPPFLAGS += -D_HYPERVISOR_
+endif
+
 AM_CPPFLAGS += -DUSE_ION
 #AM_CPPFLAGS += "-include stdint.h"
 AM_CPPFLAGS += "-Dstrlcpy=g_strlcpy"
@@ -54,6 +60,9 @@ endif
 if TARGETS_THAT_SUPPORT_UBWC
 AM_CPPFLAGS += -D_UBWC_
 endif
+
+#Hypervisor
+sources += ../common/src/hypv_intercept.cpp
 
 if TARGETS_THAT_SUPPORT_VQZIP
 AM_CPPFLAGS += -D_VQZIP_
