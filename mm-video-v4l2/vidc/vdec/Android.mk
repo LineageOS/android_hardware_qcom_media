@@ -30,6 +30,9 @@ TARGETS_THAT_USE_HEVC_ADSP_HEAP := msm8226 msm8974
 TARGETS_THAT_HAVE_VENUS_HEVC := apq8084 msm8994 msm8996
 TARGETS_THAT_SUPPORT_UBWC := msm8996 msm8953 msm8998 sdm660
 TARGETS_THAT_NEED_SW_VDEC := msm8937
+TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_4 := msm8937
+TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_51 := msm8953 sdm660
+TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_52 := msm8996 msm8998
 
 ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_USE_HEVC_ADSP_HEAP)),true)
 libmm-vdec-def += -D_HEVC_USE_ADSP_HEAP_
@@ -98,6 +101,14 @@ endif
 
 ifeq ($(TARGET_USES_MEDIA_EXTENSIONS),true)
 libmm-vdec-def += -DALLOCATE_OUTPUT_NATIVEHANDLE
+endif
+
+ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_4)),true)
+libmm-vdec-def += -DMAX_H264_LEVEL_4
+else ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_51)),true)
+libmm-vdec-def += -DMAX_H264_LEVEL_51
+else ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_52)),true)
+libmm-vdec-def += -DMAX_H264_LEVEL_52
 endif
 
 # ---------------------------------------------------------------------------------
