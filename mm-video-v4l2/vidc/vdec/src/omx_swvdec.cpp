@@ -1,7 +1,7 @@
 /**
  * @copyright
  *
- *   Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
+ *   Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
  *
  *   Redistribution and use in source and binary forms, with or without
  *   modification, are permitted provided that the following conditions are met:
@@ -1065,6 +1065,8 @@ OMX_ERRORTYPE omx_swvdec::set_parameter(OMX_HANDLETYPE cmp_handle,
             OMX_SWVDEC_LOG_API("OMX_QcomIndexParamVideoSyncFrameDecodingMode");
 
             m_sync_frame_decoding_mode = true;
+
+            retval = set_thumbnail_mode_swvdec();
             break;
         }
 
@@ -3373,6 +3375,28 @@ OMX_ERRORTYPE omx_swvdec::set_adaptive_playback_swvdec()
 
     property.info.frame_dimensions.width  = m_frame_dimensions_max.width;
     property.info.frame_dimensions.height = m_frame_dimensions_max.height;
+
+    if ((retval_swvdec = swvdec_setproperty(m_swvdec_handle, &property)) !=
+        SWVDEC_STATUS_SUCCESS)
+    {
+        retval = retval_swvdec2omx(retval_swvdec);
+    }
+
+    return retval;
+}
+
+/**
+ * @brief Set thumbnail mode for SwVdec core.
+ */
+OMX_ERRORTYPE omx_swvdec::set_thumbnail_mode_swvdec()
+{
+    OMX_ERRORTYPE retval = OMX_ErrorNone;
+
+    SWVDEC_PROPERTY property;
+
+    SWVDEC_STATUS retval_swvdec;
+
+    property.id = SWVDEC_PROPERTY_ID_THUMBNAIL_MODE;
 
     if ((retval_swvdec = swvdec_setproperty(m_swvdec_handle, &property)) !=
         SWVDEC_STATUS_SUCCESS)
