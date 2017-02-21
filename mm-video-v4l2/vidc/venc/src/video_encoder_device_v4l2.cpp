@@ -5405,6 +5405,13 @@ bool venc_dev::venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames)
                          intra_period.num_pframes, intra_period.num_bframes);
     }
 
+    if (m_sVenc_cfg.input_width * m_sVenc_cfg.input_height >= 5376 * 2688 &&
+        (property_get("vidc.enc.disable_pframes", property_value, "0") && atoi(property_value))) {
+          intra_period.num_pframes = 0;
+          DEBUG_PRINT_LOW("Warning: Disabling P frames for 5k/6k resolutions pFrames = %lu bFrames = %lu",
+          intra_period.num_pframes, intra_period.num_bframes);
+    }
+
     control.id = V4L2_CID_MPEG_VIDC_VIDEO_NUM_P_FRAMES;
     control.value = intra_period.num_pframes;
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
