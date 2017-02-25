@@ -137,6 +137,7 @@ static const char* MEM_DEVICE = "/dev/pmem_smipool";
             & BITMASK_FLAG(mIndex)) == 0x0)
 #ifdef _ANDROID_ICS_
 #define MAX_NUM_INPUT_BUFFERS 32
+#define MAX_NUM_OUTPUT_BUFFERS 64
 #endif
 void* enc_message_thread(void *);
 
