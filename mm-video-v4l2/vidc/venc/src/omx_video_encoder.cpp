@@ -529,9 +529,10 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     DEBUG_PRINT_LOW("i/p actual cnt requested = %lu", portDefn->nBufferCountActual);
                     DEBUG_PRINT_LOW("i/p min cnt requested = %lu", portDefn->nBufferCountMin);
                     DEBUG_PRINT_LOW("i/p buffersize requested = %lu", portDefn->nBufferSize);
+
                     if (portDefn->nBufferCountActual > MAX_NUM_INPUT_BUFFERS) {
-                        DEBUG_PRINT_ERROR("ERROR: (In_PORT) actual count (%u) exceeds max(%u)",
-                                (unsigned int)portDefn->nBufferCountActual, (unsigned int)MAX_NUM_INPUT_BUFFERS);
+                        DEBUG_PRINT_ERROR("ERROR: (In_PORT) actual count (%lu) exceeds max(%lu)",
+                                             (unsigned int)portDefn->nBufferCountActual, (unsigned int)MAX_NUM_INPUT_BUFFERS);
                         return OMX_ErrorUnsupportedSetting;
                     }
                     if (portDefn->nBufferCountMin > portDefn->nBufferCountActual) {
@@ -582,11 +583,13 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     DEBUG_PRINT_LOW("o/p actual cnt requested = %lu", portDefn->nBufferCountActual);
                     DEBUG_PRINT_LOW("o/p min cnt requested = %lu", portDefn->nBufferCountMin);
                     DEBUG_PRINT_LOW("o/p buffersize requested = %lu", portDefn->nBufferSize);
+
                     if (portDefn->nBufferCountActual > MAX_NUM_OUTPUT_BUFFERS) {
                         DEBUG_PRINT_ERROR("ERROR: (Out_PORT) actual count (%u) exceeds max(%u)",
-                                (unsigned int)portDefn->nBufferCountActual, (unsigned int)MAX_NUM_OUTPUT_BUFFERS);
+                                            (unsigned int)portDefn->nBufferCountActual, (unsigned int)MAX_NUM_OUTPUT_BUFFERS);
                         return OMX_ErrorUnsupportedSetting;
                     }
+
                     if (portDefn->nBufferCountMin > portDefn->nBufferCountActual) {
                         DEBUG_PRINT_ERROR("ERROR: (Out_PORT) Min buffers (%lu) > actual count (%lu)",
                                 portDefn->nBufferCountMin, portDefn->nBufferCountActual);
@@ -724,6 +727,7 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             }
         case OMX_IndexParamVideoH263:
             {
+                VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_H263TYPE);
                 OMX_VIDEO_PARAM_H263TYPE* pParam = (OMX_VIDEO_PARAM_H263TYPE*)paramData;
                 DEBUG_PRINT_LOW("set_parameter: OMX_IndexParamVideoH263");
                 if (handle->venc_set_param(paramData,OMX_IndexParamVideoH263) != true) {
@@ -1038,6 +1042,7 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             }
 #ifdef _ANDROID_ICS_
         case OMX_QcomIndexParamVideoMetaBufferMode:
+        case OMX_QTIIndexParamIMSVTVideoMetaBufferMode:
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, StoreMetaDataInBuffersParams);
                 StoreMetaDataInBuffersParams *pParam =

@@ -2838,11 +2838,11 @@ OMX_ERRORTYPE  omx_video::allocate_input_buffer(
             //This should only be used for passing reference to source type and
             //secure handle fd struct native_handle_t*
             m_pInput_pmem[i].buffer = malloc(sizeof(OMX_U32) + sizeof(native_handle_t*));
+            (*bufferHdr)->nAllocLen = sizeof(OMX_U32) + sizeof(native_handle_t*);
             if (m_pInput_pmem[i].buffer == NULL) {
                 DEBUG_PRINT_ERROR("%s: failed to allocate native-handle", __func__);
                 return OMX_ErrorInsufficientResources;
             }
-            (*bufferHdr)->nAllocLen = sizeof(OMX_U32) + sizeof(native_handle_t*);
         }
 
         (*bufferHdr)->pBuffer           = (OMX_U8 *)m_pInput_pmem[i].buffer;
@@ -2996,8 +2996,8 @@ OMX_ERRORTYPE  omx_video::allocate_output_buffer(
             m_pOutput_pmem[i].offset = 0;
 
             m_pOutput_pmem[i].buffer = NULL;
-            *bufferHdr = (m_out_mem_ptr + i );
 
+            *bufferHdr = (m_out_mem_ptr + i );
             if(!secure_session) {
 #ifdef _MSM8974_
                 m_pOutput_pmem[i].buffer = (unsigned char *)mmap(NULL,
@@ -3182,7 +3182,7 @@ OMX_ERRORTYPE  omx_video::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
         DEBUG_PRINT_LOW("free_buffer on i/p port - Port idx %u, actual cnt %lu",
                 nPortIndex, m_sInPortDef.nBufferCountActual);
         if (nPortIndex < m_sInPortDef.nBufferCountActual &&
-                BITMASK_PRESENT(&m_inp_bm_count, nPortIndex)) {
+               BITMASK_PRESENT(&m_inp_bm_count, nPortIndex)) {
             // Clear the bit associated with it.
             BITMASK_CLEAR(&m_inp_bm_count,nPortIndex);
             free_input_buffer (buffer);
@@ -3484,9 +3484,9 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE         
             post_event ((unsigned int)buffer,0,OMX_COMPONENT_GENERATE_EBD);
             return OMX_ErrorBadParameter;
         }
-    } else if (input_use_buffer && !m_use_input_pmem)
+    } else if (input_use_buffer && !m_use_input_pmem && m_pInput_pmem[nBufIndex].buffer)
 #else
-    if (input_use_buffer && !m_use_input_pmem)
+    if (input_use_buffer && !m_use_input_pmem && m_pInput_pmem[nBufIndex].buffer)
 #endif
     {
         DEBUG_PRINT_LOW("Heap UseBuffer case, so memcpy the data");
