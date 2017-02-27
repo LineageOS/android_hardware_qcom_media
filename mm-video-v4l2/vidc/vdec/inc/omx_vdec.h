@@ -54,13 +54,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 static ptrdiff_t x;
 
 #ifdef _ANDROID_
-#ifdef MAX_RES_720P
-#define LOG_TAG "OMX-VDEC-720P"
-#elif MAX_RES_1080P
 #define LOG_TAG "OMX-VDEC-1080P"
-#else
-#define LOG_TAG "OMX-VDEC"
-#endif
 
 #ifdef USE_ION
 #include <linux/msm_ion.h>
@@ -73,6 +67,7 @@ extern "C" {
 #include <utils/Log.h>
 }
 #include <linux/videodev2.h>
+#define VALID_TS(ts)      ((ts < LLONG_MAX)? true : false)
 #include <poll.h>
 #include "hevc_utils.h"
 #define TIMEOUT 5000
@@ -98,13 +93,7 @@ extern "C" {
 #include "OMX_VideoExt.h"
 #include "OMX_IndexExt.h"
 #include "qc_omx_component.h"
-#include <linux/msm_vidc_dec.h>
 #include <media/msm_vidc.h>
-#include "frameparser.h"
-#ifdef MAX_RES_1080P
-#include "mp4_utils.h"
-#endif
-#include "extra_data_handler.h"
 #include "ts_parser.h"
 #include "vidc_color_converter.h"
 #include "vidc_debug.h"
@@ -199,6 +188,7 @@ class VideoHeap : public MemoryHeapBase
 #define OMX_BITSINFO_EXTRADATA  0x01000000
 #define OMX_VQZIPSEI_EXTRADATA  0x02000000
 #define OMX_OUTPUTCROP_EXTRADATA 0x04000000
+#define OMX_MB_ERROR_MAP_EXTRADATA 0x08000000
 
 #define OMX_VUI_DISPLAY_INFO_EXTRADATA  0x08000000
 #define OMX_MPEG2_SEQDISP_INFO_EXTRADATA 0x10000000
@@ -227,6 +217,38 @@ class VideoHeap : public MemoryHeapBase
 #define OMX_USERDATA_EXTRADATA_SIZE ((sizeof(OMX_OTHER_EXTRADATATYPE) +\
             + 3)&(~3))
 
+/* STATUS CODES */
+/* Base value for status codes */
+#define VDEC_S_BASE	0x40000000
+/* Success */
+#define VDEC_S_SUCCESS	(VDEC_S_BASE)
+/* General failure */
+#define VDEC_S_EFAIL	(VDEC_S_BASE + 1)
+/* Fatal irrecoverable  failure. Need to  tear down session. */
+#define VDEC_S_EFATAL   (VDEC_S_BASE + 2)
+/* Error with input bistream */
+#define VDEC_S_INPUT_BITSTREAM_ERR (VDEC_S_BASE + 3)
+
+#define VDEC_MSG_BASE	0x0000000
+/* Codes to identify asynchronous message responses and events that driver
+  wants to communicate to the app.*/
+#define VDEC_MSG_RESP_INPUT_BUFFER_DONE	(VDEC_MSG_BASE + 1)
+#define VDEC_MSG_RESP_OUTPUT_BUFFER_DONE	(VDEC_MSG_BASE + 2)
+#define VDEC_MSG_RESP_INPUT_FLUSHED	(VDEC_MSG_BASE + 3)
+#define VDEC_MSG_RESP_OUTPUT_FLUSHED	(VDEC_MSG_BASE + 4)
+#define VDEC_MSG_RESP_FLUSH_INPUT_DONE	(VDEC_MSG_BASE + 5)
+#define VDEC_MSG_RESP_FLUSH_OUTPUT_DONE	(VDEC_MSG_BASE + 6)
+#define VDEC_MSG_RESP_START_DONE	(VDEC_MSG_BASE + 7)
+#define VDEC_MSG_RESP_STOP_DONE	(VDEC_MSG_BASE + 8)
+#define VDEC_MSG_RESP_PAUSE_DONE	(VDEC_MSG_BASE + 9)
+#define VDEC_MSG_RESP_RESUME_DONE	(VDEC_MSG_BASE + 10)
+#define VDEC_MSG_EVT_CONFIG_CHANGED	(VDEC_MSG_BASE + 11)
+#define VDEC_MSG_EVT_HW_ERROR	(VDEC_MSG_BASE + 12)
+#define VDEC_MSG_EVT_INFO_FIELD_DROPPED	(VDEC_MSG_BASE + 13)
+#define VDEC_MSG_EVT_HW_OVERLOAD	(VDEC_MSG_BASE + 14)
+#define VDEC_MSG_EVT_MAX_CLIENTS	(VDEC_MSG_BASE + 15)
+#define VDEC_MSG_EVT_HW_UNSUPPORTED	(VDEC_MSG_BASE + 16)
+
 //  Define next macro with required values to enable default extradata,
 //    VDEC_EXTRADATA_MB_ERROR_MAP
 //    OMX_INTERLACE_EXTRADATA
@@ -239,17 +261,159 @@ enum port_indexes {
     OMX_CORE_INPUT_PORT_INDEX        =0,
     OMX_CORE_OUTPUT_PORT_INDEX       =1
 };
-enum vidc_perf_level {
-    VIDC_SVS = 0,
-    VIDC_NOMINAL = 1,
-    VIDC_TURBO = 2
+
+
+class perf_metrics
+{
+    public:
+        perf_metrics() :
+            start_time(0),
+            proc_time(0),
+            active(false) {
+            };
+        ~perf_metrics() {};
+        void start();
+        void stop();
+        void end(OMX_U32 units_cntr = 0);
+        void reset();
+        OMX_U64 processing_time_us();
+    private:
+        inline OMX_U64 get_act_time();
+        OMX_U64 start_time;
+        OMX_U64 proc_time;
+        bool active;
 };
 
-enum turbo_mode {
-    TURBO_MODE_NONE = 0x0,
-    TURBO_MODE_CLIENT_REQUESTED = 0x1,
-    TURBO_MODE_HIGH_FPS = 0x2,
-    TURBO_MODE_MAX = 0xFF
+enum vdec_codec {
+	VDEC_CODECTYPE_H264 = 0x1,
+	VDEC_CODECTYPE_H263 = 0x2,
+	VDEC_CODECTYPE_MPEG4 = 0x3,
+	VDEC_CODECTYPE_DIVX_3 = 0x4,
+	VDEC_CODECTYPE_DIVX_4 = 0x5,
+	VDEC_CODECTYPE_DIVX_5 = 0x6,
+	VDEC_CODECTYPE_DIVX_6 = 0x7,
+	VDEC_CODECTYPE_XVID = 0x8,
+	VDEC_CODECTYPE_MPEG1 = 0x9,
+	VDEC_CODECTYPE_MPEG2 = 0xa,
+	VDEC_CODECTYPE_VC1 = 0xb,
+	VDEC_CODECTYPE_VC1_RCV = 0xc,
+	VDEC_CODECTYPE_HEVC = 0xd,
+	VDEC_CODECTYPE_MVC = 0xe,
+	VDEC_CODECTYPE_VP8 = 0xf,
+	VDEC_CODECTYPE_VP9 = 0x10,
+};
+
+enum vdec_output_fromat {
+	VDEC_YUV_FORMAT_NV12 = 0x1,
+	VDEC_YUV_FORMAT_TILE_4x2 = 0x2,
+	VDEC_YUV_FORMAT_NV12_UBWC = 0x3,
+	VDEC_YUV_FORMAT_NV12_TP10_UBWC = 0x4
+};
+
+enum vdec_interlaced_format {
+	VDEC_InterlaceFrameProgressive = 0x1,
+	VDEC_InterlaceInterleaveFrameTopFieldFirst = 0x2,
+	VDEC_InterlaceInterleaveFrameBottomFieldFirst = 0x4
+};
+
+enum vdec_output_order {
+	VDEC_ORDER_DISPLAY = 0x1,
+	VDEC_ORDER_DECODE = 0x2
+};
+
+struct vdec_framesize {
+	uint32_t   left;
+	uint32_t   top;
+	uint32_t   right;
+	uint32_t   bottom;
+};
+
+struct vdec_picsize {
+	uint32_t frame_width;
+	uint32_t frame_height;
+	uint32_t stride;
+	uint32_t scan_lines;
+};
+
+enum vdec_buffer {
+	VDEC_BUFFER_TYPE_INPUT,
+	VDEC_BUFFER_TYPE_OUTPUT
+};
+
+struct vdec_allocatorproperty {
+	enum vdec_buffer buffer_type;
+	uint32_t mincount;
+	uint32_t maxcount;
+	uint32_t actualcount;
+	size_t buffer_size;
+	uint32_t alignment;
+	uint32_t buf_poolid;
+	size_t meta_buffer_size;
+};
+
+struct vdec_bufferpayload {
+	void *bufferaddr;
+	size_t buffer_len;
+	int pmem_fd;
+	size_t offset;
+	size_t mmaped_size;
+};
+
+enum vdec_picture {
+	PICTURE_TYPE_I,
+	PICTURE_TYPE_P,
+	PICTURE_TYPE_B,
+	PICTURE_TYPE_BI,
+	PICTURE_TYPE_SKIP,
+	PICTURE_TYPE_IDR,
+	PICTURE_TYPE_UNKNOWN
+};
+
+struct vdec_aspectratioinfo {
+	uint32_t aspect_ratio;
+	uint32_t par_width;
+	uint32_t par_height;
+};
+
+struct vdec_sep_metadatainfo {
+	void *metabufaddr;
+	uint32_t size;
+	int fd;
+	int offset;
+	uint32_t buffer_size;
+};
+
+struct vdec_output_frameinfo {
+	void *bufferaddr;
+	size_t offset;
+	size_t len;
+	uint32_t flags;
+	int64_t time_stamp;
+	enum vdec_picture pic_type;
+	void *client_data;
+	void *input_frame_clientdata;
+	struct vdec_picsize picsize;
+	struct vdec_framesize framesize;
+	enum vdec_interlaced_format interlaced_format;
+	struct vdec_aspectratioinfo aspect_ratio_info;
+	struct vdec_sep_metadatainfo metadata_info;
+};
+
+union vdec_msgdata {
+	struct vdec_output_frameinfo output_frame;
+	void *input_frame_clientdata;
+};
+
+struct vdec_msginfo {
+	uint32_t status_code;
+	uint32_t msgcode;
+	union vdec_msgdata msgdata;
+	size_t msgdatasize;
+};
+
+struct vdec_framerate {
+	unsigned long fps_denominator;
+	unsigned long fps_numerator;
 };
 
 #ifdef USE_ION
@@ -260,7 +424,6 @@ struct vdec_ion {
 };
 #endif
 
-#ifdef _MSM8974_
 struct extradata_buffer_info {
     unsigned long buffer_size;
     char* uaddr;
@@ -270,7 +433,6 @@ struct extradata_buffer_info {
     struct vdec_ion ion;
 #endif
 };
-#endif
 
 struct video_driver_context {
     int video_driver_fd;
@@ -298,10 +460,8 @@ struct video_driver_context {
     char kind[128];
     bool idr_only_decoding;
     unsigned disable_dmx;
-#ifdef _MSM8974_
     struct extradata_buffer_info extradata_info;
     int num_planes;
-#endif
 };
 
 struct video_decoder_capability {
@@ -469,12 +629,10 @@ class omx_vdec: public qc_omx_component
         void complete_pending_buffer_done_cbs();
         struct video_driver_context drv_ctx;
         int m_poll_efd;
-#ifdef _MSM8974_
         OMX_ERRORTYPE allocate_extradata();
         void free_extradata();
         int update_resolution(int width, int height, int stride, int scan_lines);
         OMX_ERRORTYPE is_video_session_supported();
-#endif
         int  m_pipe_in;
         int  m_pipe_out;
         pthread_t msg_thread_id;
@@ -485,7 +643,6 @@ class omx_vdec: public qc_omx_component
         OMX_BUFFERHEADERTYPE* get_omx_output_buffer_header(int index);
         OMX_ERRORTYPE set_dpb(bool is_split_mode, int dpb_color_format);
         OMX_ERRORTYPE decide_dpb_buffer_mode(bool split_opb_dpb_with_same_color_fmt);
-        void request_perf_level(enum vidc_perf_level perf_level);
         int dpb_bit_depth;
         bool async_thread_force_stop;
         volatile bool message_thread_stop;
@@ -578,13 +735,11 @@ class omx_vdec: public qc_omx_component
             VC1_AP = 2
         };
 
-#ifdef _MSM8974_
         enum v4l2_ports {
             CAPTURE_PORT,
             OUTPUT_PORT,
             MAX_PORT
         };
-#endif
 
         struct omx_event {
             unsigned long param1;
@@ -678,16 +833,6 @@ class omx_vdec: public qc_omx_component
         OMX_ERRORTYPE empty_this_buffer_proxy(OMX_HANDLETYPE       hComp,
                 OMX_BUFFERHEADERTYPE *buffer);
 
-        OMX_ERRORTYPE empty_this_buffer_proxy_arbitrary(OMX_HANDLETYPE hComp,
-                OMX_BUFFERHEADERTYPE *buffer
-                );
-
-        OMX_ERRORTYPE push_input_buffer (OMX_HANDLETYPE hComp);
-        OMX_ERRORTYPE push_input_sc_codec (OMX_HANDLETYPE hComp);
-        OMX_ERRORTYPE push_input_h264 (OMX_HANDLETYPE hComp);
-        OMX_ERRORTYPE push_input_hevc (OMX_HANDLETYPE hComp);
-        OMX_ERRORTYPE push_input_vc1 (OMX_HANDLETYPE hComp);
-
         OMX_ERRORTYPE fill_this_buffer_proxy(OMX_HANDLETYPE       hComp,
                 OMX_BUFFERHEADERTYPE *buffer);
         bool release_done();
@@ -721,7 +866,6 @@ class omx_vdec: public qc_omx_component
         void prepare_color_aspects_metadata(OMX_U32 primaries, OMX_U32 range,
                                             OMX_U32 transfer, OMX_U32 matrix,
                                             ColorMetaData *color_mdata);
-#ifdef _MSM8974_
         void append_interlace_extradata(OMX_OTHER_EXTRADATATYPE *extra,
                 OMX_U32 interlaced_format_type);
         OMX_ERRORTYPE enable_extradata(OMX_U64 requested_extradata, bool is_internal,
@@ -734,11 +878,6 @@ class omx_vdec: public qc_omx_component
                 OMX_TICKS time_stamp,
                 struct msm_vidc_panscan_window_payload *panscan_payload,
                 struct vdec_aspectratioinfo *aspect_ratio_info);
-#else
-        void append_interlace_extradata(OMX_OTHER_EXTRADATATYPE *extra,
-                OMX_U32 interlaced_format_type, OMX_U32 buf_index);
-        OMX_ERRORTYPE enable_extradata(OMX_U32 requested_extradata, bool enable = true);
-#endif
         void append_frame_info_extradata(OMX_OTHER_EXTRADATATYPE *extra,
                 OMX_U32 num_conceal_mb,
                 OMX_U32 recovery_sei_flag,
@@ -797,12 +936,10 @@ class omx_vdec: public qc_omx_component
             return x;
         }
 
-#ifdef MAX_RES_1080P
         OMX_ERRORTYPE vdec_alloc_h264_mv();
         void vdec_dealloc_h264_mv();
         OMX_ERRORTYPE vdec_alloc_meta_buffers();
         void vdec_dealloc_meta_buffers();
-#endif
 
         inline void omx_report_error () {
             if (m_cb.EventHandler && !m_error_propogated && m_state != OMX_StateLoaded) {
@@ -924,10 +1061,6 @@ class omx_vdec: public qc_omx_component
         OMX_VENDOR_EXTRADATATYPE            m_vendor_config;
 
         /*Variables for arbitrary Byte parsing support*/
-        frame_parse m_frame_parser;
-        h264_stream_parser *h264_parser;
-        MP4_Utils mp4_headerparser;
-        HEVC_Utils m_hevc_utils;
 
         omx_cmd_queue m_input_pending_q;
         omx_cmd_queue m_input_free_q;
@@ -938,7 +1071,6 @@ class omx_vdec: public qc_omx_component
         OMX_BUFFERHEADERTYPE  *m_inp_heap_ptr;
         OMX_BUFFERHEADERTYPE  **m_phdr_pmem_ptr;
         unsigned int m_heap_inp_bm_count;
-        codec_type codec_type_parse;
         bool first_frame_meta;
         unsigned frame_count;
         unsigned nal_count;
@@ -1002,7 +1134,6 @@ class omx_vdec: public qc_omx_component
             int offset;
         };
         meta_buffer meta_buff;
-        extra_data_handler extra_data_handle;
         OMX_PARAM_PORTDEFINITIONTYPE m_port_def;
         OMX_QCOM_FRAME_PACK_ARRANGEMENT m_frame_pack_arrangement;
         omx_time_stamp_reorder time_stamp_dts;
@@ -1014,7 +1145,6 @@ class omx_vdec: public qc_omx_component
         OMX_QCOM_EXTRADATA_FRAMEINFO *m_extradata;
         OMX_OTHER_EXTRADATATYPE *m_other_extradata;
         bool codec_config_flag;
-#ifdef _MSM8974_
         int capture_capability;
         int output_capability;
         bool streaming[MAX_PORT];
@@ -1023,7 +1153,6 @@ class omx_vdec: public qc_omx_component
         OMX_U32 prev_n_filled_len;
         bool is_down_scalar_enabled;
         bool m_force_down_scalar;
-#endif
         struct custom_buffersize {
             OMX_U32 input_buffersize;
         } m_custom_buffersize;
@@ -1056,7 +1185,6 @@ class omx_vdec: public qc_omx_component
         ColorMetaData m_color_mdata;
 
         OMX_U32 operating_frame_rate;
-        uint8_t m_need_turbo;
 
         OMX_U32 m_smoothstreaming_width;
         OMX_U32 m_smoothstreaming_height;
@@ -1133,16 +1261,12 @@ class omx_vdec: public qc_omx_component
                     return cache_ops(index, ION_IOC_CLEAN_INV_CACHES);
                 }
         };
-#if  defined (_MSM8960_) || defined (_MSM8974_)
         allocate_color_convert_buf client_buffers;
-#endif
         struct video_decoder_capability m_decoder_capability;
         struct debug_cap m_debug;
         int log_input_buffers(const char *, int);
         int log_output_buffers(OMX_BUFFERHEADERTYPE *);
-#ifdef _MSM8974_
         void send_codec_config();
-#endif
         OMX_TICKS m_last_rendered_TS;
         volatile int32_t m_queued_codec_config_count;
         OMX_U32 current_perf_level;
@@ -1298,7 +1422,6 @@ class omx_vdec: public qc_omx_component
         client_extradata_info m_client_extradata_info;
 };
 
-#ifdef _MSM8974_
 enum instance_state {
     MSM_VIDC_CORE_UNINIT_DONE = 0x0001,
     MSM_VIDC_CORE_INIT,
@@ -1322,7 +1445,5 @@ enum vidc_resposes_id {
     MSM_VIDC_DECODER_FLUSH_DONE = 0x11,
     MSM_VIDC_DECODER_EVENT_CHANGE,
 };
-
-#endif // _MSM8974_
 
 #endif // __OMX_VDEC_H__

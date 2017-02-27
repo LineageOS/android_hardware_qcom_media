@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2016, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2017, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -54,7 +54,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif // _ANDROID_
 #include <pthread.h>
 #include <semaphore.h>
-#include <linux/msm_vidc_enc.h>
 #include <media/hardware/HardwareAPI.h>
 #include "OMX_Core.h"
 #include "OMX_QCOMExtns.h"
@@ -63,7 +62,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OMX_IndexExt.h"
 #include "qc_omx_component.h"
 #include "omx_video_common.h"
-#include "extra_data_handler.h"
 #include <linux/videodev2.h>
 #include <dlfcn.h>
 #include "C2DColorConverter.h"
@@ -85,21 +83,7 @@ class VideoHeap : public MemoryHeapBase
 
 #ifdef USE_ION
 static const char* MEM_DEVICE = "/dev/ion";
-#if defined(MAX_RES_720P) && !defined(_MSM8974_)
-#define MEM_HEAP_ID ION_CAMERA_HEAP_ID
-#else
-#ifdef _MSM8974_
 #define MEM_HEAP_ID ION_IOMMU_HEAP_ID
-#else
-#define MEM_HEAP_ID ION_CP_MM_HEAP_ID
-#endif
-#endif
-#elif MAX_RES_720P
-static const char* MEM_DEVICE = "/dev/pmem_adsp";
-#elif MAX_RES_1080P_EBI
-static const char* MEM_DEVICE  = "/dev/pmem_adsp";
-#elif MAX_RES_1080P
-static const char* MEM_DEVICE = "/dev/pmem_smipool";
 #else
 #error MEM_DEVICE cannot be determined.
 #endif
@@ -140,6 +124,33 @@ static const char* MEM_DEVICE = "/dev/pmem_smipool";
 #define BITMASK_ABSENT(mArray,mIndex) (((mArray)[BITMASK_OFFSET(mIndex)] \
             & BITMASK_FLAG(mIndex)) == 0x0)
 
+/** STATUS CODES*/
+/* Base value for status codes */
+#define VEN_S_BASE	0x00000000
+#define VEN_S_SUCCESS	(VEN_S_BASE)/* Success */
+#define VEN_S_EFAIL	(VEN_S_BASE+1)/* General failure */
+
+/*Asynchronous messages from driver*/
+#define VEN_MSG_INDICATION	0
+#define VEN_MSG_INPUT_BUFFER_DONE	1
+#define VEN_MSG_OUTPUT_BUFFER_DONE	2
+#define VEN_MSG_NEED_OUTPUT_BUFFER	3
+#define VEN_MSG_FLUSH_INPUT_DONE	4
+#define VEN_MSG_FLUSH_OUPUT_DONE	5
+#define VEN_MSG_START	6
+#define VEN_MSG_STOP	7
+#define VEN_MSG_PAUSE	8
+#define VEN_MSG_RESUME	9
+#define VEN_MSG_LTRUSE_FAILED	    10
+#define VEN_MSG_HW_OVERLOAD	11
+#define VEN_MSG_MAX_CLIENTS	12
+
+/*Different methods of Multi slice selection.*/
+#define VEN_MSLICE_OFF	1
+#define VEN_MSLICE_CNT_MB	2 /*number of MBscount per slice*/
+#define VEN_MSLICE_CNT_BYTE	3 /*number of bytes count per slice.*/
+#define VEN_MSLICE_GOB	4 /*Multi slice by GOB for H.263 only.*/
+
 #define MAX_NUM_INPUT_BUFFERS 64
 #define MAX_NUM_OUTPUT_BUFFERS 64
 
@@ -155,6 +166,7 @@ void* message_thread_enc(void *);
 
 enum omx_venc_extradata_types {
     VENC_EXTRADATA_SLICEINFO = 0x100,
+    VENC_EXTRADATA_LTRINFO = 0x200,
     VENC_EXTRADATA_MBINFO = 0x400,
     VENC_EXTRADATA_FRAMEDIMENSION = 0x1000000,
     VENC_EXTRADATA_YUV_STATS = 0x800,
@@ -165,6 +177,58 @@ enum omx_venc_extradata_types {
 struct output_metabuffer {
     OMX_U32 type;
     native_handle_t *nh;
+};
+
+struct venc_buffer{
+ unsigned char *ptrbuffer;
+ unsigned long	sz;
+ unsigned long	len;
+ unsigned long	offset;
+ long long	timestamp;
+ unsigned long	flags;
+ void	*clientdata;
+};
+
+struct venc_bufferpayload{
+	unsigned char *pbuffer;
+	size_t	sz;
+	int	fd;
+	unsigned int	offset;
+	unsigned int	maped_size;
+	unsigned long	filled_len;
+};
+
+struct venc_profile{
+	unsigned long	profile;
+};
+
+struct ven_profilelevel{
+	unsigned long	level;
+};
+
+struct	venc_voptimingcfg{
+	unsigned long	voptime_resolution;
+};
+
+struct venc_framerate{
+	unsigned long	fps_denominator;
+	unsigned long	fps_numerator;
+};
+
+struct venc_headerextension{
+	 unsigned long	header_extension;
+};
+
+struct venc_multiclicecfg{
+	unsigned long	mslice_mode;
+	unsigned long	mslice_size;
+};
+
+struct venc_msg{
+	unsigned long	statuscode;
+	unsigned long	msgcode;
+	struct venc_buffer	buf;
+	unsigned long	msgdata_size;
 };
 
 // OMX video class
@@ -236,7 +300,6 @@ class omx_video: public qc_omx_component
         virtual OMX_U32 dev_stop(void) = 0;
         virtual OMX_U32 dev_pause(void) = 0;
         virtual OMX_U32 dev_start(void) = 0;
-        virtual OMX_U32 dev_flush(unsigned) = 0;
         virtual OMX_U32 dev_resume(void) = 0;
         virtual OMX_U32 dev_start_done(void) = 0;
         virtual OMX_U32 dev_set_message_thread_id(pthread_t) = 0;
@@ -255,7 +318,6 @@ class omx_video: public qc_omx_component
         virtual int dev_set_format(int) = 0;
         virtual bool dev_is_video_session_supported(OMX_U32 width, OMX_U32 height) = 0;
         virtual bool dev_get_capability_ltrcount(OMX_U32 *, OMX_U32 *, OMX_U32 *) = 0;
-        virtual bool dev_get_performance_level(OMX_U32 *) = 0;
         virtual bool dev_get_vui_timing_info(OMX_U32 *) = 0;
         virtual bool dev_get_vqzip_sei_info(OMX_U32 *) = 0;
         virtual bool dev_get_peak_bitrate(OMX_U32 *) = 0;
@@ -515,9 +577,7 @@ class omx_video: public qc_omx_component
         bool execute_omx_flush(OMX_U32);
         bool execute_output_flush(void);
         bool execute_input_flush(void);
-#ifdef _MSM8974_
         bool execute_flush_all(void);
-#endif
         OMX_ERRORTYPE empty_buffer_done(OMX_HANDLETYPE hComp,
                 OMX_BUFFERHEADERTYPE * buffer);
 
@@ -615,8 +675,6 @@ class omx_video: public qc_omx_component
         OMX_VIDEO_PARAM_PORTFORMATTYPE m_sOutPortFormat;
         OMX_PARAM_PORTDEFINITIONTYPE m_sInPortDef;
         OMX_PARAM_PORTDEFINITIONTYPE m_sOutPortDef;
-        OMX_VIDEO_PARAM_MPEG4TYPE m_sParamMPEG4;
-        OMX_VIDEO_PARAM_H263TYPE m_sParamH263;
         OMX_VIDEO_PARAM_AVCTYPE m_sParamAVC;
         OMX_VIDEO_PARAM_VP8TYPE m_sParamVP8;
         OMX_VIDEO_PARAM_HEVCTYPE m_sParamHEVC;
@@ -632,7 +690,6 @@ class omx_video: public qc_omx_component
         OMX_CONFIG_INTRAREFRESHVOPTYPE m_sConfigIntraRefreshVOP;
         OMX_VIDEO_PARAM_QUANTIZATIONTYPE m_sSessionQuantization;
         OMX_QCOM_VIDEO_PARAM_QPRANGETYPE m_sSessionQPRange;
-        OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE m_sSessionIPBQPRange;
         OMX_VIDEO_PARAM_AVCSLICEFMO m_sAVCSliceFMO;
         QOMX_VIDEO_INTRAPERIODTYPE m_sIntraperiod;
         OMX_VIDEO_PARAM_ERRORCORRECTIONTYPE m_sErrorCorrection;
@@ -645,8 +702,6 @@ class omx_video: public qc_omx_component
         OMX_VIDEO_CONFIG_DEINTERLACE m_sConfigDeinterlace;
         OMX_VIDEO_VP8REFERENCEFRAMETYPE m_sConfigVp8ReferenceFrame;
         QOMX_VIDEO_HIERARCHICALLAYERS m_sHierLayers;
-        OMX_QOMX_VIDEO_MBI_STATISTICS m_sMBIStatistics;
-        QOMX_EXTNINDEX_VIDEO_INITIALQP m_sParamInitqp;
         QOMX_EXTNINDEX_VIDEO_HIER_P_LAYERS m_sHPlayers;
         OMX_SKYPE_VIDEO_CONFIG_BASELAYERPID m_sBaseLayerID;
         OMX_SKYPE_VIDEO_PARAM_DRIVERVER m_sDriverVer;
@@ -662,7 +717,6 @@ class omx_video: public qc_omx_component
         } timestamp;
         OMX_U32 m_sExtraData;
         OMX_U32 m_input_msg_id;
-        QOMX_EXTNINDEX_VIDEO_VENC_LOW_LATENCY_MODE m_slowLatencyMode;
 #ifdef SUPPORT_CONFIG_INTRA_REFRESH
         OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE m_sConfigIntraRefresh;
 #endif
@@ -705,7 +759,6 @@ class omx_video: public qc_omx_component
         // to know whether Event Port Settings change has been triggered or not.
         bool m_event_port_settings_sent;
         OMX_U8                m_cRole[OMX_MAX_STRINGNAME_SIZE];
-        extra_data_handler extra_data_handle;
         bool hw_overload;
         size_t m_graphicbuffer_size;
         char m_platform[OMX_MAX_STRINGNAME_SIZE];

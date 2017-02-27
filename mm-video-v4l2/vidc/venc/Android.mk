@@ -19,7 +19,6 @@ libmm-venc-def += -UOUTPUT_BUFFER_LOG
 libmm-venc-def += -USINGLE_ENCODER_INSTANCE
 libmm-venc-def += -Werror
 libmm-venc-def += -D_ANDROID_ICS_
-libmm-venc-def += -D_MSM8974_
 
 TARGETS_THAT_USE_FLAG_MSM8226 := msm8226 msm8916 msm8909
 TARGETS_THAT_NEED_SW_VENC_MPEG4 := msm8909 msm8937
@@ -29,15 +28,7 @@ TARGETS_THAT_SUPPORT_VQZIP := msm8996 msm8998
 TARGETS_THAT_SUPPORT_PQ := msm8996 msm8998 sdm660
 
 ifeq ($(TARGET_BOARD_PLATFORM),msm8610)
-libmm-venc-def += -DMAX_RES_720P
 libmm-venc-def += -D_MSM8610_
-else
-ifeq ($(TARGET_BOARD_PLATFORM),msm8226)
-libmm-venc-def += -DMAX_RES_1080P
-else
-libmm-venc-def += -DMAX_RES_1080P
-libmm-venc-def += -DMAX_RES_1080P_EBI
-endif
 endif
 
 ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_UBWC)),true)

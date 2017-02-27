@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -1726,23 +1726,6 @@ OMX_U32 omx_venc::dev_start(void)
    RETURN(0);
 }
 
-OMX_U32 omx_venc::dev_flush(unsigned port)
-{
-   ENTER_FUNC();
-   SWVENC_STATUS Ret;
-
-   (void)port;
-   Ret = swvenc_flush(m_hSwVenc);
-   if (Ret != SWVENC_S_SUCCESS)
-   {
-      DEBUG_PRINT_ERROR("%s, swvenc_flush failed (%d)",
-        __FUNCTION__, Ret);
-      RETURN(-1);
-   }
-
-   RETURN(0);
-}
-
 OMX_U32 omx_venc::dev_start_done(void)
 {
    ENTER_FUNC();
@@ -2045,16 +2028,6 @@ bool omx_venc::dev_get_capability_ltrcount
     (void)step_size;
 
     DEBUG_PRINT_ERROR("Get Capability LTR Count is not supported");
-
-    RETURN(false);
-}
-
-bool omx_venc::dev_get_performance_level(OMX_U32 *perflevel)
-{
-    ENTER_FUNC();
-
-    (void)perflevel;
-    DEBUG_PRINT_ERROR("Get performance level is not supported");
 
     RETURN(false);
 }
