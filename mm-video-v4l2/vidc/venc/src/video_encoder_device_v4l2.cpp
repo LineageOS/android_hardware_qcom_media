@@ -1437,6 +1437,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
     struct v4l2_format fmt;
     struct v4l2_requestbuffers bufreq;
     int ret;
+    bool isCBR;
 
     switch ((int)index) {
         case OMX_IndexParamPortDefinition:
@@ -2062,6 +2063,23 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 if (!venc_set_lowlatency_mode(pParam->bEnable)) {
                      DEBUG_PRINT_ERROR("Setting low latency mode failed");
                      return OMX_ErrorUnsupportedSetting;
+                }
+                break;
+            }
+        case OMX_QTIIndexParamIframeSizeType:
+            {
+                QOMX_VIDEO_IFRAMESIZE* pParam =
+                    (QOMX_VIDEO_IFRAMESIZE *)paramData;
+                isCBR = rate_ctrl.rcmode == V4L2_CID_MPEG_VIDC_VIDEO_RATE_CONTROL_CBR_VFR ||
+                    rate_ctrl.rcmode == V4L2_CID_MPEG_VIDC_VIDEO_RATE_CONTROL_CBR_CFR;
+                if (!isCBR) {
+                    DEBUG_PRINT_ERROR("venc_set_param: OMX_QTIIndexParamIframeSizeType not allowed for this configuration isCBR(%d)",
+                        isCBR);
+                    return OMX_ErrorUnsupportedSetting;
+                }
+                if (!venc_set_iframesize_type(pParam->eType)) {
+                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamIframeSizeType failed");
+                    return OMX_ErrorUnsupportedSetting;
                 }
                 break;
             }
@@ -5340,6 +5358,37 @@ bool venc_dev::venc_set_lowlatency_mode(OMX_BOOL enable)
         low_latency.enable = 1;
     else
         low_latency.enable = 0;
+
+    return true;
+}
+
+bool venc_dev::venc_set_iframesize_type(QOMX_VIDEO_IFRAMESIZE_TYPE type)
+{
+    struct v4l2_control control;
+    control.id = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_TYPE;
+
+    switch (type) {
+        case QOMX_IFRAMESIZE_DEFAULT:
+            control.value = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_DEFAULT;
+            break;
+        case QOMX_IFRAMESIZE_MEDIUM:
+            control.value = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_MEDIUM;
+            break;
+        case QOMX_IFRAMESIZE_HUGE:
+            control.value = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_HUGE;
+            break;
+        case QOMX_IFRAMESIZE_UNLIMITED:
+            control.value = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_UNLIMITED;
+            break;
+        default:
+            DEBUG_PRINT_INFO("Unknown Iframe Size found setting it to default");
+            control.value = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_DEFAULT;
+    }
+
+    if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
+        DEBUG_PRINT_ERROR("Failed to set iframe size hint");
+        return false;
+    }
 
     return true;
 }

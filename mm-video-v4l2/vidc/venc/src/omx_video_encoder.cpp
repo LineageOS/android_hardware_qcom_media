@@ -1606,6 +1606,16 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 }
                 break;
             }
+        case OMX_QTIIndexParamIframeSizeType:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_VIDEO_IFRAMESIZE);
+                if (!handle->venc_set_param(paramData,
+                            (OMX_INDEXTYPE)OMX_QTIIndexParamIframeSizeType)) {
+                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamIframeSizeType failed");
+                    return OMX_ErrorUnsupportedSetting;
+                }
+                break;
+            }
         case OMX_IndexParamVideoSliceFMO:
         default:
             {
