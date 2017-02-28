@@ -2631,8 +2631,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 QOMX_DISABLETYPE * pParam = (QOMX_DISABLETYPE *)paramData;
                 DEBUG_PRINT_LOW("venc_set_param: OMX_QTIIndexParamDisablePQ: %d", pParam->bDisable);
 #ifdef _PQ_
-                if (pParam->bDisable)
-                    m_pq.is_pq_force_disable = true;
+                m_pq.is_pq_force_disable = (pParam->bDisable == OMX_TRUE);
 #endif
                 break;
             }
