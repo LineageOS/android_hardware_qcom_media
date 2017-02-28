@@ -575,6 +575,9 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     OMX_QTIIndexParamVPXColorSpaceExtraData = 0x7F000066,
     /* Enable client extradata */
     OMX_QTIIndexParamVideoClientExtradata = 0x7F000060,
+
+    /* Suggest how big Iframe sizes should be */
+    OMX_QTIIndexParamIframeSizeType = 0x7F000070,
 };
 
 /**
@@ -1741,6 +1744,19 @@ typedef struct QOMX_VIDEO_H264ENTROPYCODINGTYPE {
    OMX_BOOL bCabac;
    OMX_U32 nCabacInitIdc;
 } QOMX_VIDEO_H264ENTROPYCODINGTYPE;
+
+typedef enum QOMX_VIDEO_IFRAMESIZE_TYPE {
+    QOMX_IFRAMESIZE_DEFAULT,
+    QOMX_IFRAMESIZE_MEDIUM,
+    QOMX_IFRAMESIZE_HUGE,
+    QOMX_IFRAMESIZE_UNLIMITED,
+} QOMX_VIDEO_IFRAMESIZE_TYPE;
+
+typedef struct QOMX_VIDEO_IFRAMESIZE {
+   OMX_U32 nSize;
+   OMX_VERSIONTYPE nVersion;
+   QOMX_VIDEO_IFRAMESIZE_TYPE eType;
+} QOMX_VIDEO_IFRAMESIZE;
 
 /* VIDEO POSTPROCESSING CTRLS AND ENUMS */
 /* MUST KEEP SAME AS IN vpp.h */
