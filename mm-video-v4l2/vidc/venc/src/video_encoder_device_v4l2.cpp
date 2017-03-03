@@ -396,6 +396,7 @@ void* venc_dev::async_venc_message_thread (void *input)
             } else if (dqevent.type == V4L2_EVENT_MSM_VIDC_SYS_ERROR){
                 DEBUG_PRINT_ERROR("ERROR: Encoder is in bad state");
                 venc_msg.statuscode=VEN_S_EFAIL;
+		venc_msg.msgcode = VEN_MSG_INDICATION;
 
                 if (omx->async_message_process(input,&venc_msg) < 0) {
                     DEBUG_PRINT_ERROR("ERROR: Wrong ioctl message");
