@@ -1,0 +1,112 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "fa5d592f_c8d1d9fc",
+        "filename": "libstagefrighthw/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 29,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-03-04T23:17:48Z",
+      "side": 1,
+      "message": "Just out of curiosity, are you setting this? It\u0027d be good to know if your 8084\u0027s blobs (media and camera) are capable of using this.",
+      "range": {
+        "startLine": 29,
+        "startChar": 8,
+        "endLine": 29,
+        "endChar": 36
+      },
+      "revId": "09b367bc942341b9712f09cf0108a87fe518b7f5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fa5d592f_88c40141",
+        "filename": "mm-video-v4l2/vidc/vdec/src/omx_vdec_hevc_swvdec.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 10748,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-03-04T23:17:48Z",
+      "side": 1,
+      "message": "I wonder if this being missing is what broke you previously.",
+      "revId": "09b367bc942341b9712f09cf0108a87fe518b7f5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fa5d592f_68c1cd2d",
+        "filename": "mm-video-v4l2/vidc/vdec/src/omx_vdec_msm8974.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 481,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-03-04T23:17:48Z",
+      "side": 1,
+      "message": "I wish we could upstream the unused attribute tagging to QC. Have you considered making this a shorter macro or line breaking to keep the line length to the 80 chars or so it currently is?",
+      "revId": "09b367bc942341b9712f09cf0108a87fe518b7f5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fa5d592f_48de0913",
+        "filename": "mm-video-v4l2/vidc/vdec/src/omx_vdec_msm8974.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 1222,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-03-04T23:17:48Z",
+      "side": 1,
+      "message": "This also appears to be relevant to addressing the original issue.",
+      "revId": "09b367bc942341b9712f09cf0108a87fe518b7f5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fa5d592f_08e811b3",
+        "filename": "mm-video-v4l2/vidc/vdec/src/omx_vdec_msm8974.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 7310,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-03-04T23:17:48Z",
+      "side": 1,
+      "message": "This block also looks relevant...",
+      "revId": "09b367bc942341b9712f09cf0108a87fe518b7f5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fa5d592f_e8ec9dc9",
+        "filename": "mm-video-v4l2/vidc/venc/inc/video_encoder_device_v4l2.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 116,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-03-04T23:17:48Z",
+      "side": 1,
+      "message": "I think this one might be paired with a kernel update, due to the size of the field possibly changing.",
+      "revId": "09b367bc942341b9712f09cf0108a87fe518b7f5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
