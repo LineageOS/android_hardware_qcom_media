@@ -419,7 +419,7 @@ int frame_parse::parse_sc_frame ( OMX_BUFFERHEADERTYPE *source,
 
     /*Exit State Machine*/
     psource = source->pBuffer + source->nOffset;
-    int bytes_to_skip = 0;
+    unsigned bytes_to_skip = 0;
     switch (parse_state) {
         case A5:
             *partialframe = 0;
@@ -504,7 +504,7 @@ int frame_parse::parse_h264_nallength (OMX_BUFFERHEADERTYPE *source,
         } else {
             DEBUG_PRINT_ERROR("FrameParser: NAL Parsing Error!"
                 "Buffer recieved with source_len = %lu and with"
-                "flags %u", source_len, source->nFlags);
+                "flags %lu", source_len, source->nFlags);
             return -1;
         }
     }
