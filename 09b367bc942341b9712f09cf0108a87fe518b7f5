@@ -48,6 +48,30 @@
     },
     {
       "key": {
+        "uuid": "fa5d592f_c372da7b",
+        "filename": "libstagefrighthw/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 29,
+      "author": {
+        "id": 15402
+      },
+      "writtenOn": "2017-03-05T12:25:34Z",
+      "side": 1,
+      "message": "Device still works, video playback still works, too.\nSince I\u0027m not quite sure about the implications, what would be a meaningful example to test?",
+      "parentUuid": "fa5d592f_08b7f187",
+      "range": {
+        "startLine": 29,
+        "startChar": 8,
+        "endLine": 29,
+        "endChar": 36
+      },
+      "revId": "09b367bc942341b9712f09cf0108a87fe518b7f5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "fa5d592f_88c40141",
         "filename": "mm-video-v4l2/vidc/vdec/src/omx_vdec_hevc_swvdec.cpp",
         "patchSetId": 1
