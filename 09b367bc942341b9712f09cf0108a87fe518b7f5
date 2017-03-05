@@ -25,6 +25,29 @@
     },
     {
       "key": {
+        "uuid": "fa5d592f_08b7f187",
+        "filename": "libstagefrighthw/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 29,
+      "author": {
+        "id": 15402
+      },
+      "writtenOn": "2017-03-05T09:50:32Z",
+      "side": 1,
+      "message": "No, I don\u0027t.  I\u0027ll check if that works.  Do you have info what this actually does?",
+      "range": {
+        "startLine": 29,
+        "startChar": 8,
+        "endLine": 29,
+        "endChar": 36
+      },
+      "revId": "09b367bc942341b9712f09cf0108a87fe518b7f5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "fa5d592f_88c40141",
         "filename": "mm-video-v4l2/vidc/vdec/src/omx_vdec_hevc_swvdec.cpp",
         "patchSetId": 1
@@ -42,6 +65,41 @@
     },
     {
       "key": {
+        "uuid": "fa5d592f_e8bb7d70",
+        "filename": "mm-video-v4l2/vidc/vdec/src/omx_vdec_hevc_swvdec.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 10748,
+      "author": {
+        "id": 15402
+      },
+      "writtenOn": "2017-03-05T09:50:32Z",
+      "side": 1,
+      "message": "Perhaps, yes.  When checking the sources against the msm8974 branch it actually looked like apq8084 being neglected usptream since 2014.  Only the bare minimum of patches have gone into the apq8084 branches, apparently.",
+      "parentUuid": "fa5d592f_88c40141",
+      "revId": "09b367bc942341b9712f09cf0108a87fe518b7f5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fa5d592f_88588157",
+        "filename": "mm-video-v4l2/vidc/vdec/src/omx_vdec_msm8974.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 178,
+      "author": {
+        "id": 15402
+      },
+      "writtenOn": "2017-03-05T09:50:32Z",
+      "side": 1,
+      "message": "This patch also requires a kernel patch, which has been applied to the klte kernel as commit 6c9f865e,\n\"msm: vidc: Send resolution along with output buffer\"",
+      "revId": "09b367bc942341b9712f09cf0108a87fe518b7f5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "fa5d592f_68c1cd2d",
         "filename": "mm-video-v4l2/vidc/vdec/src/omx_vdec_msm8974.cpp",
         "patchSetId": 1
@@ -53,6 +111,24 @@
       "writtenOn": "2017-03-04T23:17:48Z",
       "side": 1,
       "message": "I wish we could upstream the unused attribute tagging to QC. Have you considered making this a shorter macro or line breaking to keep the line length to the 80 chars or so it currently is?",
+      "revId": "09b367bc942341b9712f09cf0108a87fe518b7f5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fa5d592f_68a78d50",
+        "filename": "mm-video-v4l2/vidc/vdec/src/omx_vdec_msm8974.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 481,
+      "author": {
+        "id": 15402
+      },
+      "writtenOn": "2017-03-05T09:50:32Z",
+      "side": 1,
+      "message": "As I said, given that upstream doesn\u0027t follow 80 chars line length I didn\u0027t care myself.  Having said that, on BSD systems there\u0027s a predefined macro \"__unused\".  Apparently the sys/cdefs.h file is available so I used it and will prep a followup patch.",
+      "parentUuid": "fa5d592f_68c1cd2d",
       "revId": "09b367bc942341b9712f09cf0108a87fe518b7f5",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
@@ -104,6 +180,24 @@
       "writtenOn": "2017-03-04T23:17:48Z",
       "side": 1,
       "message": "I think this one might be paired with a kernel update, due to the size of the field possibly changing.",
+      "revId": "09b367bc942341b9712f09cf0108a87fe518b7f5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fa5d592f_e8493d8c",
+        "filename": "mm-video-v4l2/vidc/venc/inc/video_encoder_device_v4l2.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 116,
+      "author": {
+        "id": 15402
+      },
+      "writtenOn": "2017-03-05T09:50:32Z",
+      "side": 1,
+      "message": "Right, but even if the kernel isn\u0027t changed, this has no influence since sizeof(int) \u003d\u003d sizeof(long) and the kernel itself apparently doesn\u0027t use this member at all (at least in Samsungs\u0027 apq8084 kernels.",
+      "parentUuid": "fa5d592f_e8ec9dc9",
       "revId": "09b367bc942341b9712f09cf0108a87fe518b7f5",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
