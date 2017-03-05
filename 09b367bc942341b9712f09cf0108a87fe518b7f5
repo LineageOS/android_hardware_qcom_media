@@ -72,6 +72,30 @@
     },
     {
       "key": {
+        "uuid": "fa5d592f_2ed63d50",
+        "filename": "libstagefrighthw/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 29,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-03-05T20:39:01Z",
+      "side": 1,
+      "message": "You shouldn\u0027t notice a difference if it\u0027s working correctly. If it\u0027s not working correctly you\u0027d likely notice crashing or corruption with camera/media encode/media decode.",
+      "parentUuid": "fa5d592f_c372da7b",
+      "range": {
+        "startLine": 29,
+        "startChar": 8,
+        "endLine": 29,
+        "endChar": 36
+      },
+      "revId": "09b367bc942341b9712f09cf0108a87fe518b7f5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "fa5d592f_88c40141",
         "filename": "mm-video-v4l2/vidc/vdec/src/omx_vdec_hevc_swvdec.cpp",
         "patchSetId": 1
@@ -159,6 +183,24 @@
     },
     {
       "key": {
+        "uuid": "fa5d592f_0ecb79a6",
+        "filename": "mm-video-v4l2/vidc/vdec/src/omx_vdec_msm8974.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 481,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-03-05T20:39:01Z",
+      "side": 1,
+      "message": "Yeah, CAF isn\u0027t always known for having the neatest code. Just noting it, but we should try to keep things cleaner for code we introduce if possible. (I\u0027m not super hung up on this either way)",
+      "parentUuid": "fa5d592f_68a78d50",
+      "revId": "09b367bc942341b9712f09cf0108a87fe518b7f5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "fa5d592f_48de0913",
         "filename": "mm-video-v4l2/vidc/vdec/src/omx_vdec_msm8974.cpp",
         "patchSetId": 1
@@ -222,6 +264,24 @@
       "side": 1,
       "message": "Right, but even if the kernel isn\u0027t changed, this has no influence since sizeof(int) \u003d\u003d sizeof(long) and the kernel itself apparently doesn\u0027t use this member at all (at least in Samsungs\u0027 apq8084 kernels.",
       "parentUuid": "fa5d592f_e8ec9dc9",
+      "revId": "09b367bc942341b9712f09cf0108a87fe518b7f5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fa5d592f_eecf05af",
+        "filename": "mm-video-v4l2/vidc/venc/inc/video_encoder_device_v4l2.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 116,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-03-05T20:39:01Z",
+      "side": 1,
+      "message": "Ah, ok, that\u0027s cool then.",
+      "parentUuid": "fa5d592f_e8493d8c",
       "revId": "09b367bc942341b9712f09cf0108a87fe518b7f5",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
