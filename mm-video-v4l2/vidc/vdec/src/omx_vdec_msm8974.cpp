@@ -487,26 +487,6 @@ void *get_omx_component_factory_fn(void)
     return (new omx_vdec);
 }
 
-#ifdef _ANDROID_
-#ifdef USE_ION
-VideoHeap::VideoHeap(int devicefd, size_t size, void* base,
-        ion_user_handle_t handle, int ionMapfd)
-{
-    (void) devicefd;
-    (void) size;
-    (void) base;
-    (void) handle;
-    (void) ionMapfd;
-    //    ionInit(devicefd, base, size, 0 , MEM_DEVICE,handle,ionMapfd);
-}
-#else
-VideoHeap::VideoHeap(int fd, size_t size, void* base)
-{
-    // dup file descriptor, map once, use pmem
-    init(dup(fd), base, size, 0 , MEM_DEVICE);
-}
-#endif
-#endif // _ANDROID_
 /* ======================================================================
    FUNCTION
    omx_vdec::omx_vdec
@@ -540,9 +520,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_inp_bPopulated(OMX_FALSE),
     m_out_bPopulated(OMX_FALSE),
     m_flags(0),
-#ifdef _ANDROID_
-    m_heap_ptr(NULL),
-#endif
     m_inp_bEnabled(OMX_TRUE),
     m_out_bEnabled(OMX_TRUE),
     m_in_alloc_cnt(0),
@@ -10748,7 +10725,6 @@ OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::free_output_buffer(
 #ifdef USE_ION
     omx->free_ion_memory(&op_buf_ion_info[index]);
 #endif
-    m_heap_ptr[index].video_heap_ptr = NULL;
     if (allocated_count > 0)
         allocated_count--;
     else
@@ -10818,11 +10794,7 @@ OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::allocate_buffers_color_conve
         omx->free_ion_memory(&op_buf_ion_info[i]);
         return OMX_ErrorInsufficientResources;
     }
-    m_heap_ptr[i].video_heap_ptr = new VideoHeap (
-            op_buf_ion_info[i].ion_device_fd,buffer_size_req,
-            pmem_baseaddress[i],op_buf_ion_info[i].ion_alloc_data.handle,pmem_fd[i]);
 #endif
-    m_pmem_info_client[i].pmem_fd = (unsigned long)m_heap_ptr[i].video_heap_ptr.get();
     m_pmem_info_client[i].offset = 0;
     m_platform_entry_client[i].entry = (void *)&m_pmem_info_client[i];
     m_platform_entry_client[i].type = OMX_QCOM_PLATFORM_PRIVATE_PMEM;

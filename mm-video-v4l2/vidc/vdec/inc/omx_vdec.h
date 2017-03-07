@@ -66,7 +66,6 @@ static ptrdiff_t x;
 //#include <binder/MemoryHeapIon.h>
 //#else
 #endif
-#include <binder/MemoryHeapBase.h>
 #include <ui/ANativeObjectBase.h>
 extern "C" {
 #include <utils/Log.h>
@@ -81,6 +80,7 @@ extern "C" {
 #include <media/hardware/HardwareAPI.h>
 #endif
 
+#include <sys/mman.h>
 #include <unistd.h>
 
 #if defined (_ANDROID_ICS_)
@@ -116,28 +116,6 @@ extern "C" {
     OMX_API void * get_omx_component_factory_fn(void);
 }
 
-#ifdef _ANDROID_
-using namespace android;
-#ifdef USE_ION
-class VideoHeap : public MemoryHeapBase
-{
-    public:
-        VideoHeap(int devicefd, size_t size, void* base,ion_user_handle_t handle,int mapfd);
-        virtual ~VideoHeap() {}
-    private:
-        int m_ion_device_fd;
-        ion_user_handle_t m_ion_handle;
-};
-#else
-// local pmem heap object
-class VideoHeap : public MemoryHeapBase
-{
-    public:
-        VideoHeap(int fd, size_t size, void* base);
-        virtual ~VideoHeap() {}
-};
-#endif
-#endif // _ANDROID_
 //////////////////////////////////////////////////////////////////////////////
 //                       Module specific globals
 //////////////////////////////////////////////////////////////////////////////
@@ -881,14 +859,6 @@ class omx_vdec: public qc_omx_component
         // encapsulate the waiting states.
         unsigned int m_flags;
 
-#ifdef _ANDROID_
-        // Heap pointer to frame buffers
-        struct vidc_heap {
-            sp<MemoryHeapBase>    video_heap_ptr;
-        };
-        struct vidc_heap *m_heap_ptr;
-        unsigned int m_heap_count;
-#endif //_ANDROID_
         // store I/P PORT state
         OMX_BOOL m_inp_bEnabled;
         // store O/P PORT state
@@ -1067,10 +1037,6 @@ class omx_vdec: public qc_omx_component
 #endif
                 unsigned char *pmem_baseaddress[MAX_COUNT];
                 unsigned long pmem_fd[MAX_COUNT];
-                struct vidc_heap {
-                    sp<MemoryHeapBase>    video_heap_ptr;
-                };
-                struct vidc_heap m_heap_ptr[MAX_COUNT];
         };
 #if  defined (_MSM8960_) || defined (_MSM8974_)
         allocate_color_convert_buf client_buffers;
