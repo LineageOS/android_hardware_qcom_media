@@ -221,15 +221,6 @@ unsigned omx_video::omx_cmd_queue::get_q_msg_type()
 }
 
 
-
-#ifdef _ANDROID_
-VideoHeap::VideoHeap(int fd, size_t size, void* base)
-{
-    // dup file descriptor, map once, use pmem
-    init(dup(fd), base, size, 0 , MEM_DEVICE);
-}
-#endif // _ANDROID_
-
 /* ======================================================================
    FUNCTION
    omx_venc::omx_venc

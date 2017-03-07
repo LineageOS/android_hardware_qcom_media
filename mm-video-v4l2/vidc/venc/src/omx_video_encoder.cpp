@@ -2148,11 +2148,6 @@ OMX_ERRORTYPE  omx_venc::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
     m_cmd_q.m_read = m_cmd_q.m_write =0;
     m_etb_q.m_read = m_etb_q.m_write =0;
 
-#ifdef _ANDROID_
-    // Clear the strong reference
-    DEBUG_PRINT_HIGH("Calling m_heap_ptr.clear()");
-    m_heap_ptr.clear();
-#endif // _ANDROID_
     DEBUG_PRINT_HIGH("Calling venc_close()");
     if (handle) {
         handle->venc_close();
