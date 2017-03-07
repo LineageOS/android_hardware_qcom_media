@@ -47,7 +47,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdio.h>
 #include <sys/mman.h>
 #ifdef _ANDROID_
-#include <binder/MemoryHeapBase.h>
 #ifdef _ANDROID_ICS_
 #include "QComOMXMetadata.h"
 #endif
@@ -70,14 +69,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifdef _ANDROID_
 using namespace android;
-// local pmem heap object
-class VideoHeap : public MemoryHeapBase
-{
-    public:
-        VideoHeap(int fd, size_t size, void* base);
-        virtual ~VideoHeap() {}
-};
-
 #include <utils/Log.h>
 
 #endif // _ANDROID_
@@ -670,10 +661,6 @@ class omx_video: public qc_omx_component
         uint64_t m_flags;
         uint64_t m_etb_count;
         uint64_t m_fbd_count;
-#ifdef _ANDROID_
-        // Heap pointer to frame buffers
-        sp<MemoryHeapBase>    m_heap_ptr;
-#endif //_ANDROID_
         // to know whether Event Port Settings change has been triggered or not.
         bool m_event_port_settings_sent;
         OMX_U8                m_cRole[OMX_MAX_STRINGNAME_SIZE];
