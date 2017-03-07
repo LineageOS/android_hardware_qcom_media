@@ -22,6 +22,8 @@ LOCAL_PRELINK_MODULE:= false
 
 LOCAL_MODULE:= libdivxdrmdecrypt
 LOCAL_MODULE_TAGS := optional
+LOCAL_PROPRIETARY_MODULE := true
+LOCAL_MODULE_OWNER := qti
 
 LOCAL_SHARED_LIBRARIES	:= liblog libdl
 
