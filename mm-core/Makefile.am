@@ -10,7 +10,7 @@
 
 AM_CPPFLAGS = -D__packed__=
 AM_CPPFLAGS += -D_ANDROID_
-AM_CPPFLAGS += -D_ENABLE_QC_MSG_LOG_
+AM_CPPFLAGS += -U_ENABLE_QC_MSG_LOG_
 #AM_CPPFLAGS += -g -O3
 #AM_CPPFLAGS += -O0 -fno-inline -fno-short-enums
 AM_CPPFLAGS += -I$(top_srcdir)/mm-core/inc/
@@ -54,6 +54,14 @@ if TARGET_MSM8996
 TARGET_REGISTRY = msm8996
 endif
 
+if TARGET_MSM8909
+TARGET_REGISTRY = 8909
+endif
+
+if TARGET_MSM8937
+TARGET_REGISTRY = 8937
+endif
+
 c_sources +=src/${TARGET_REGISTRY}/registry_table_android.c
 
 lib_LTLIBRARIES = libOmxCore.la
@@ -61,8 +69,8 @@ include_HEADERS = $(h_sources)
 libOmxCore_la_SOURCES = $(c_sources)
 libOmxCore_la_CFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) -fPIC
 libOmxCore_la_CPPFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) -fPIC
-libOmxCore_la_LDFLAGS = -ldl -lrt -lpthread -lglib-2.0
-libOmxCore_la_LDFLAGS += -shared -version-info 0
+libOmxCore_la_LDFLAGS = -ldl -lrt -lpthread -lglib-2.0 -lcutils
+libOmxCore_la_LDFLAGS += -shared -avoid-version
 
 lib_LTLIBRARIES += libmm-omxcore.la
 
@@ -74,6 +82,6 @@ include_HEADERS = $(h_sources)
 libmm_omxcore_la_SOURCES = $(c_sources)
 libmm_omxcore_la_CFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) -fPIC
 libmm_omxcore_la_CPPFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) -fPIC
-libmm_omxcore_la_LDFLAGS = -ldl -lrt -lpthread -lglib-2.0
-libmm_omxcore_la_LDFLAGS += -shared -version-info 0
+libmm_omxcore_la_LDFLAGS = -ldl -lrt -lpthread -lglib-2.0 -lcutils
+libmm_omxcore_la_LDFLAGS += -shared -avoid-version
 

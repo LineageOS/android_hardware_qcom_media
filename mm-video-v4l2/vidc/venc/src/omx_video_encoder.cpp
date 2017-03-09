@@ -44,6 +44,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 extern int m_pipe;
 static int bframes;
 static int entropy;
+static int perfmode;
 static int lowlatency;
 // factory function executed by the core to create instances
 void *get_omx_component_factory_fn(void)
@@ -146,6 +147,9 @@ omx_venc::omx_venc()
     property_value[0] = '\0';
     property_get("vidc.debug.entropy", property_value, "1");
     entropy = !!atoi(property_value);
+    property_value[0] = '\0';
+    property_get("vidc.debug.perf.mode", property_value, "0");
+    perfmode = atoi(property_value);
     property_value[0] = '\0';
     handle = NULL;
     property_get("vidc.debug.lowlatency", property_value, "0");
@@ -431,6 +435,7 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
                 &m_sOutPortDef.nBufferSize,
                 m_sOutPortDef.nPortIndex) != true) {
         eRet = OMX_ErrorUndefined;
+        goto init_error;
     }
 
     // Initialize the video color format for input port
@@ -576,32 +581,52 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
         if (pipe(fds)) {
             DEBUG_PRINT_ERROR("ERROR: pipe creation failed");
             eRet = OMX_ErrorInsufficientResources;
+            goto init_error;
         } else {
             if (fds[0] == 0 || fds[1] == 0) {
                 if (pipe(fds)) {
                     DEBUG_PRINT_ERROR("ERROR: pipe creation failed");
                     eRet = OMX_ErrorInsufficientResources;
+                    goto init_error;
                 }
             }
             if (eRet == OMX_ErrorNone) {
                 m_pipe_in = fds[0];
                 m_pipe_out = fds[1];
+
+                msg_thread_created = true;
+                r = pthread_create(&msg_thread_id,0, message_thread_enc, this);
+                if (r < 0) {
+                    DEBUG_PRINT_ERROR("ERROR: message_thread_enc thread creation failed");
+                    eRet = OMX_ErrorInsufficientResources;
+                    msg_thread_created = false;
+                    goto init_error;
+                } else {
+                    async_thread_created = true;
+                    r = pthread_create(&async_thread_id,0, venc_dev::async_venc_message_thread, this);
+                    if (r < 0) {
+                        DEBUG_PRINT_ERROR("ERROR: venc_dev::async_venc_message_thread thread creation failed");
+                        eRet = OMX_ErrorInsufficientResources;
+                        async_thread_created = false;
+
+                        msg_thread_stop = true;
+                        pthread_join(msg_thread_id,NULL);
+                        msg_thread_created = false;
+
+                        goto init_error;
+                    } else
+                        dev_set_message_thread_id(async_thread_id);
+                }
             }
         }
-        msg_thread_created = true;
-        r = pthread_create(&msg_thread_id,0, message_thread_enc, this);
-        if (r < 0) {
-            eRet = OMX_ErrorInsufficientResources;
-            msg_thread_created = false;
-        } else {
-            async_thread_created = true;
-            r = pthread_create(&async_thread_id,0, venc_dev::async_venc_message_thread, this);
-            if (r < 0) {
-                eRet = OMX_ErrorInsufficientResources;
-                async_thread_created = false;
-            } else
-                dev_set_message_thread_id(async_thread_id);
-        }
+    }
+
+    if (perfmode) {
+        QOMX_EXTNINDEX_VIDEO_PERFMODE pParam;
+        pParam.nPerfMode = perfmode;
+        DEBUG_PRINT_LOW("Perfmode = 0x%x", pParam.nPerfMode);
+        if (!handle->venc_set_config(&pParam, (OMX_INDEXTYPE)OMX_QcomIndexConfigVideoVencPerfMode))
+            DEBUG_PRINT_ERROR("Failed setting PerfMode to %d", pParam.nPerfMode);
     }
 
     if (lowlatency)
@@ -1148,6 +1173,31 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 break;
 
             }
+        case OMX_GoogleAndroidIndexAllocateNativeHandle:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, AllocateNativeHandleParams);
+
+                AllocateNativeHandleParams* allocateNativeHandleParams = (AllocateNativeHandleParams *) paramData;
+
+                if (!secure_session) {
+                    DEBUG_PRINT_ERROR("Enable/Disable allocate-native-handle allowed only in secure session");
+                    eRet = OMX_ErrorUnsupportedSetting;
+                    break;
+                } else if (allocateNativeHandleParams->nPortIndex != PORT_INDEX_OUT) {
+                    DEBUG_PRINT_ERROR("Enable/Disable allocate-native-handle allowed only on Output port!");
+                    eRet = OMX_ErrorUnsupportedSetting;
+                    break;
+                } else if (m_out_mem_ptr) {
+                    DEBUG_PRINT_ERROR("Enable/Disable allocate-native-handle is not allowed since Output port is not free !");
+                    eRet = OMX_ErrorInvalidState;
+                    break;
+                }
+
+                if (allocateNativeHandleParams != NULL) {
+                    allocate_native_handle = allocateNativeHandleParams->enable;
+                }
+                break;
+            }
         case OMX_IndexParamVideoQuantization:
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_QUANTIZATIONTYPE);
@@ -1292,14 +1342,9 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                         }
                     }
                 } else if (pParam->nPortIndex == PORT_INDEX_OUT && secure_session) {
-                    if (pParam->bStoreMetaData != meta_mode_enable) {
-                        if (!handle->venc_set_meta_mode(pParam->bStoreMetaData)) {
-                            DEBUG_PRINT_ERROR("\nERROR: set Metabuffer mode %d fail",
-                                    pParam->bStoreMetaData);
+                            DEBUG_PRINT_ERROR("set_parameter: metamode is "
+                            "valid for input port only in secure session");
                             return OMX_ErrorUnsupportedSetting;
-                        }
-                        meta_mode_enable = pParam->bStoreMetaData;
-                    }
                 } else {
                     DEBUG_PRINT_ERROR("set_parameter: metamode is "
                             "valid for input port only");
@@ -1364,8 +1409,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                         break;
                     }
                 }
-
-#ifndef _MSM8974_
                 else if (pParam->nIndex == (OMX_INDEXTYPE)OMX_ExtraDataVideoLTRInfo) {
                     if (pParam->nPortIndex == PORT_INDEX_OUT) {
                         if (pParam->bEnabled == OMX_TRUE)
@@ -1380,7 +1423,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                         break;
                     }
                 }
-#endif
                 else {
                     DEBUG_PRINT_ERROR("set_parameter: unsupported extrdata index (%x)",
                             pParam->nIndex);
@@ -1725,6 +1767,16 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 VALIDATE_OMX_PARAM_DATA(paramData, QOMX_DISABLETYPE);
                 handle->venc_set_param(paramData,
                         (OMX_INDEXTYPE)OMX_QTIIndexParamDisablePQ);
+                break;
+            }
+        case OMX_QTIIndexParamIframeSizeType:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_VIDEO_IFRAMESIZE);
+                if (!handle->venc_set_param(paramData,
+                            (OMX_INDEXTYPE)OMX_QTIIndexParamIframeSizeType)) {
+                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamIframeSizeType failed");
+                    return OMX_ErrorUnsupportedSetting;
+                }
                 break;
             }
         case OMX_IndexParamVideoSliceFMO:
@@ -2464,6 +2516,10 @@ bool omx_venc::dev_get_temporal_layer_caps(OMX_U32 *nMaxLayers,
     return handle->venc_get_temporal_layer_caps(nMaxLayers, nMaxBLayers);
 }
 
+bool omx_venc::dev_get_pq_status(OMX_BOOL *pq_status) {
+    return handle->venc_get_pq_status(pq_status);
+}
+
 bool omx_venc::dev_loaded_start()
 {
     return handle->venc_loaded_start();
@@ -2621,13 +2677,22 @@ int omx_venc::async_message_process (void *context, void* message)
                                 m_sVenc_msg->buf.len);
                     }
                 } else if (omx->is_secure_session()) {
-                    output_metabuffer *meta_buf = (output_metabuffer *)(omxhdr->pBuffer);
-                    native_handle_t *nh = meta_buf->nh;
-                    nh->data[1] = m_sVenc_msg->buf.offset;
-                    nh->data[2] = m_sVenc_msg->buf.len;
-                    omxhdr->nFilledLen = sizeof(output_metabuffer);
-                    omxhdr->nTimeStamp = m_sVenc_msg->buf.timestamp;
-                    omxhdr->nFlags = m_sVenc_msg->buf.flags;
+                    if (omx->allocate_native_handle) {
+                        native_handle_t *nh = (native_handle_t *)(omxhdr->pBuffer);
+                        nh->data[1] = m_sVenc_msg->buf.offset;
+                        nh->data[2] = m_sVenc_msg->buf.len;
+                        omxhdr->nFilledLen = m_sVenc_msg->buf.len;
+                        omxhdr->nTimeStamp = m_sVenc_msg->buf.timestamp;
+                        omxhdr->nFlags = m_sVenc_msg->buf.flags;
+                    } else {
+                        output_metabuffer *meta_buf = (output_metabuffer *)(omxhdr->pBuffer);
+                        native_handle_t *nh = meta_buf->nh;
+                        nh->data[1] = m_sVenc_msg->buf.offset;
+                        nh->data[2] = m_sVenc_msg->buf.len;
+                        omxhdr->nFilledLen = sizeof(output_metabuffer);
+                        omxhdr->nTimeStamp = m_sVenc_msg->buf.timestamp;
+                        omxhdr->nFlags = m_sVenc_msg->buf.flags;
+                    }
                 } else {
                     omxhdr->nFilledLen = 0;
                 }
