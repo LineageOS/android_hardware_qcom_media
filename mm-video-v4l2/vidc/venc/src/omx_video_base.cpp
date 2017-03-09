@@ -296,6 +296,7 @@ omx_video::omx_video():
     output_use_buffer (false),
     pending_input_buffers(0),
     pending_output_buffers(0),
+    allocate_native_handle(false),
     m_out_bm_count(0),
     m_inp_bm_count(0),
     m_flags(0),
