@@ -533,6 +533,7 @@ class venc_dev
         bool venc_set_useltr(OMX_U32 frameIdx);
         bool venc_set_markltr(OMX_U32 frameIdx);
         bool venc_set_inband_video_header(OMX_BOOL enable);
+        bool venc_set_au_delimiter(OMX_BOOL enable);
         bool venc_set_hier_layers(QOMX_VIDEO_HIERARCHICALCODINGTYPE type, OMX_U32 num_layers);
         bool venc_set_vui_timing_info(OMX_BOOL enable);
         bool venc_set_peak_bitrate(OMX_U32 nPeakBitrate);

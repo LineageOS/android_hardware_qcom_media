@@ -1346,6 +1346,18 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 memcpy(&m_sPrependSPSPPS, paramData, sizeof(m_sPrependSPSPPS));
                 break;
             }
+       case OMX_QcomIndexParamAUDelimiter:
+           {
+               VALIDATE_OMX_PARAM_DATA(paramData, OMX_QCOM_VIDEO_CONFIG_AUD);
+               if(!handle->venc_set_param(paramData,
+                                          (OMX_INDEXTYPE)OMX_QcomIndexParamAUDelimiter)) {
+                   DEBUG_PRINT_ERROR("%s: %s",
+                                     "OMX_QComIndexParamAUDelimiter:",
+                                     "request for AU Delimiters failed.");
+                   return OMX_ErrorUnsupportedSetting;
+               }
+               break;
+           }
        case OMX_QcomIndexHierarchicalStructure:
            {
                 VALIDATE_OMX_PARAM_DATA(paramData, QOMX_VIDEO_HIERARCHICALLAYERS);

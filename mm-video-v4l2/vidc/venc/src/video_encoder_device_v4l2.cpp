@@ -2098,7 +2098,19 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
 
                 break;
             }
+        case OMX_QcomIndexParamAUDelimiter:
+            {
+                OMX_QCOM_VIDEO_CONFIG_AUD * pParam =
+                    (OMX_QCOM_VIDEO_CONFIG_AUD *)paramData;
 
+                DEBUG_PRINT_LOW("set AU Delimiters: %d", pParam->bEnable);
+                if(venc_set_au_delimiter(pParam->bEnable) == false) {
+                    DEBUG_PRINT_ERROR("ERROR: set AU delimiter failed");
+                    return OMX_ErrorUnsupportedSetting;
+                }
+
+                break;
+            }
         case OMX_QcomIndexConfigH264EntropyCodingCabac:
             {
                 QOMX_VIDEO_H264ENTROPYCODINGTYPE * pParam =
@@ -3963,6 +3975,25 @@ bool venc_dev::venc_set_inband_video_header(OMX_BOOL enable)
     DEBUG_PRINT_HIGH("Set inband sps/pps: %d", enable);
     if(ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control) < 0) {
         DEBUG_PRINT_ERROR("Request for inband sps/pps failed");
+        return false;
+    }
+    return true;
+}
+
+bool venc_dev::venc_set_au_delimiter(OMX_BOOL enable)
+{
+    struct v4l2_control control;
+
+    control.id = V4L2_CID_MPEG_VIDC_VIDEO_AU_DELIMITER;
+    if(enable) {
+        control.value = V4L2_MPEG_VIDC_VIDEO_AU_DELIMITER_ENABLED;
+    } else {
+        control.value = V4L2_MPEG_VIDC_VIDEO_AU_DELIMITER_DISABLED;
+    }
+
+    DEBUG_PRINT_HIGH("Set AU delimiters: %d", enable);
+    if(ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control) < 0) {
+        DEBUG_PRINT_ERROR("Request for AU delimiters failed");
         return false;
     }
     return true;
