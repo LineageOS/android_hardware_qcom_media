@@ -497,6 +497,8 @@ enum OMX_QCOM_EXTN_INDEXTYPE
 
     OMX_QcomIndexParamSetMVSearchrange = 0x7F00003C,
 
+    OMX_QcomIndexConfigPerfLevel = 0x7F00003D,
+
     /*"OMX.QCOM.index.param.video.LTRCount"*/
     OMX_QcomIndexParamVideoLTRCount = QOMX_IndexParamVideoLTRCount,
 
@@ -522,6 +524,9 @@ enum OMX_QCOM_EXTN_INDEXTYPE
 
     /* Enable VPP */
     OMX_QcomIndexParamEnableVpp = 0x7F000046,
+
+    /* MBI statistics mode */
+    OMX_QcomIndexParamMBIStatisticsMode = 0x7F000047,
 
     /* Set PictureTypeDecode */
     OMX_QcomIndexConfigPictureTypeDecode = 0x7F000048,
@@ -1025,6 +1030,34 @@ typedef struct OMX_QCOM_VIDEO_CONFIG_AUD
     OMX_VERSIONTYPE nVersion;/** OMX specification version information */
     OMX_BOOL bEnable;        /** Enable/disable the setting */
 } OMX_QCOM_VIDEO_CONFIG_AUD;
+
+typedef enum QOMX_VIDEO_PERF_LEVEL
+{
+    OMX_QCOM_PerfLevelNominal,
+    OMX_QCOM_PerfLevelTurbo
+} QOMX_VIDEO_PERF_LEVEL;
+
+/**
+  * This structure describes the parameters corresponding
+  * to OMX_QcomIndexParamPerfLevel extension. It will set
+  * the performance mode specified as QOMX_VIDEO_PERF_LEVEL.
+  */
+typedef struct OMX_QCOM_VIDEO_PARAM_PERF_LEVEL {
+    OMX_U32 nSize;                      /** Size of the structure in bytes */
+    OMX_VERSIONTYPE nVersion;           /** OMX specification version information */
+    QOMX_VIDEO_PERF_LEVEL ePerfLevel;   /** Performance level */
+} OMX_QCOM_VIDEO_PARAM_PERF_LEVEL;
+
+/**
+ * This structure describes the parameters corresponding
+ * to OMX_QcomIndexConfigPerfLevel extension. It will set
+ * the performance mode specified as QOMX_VIDEO_PERF_LEVEL.
+ */
+typedef struct OMX_QCOM_VIDEO_CONFIG_PERF_LEVEL {
+    OMX_U32 nSize;                      /** Size of the structure in bytes */
+    OMX_VERSIONTYPE nVersion;           /** OMX specification version information */
+    QOMX_VIDEO_PERF_LEVEL ePerfLevel;   /** Performance level */
+} OMX_QCOM_VIDEO_CONFIG_PERF_LEVEL;
 
 typedef enum QOMX_VIDEO_PICTURE_TYPE_DECODE
 {
@@ -1938,6 +1971,13 @@ typedef enum OMX_QOMX_VIDEO_MBISTATISTICSTYPE {
     QOMX_MBI_STATISTICS_MODE_1 = 0x01,
     QOMX_MBI_STATISTICS_MODE_2 = 0x02,
 } OMX_QOMX_VIDEO_MBISTATISTICSTYPE;
+
+typedef struct OMX_QOMX_VIDEO_MBI_STATISTICS {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    OMX_QOMX_VIDEO_MBISTATISTICSTYPE eMBIStatisticsType;
+} OMX_QOMX_VIDEO_MBI_STATISTICS;
 
 typedef struct QOMX_VIDEO_BATCHSIZETYPE {
     OMX_U32 nSize;
