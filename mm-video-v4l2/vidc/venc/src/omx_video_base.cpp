@@ -2523,7 +2523,7 @@ OMX_ERRORTYPE  omx_video::use_input_buffer(
 
         DEBUG_PRINT_LOW("use_inp:: bufhdr = %p, pBuffer = %p, m_pInput_pmem[i].buffer = %p",
                 (*bufferHdr), (*bufferHdr)->pBuffer, m_pInput_pmem[i].buffer);
-        if ( dev_use_buf(&m_pInput_pmem[i],PORT_INDEX_IN,i) != true) {
+        if (dev_use_buf(PORT_INDEX_IN) != true) {
             DEBUG_PRINT_ERROR("ERROR: dev_use_buf() Failed for i/p buf");
             return OMX_ErrorInsufficientResources;
         }
@@ -2705,7 +2705,7 @@ OMX_ERRORTYPE  omx_video::use_output_buffer(
 
             DEBUG_PRINT_LOW("use_out:: bufhdr = %p, pBuffer = %p, m_pOutput_pmem[i].buffer = %p",
                     (*bufferHdr), (*bufferHdr)->pBuffer, m_pOutput_pmem[i].buffer);
-            if (dev_use_buf(&m_pOutput_pmem[i],PORT_INDEX_OUT,i) != true) {
+            if (dev_use_buf(PORT_INDEX_OUT) != true) {
                 DEBUG_PRINT_ERROR("ERROR: dev_use_buf Failed for o/p buf");
                 return OMX_ErrorInsufficientResources;
             }
@@ -3111,7 +3111,7 @@ OMX_ERRORTYPE  omx_video::allocate_input_buffer(
         DEBUG_PRINT_LOW("Virtual address in allocate buffer is %p", m_pInput_pmem[i].buffer);
         BITMASK_SET(&m_inp_bm_count,i);
         //here change the I/P param here from buf_adr to pmem
-        if (!mUseProxyColorFormat && (dev_use_buf(&m_pInput_pmem[i],PORT_INDEX_IN,i) != true)) {
+        if (!mUseProxyColorFormat && (dev_use_buf(PORT_INDEX_IN) != true)) {
             DEBUG_PRINT_ERROR("ERROR: dev_use_buf FAILED for i/p buf");
             return OMX_ErrorInsufficientResources;
         }
@@ -3301,7 +3301,7 @@ OMX_ERRORTYPE  omx_video::allocate_output_buffer(
 
             BITMASK_SET(&m_out_bm_count,i);
 
-            if (dev_use_buf(&m_pOutput_pmem[i],PORT_INDEX_OUT,i) != true) {
+            if (dev_use_buf(PORT_INDEX_OUT) != true) {
                 DEBUG_PRINT_ERROR("ERROR: dev_use_buf FAILED for o/p buf");
                 return OMX_ErrorInsufficientResources;
             }
@@ -3752,7 +3752,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
                     Input_pmem_info.fd, Input_pmem_info.offset,
                     Input_pmem_info.size);
         }
-        if (dev_use_buf(&Input_pmem_info,PORT_INDEX_IN,nBufIndex) != true) {
+        if (dev_use_buf(PORT_INDEX_IN) != true) {
             DEBUG_PRINT_ERROR("ERROR: in dev_use_buf");
             post_event ((unsigned long)buffer,0,OMX_COMPONENT_GENERATE_EBD);
             return OMX_ErrorBadParameter;
@@ -4840,8 +4840,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
     return ret;
 }
 
-OMX_ERRORTYPE omx_video::queue_meta_buffer(OMX_HANDLETYPE hComp,
-        struct pmem &Input_pmem_info)
+OMX_ERRORTYPE omx_video::queue_meta_buffer(OMX_HANDLETYPE hComp)
 {
 
     OMX_ERRORTYPE ret = OMX_ErrorNone;
@@ -4854,7 +4853,7 @@ OMX_ERRORTYPE omx_video::queue_meta_buffer(OMX_HANDLETYPE hComp,
     }
 
     if (psource_frame->nFilledLen > 0) {
-        if (dev_use_buf(&Input_pmem_info,PORT_INDEX_IN,0) != true) {
+        if (dev_use_buf(PORT_INDEX_IN) != true) {
             DEBUG_PRINT_ERROR("ERROR: in dev_use_buf");
             post_event ((unsigned long)psource_frame,0,OMX_COMPONENT_GENERATE_EBD);
             ret = OMX_ErrorBadParameter;
@@ -4937,7 +4936,7 @@ OMX_ERRORTYPE omx_video::convert_queue_buffer(OMX_HANDLETYPE hComp,
             munmap(uva,Input_pmem_info.size);
         }
     }
-    if (dev_use_buf(&m_pInput_pmem[index],PORT_INDEX_IN,0) != true) {
+    if (dev_use_buf(PORT_INDEX_IN) != true) {
         DEBUG_PRINT_ERROR("ERROR: in dev_use_buf");
         post_event ((unsigned long)pdest_frame,0,OMX_COMPONENT_GENERATE_EBD);
         ret = OMX_ErrorBadParameter;
@@ -5007,7 +5006,7 @@ OMX_ERRORTYPE omx_video::push_input_buffer(OMX_HANDLETYPE hComp)
             DEBUG_PRINT_LOW("ETB fd = %d, offset = %d, size = %d",Input_pmem_info.fd,
                     Input_pmem_info.offset,
                     Input_pmem_info.size);
-            ret = queue_meta_buffer(hComp,Input_pmem_info);
+            ret = queue_meta_buffer(hComp);
         } else {
             VideoGrallocMetadata *media_buffer = (VideoGrallocMetadata *)psource_frame->pBuffer;
             private_handle_t *handle = (private_handle_t *)media_buffer->pHandle;
@@ -5023,7 +5022,7 @@ OMX_ERRORTYPE omx_video::push_input_buffer(OMX_HANDLETYPE hComp)
                     handle->format == QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed ||
                     handle->format == HAL_PIXEL_FORMAT_RGBA_8888 ||
                     handle->format == QOMX_COLOR_Format32bitRGBA8888Compressed)
-                ret = queue_meta_buffer(hComp,Input_pmem_info);
+                ret = queue_meta_buffer(hComp);
             else
                 ret = OMX_ErrorBadParameter;
         }
@@ -5070,7 +5069,7 @@ OMX_ERRORTYPE omx_video::push_empty_eos_buffer(OMX_HANDLETYPE hComp,
         Input_pmem_info.offset = 0;
         Input_pmem_info.size = m_pInput_pmem[index].size;
 
-        if (dev_use_buf(&Input_pmem_info, PORT_INDEX_IN, 0) != true) {
+        if (dev_use_buf(PORT_INDEX_IN) != true) {
             DEBUG_PRINT_ERROR("ERROR: in dev_use_buf for empty eos buffer");
             retVal = OMX_ErrorBadParameter;
             break;

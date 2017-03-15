@@ -324,7 +324,7 @@ class venc_dev
         unsigned venc_start_done(void);
         unsigned venc_stop_done(void);
         unsigned venc_set_message_thread_id(pthread_t);
-        bool venc_use_buf(void*, unsigned,unsigned);
+        bool allocate_extradata(unsigned);
         bool venc_free_buf(void*, unsigned);
         bool venc_empty_buf(void *, void *,unsigned,unsigned);
         bool venc_fill_buf(void *, void *,unsigned,unsigned);

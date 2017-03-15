@@ -303,7 +303,7 @@ class omx_video: public qc_omx_component
         virtual OMX_U32 dev_resume(void) = 0;
         virtual OMX_U32 dev_start_done(void) = 0;
         virtual OMX_U32 dev_set_message_thread_id(pthread_t) = 0;
-        virtual bool dev_use_buf(void *,unsigned,unsigned) = 0;
+        virtual bool dev_use_buf(unsigned) = 0;
         virtual bool dev_free_buf(void *,unsigned) = 0;
         virtual bool dev_empty_buf(void *, void *,unsigned,unsigned) = 0;
         virtual bool dev_fill_buf(void *buffer, void *,unsigned,unsigned) = 0;
@@ -590,8 +590,7 @@ class omx_video: public qc_omx_component
         OMX_ERRORTYPE push_input_buffer(OMX_HANDLETYPE hComp);
         OMX_ERRORTYPE convert_queue_buffer(OMX_HANDLETYPE hComp,
                 struct pmem &Input_pmem_info,unsigned long &index);
-        OMX_ERRORTYPE queue_meta_buffer(OMX_HANDLETYPE hComp,
-                struct pmem &Input_pmem_info);
+        OMX_ERRORTYPE queue_meta_buffer(OMX_HANDLETYPE hComp);
         OMX_ERRORTYPE push_empty_eos_buffer(OMX_HANDLETYPE hComp,
                 OMX_BUFFERHEADERTYPE *buffer);
         OMX_ERRORTYPE fill_this_buffer_proxy(OMX_HANDLETYPE hComp,
