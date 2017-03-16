@@ -50,10 +50,17 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cutils/atomic.h>
 #include <qdMetaData.h>
 #include <color_metadata.h>
+#include "VideoAPI.h"
+#include "HardwareAPI.h"
 
 static ptrdiff_t x;
 
+extern "C" {
+#include <utils/Log.h>
+}
+
 #ifdef _ANDROID_
+#undef LOG_TAG
 #define LOG_TAG "OMX-VDEC-1080P"
 
 #ifdef USE_ION
@@ -63,9 +70,6 @@ static ptrdiff_t x;
 #endif
 #include <binder/MemoryHeapBase.h>
 #include <ui/ANativeObjectBase.h>
-extern "C" {
-#include <utils/Log.h>
-}
 #include <linux/videodev2.h>
 #define VALID_TS(ts)      ((ts < LLONG_MAX)? true : false)
 #include <poll.h>
