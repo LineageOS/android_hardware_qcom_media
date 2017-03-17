@@ -213,6 +213,7 @@ typedef struct OMX_QCOM_PARAM_PORTDEFINITIONTYPE {
 
 } OMX_QCOM_PARAM_PORTDEFINITIONTYPE;
 
+//Will be removed
 typedef struct OMX_QCOM_VIDEO_PARAM_QPRANGETYPE {
     OMX_U32 nSize;
     OMX_VERSIONTYPE nVersion;
@@ -220,6 +221,25 @@ typedef struct OMX_QCOM_VIDEO_PARAM_QPRANGETYPE {
     OMX_U32 minQP;
     OMX_U32 maxQP;
 } OMX_QCOM_VIDEO_PARAM_QPRANGETYPE;
+
+typedef struct OMX_QCOM_VIDEO_CONFIG_QP {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    OMX_U32 nQP;
+} OMX_QCOM_VIDEO_CONFIG_QP;
+
+typedef struct OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    OMX_U32 minIQP;
+    OMX_U32 maxIQP;
+    OMX_U32 minPQP;
+    OMX_U32 maxPQP;
+    OMX_U32 minBQP;
+    OMX_U32 maxBQP;
+} OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE;
 
 #define OMX_QCOM_PLATFORMPVT_EXTN   "OMX.QCOM.index.param.platformprivate"
 /** Allowed APIs on the above Index: OMX_SetParameter() */
@@ -405,9 +425,6 @@ enum OMX_QCOM_EXTN_INDEXTYPE
 
     OMX_GoogleAndroidIndexGetAndroidNativeBufferUsage = 0x7F000019,
 
-    /*"OMX.QCOM.index.config.video.QPRange" */
-    OMX_QcomIndexConfigVideoQPRange = 0x7F00001A,
-
     /*"OMX.QCOM.index.param.EnableTimeStampReoder"*/
     OMX_QcomIndexParamEnableTimeStampReorder = 0x7F00001B,
 
@@ -428,7 +445,7 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     /*"OMX.QCOM.index.param.video.EnableSmoothStreaming"*/
     OMX_QcomIndexParamEnableSmoothStreaming = 0x7F000021,
 
-    /*"OMX.QCOM.index.param.video.QPRange" */
+    /*"OMX.QCOM.index.param.video.QPRange" */ //Will be removed
     OMX_QcomIndexParamVideoQPRange = 0x7F000022,
 
     OMX_QcomIndexEnableH263PlusPType = 0x7F000023,
@@ -495,6 +512,9 @@ enum OMX_QCOM_EXTN_INDEXTYPE
 
     OMX_QcomIndexParamPeakBitrate = 0x7F00003A,
 
+    /* Enable InitialQP : QOMX_EXTNINDEX_VIDEO_INITIALQP */
+    QOMX_IndexParamVideoInitialQp = 0x7F00003B,
+
     OMX_QcomIndexParamSetMVSearchrange = 0x7F00003C,
 
     OMX_QcomIndexConfigPerfLevel = 0x7F00003D,
@@ -544,6 +564,7 @@ enum OMX_QCOM_EXTN_INDEXTYPE
 
     OMX_QcomIndexParamDriverVersion = 0x7F00004F,
 
+    /* Reference : OMX_QCOM_VIDEO_CONFIG_QP */
     OMX_QcomIndexConfigQp = 0x7F000050,
 
     OMX_QcomIndexParamVencAspectRatio = 0x7F000051,
@@ -586,6 +607,9 @@ enum OMX_QCOM_EXTN_INDEXTYPE
 
     /* Configure BLUR resolution for encode */
     OMX_QTIIndexConfigVideoBlurResolution = 0x7F00005E,
+
+    /* QP range for I/P/B frames : OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE */
+    OMX_QcomIndexParamVideoIPBQPRange = 0x7F00005F,
 
     /* Enable client extradata */
     OMX_QTIIndexParamVideoClientExtradata = 0x7F000060,
@@ -702,6 +726,37 @@ typedef struct QOMX_EXTNINDEX_VIDEO_HYBRID_HP_MODE {
    OMX_U32 nMaxQuantizer;
    OMX_U32 nHpLayers;
 } QOMX_EXTNINDEX_VIDEO_HYBRID_HP_MODE;
+
+/**
+ * Initial QP parameter.  This structure is used to enable
+ * vendor specific extension to let client enable setting
+ * initial QP values to I P B Frames
+ *
+ * STRUCT MEMBERS:
+ *  nSize              : Size of Structure in bytes
+ *  nVersion           : OpenMAX IL specification version information
+ *  nPortIndex         : Index of the port to which this structure applies
+ *  OMX_U32 nQpI       : First Iframe QP
+ *  OMX_U32 nQpP       : First Pframe QP
+ *  OMX_U32 nQpB       : First Bframe QP
+ *  OMX_U32 bEnableInitQp : Bit field indicating which frame type(s) shall
+ *                             use the specified initial QP.
+ *                          Bit 0: Enable initial QP for I/IDR
+ *                                 and use value specified in nInitQpI
+ *                          Bit 1: Enable initial QP for
+ *                                 and use value specified in nInitQpP
+ *                          Bit 2: Enable initial QP for B
+ *                                 and use value specified in nInitQpB
+ */
+typedef struct QOMX_EXTNINDEX_VIDEO_INITIALQP {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    OMX_U32 nQpI;
+    OMX_U32 nQpP;
+    OMX_U32 nQpB;
+    OMX_U32 bEnableInitQp;
+} QOMX_EXTNINDEX_VIDEO_INITIALQP;
 
 /**
  * Extension index parameter.  This structure is used to enable
@@ -1001,23 +1056,6 @@ typedef struct OMX_QCOM_VIDEO_CONFIG_RANDOMINTRAREFRESHTYPE
    OMX_U32 nPortIndex;      /** Portindex which is extended by this structure */
    OMX_U32 nRirMBs;         /** The number of MBs to be set for intrarefresh */
 } OMX_QCOM_VIDEO_CONFIG_RANDOMINTRAREFRESHTYPE;
-
-
-/**
- * This structure describes the parameters corresponding to the
- * OMX_QCOM_VIDEO_CONFIG_QPRANGE extension. This parameter can be set
- * dynamically during any state except the state invalid. This is primarily
- * used for the min/max QP to be set from the application.  This
- * is set on the out port.
- */
-typedef struct OMX_QCOM_VIDEO_CONFIG_QPRANGE
-{
-   OMX_U32 nSize;           /** Size of the structure in bytes */
-   OMX_VERSIONTYPE nVersion;/** OMX specification version information */
-   OMX_U32 nPortIndex;      /** Portindex which is extended by this structure */
-   OMX_U32 nMinQP;          /** The number for minimum quantization parameter */
-   OMX_U32 nMaxQP;          /** The number for maximum quantization parameter */
-} OMX_QCOM_VIDEO_CONFIG_QPRANGE;
 
 /**
  * This structure describes the parameters for the
