@@ -176,13 +176,13 @@ typedef enum OMX_QCOMFramePackingFormat
   OMX_QCOM_FramePacking_Arbitrary,
 
   /*  2 - Multiple complete frames per buffer (integer number)
-   *  OMX IL 1.1.1 Figure 2-11: Case 2—Each Buffer Filled with
+   *  OMX IL 1.1.1 Figure 2-11: Case 2-Each Buffer Filled with
    *  Only Complete Frames of Data
    */
   OMX_QCOM_FramePacking_CompleteFrames,
 
   /*  3 - Only one complete frame per buffer, no partial frame
-   *  OMX IL 1.1.1 Figure 2-12: Case 3—Each Buffer Filled with
+   *  OMX IL 1.1.1 Figure 2-12: Case 3-Each Buffer Filled with
    *  Only One Frame of Compressed Data. Usually at least one
    *  complete unit of data will be delivered in a buffer for
    *  uncompressed data formats.
@@ -517,6 +517,7 @@ enum OMX_QCOM_EXTN_INDEXTYPE
 
     OMX_QcomIndexParamSetMVSearchrange = 0x7F00003C,
 
+    /* Note: This will get deprecated */
     OMX_QcomIndexConfigPerfLevel = 0x7F00003D,
 
     /*"OMX.QCOM.index.param.video.LTRCount"*/
@@ -594,6 +595,7 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     OMX_QTIIndexConfigVideoRoiInfo = 0x7F000059,
 
     /* Encoder Low Latency mode */
+    /* Note: This will get deprecated */
     OMX_QcomIndexConfigVideoVencLowLatencyMode = 0x7F00005A,
 
     /* Set Low Latency Mode */
@@ -643,6 +645,29 @@ enum OMX_QCOM_EXTN_INDEXTYPE
 
 /**
 * This is custom extension to configure Low Latency Mode.
+*
+* STRUCT MEMBERS
+*
+* nSize         : Size of Structure in bytes
+* nVersion      : OpenMAX IL specification version information
+* bEnableLowLatencyMode   : Enable/Disable Low Latency mode
+* nNumFrames    : Latency in terms of num of frames
+*                 0: Minimum possible latency,
+*                 n: n-frame latency
+*                 Valid when bEnableLowLatencyMode is TRUE
+*/
+
+typedef struct QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE
+{
+   OMX_U32 nSize;
+   OMX_VERSIONTYPE nVersion;
+   OMX_BOOL bEnableLowLatencyMode;
+   OMX_U32  nNumFrames;
+} QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE;
+
+/**
+* This is custom extension to configure Low Latency Mode.
+* Note: This struct will get deprecated.
 *
 * STRUCT MEMBERS
 *
@@ -1069,6 +1094,9 @@ typedef struct OMX_QCOM_VIDEO_CONFIG_AUD
     OMX_BOOL bEnable;        /** Enable/disable the setting */
 } OMX_QCOM_VIDEO_CONFIG_AUD;
 
+/**
+ * Note: This will get deprecated
+ */
 typedef enum QOMX_VIDEO_PERF_LEVEL
 {
     OMX_QCOM_PerfLevelNominal,
@@ -1079,6 +1107,7 @@ typedef enum QOMX_VIDEO_PERF_LEVEL
   * This structure describes the parameters corresponding
   * to OMX_QcomIndexParamPerfLevel extension. It will set
   * the performance mode specified as QOMX_VIDEO_PERF_LEVEL.
+  * Note: This will get deprecated
   */
 typedef struct OMX_QCOM_VIDEO_PARAM_PERF_LEVEL {
     OMX_U32 nSize;                      /** Size of the structure in bytes */
@@ -1090,6 +1119,7 @@ typedef struct OMX_QCOM_VIDEO_PARAM_PERF_LEVEL {
  * This structure describes the parameters corresponding
  * to OMX_QcomIndexConfigPerfLevel extension. It will set
  * the performance mode specified as QOMX_VIDEO_PERF_LEVEL.
+ * Note: This will get deprecated
  */
 typedef struct OMX_QCOM_VIDEO_CONFIG_PERF_LEVEL {
     OMX_U32 nSize;                      /** Size of the structure in bytes */
