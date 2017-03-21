@@ -8113,7 +8113,11 @@ bool venc_dev::venc_check_for_pq(void)
         (m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) <=
         (m_pq.caps.max_mb_per_sec / ((m_sVenc_cfg.input_height * m_sVenc_cfg.input_width) / 256));
 
+#ifdef QLE_BUILD
     frame_rate_supported = (((operating_rate >> 16) > 0) && ((operating_rate >> 16) < 5)) ? false : frame_rate_supported;
+#else
+    frame_rate_supported = (((operating_rate >> 16) > 0) && (((operating_rate >> 16) < 5) || ((operating_rate >> 16) >= 120))) ? false : frame_rate_supported;
+#endif
 
     yuv_format_supported = ((m_sVenc_cfg.inputformat == V4L2_PIX_FMT_NV12 && (m_pq.caps.color_formats & BIT(COLOR_FMT_NV12)))
             || (m_sVenc_cfg.inputformat == V4L2_PIX_FMT_NV21 && (m_pq.caps.color_formats & BIT(COLOR_FMT_NV21)))
