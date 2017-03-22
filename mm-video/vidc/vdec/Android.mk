@@ -77,6 +77,7 @@ libmm-vdec-inc          += $(call project-path-for,qcom-display)/libqdutils
 
 LOCAL_MODULE                    := libOmxVdec
 LOCAL_MODULE_TAGS               := optional
+LOCAL_PROPRIETARY_MODULE        := true
 LOCAL_CFLAGS                    := $(libOmxVdec-def)
 LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 
