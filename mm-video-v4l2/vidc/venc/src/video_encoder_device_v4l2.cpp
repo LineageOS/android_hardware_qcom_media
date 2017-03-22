@@ -2009,7 +2009,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                     (OMX_VIDEO_PARAM_INTRAREFRESHTYPE *)paramData;
 
                 if (intra_refresh->nPortIndex == (OMX_U32) PORT_INDEX_OUT) {
-                    if (venc_set_intra_refresh(intra_refresh->eRefreshMode) == false) {
+                    if (venc_set_intra_refresh(intra_refresh->eRefreshMode, intra_refresh->nCirMBs) == false) {
                         DEBUG_PRINT_ERROR("ERROR: Setting Intra refresh failed");
                         return false;
                     }
@@ -2636,8 +2636,18 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
 #ifdef SUPPORT_CONFIG_INTRA_REFRESH
         case OMX_IndexConfigAndroidIntraRefresh:
             {
+                OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE *intra_refresh = (OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE *)configData;
+                DEBUG_PRINT_LOW("OMX_IndexConfigAndroidIntraRefresh : num frames = %d", intra_refresh->nRefreshPeriod);
+
                 if (intra_refresh->nPortIndex == (OMX_U32) PORT_INDEX_OUT) {
-                    if (venc_set_intra_refresh(OMX_VIDEO_IntraRefreshRandom) == false) {
+                    OMX_U32 mb_size = m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC ? 32 : 16;
+                    OMX_U32 num_mbs_per_frame = (ALIGN(m_sVenc_cfg.dvs_height, mb_size)/mb_size) * (ALIGN(m_sVenc_cfg.dvs_width, mb_size)/mb_size);
+                    OMX_U32 num_intra_refresh_mbs = 0;
+                    if (intra_refresh->nRefreshPeriod) {
+                        num_intra_refresh_mbs = ceil(num_mbs_per_frame / intra_refresh->nRefreshPeriod);
+                    }
+
+                    if (venc_set_intra_refresh(OMX_VIDEO_IntraRefreshRandom, num_intra_refresh_mbs) == false) {
                         DEBUG_PRINT_ERROR("ERROR: Setting Intra refresh failed");
                         return false;
                     }
@@ -4888,20 +4898,24 @@ bool venc_dev::venc_set_multislice_cfg(OMX_INDEXTYPE Codec, OMX_U32 nSlicesize) 
     return status;
 }
 
-bool venc_dev::venc_set_intra_refresh(OMX_VIDEO_INTRAREFRESHTYPE ir_mode)
+bool venc_dev::venc_set_intra_refresh(OMX_VIDEO_INTRAREFRESHTYPE ir_mode, OMX_U32 irMBs)
 {
     bool status = true;
     int rc;
-    struct v4l2_control control_mode;
-    control_mode.id = V4L2_CID_MPEG_VIDC_VIDEO_INTRA_REFRESH_MODE;
+    struct v4l2_control control_mode, control_mbs;
+    control_mode.id   = V4L2_CID_MPEG_VIDC_VIDEO_INTRA_REFRESH_MODE;
+    control_mbs.id    = V4L2_CID_MPEG_VIDC_VIDEO_IR_MBS;
+    control_mbs.value = 0;
     // There is no disabled mode.  Disabled mode is indicated by a 0 count.
-    if (ir_mode == OMX_VIDEO_IntraRefreshMax) {
+    if (ir_mode == OMX_VIDEO_IntraRefreshMax || irMBs == 0) {
         control_mode.value = V4L2_CID_MPEG_VIDC_VIDEO_INTRA_REFRESH_NONE;
         return status;
     } else if (ir_mode == OMX_VIDEO_IntraRefreshCyclic) {
         control_mode.value = V4L2_CID_MPEG_VIDC_VIDEO_INTRA_REFRESH_CYCLIC;
+        control_mbs.value  = irMBs;
     } else if (ir_mode == OMX_VIDEO_IntraRefreshRandom) {
         control_mode.value = V4L2_CID_MPEG_VIDC_VIDEO_INTRA_REFRESH_RANDOM;
+        control_mbs.value  = irMBs;
     } else {
         DEBUG_PRINT_ERROR("ERROR: Invalid IntraRefresh Parameters:"
                 " mb mode:%d", ir_mode);
@@ -4918,7 +4932,18 @@ bool venc_dev::venc_set_intra_refresh(OMX_VIDEO_INTRAREFRESHTYPE ir_mode)
 
     DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control_mode.id, control_mode.value);
 
-    intra_refresh.irmode = control_mode.value;
+    DEBUG_PRINT_LOW("Calling IOCTL set control for id=%u, val=%d", control_mbs.id, control_mbs.value);
+    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control_mbs);
+
+    if (rc) {
+        DEBUG_PRINT_ERROR("Failed to set control");
+        return false;
+    }
+
+    DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control_mbs.id, control_mbs.value);
+
+    intra_refresh.irmode  = control_mode.value;
+    intra_refresh.mbcount = control_mbs.value;
 
     return status;
 }
