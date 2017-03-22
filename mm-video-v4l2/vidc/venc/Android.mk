@@ -96,6 +96,7 @@ libmm-venc-inc      += $(venc-inc)
 
 LOCAL_MODULE                    := libOmxVenc
 LOCAL_MODULE_TAGS               := optional
+LOCAL_PROPRIETARY_MODULE        := true
 LOCAL_CFLAGS                    := $(libmm-venc-def)
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 

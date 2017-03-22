@@ -128,6 +128,7 @@ endif
 
 LOCAL_MODULE                    := libOmxVdec
 LOCAL_MODULE_TAGS               := optional
+LOCAL_PROPRIETARY_MODULE        := true
 LOCAL_CFLAGS                    := $(libOmxVdec-def)
 LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 
@@ -168,6 +169,7 @@ ifeq ($(call is-board-platform-in-list,msm8974 msm8610 apq8084 mpq8092 msm8226),
 
 LOCAL_MODULE                    := libOmxVdecHevc
 LOCAL_MODULE_TAGS               := optional
+LOCAL_PROPRIETARY_MODULE        := true
 LOCAL_CFLAGS                    := $(libOmxVdec-def)
 LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 
