@@ -31,6 +31,7 @@ LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 LOCAL_MODULE                    := libOmxVidcCommon
 LOCAL_MODULE_TAGS               := optional
+LOCAL_PROPRIETARY_MODULE        := true
 LOCAL_CFLAGS                    := $(libmm-vidc-def)
 LOCAL_C_INCLUDES                := $(libmm-vidc-inc)
 
