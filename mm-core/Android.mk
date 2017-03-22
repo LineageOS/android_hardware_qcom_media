@@ -64,6 +64,7 @@ LOCAL_C_INCLUDES        := $(LOCAL_PATH)/src/common
 LOCAL_C_INCLUDES        += $(LOCAL_PATH)/inc
 LOCAL_MODULE            := libOmxCore
 LOCAL_MODULE_TAGS       := optional
+LOCAL_PROPRIETARY_MODULE:= true
 LOCAL_SHARED_LIBRARIES  := liblog libdl
 LOCAL_CFLAGS            := $(OMXCORE_CFLAGS)
 
@@ -83,6 +84,7 @@ LOCAL_C_INCLUDES        := $(LOCAL_PATH)/src/common
 LOCAL_C_INCLUDES        += $(LOCAL_PATH)/inc
 LOCAL_MODULE            := libmm-omxcore
 LOCAL_MODULE_TAGS       := optional
+LOCAL_PROPRIETARY_MODULE:= true
 LOCAL_SHARED_LIBRARIES  := liblog libdl
 LOCAL_CFLAGS            := $(OMXCORE_CFLAGS)
 
