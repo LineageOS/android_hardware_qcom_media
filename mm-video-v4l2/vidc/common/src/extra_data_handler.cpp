@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2017, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -551,5 +551,33 @@ OMX_U32 extra_data_handler::create_extra_data(OMX_BUFFERHEADERTYPE *buf_hdr)
     }
 
     return 1;
+}
+
+
+IvfFileHeader:: IvfFileHeader() :
+    signature{'D','K','I','F'},
+    version(),
+    size(32),
+    fourCC{'V','P','8','0'},
+    unused()
+{
+}
+
+IvfFileHeader:: IvfFileHeader(bool isVp9, int width, int height,
+                    int rate, int scale, int frameCount) :
+    IvfFileHeader() {
+    this->width = width;
+    this->height = height;
+    this->rate = rate;
+    this->scale = scale;
+    this->frameCount = frameCount;
+    fourCC[2] = isVp9 ? '9' : '8';
+}
+
+IvfFrameHeader:: IvfFrameHeader(): filledLen(), timeStamp() {}
+
+IvfFrameHeader:: IvfFrameHeader(uint32_t filledLen, uint64_t timeStamp) :
+    filledLen(filledLen),
+    timeStamp(timeStamp) {
 }
 
