@@ -289,7 +289,7 @@ struct extradata_buffer_info {
     enum v4l2_ports port_index;
 #ifdef USE_ION
     struct venc_ion ion;
-    unsigned int m_ion_dev;
+    int m_ion_dev;
 #endif
     bool vqzip_sei_found;
 };
