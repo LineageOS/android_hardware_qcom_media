@@ -5506,9 +5506,6 @@ OMX_ERRORTYPE  omx_vdec::use_output_buffer(
     OMX_PTR privateAppData = NULL;
     private_handle_t *handle = NULL;
     OMX_U8 *buff = buffer;
-    struct v4l2_buffer buf;
-    struct v4l2_plane plane[VIDEO_MAX_PLANES];
-    int extra_idx = 0;
     (void) hComp;
     (void) port;
 
@@ -5709,42 +5706,6 @@ OMX_ERRORTYPE  omx_vdec::use_output_buffer(
         *bufferHdr = (m_out_mem_ptr + i );
         if (secure_mode)
             drv_ctx.ptr_outputbuffer[i].bufferaddr = *bufferHdr;
-        //setbuffers.buffer_type = VDEC_BUFFER_TYPE_OUTPUT;
-
-        DEBUG_PRINT_HIGH("Set the Output Buffer Idx: %d Addr: %p, pmem_fd=0x%x", i,
-                drv_ctx.ptr_outputbuffer[i].bufferaddr,
-                drv_ctx.ptr_outputbuffer[i].pmem_fd );
-
-        buf.index = i;
-        buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-        buf.memory = V4L2_MEMORY_USERPTR;
-        plane[0].length = drv_ctx.op_buf.buffer_size;
-        plane[0].m.userptr = (unsigned long)drv_ctx.ptr_outputbuffer[i].bufferaddr -
-            (unsigned long)drv_ctx.ptr_outputbuffer[i].offset;
-        plane[0].reserved[0] = drv_ctx.ptr_outputbuffer[i].pmem_fd;
-        plane[0].reserved[1] = drv_ctx.ptr_outputbuffer[i].offset;
-        plane[0].data_offset = 0;
-        extra_idx = EXTRADATA_IDX(drv_ctx.num_planes);
-        if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
-            plane[extra_idx].length = drv_ctx.extradata_info.buffer_size;
-            plane[extra_idx].m.userptr = (long unsigned int) (drv_ctx.extradata_info.uaddr + i * drv_ctx.extradata_info.buffer_size);
-#ifdef USE_ION
-            plane[extra_idx].reserved[0] = drv_ctx.extradata_info.ion.fd_ion_data.fd;
-#endif
-            plane[extra_idx].reserved[1] = i * drv_ctx.extradata_info.buffer_size;
-            plane[extra_idx].data_offset = 0;
-        } else if  (extra_idx >= VIDEO_MAX_PLANES) {
-            DEBUG_PRINT_ERROR("Extradata index is more than allowed: %d", extra_idx);
-            return OMX_ErrorBadParameter;
-        }
-        buf.m.planes = plane;
-        buf.length = drv_ctx.num_planes;
-
-        if (ioctl(drv_ctx.video_driver_fd, VIDIOC_PREPARE_BUF, &buf)) {
-            DEBUG_PRINT_ERROR("Failed to prepare bufs");
-            /*TODO: How to handle this case */
-            return OMX_ErrorInsufficientResources;
-        }
 
         if (i == (drv_ctx.op_buf.actualcount -1) && !streaming[CAPTURE_PORT]) {
             enum v4l2_buf_type buf_type;
@@ -6189,8 +6150,6 @@ OMX_ERRORTYPE  omx_vdec::allocate_input_buffer(
     }
 
     if (i < drv_ctx.ip_buf.actualcount) {
-        struct v4l2_buffer buf;
-        struct v4l2_plane plane;
         int rc;
         DEBUG_PRINT_LOW("Allocate input Buffer");
 #ifdef USE_ION
@@ -6250,30 +6209,6 @@ OMX_ERRORTYPE  omx_vdec::allocate_input_buffer(
         drv_ctx.ptr_inputbuffer [i].buffer_len = drv_ctx.ip_buf.buffer_size;
         drv_ctx.ptr_inputbuffer [i].mmaped_size = drv_ctx.ip_buf.buffer_size;
         drv_ctx.ptr_inputbuffer [i].offset = 0;
-
-
-        buf.index = i;
-        buf.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
-        buf.memory = V4L2_MEMORY_USERPTR;
-        plane.bytesused = 0;
-        plane.length = drv_ctx.ptr_inputbuffer [i].mmaped_size;
-        plane.m.userptr = (unsigned long)drv_ctx.ptr_inputbuffer[i].bufferaddr;
-        plane.reserved[0] =drv_ctx.ptr_inputbuffer [i].pmem_fd;
-        plane.reserved[1] = 0;
-        plane.data_offset = drv_ctx.ptr_inputbuffer[i].offset;
-        buf.m.planes = &plane;
-        buf.length = 1;
-
-        DEBUG_PRINT_LOW("Set the input Buffer Idx: %d Addr: %p", i,
-                drv_ctx.ptr_inputbuffer[i].bufferaddr);
-
-        rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_PREPARE_BUF, &buf);
-
-        if (rc) {
-            DEBUG_PRINT_ERROR("Failed to prepare bufs");
-            /*TODO: How to handle this case */
-            return OMX_ErrorInsufficientResources;
-        }
 
         input = *bufferHdr;
         BITMASK_SET(&m_inp_bm_count,i);
@@ -6336,7 +6271,6 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
     OMX_BUFFERHEADERTYPE       *bufHdr= NULL; // buffer header
     unsigned                         i= 0; // Temporary counter
-    int extra_idx = 0;
 #ifdef USE_ION
     int ion_device_fd =-1;
     struct ion_allocation_data ion_alloc_data;
@@ -6562,8 +6496,6 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
 
     if (eRet == OMX_ErrorNone) {
         if (i < drv_ctx.op_buf.actualcount) {
-            struct v4l2_buffer buf;
-            struct v4l2_plane plane[VIDEO_MAX_PLANES];
             int rc;
             m_pmem_info[i].offset = drv_ctx.ptr_outputbuffer[i].offset;
 
@@ -6580,39 +6512,6 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
 #endif
             }
             drv_ctx.ptr_outputbuffer[i].mmaped_size = drv_ctx.op_buf.buffer_size;
-
-            buf.index = i;
-            buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-            buf.memory = V4L2_MEMORY_USERPTR;
-            plane[0].length = drv_ctx.op_buf.buffer_size;
-            plane[0].m.userptr = (unsigned long)drv_ctx.ptr_outputbuffer[i].bufferaddr -
-                (unsigned long)drv_ctx.ptr_outputbuffer[i].offset;
-#ifdef USE_ION
-            plane[0].reserved[0] = drv_ctx.op_buf_ion_info[i].fd_ion_data.fd;
-#endif
-            plane[0].reserved[1] = drv_ctx.ptr_outputbuffer[i].offset;
-            plane[0].data_offset = 0;
-            extra_idx = EXTRADATA_IDX(drv_ctx.num_planes);
-            if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
-                plane[extra_idx].length = drv_ctx.extradata_info.buffer_size;
-                plane[extra_idx].m.userptr = (long unsigned int) (drv_ctx.extradata_info.uaddr + i * drv_ctx.extradata_info.buffer_size);
-#ifdef USE_ION
-                plane[extra_idx].reserved[0] = drv_ctx.extradata_info.ion.fd_ion_data.fd;
-#endif
-                plane[extra_idx].reserved[1] = i * drv_ctx.extradata_info.buffer_size;
-                plane[extra_idx].data_offset = 0;
-            } else if (extra_idx >= VIDEO_MAX_PLANES) {
-                DEBUG_PRINT_ERROR("Extradata index higher than allowed: %d", extra_idx);
-                return OMX_ErrorBadParameter;
-            }
-            buf.m.planes = plane;
-            buf.length = drv_ctx.num_planes;
-            DEBUG_PRINT_LOW("Set the Output Buffer Idx: %d Addr: %p", i, drv_ctx.ptr_outputbuffer[i].bufferaddr);
-            rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_PREPARE_BUF, &buf);
-            if (rc) {
-                /*TODO: How to handle this case */
-                return OMX_ErrorInsufficientResources;
-            }
 
             if (i == (drv_ctx.op_buf.actualcount -1 ) && !streaming[CAPTURE_PORT]) {
                 enum v4l2_buf_type buf_type;

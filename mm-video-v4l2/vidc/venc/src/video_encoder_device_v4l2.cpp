@@ -142,6 +142,8 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     hw_overload = false;
     mBatchSize = 0;
     deinterlace_enabled = false;
+    m_roi_enabled = false;
+    pthread_mutex_init(&m_roilock, NULL);
     pthread_mutex_init(&pause_resume_mlock, NULL);
     pthread_cond_init(&pause_resume_cond, NULL);
     memset(&input_extradata_info, 0, sizeof(input_extradata_info));
@@ -175,7 +177,6 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     memset(&ltrinfo, 0, sizeof(ltrinfo));
     memset(&fd_list, 0, sizeof(fd_list));
     memset(&hybrid_hp, 0, sizeof(hybrid_hp));
-    memset(&roi, 0, sizeof(roi));
     sess_priority.priority = 1;
     operating_rate = 0;
     memset(&color_space, 0x0, sizeof(color_space));
@@ -227,7 +228,18 @@ venc_dev::venc_dev(class omx_venc *venc_class)
 
 venc_dev::~venc_dev()
 {
-    //nothing to do
+    if (m_roi_enabled) {
+        std::list<roidata>::iterator iter;
+        pthread_mutex_lock(&m_roilock);
+        for (iter = m_roilist.begin(); iter != m_roilist.end(); iter++) {
+            DEBUG_PRINT_HIGH("roidata with timestamp (%lld) should have been removed already",
+                iter->timestamp);
+            free(iter->info.pRoiMBInfo);
+        }
+        m_roilist.clear();
+        pthread_mutex_unlock(&m_roilock);
+    }
+    pthread_mutex_destroy(&m_roilock);
 }
 
 void* venc_dev::async_venc_message_thread (void *input)
@@ -503,6 +515,48 @@ static OMX_ERRORTYPE subscribe_to_events(int fd)
     return eRet;
 }
 
+void venc_dev::get_roi_for_timestamp(struct roidata &roi, OMX_TICKS timestamp)
+{
+    std::list<roidata>::iterator iter;
+    bool found = false;
+
+    memset(&roi, 0, sizeof(struct roidata));
+    roi.dirty = false;
+
+    /*
+     * look for the roi data which has timestamp nearest and
+     * lower than the etb timestamp, we should not take the
+     * roi data which has the timestamp greater than etb timestamp.
+     */
+    pthread_mutex_lock(&m_roilock);
+    iter = m_roilist.begin();
+    while (iter != m_roilist.end()) {
+        if (iter->timestamp <= timestamp) {
+            if (found) {
+                /* we found roidata in previous iteration already and got another
+                 * roidata in this iteration, so we will use this iteration's
+                 * roidata and free the previous roidata which is no longer used.
+                 */
+                DEBUG_PRINT_LOW("freeing unused roidata with timestamp %lld us", roi.timestamp);
+                free(roi.info.pRoiMBInfo);
+            }
+            found = true;
+            roi = *iter;
+            /* we got roidata so erase the elment in the roi list.
+             * after list erase iterator will point to next element
+             * so we don't need to increment iter after erase.
+             */
+            iter = m_roilist.erase(iter);
+        } else {
+            iter++;
+        }
+    }
+    if (found) {
+        DEBUG_PRINT_LOW("found roidata with timestamp %lld us", roi.timestamp);
+    }
+    pthread_mutex_unlock(&m_roilock);
+}
+
 int venc_dev::append_mbi_extradata(void *dst, struct msm_vidc_extradata_header* src)
 {
     OMX_QCOM_EXTRADATA_MBINFO *mbi = (OMX_QCOM_EXTRADATA_MBINFO *)dst;
@@ -675,6 +729,13 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
        *     By this time if client sets next ROI, then we shouldn't process new ROI here.
        */
 
+    struct roidata roi;
+    memset(&roi, 0, sizeof(struct roidata));
+    roi.dirty = false;
+    if (m_roi_enabled) {
+        get_roi_for_timestamp(roi, nTimeStamp);
+    }
+
 #ifdef _PQ_
     pthread_mutex_lock(&m_pq.lock);
     if (m_pq.is_pq_enabled) {
@@ -687,32 +748,33 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
             roiData->mbi_info_size = roi.info.nRoiMBInfoSize;
             DEBUG_PRINT_HIGH("Using PQ + ROI QP map: Enable = %d", roiData->b_roi_info);
             memcpy(roiData->data, roi.info.pRoiMBInfo, roi.info.nRoiMBInfoSize);
-            roi.dirty = false;
         }
         filled_len += sizeof(msm_vidc_extradata_header) - sizeof(unsigned int);
         data->nDataSize = m_pq.fill_pq_stats(buf, filled_len);
         data->nSize = ALIGN(sizeof(msm_vidc_extradata_header) +  data->nDataSize, 4);
         data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_PQ_INFO;
+        data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
     } else {
-        data->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) +
-                sizeof(struct msm_vidc_roi_qp_payload) +
-                roi.info.nRoiMBInfoSize - 2 * sizeof(unsigned int), 4);
-        data->nVersion.nVersion = OMX_SPEC_VERSION;
-        data->nPortIndex = 0;
-        data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_ROI_QP;
-        data->nDataSize = sizeof(struct msm_vidc_roi_qp_payload);
-        struct msm_vidc_roi_qp_payload *roiData =
-                (struct msm_vidc_roi_qp_payload *)(data->data);
-        roiData->upper_qp_offset = roi.info.nUpperQpOffset;
-        roiData->lower_qp_offset = roi.info.nLowerQpOffset;
-        roiData->b_roi_info = roi.info.bUseRoiInfo;
-        roiData->mbi_info_size = roi.info.nRoiMBInfoSize;
-        DEBUG_PRINT_HIGH("Using ROI QP map: Enable = %d", roiData->b_roi_info);
-        memcpy(roiData->data, roi.info.pRoiMBInfo, roi.info.nRoiMBInfoSize);
-        roi.dirty = false;
+        if (roi.dirty) {
+            data->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) +
+                    sizeof(struct msm_vidc_roi_qp_payload) +
+                    roi.info.nRoiMBInfoSize - 2 * sizeof(unsigned int), 4);
+            data->nVersion.nVersion = OMX_SPEC_VERSION;
+            data->nPortIndex = 0;
+            data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_ROI_QP;
+            data->nDataSize = sizeof(struct msm_vidc_roi_qp_payload);
+            struct msm_vidc_roi_qp_payload *roiData =
+                    (struct msm_vidc_roi_qp_payload *)(data->data);
+            roiData->upper_qp_offset = roi.info.nUpperQpOffset;
+            roiData->lower_qp_offset = roi.info.nLowerQpOffset;
+            roiData->b_roi_info = roi.info.bUseRoiInfo;
+            roiData->mbi_info_size = roi.info.nRoiMBInfoSize;
+            DEBUG_PRINT_HIGH("Using ROI QP map: Enable = %d", roiData->b_roi_info);
+            memcpy(roiData->data, roi.info.pRoiMBInfo, roi.info.nRoiMBInfoSize);
+            data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
+        }
     }
     pthread_mutex_unlock(&m_pq.lock);
-    data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
 #else // _PQ_
     if (roi.dirty) {
         data->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) +
@@ -730,10 +792,17 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
         roiData->mbi_info_size = roi.info.nRoiMBInfoSize;
         DEBUG_PRINT_HIGH("Using ROI QP map: Enable = %d", roiData->b_roi_info);
         memcpy(roiData->data, roi.info.pRoiMBInfo, roi.info.nRoiMBInfoSize);
-        roi.dirty = false;
         data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
     }
 #endif // _PQ_
+
+    if (m_roi_enabled) {
+        if (roi.dirty) {
+            DEBUG_PRINT_LOW("free roidata with timestamp %lld us", roi.timestamp);
+            free(roi.info.pRoiMBInfo);
+            roi.dirty = false;
+        }
+    }
 
 #ifdef _VQZIP_
     if (vqzip_sei_info.enabled && !input_extradata_info.vqzip_sei_found) {
@@ -2251,6 +2320,12 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
         case OMX_QTIIndexParamVideoEnableRoiInfo:
             {
                 struct v4l2_control control;
+                OMX_QTI_VIDEO_PARAM_ENABLE_ROIINFO *pParam =
+                    (OMX_QTI_VIDEO_PARAM_ENABLE_ROIINFO *)paramData;
+                if (pParam->bEnableRoiInfo == OMX_FALSE) {
+                    DEBUG_PRINT_INFO("OMX_QTIIndexParamVideoEnableRoiInfo: bEnableRoiInfo is false");
+                    break;
+                }
                 if (m_sVenc_cfg.codectype != V4L2_PIX_FMT_H264 &&
                         m_sVenc_cfg.codectype != V4L2_PIX_FMT_HEVC) {
                     DEBUG_PRINT_ERROR("OMX_QTIIndexParamVideoEnableRoiInfo is not supported for %lu codec", m_sVenc_cfg.codectype);
@@ -2263,6 +2338,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                     DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamVideoEnableRoiInfo failed");
                     return OMX_ErrorUnsupportedSetting;
                 }
+                m_roi_enabled = true;
 #ifdef _PQ_
                 m_pq.pConfig.a_qp.roi_enabled = (OMX_U32)true;
                 allocate_extradata(&m_pq.roi_extradata_info, ION_FLAG_CACHED);
@@ -3081,10 +3157,9 @@ void venc_dev::venc_config_print()
 
     DEBUG_PRINT_HIGH("ENC_CONFIG: Session Priority: %u", sess_priority.priority);
 
+    DEBUG_PRINT_HIGH("ENC_CONFIG: ROI : %u", m_roi_enabled);
 #ifdef _PQ_
     DEBUG_PRINT_HIGH("ENC_CONFIG: Adaptive QP (PQ): %u", m_pq.is_pq_enabled);
-
-    DEBUG_PRINT_HIGH("ENC_CONFIG: ROI : %u", m_pq.pConfig.a_qp.roi_enabled);
 #endif // _PQ_
 
     DEBUG_PRINT_HIGH("ENC_CONFIG: Operating Rate: %u", operating_rate);
@@ -3114,106 +3189,43 @@ bool venc_dev::venc_reconfig_reqbufs()
 }
 
 //allocating I/P memory from pmem and register with the device
-
-bool venc_dev::venc_use_buf(void *buf_addr, unsigned port,unsigned index)
+bool venc_dev::allocate_extradata(unsigned port)
 {
-
-    struct pmem *pmem_tmp;
-    struct v4l2_buffer buf;
-    struct v4l2_plane plane[VIDEO_MAX_PLANES];
     int rc = 0;
-    unsigned int extra_idx;
-    int extradata_index = 0;
+    unsigned int extra_idx = 0;
 
-    pmem_tmp = (struct pmem *)buf_addr;
-    DEBUG_PRINT_LOW("venc_use_buf:: pmem_tmp = %p", pmem_tmp);
-
-    if (port == PORT_INDEX_IN) {
-        extra_idx = EXTRADATA_IDX(num_input_planes);
-
-        if ((num_input_planes > 1) && (extra_idx)) {
-            rc = allocate_extradata(&input_extradata_info, ION_FLAG_CACHED);
-
-            if (rc)
-                DEBUG_PRINT_ERROR("Failed to allocate extradata: %d\n", rc);
+    // PORT_INDEX_IN = 0
+    // PORT_INDEX_OUT = 1
+    struct port_info_s {
+        int num_planes;
+        struct extradata_buffer_info *extradata_info;
+        int flag;
+    }port_info[2] = {
+        {
+            .num_planes = num_input_planes,
+            .extradata_info = &input_extradata_info,
+            .flag = ION_FLAG_CACHED
+        },
+        {
+            .num_planes = num_output_planes,
+            .extradata_info = &output_extradata_info,
+            .flag = 0
         }
-        buf.index = index;
-        buf.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
-        buf.memory = V4L2_MEMORY_USERPTR;
-        plane[0].length = pmem_tmp->size;
-        plane[0].m.userptr = (unsigned long)pmem_tmp->buffer;
-        plane[0].reserved[0] = pmem_tmp->fd;
-        plane[0].reserved[1] = 0;
-        plane[0].data_offset = pmem_tmp->offset;
-        buf.m.planes = plane;
-        buf.length = num_input_planes;
+    };
 
-if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
-            extradata_index = venc_get_index_from_fd(input_extradata_info.m_ion_dev, pmem_tmp->fd);
-            if (extradata_index < 0 ) {
-                DEBUG_PRINT_ERROR("Extradata index calculation went wrong for fd = %d", pmem_tmp->fd);
-                return OMX_ErrorBadParameter;
-            }
-            plane[extra_idx].length = input_extradata_info.buffer_size;
-            plane[extra_idx].m.userptr = (unsigned long) (input_extradata_info.uaddr + extradata_index * input_extradata_info.buffer_size);
-#ifdef USE_ION
-            plane[extra_idx].reserved[0] = input_extradata_info.ion.fd_ion_data.fd;
-#endif
-            plane[extra_idx].reserved[1] = input_extradata_info.buffer_size * extradata_index;
-            plane[extra_idx].data_offset = 0;
-        } else if  (extra_idx >= VIDEO_MAX_PLANES) {
-            DEBUG_PRINT_ERROR("Extradata index is more than allowed: %d\n", extra_idx);
-            return OMX_ErrorBadParameter;
-        }
-
-
-        DEBUG_PRINT_LOW("Registering [%d] fd=%d size=%d userptr=%lu", index,
-                pmem_tmp->fd, plane[0].length, plane[0].m.userptr);
-        rc = ioctl(m_nDriver_fd, VIDIOC_PREPARE_BUF, &buf);
-
-        if (rc)
-            DEBUG_PRINT_LOW("VIDIOC_PREPARE_BUF Failed");
-    } else if (port == PORT_INDEX_OUT) {
-        extra_idx = EXTRADATA_IDX(num_output_planes);
-
-        if ((num_output_planes > 1) && (extra_idx)) {
-            rc = allocate_extradata(&output_extradata_info, 0);
-
-            if (rc)
-                DEBUG_PRINT_ERROR("Failed to allocate extradata: %d", rc);
-        }
-
-        buf.index = index;
-        buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-        buf.memory = V4L2_MEMORY_USERPTR;
-        plane[0].length = pmem_tmp->size;
-        plane[0].m.userptr = (unsigned long)pmem_tmp->buffer;
-        plane[0].reserved[0] = pmem_tmp->fd;
-        plane[0].reserved[1] = 0;
-        plane[0].data_offset = pmem_tmp->offset;
-        buf.m.planes = plane;
-        buf.length = num_output_planes;
-
-        if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
-            plane[extra_idx].length = output_extradata_info.buffer_size;
-            plane[extra_idx].m.userptr = (unsigned long) (output_extradata_info.uaddr + index * output_extradata_info.buffer_size);
-#ifdef USE_ION
-            plane[extra_idx].reserved[0] = output_extradata_info.ion.fd_ion_data.fd;
-#endif
-            plane[extra_idx].reserved[1] = output_extradata_info.buffer_size * index;
-            plane[extra_idx].data_offset = 0;
-        } else if  (extra_idx >= VIDEO_MAX_PLANES) {
-            DEBUG_PRINT_ERROR("Extradata index is more than allowed: %d", extra_idx);
-            return OMX_ErrorBadParameter;
-        }
-
-        rc = ioctl(m_nDriver_fd, VIDIOC_PREPARE_BUF, &buf);
-
-        if (rc)
-            DEBUG_PRINT_LOW("VIDIOC_PREPARE_BUF Failed");
-    } else {
+    if (port != PORT_INDEX_IN && port != PORT_INDEX_OUT) {
         DEBUG_PRINT_ERROR("ERROR: venc_use_buf:Invalid Port Index ");
         return false;
+    }
+
+    extra_idx = EXTRADATA_IDX(port_info[port].num_planes);
+    if ((port_info[port].num_planes > 1) && (extra_idx)) {
+        rc = allocate_extradata(port_info[port].extradata_info,
+                                port_info[port].flag);
+        if (rc) {
+            DEBUG_PRINT_ERROR("Failed to allocate extradata: %d\n", rc);
+            return false;
+        }
     }
 
     return true;
@@ -3819,14 +3831,6 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
             }
 #endif // _PQ_
 
-            if (!handle_input_extradata(buf)) {
-                DEBUG_PRINT_ERROR("%s Failed to handle input extradata", __func__);
-                return false;
-            }
-            rc = ioctl(m_nDriver_fd, VIDIOC_PREPARE_BUF, &buf);
-            if (rc)
-                DEBUG_PRINT_LOW("VIDIOC_PREPARE_BUF Failed");
-
             if (bufhdr->nFlags & OMX_BUFFERFLAG_EOS)
                 buf.flags |= V4L2_QCOM_BUF_FLAG_EOS;
             if (i != numBufs - 1) {
@@ -3843,6 +3847,10 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
             buf.timestamp.tv_sec = bufTimeStamp / 1000000;
             buf.timestamp.tv_usec = (bufTimeStamp % 1000000);
 
+            if (!handle_input_extradata(buf)) {
+                DEBUG_PRINT_ERROR("%s Failed to handle input extradata", __func__);
+                return false;
+            }
             VIDC_TRACE_INT_LOW("ETB-TS", bufTimeStamp / 1000);
 
             rc = ioctl(m_nDriver_fd, VIDIOC_QBUF, &buf);
@@ -5999,7 +6007,14 @@ bool venc_dev::venc_set_operatingrate(OMX_U32 rate) {
     return true;
 }
 
-bool venc_dev::venc_set_roi_qp_info(OMX_QTI_VIDEO_CONFIG_ROIINFO *roiInfo) {
+bool venc_dev::venc_set_roi_qp_info(OMX_QTI_VIDEO_CONFIG_ROIINFO *roiInfo)
+{
+    struct roidata roi;
+
+    if (!m_roi_enabled) {
+        DEBUG_PRINT_ERROR("ROI info not enabled");
+        return false;
+    }
     if (!roiInfo) {
         DEBUG_PRINT_ERROR("No ROI info present");
         return false;
@@ -6010,15 +6025,66 @@ bool venc_dev::venc_set_roi_qp_info(OMX_QTI_VIDEO_CONFIG_ROIINFO *roiInfo) {
         return false;
     }
 
-#ifdef _PQ_
     DEBUG_PRINT_HIGH("ROI QP info received");
+    memset(&roi, 0, sizeof(struct roidata));
+
+#ifdef _PQ_
     pthread_mutex_lock(&m_pq.lock);
-    roi.info = *roiInfo;
+    roi.info.nUpperQpOffset = roiInfo->nUpperQpOffset;
+    roi.info.nLowerQpOffset = roiInfo->nLowerQpOffset;
+    roi.info.bUseRoiInfo = roiInfo->bUseRoiInfo;
+    roi.info.nRoiMBInfoSize = roiInfo->nRoiMBInfoSize;
+
+    roi.info.pRoiMBInfo = malloc(roi.info.nRoiMBInfoSize);
+    if (!roi.info.pRoiMBInfo) {
+        DEBUG_PRINT_ERROR("venc_set_roi_qp_info: malloc failed");
+        return false;
+    }
+    memcpy(roi.info.pRoiMBInfo, roiInfo->pRoiMBInfo, roiInfo->nRoiMBInfoSize);
+    /*
+     * set the timestamp equal to previous etb timestamp + 1
+     * to know this roi data arrived after previous etb
+     */
+    if (venc_handle->m_etb_count)
+        roi.timestamp = venc_handle->m_etb_timestamp + 1;
+    else
+        roi.timestamp = 0;
+
     roi.dirty = true;
+
+    pthread_mutex_lock(&m_roilock);
+    DEBUG_PRINT_LOW("list add roidata with timestamp %lld us", roi.timestamp);
+    m_roilist.push_back(roi);
+    pthread_mutex_unlock(&m_roilock);
+
     pthread_mutex_unlock(&m_pq.lock);
 #else // _PQ_
-    roi.info = *roiInfo;
+    roi.info.nUpperQpOffset = roiInfo->nUpperQpOffset;
+    roi.info.nLowerQpOffset = roiInfo->nLowerQpOffset;
+    roi.info.bUseRoiInfo = roiInfo->bUseRoiInfo;
+    roi.info.nRoiMBInfoSize = roiInfo->nRoiMBInfoSize;
+
+    roi.info.pRoiMBInfo = malloc(roi.info.nRoiMBInfoSize);
+    if (!roi.info.pRoiMBInfo) {
+        DEBUG_PRINT_ERROR("venc_set_roi_qp_info: malloc failed.");
+        return false;
+    }
+    memcpy(roi.info.pRoiMBInfo, roiInfo->pRoiMBInfo, roiInfo->nRoiMBInfoSize);
+    /*
+     * set the timestamp equal to previous etb timestamp + 1
+     * to know this roi data arrived after previous etb
+     */
+    if (venc_handle->m_etb_count)
+        roi.timestamp = venc_handle->m_etb_timestamp + 1;
+    else
+        roi.timestamp = 0;
+
     roi.dirty = true;
+
+    pthread_mutex_lock(&m_roilock);
+    DEBUG_PRINT_LOW("list add roidata with timestamp %lld us.", roi.timestamp);
+    m_roilist.push_back(roi);
+    pthread_mutex_unlock(&m_roilock);
 #endif // _PQ_
 
     return true;
@@ -6998,6 +7064,11 @@ venc_dev::venc_dev_pq::venc_dev_pq()
     configured_format = 0;
     is_pq_force_disable = 0;
     pthread_mutex_init(&lock, NULL);
+    memset(&pConfig, 0, sizeof(gpu_stats_lib_input_config));
+    memset(&roi_extradata_info, 0, sizeof(extradata_buffer_info));
+    roi_extradata_info.size = 16 * 1024;            // Max size considering 4k
+    roi_extradata_info.buffer_size = 16 * 1024;     // Max size considering 4k
+    roi_extradata_info.port_index = OUTPUT_PORT;
 }
 
 bool venc_dev::venc_dev_pq::init(unsigned long format)
@@ -7065,11 +7136,6 @@ bool venc_dev::venc_dev_pq::init(unsigned long format)
         mPQConfigure = NULL;
         mPQComputeStats = NULL;
     }
-    memset(&pConfig, 0, sizeof(gpu_stats_lib_input_config));
-    memset(&roi_extradata_info, 0, sizeof(extradata_buffer_info));
-    roi_extradata_info.size = 16 * 1024;            // Max size considering 4k
-    roi_extradata_info.buffer_size = 16 * 1024;     // Max size considering 4k
-    roi_extradata_info.port_index = OUTPUT_PORT;
     is_YUV_format_uncertain = false;
     configured_format = format;
 
