@@ -80,8 +80,8 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE                    := libOmxVenc
 LOCAL_MODULE_TAGS               := optional
-LOCAL_PROPRIETARY_MODULE        := true
-LOCAL_MODULE_OWNER              := qti
+LOCAL_MODULE_PATH_32            := $(TARGET_OUT_VENDOR)/lib
+LOCAL_MODULE_PATH_64            := $(TARGET_OUT_VENDOR)/lib64
 LOCAL_CFLAGS                    := $(libmm-venc-def)
 LOCAL_CLANG := false
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
@@ -110,8 +110,8 @@ libmm-venc-inc      += $(TARGET_OUT_HEADERS)/mm-video/swvenc
 LOCAL_MODULE                    := libOmxSwVencMpeg4
 
 LOCAL_MODULE_TAGS               := optional
-LOCAL_PROPRIETARY_MODULE        := true
-LOCAL_MODULE_OWNER              := qti
+LOCAL_MODULE_PATH_32            := $(TARGET_OUT_VENDOR)/lib
+LOCAL_MODULE_PATH_64            := $(TARGET_OUT_VENDOR)/lib64
 LOCAL_CFLAGS                    := $(libmm-venc-def)
 LOCAL_CLANG := false
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
