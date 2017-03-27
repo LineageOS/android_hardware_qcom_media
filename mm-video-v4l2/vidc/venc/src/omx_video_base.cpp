@@ -1731,6 +1731,27 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 break;
             }
 
+        case QOMX_IndexParamVideoInitialQp:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_EXTNINDEX_VIDEO_INITIALQP);
+                QOMX_EXTNINDEX_VIDEO_INITIALQP *initial_qp = (QOMX_EXTNINDEX_VIDEO_INITIALQP*) paramData;
+                DEBUG_PRINT_LOW("get_parameter: QOMX_IndexParamVideoInitialQp");
+                initial_qp->nQpI = m_sSessionQuantization.nQpI;
+                initial_qp->nQpP = m_sSessionQuantization.nQpP;
+                initial_qp->nQpB = m_sSessionQuantization.nQpB;
+                initial_qp->bEnableInitQp = m_QPSet;
+                break;
+            }
+
+        case OMX_QcomIndexParamVideoIPBQPRange:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE);
+                OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE *qp_range = (OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE*) paramData;
+                DEBUG_PRINT_LOW("get_parameter: OMX_QcomIndexParamVideoIPBQPRange");
+                memcpy(qp_range, &m_sSessionQPRange, sizeof(m_sSessionQPRange));
+                break;
+            }
+
         case OMX_IndexParamVideoErrorCorrection:
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_ERRORCORRECTIONTYPE);

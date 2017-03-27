@@ -687,8 +687,9 @@ class omx_video: public qc_omx_component
         OMX_PARAM_BUFFERSUPPLIERTYPE m_sOutBufSupplier;
         OMX_CONFIG_ROTATIONTYPE m_sConfigFrameRotation;
         OMX_CONFIG_INTRAREFRESHVOPTYPE m_sConfigIntraRefreshVOP;
+        OMX_U32 m_QPSet;
         OMX_VIDEO_PARAM_QUANTIZATIONTYPE m_sSessionQuantization;
-        OMX_QCOM_VIDEO_PARAM_QPRANGETYPE m_sSessionQPRange;
+        OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE m_sSessionQPRange;
         OMX_VIDEO_PARAM_AVCSLICEFMO m_sAVCSliceFMO;
         QOMX_VIDEO_INTRAPERIODTYPE m_sIntraperiod;
         OMX_VIDEO_PARAM_ERRORCORRECTIONTYPE m_sErrorCorrection;
@@ -704,7 +705,7 @@ class omx_video: public qc_omx_component
         QOMX_EXTNINDEX_VIDEO_HIER_P_LAYERS m_sHPlayers;
         OMX_SKYPE_VIDEO_CONFIG_BASELAYERPID m_sBaseLayerID;
         OMX_SKYPE_VIDEO_PARAM_DRIVERVER m_sDriverVer;
-        OMX_SKYPE_VIDEO_CONFIG_QP m_sConfigQP;
+        OMX_QCOM_VIDEO_CONFIG_QP m_sConfigQP;
         QOMX_EXTNINDEX_VIDEO_VENC_SAR m_sSar;
         QOMX_VIDEO_H264ENTROPYCODINGTYPE m_sParamEntropy;
         PrependSPSPPSToIDRFramesParams m_sPrependSPSPPS;

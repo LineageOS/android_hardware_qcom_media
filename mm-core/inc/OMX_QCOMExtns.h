@@ -213,15 +213,6 @@ typedef struct OMX_QCOM_PARAM_PORTDEFINITIONTYPE {
 
 } OMX_QCOM_PARAM_PORTDEFINITIONTYPE;
 
-//Will be removed
-typedef struct OMX_QCOM_VIDEO_PARAM_QPRANGETYPE {
-    OMX_U32 nSize;
-    OMX_VERSIONTYPE nVersion;
-    OMX_U32 nPortIndex;
-    OMX_U32 minQP;
-    OMX_U32 maxQP;
-} OMX_QCOM_VIDEO_PARAM_QPRANGETYPE;
-
 typedef struct OMX_QCOM_VIDEO_CONFIG_QP {
     OMX_U32 nSize;
     OMX_VERSIONTYPE nVersion;
@@ -444,9 +435,6 @@ enum OMX_QCOM_EXTN_INDEXTYPE
 
     /*"OMX.QCOM.index.param.video.EnableSmoothStreaming"*/
     OMX_QcomIndexParamEnableSmoothStreaming = 0x7F000021,
-
-    /*"OMX.QCOM.index.param.video.QPRange" */ //Will be removed
-    OMX_QcomIndexParamVideoQPRange = 0x7F000022,
 
     OMX_QcomIndexEnableH263PlusPType = 0x7F000023,
 
