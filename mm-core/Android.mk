@@ -98,8 +98,8 @@ LOCAL_C_INCLUDES        += $(LOCAL_PATH)/inc
 LOCAL_PRELINK_MODULE    := false
 LOCAL_MODULE            := libOmxCore
 LOCAL_MODULE_TAGS       := optional
-LOCAL_PROPRIETARY_MODULE := true
-LOCAL_MODULE_OWNER      := qti
+LOCAL_MODULE_PATH_32    := $(TARGET_OUT_VENDOR)/lib
+LOCAL_MODULE_PATH_64    := $(TARGET_OUT_VENDOR)/lib64
 LOCAL_SHARED_LIBRARIES  := liblog libdl libcutils
 LOCAL_CFLAGS            := $(OMXCORE_CFLAGS)
 
@@ -128,8 +128,8 @@ LOCAL_C_INCLUDES        += $(LOCAL_PATH)/inc
 LOCAL_PRELINK_MODULE    := false
 LOCAL_MODULE            := libmm-omxcore
 LOCAL_MODULE_TAGS       := optional
-LOCAL_PROPRIETARY_MODULE := true
-LOCAL_MODULE_OWNER      := qti
+LOCAL_MODULE_PATH_32    := $(TARGET_OUT_VENDOR)/lib
+LOCAL_MODULE_PATH_64    := $(TARGET_OUT_VENDOR)/lib64
 LOCAL_SHARED_LIBRARIES  := liblog libdl libcutils
 LOCAL_CFLAGS            := $(OMXCORE_CFLAGS)
 
