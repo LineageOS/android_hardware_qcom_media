@@ -3578,6 +3578,18 @@ bool omx_vdec::post_event(unsigned long p1,
     return bRet;
 }
 
+static int get_max_h264_level() {
+#ifdef MAX_H264_LEVEL_4
+    return OMX_VIDEO_AVCLevel4;
+#elif MAX_H264_LEVEL_51
+    return OMX_VIDEO_AVCLevel51;
+#elif MAX_H264_LEVEL_52
+    return OMX_VIDEO_AVCLevel52;
+#else
+    return OMX_VIDEO_AVCLevel52;
+#endif
+}
+
 OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVELTYPE *profileLevelType)
 {
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
@@ -3586,7 +3598,7 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
 
     if (profileLevelType->nPortIndex == 0) {
         if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.avc",OMX_MAX_STRINGNAME_SIZE)) {
-            profileLevelType->eLevel = OMX_VIDEO_AVCLevel51;
+            profileLevelType->eLevel = get_max_h264_level();
             if (profileLevelType->nProfileIndex == 0) {
                 profileLevelType->eProfile = OMX_VIDEO_AVCProfileBaseline;
             } else if (profileLevelType->nProfileIndex == 1) {
