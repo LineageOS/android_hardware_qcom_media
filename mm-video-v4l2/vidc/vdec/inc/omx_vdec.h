@@ -53,6 +53,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "VideoAPI.h"
 #include "HardwareAPI.h"
 #include <unordered_map>
+#include <media/msm_media_info.h>
 
 static ptrdiff_t x;
 
@@ -164,6 +165,8 @@ extern "C" {
 #define MAX_NUM_INPUT_OUTPUT_BUFFERS 64
 #endif
 
+#define MIN_NUM_INPUT_OUTPUT_EXTRADATA_BUFFERS 32 // 32 (max cap when VPP enabled)
+
 #define OMX_FRAMEINFO_EXTRADATA 0x00010000
 #define OMX_INTERLACE_EXTRADATA 0x00020000
 #define OMX_TIMEINFO_EXTRADATA  0x00040000
@@ -246,7 +249,9 @@ extern "C" {
 
 enum port_indexes {
     OMX_CORE_INPUT_PORT_INDEX        =0,
-    OMX_CORE_OUTPUT_PORT_INDEX       =1
+    OMX_CORE_OUTPUT_PORT_INDEX       =1,
+    OMX_CORE_INPUT_EXTRADATA_INDEX   =2,
+    OMX_CORE_OUTPUT_EXTRADATA_INDEX  =3
 };
 
 
@@ -777,6 +782,7 @@ class omx_vdec: public qc_omx_component
         bool allocate_done(void);
         bool allocate_input_done(void);
         bool allocate_output_done(void);
+        bool allocate_output_extradata_done(void);
 
         OMX_ERRORTYPE free_input_buffer(OMX_BUFFERHEADERTYPE *bufferHdr);
         OMX_ERRORTYPE free_input_buffer(unsigned int bufferindex,
@@ -784,6 +790,7 @@ class omx_vdec: public qc_omx_component
         OMX_ERRORTYPE free_output_buffer(OMX_BUFFERHEADERTYPE *bufferHdr);
         void free_output_buffer_header();
         void free_input_buffer_header();
+        void free_output_extradata_buffer_header();
 
         OMX_ERRORTYPE allocate_input_heap_buffer(OMX_HANDLETYPE       hComp,
                 OMX_BUFFERHEADERTYPE **bufferHdr,
@@ -808,10 +815,17 @@ class omx_vdec: public qc_omx_component
                 OMX_PTR                appData,
                 OMX_U32                bytes,
                 OMX_U8                 *buffer);
+        OMX_ERRORTYPE use_client_output_extradata_buffer(OMX_HANDLETYPE hComp,
+                OMX_BUFFERHEADERTYPE   **bufferHdr,
+                OMX_U32                port,
+                OMX_PTR                appData,
+                OMX_U32                bytes,
+                OMX_U8                 *buffer);
         OMX_ERRORTYPE get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVELTYPE *profileLevelType);
 
         OMX_ERRORTYPE allocate_desc_buffer(OMX_U32 index);
         OMX_ERRORTYPE allocate_output_headers();
+        OMX_ERRORTYPE allocate_client_output_extradata_headers();
         bool execute_omx_flush(OMX_U32);
         bool execute_output_flush();
         bool execute_input_flush();
@@ -829,6 +843,7 @@ class omx_vdec: public qc_omx_component
 
         bool release_output_done();
         bool release_input_done();
+        bool release_output_extradata_done();
         OMX_ERRORTYPE get_buffer_req(vdec_allocatorproperty *buffer_prop);
         OMX_ERRORTYPE set_buffer_req(vdec_allocatorproperty *buffer_prop);
         OMX_ERRORTYPE start_port_reconfig();
@@ -1000,6 +1015,8 @@ class omx_vdec: public qc_omx_component
         OMX_BUFFERHEADERTYPE  *m_inp_mem_ptr;
         // Output memory pointer
         OMX_BUFFERHEADERTYPE  *m_out_mem_ptr;
+        // Client extradata memory pointer
+        OMX_BUFFERHEADERTYPE  *m_client_output_extradata_mem_ptr;
         // number of input bitstream error frame count
         unsigned int m_inp_err_count;
 #ifdef _ANDROID_
@@ -1022,6 +1039,8 @@ class omx_vdec: public qc_omx_component
         uint64_t m_out_bm_count;
         // bitmask array size for input side
         uint64_t m_inp_bm_count;
+        // bitmask array size for extradata
+        uint64_t m_out_extradata_bm_count;
         //Input port Populated
         OMX_BOOL m_inp_bPopulated;
         //Output port Populated
@@ -1349,57 +1368,39 @@ class omx_vdec: public qc_omx_component
 
         class client_extradata_info {
             private:
-                int fd;
-                OMX_U32 total_size;
-                OMX_U32 size;
-                void *vaddr;
+                OMX_U32 size; // size of extradata of each frame
+                OMX_U32 buffer_count;
+                OMX_BOOL enable;
+
             public:
                 client_extradata_info() {
-                    fd = -1;
-                    size = 0;
-                    total_size = 0;
-                    vaddr = NULL;
-                }
-
-                void reset() {
-                    if (vaddr) {
-                        munmap(vaddr, total_size);
-                        vaddr = NULL;
-                    }
-                    if (fd != -1) {
-                        close(fd);
-                        fd = -1;
-                    }
+                    size = VENUS_EXTRADATA_SIZE(4096, 2160);;
+                    buffer_count = 0;
+                    enable = OMX_FALSE;
                 }
 
                 ~client_extradata_info() {
-                    reset();
                 }
 
-                bool set_extradata_info(int fd, OMX_U32 total_size, OMX_U32 size) {
-                    reset();
-                    this->fd = fd;
+                bool set_extradata_info(OMX_U32 size, OMX_U32 buffer_count) {
                     this->size = size;
-                    this->total_size = total_size;
-                    vaddr = (OMX_U8*)mmap(0, total_size,
-                            PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-                    if (vaddr == MAP_FAILED) {
-                        vaddr = NULL;
-                        reset();
-                        return false;
-                    }
+                    this->buffer_count = buffer_count;
                     return true;
                 }
-
-                OMX_U8 *getBase() const {
-                    return (OMX_U8 *)vaddr;
+                void enable_client_extradata(OMX_BOOL enable) {
+                    this->enable = enable;
                 }
-
+                bool is_client_extradata_enabled() {
+                    return enable;
+                }
                 OMX_U32 getSize() const {
                     return size;
                 }
+                OMX_U32 getBufferCount() const {
+                    return buffer_count;
+                }
         };
-        client_extradata_info m_client_extradata_info;
+        client_extradata_info m_client_out_extradata_info;
 
         OMX_ERRORTYPE get_vendor_extension_config(
                 OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext);
