@@ -7419,6 +7419,11 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
         return OMX_ErrorInvalidState;
     }
 
+    if (m_error_propogated) {
+        DEBUG_PRINT_ERROR("Empty this buffer not allowed after error");
+        return OMX_ErrorHardware;
+    }
+
     if (buffer == NULL) {
         DEBUG_PRINT_ERROR("ERROR:ETB Buffer is NULL");
         return OMX_ErrorBadParameter;
@@ -7755,6 +7760,11 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer(OMX_IN OMX_HANDLETYPE  hComp,
             m_state != OMX_StateIdle) {
         DEBUG_PRINT_ERROR("FTB in Invalid State");
         return OMX_ErrorInvalidState;
+    }
+
+    if (m_error_propogated) {
+        DEBUG_PRINT_ERROR("Fill this buffer not allowed after error");
+        return OMX_ErrorHardware;
     }
 
     if (!m_out_bEnabled) {

@@ -1802,7 +1802,7 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
 
 bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
 {
-    DEBUG_PRINT_LOW("venc_set_param:: venc-720p");
+    DEBUG_PRINT_LOW("venc_set_param index 0x%x", index);
     struct v4l2_format fmt;
     struct v4l2_requestbuffers bufreq;
     int ret;
@@ -2238,7 +2238,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                     DEBUG_PRINT_LOW("Enable initial QP: %d", (int)initqp->bEnableInitQp);
                     if(venc_enable_initial_qp(initqp) == false) {
                        DEBUG_PRINT_ERROR("ERROR: Failed to enable initial QP");
-                       return OMX_ErrorUnsupportedSetting;
+                       return false;
                      }
                  } else
                     DEBUG_PRINT_ERROR("ERROR: setting QOMX_IndexParamVideoEnableInitialQp");
@@ -2316,12 +2316,12 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 if (pParam->nPortIndex == PORT_INDEX_OUT) {
                     if (venc_set_slice_delivery_mode(pParam->bEnable) == false) {
                         DEBUG_PRINT_ERROR("Setting slice delivery mode failed");
-                        return OMX_ErrorUnsupportedSetting;
+                        return false;
                     }
                 } else {
                     DEBUG_PRINT_ERROR("OMX_QcomIndexEnableSliceDeliveryMode "
                             "called on wrong port(%u)", (unsigned int)pParam->nPortIndex);
-                    return OMX_ErrorBadPortIndex;
+                    return false;
                 }
 
                 break;
@@ -2386,7 +2386,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 DEBUG_PRINT_LOW("set inband sps/pps: %d", pParam->bEnable);
                 if(venc_set_inband_video_header(pParam->bEnable) == false) {
                     DEBUG_PRINT_ERROR("ERROR: set inband sps/pps failed");
-                    return OMX_ErrorUnsupportedSetting;
+                    return false;
                 }
 
                 break;
@@ -2399,7 +2399,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 DEBUG_PRINT_LOW("set AU delimiters: %d", pParam->bEnable);
                 if(venc_set_au_delimiter(pParam->bEnable) == false) {
                     DEBUG_PRINT_ERROR("ERROR: set H264 AU delimiter failed");
-                    return OMX_ErrorUnsupportedSetting;
+                    return false;
                 }
 
                 break;
@@ -2412,7 +2412,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 DEBUG_PRINT_LOW("set MBI Dump mode: %d", pParam->eMBIStatisticsType);
                 if(venc_set_mbi_statistics_mode(pParam->eMBIStatisticsType) == false) {
                     DEBUG_PRINT_ERROR("ERROR: set MBI Statistics mode failed");
-                    return OMX_ErrorUnsupportedSetting;
+                    return false;
                 }
 
                 break;
@@ -2426,7 +2426,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 DEBUG_PRINT_LOW("set Entropy info : %d", pParam->bCabac);
                 if(venc_set_entropy_config (pParam->bCabac, 0) == false) {
                     DEBUG_PRINT_ERROR("ERROR: set Entropy failed");
-                    return OMX_ErrorUnsupportedSetting;
+                    return false;
                 }
 
                 break;
@@ -2551,12 +2551,12 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 if (pParam->nPortIndex == PORT_INDEX_OUT) {
                     DEBUG_PRINT_ERROR("For the moment, client-driven batching not supported"
                             " on output port");
-                    return OMX_ErrorUnsupportedSetting;
+                    return false;
                 }
 
                 if (!venc_set_batch_size(pParam->nU32)) {
                      DEBUG_PRINT_ERROR("Failed setting batch size as %d", pParam->nU32);
-                     return OMX_ErrorUnsupportedSetting;
+                     return false;
                 }
                 break;
             }
@@ -2564,7 +2564,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
             {
                 if (!venc_set_aspectratio(paramData)) {
                     DEBUG_PRINT_ERROR("ERROR: Setting OMX_QcomIndexParamVencAspectRatio failed");
-                    return OMX_ErrorUnsupportedSetting;
+                    return false;
                 }
                 break;
             }
@@ -2574,7 +2574,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                     (QOMX_EXTNINDEX_VIDEO_VENC_LOW_LATENCY_MODE*)paramData;
                 if (!venc_set_low_latency(pParam->bLowLatencyMode)) {
                     DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamLowLatencyMode failed");
-                    return OMX_ErrorUnsupportedSetting;
+                    return false;
                 }
                 break;
             }
@@ -2590,14 +2590,14 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 if (m_sVenc_cfg.codectype != V4L2_PIX_FMT_H264 &&
                         m_sVenc_cfg.codectype != V4L2_PIX_FMT_HEVC) {
                     DEBUG_PRINT_ERROR("OMX_QTIIndexParamVideoEnableRoiInfo is not supported for %lu codec", m_sVenc_cfg.codectype);
-                    return OMX_ErrorUnsupportedSetting;
+                    return false;
                 }
                 control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
                 control.value = V4L2_MPEG_VIDC_EXTRADATA_ROI_QP;
                 DEBUG_PRINT_LOW("Setting param OMX_QTIIndexParamVideoEnableRoiInfo");
                 if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
                     DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamVideoEnableRoiInfo failed");
-                    return OMX_ErrorUnsupportedSetting;
+                    return false;
                 }
                 m_roi_enabled = true;
 #ifdef _PQ_
@@ -2613,7 +2613,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
 
                 if (!venc_set_lowlatency_mode(pParam->bEnable)) {
                      DEBUG_PRINT_ERROR("Setting low latency mode failed");
-                     return OMX_ErrorUnsupportedSetting;
+                     return false;
                 }
                 break;
             }
@@ -2644,20 +2644,18 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 if (!isCBR) {
                     DEBUG_PRINT_ERROR("venc_set_param: OMX_QTIIndexParamIframeSizeType not allowed for this configuration isCBR(%d)",
                         isCBR);
-                    return OMX_ErrorUnsupportedSetting;
+                    return false;
                 }
                 if (!venc_set_iframesize_type(pParam->eType)) {
                     DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamIframeSizeType failed");
-                    return OMX_ErrorUnsupportedSetting;
+                    return false;
                 }
                 break;
             }
-        case OMX_IndexParamVideoSliceFMO:
         default:
             DEBUG_PRINT_ERROR("ERROR: Unsupported parameter in venc_set_param: %u",
                     index);
             break;
-            //case
     }
 
     return true;
@@ -4713,11 +4711,11 @@ bool venc_dev::venc_enable_initial_qp(QOMX_EXTNINDEX_VIDEO_INITIALQP* initqp)
     struct v4l2_ext_control ctrl[4];
     struct v4l2_ext_controls controls;
 
-    ctrl[0].id = V4L2_CID_MPEG_VIDC_VIDEO_I_FRAME_QP;
+    ctrl[0].id = V4L2_CID_MPEG_VIDC_VIDEO_INITIAL_I_FRAME_QP;
     ctrl[0].value = initqp->nQpI;
-    ctrl[1].id = V4L2_CID_MPEG_VIDC_VIDEO_P_FRAME_QP;
+    ctrl[1].id = V4L2_CID_MPEG_VIDC_VIDEO_INITIAL_P_FRAME_QP;
     ctrl[1].value = initqp->nQpP;
-    ctrl[2].id = V4L2_CID_MPEG_VIDC_VIDEO_B_FRAME_QP;
+    ctrl[2].id = V4L2_CID_MPEG_VIDC_VIDEO_INITIAL_B_FRAME_QP;
     ctrl[2].value = initqp->nQpB;
     ctrl[3].id = V4L2_CID_MPEG_VIDC_VIDEO_ENABLE_INITIAL_QP;
     ctrl[3].value = initqp->bEnableInitQp;
@@ -4827,8 +4825,22 @@ bool venc_dev::venc_set_session_qp(OMX_U32 i_frame_qp, OMX_U32 p_frame_qp,OMX_U3
 {
     int rc;
     struct v4l2_control control;
-
-    control.id = V4L2_CID_MPEG_VIDEO_H264_I_FRAME_QP;
+    switch (m_sVenc_cfg.codectype) {
+        case V4L2_PIX_FMT_VP8:
+            control.id = V4L2_CID_MPEG_VIDEO_VPX_I_FRAME_QP;
+            break;
+        case V4L2_PIX_FMT_HEVC:
+        case V4L2_PIX_FMT_H264:
+            control.id = V4L2_CID_MPEG_VIDEO_H264_I_FRAME_QP;
+            break;
+        case V4L2_PIX_FMT_H263:
+        case V4L2_PIX_FMT_MPEG4:
+            control.id = V4L2_CID_MPEG_VIDEO_H263_I_FRAME_QP;
+            break;
+        default:
+            DEBUG_PRINT_ERROR("Session QP set for invalid codec");
+            return false;
+    }
     control.value = i_frame_qp;
 
     DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
@@ -4842,7 +4854,22 @@ bool venc_dev::venc_set_session_qp(OMX_U32 i_frame_qp, OMX_U32 p_frame_qp,OMX_U3
     DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
     session_qp.iframeqp = control.value;
 
-    control.id = V4L2_CID_MPEG_VIDEO_H264_P_FRAME_QP;
+    switch (m_sVenc_cfg.codectype) {
+        case V4L2_PIX_FMT_VP8:
+            control.id = V4L2_CID_MPEG_VIDEO_VPX_P_FRAME_QP;
+            break;
+        case V4L2_PIX_FMT_HEVC:
+        case V4L2_PIX_FMT_H264:
+            control.id = V4L2_CID_MPEG_VIDEO_H264_P_FRAME_QP;
+            break;
+        case V4L2_PIX_FMT_H263:
+        case V4L2_PIX_FMT_MPEG4:
+            control.id = V4L2_CID_MPEG_VIDEO_H263_P_FRAME_QP;
+            break;
+        default:
+            DEBUG_PRINT_ERROR("Session QP set for invalid codec");
+            return false;
+    }
     control.value = p_frame_qp;
 
     DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
@@ -4857,24 +4884,39 @@ bool venc_dev::venc_set_session_qp(OMX_U32 i_frame_qp, OMX_U32 p_frame_qp,OMX_U3
 
     session_qp.pframeqp = control.value;
 
-    if ((codec_profile.profile == V4L2_MPEG_VIDEO_H264_PROFILE_MAIN) ||
-            (codec_profile.profile == V4L2_MPEG_VIDEO_H264_PROFILE_HIGH)) {
-
-        control.id = V4L2_CID_MPEG_VIDEO_H264_B_FRAME_QP;
-        control.value = b_frame_qp;
-
-        DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
-        rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-
-        if (rc) {
-            DEBUG_PRINT_ERROR("Failed to set control");
-            return false;
-        }
-
-        DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
-
-        session_qp.bframeqp = control.value;
+    //VP8 Doesn't Support B frames, If client tries to send QP value for B frames for VP8 error out.
+    if ((m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8 || !((codec_profile.profile == V4L2_MPEG_VIDEO_H264_PROFILE_MAIN) ||
+                (codec_profile.profile == V4L2_MPEG_VIDEO_H264_PROFILE_HIGH))) && b_frame_qp) {
+        DEBUG_PRINT_ERROR("%s: Invalid configuration for B Frame setting", __func__);
+        return false;
     }
+
+    switch (m_sVenc_cfg.codectype) {
+    case V4L2_PIX_FMT_HEVC:
+    case V4L2_PIX_FMT_H264:
+        control.id = V4L2_CID_MPEG_VIDEO_H264_B_FRAME_QP;
+        break;
+    case V4L2_PIX_FMT_H263:
+    case V4L2_PIX_FMT_MPEG4:
+        control.id = V4L2_CID_MPEG_VIDEO_H263_B_FRAME_QP;
+        break;
+    default:
+        DEBUG_PRINT_ERROR("Session QP set for invalid codec");
+        return false;
+    }
+    control.value = b_frame_qp;
+
+    DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
+    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
+
+    if (rc) {
+        DEBUG_PRINT_ERROR("Failed to set control");
+        return false;
+    }
+
+    DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
+
+    session_qp.bframeqp = control.value;
 
     return true;
 }
@@ -4886,10 +4928,22 @@ bool venc_dev::venc_set_session_qp_range(OMX_U32 min_qp, OMX_U32 max_qp)
 
     if ((min_qp >= session_qp_range.minqp) && (max_qp <= session_qp_range.maxqp)) {
 
-        if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8)
-            control.id = V4L2_CID_MPEG_VIDC_VIDEO_VP8_MIN_QP;
-        else
-            control.id = V4L2_CID_MPEG_VIDEO_H264_MIN_QP;
+        switch (m_sVenc_cfg.codectype) {
+            case V4L2_PIX_FMT_VP8:
+                control.id = V4L2_CID_MPEG_VIDEO_VPX_MIN_QP;
+                break;
+            case V4L2_PIX_FMT_HEVC:
+            case V4L2_PIX_FMT_H264:
+                control.id = V4L2_CID_MPEG_VIDEO_H264_MIN_QP;
+                break;
+            case V4L2_PIX_FMT_H263:
+            case V4L2_PIX_FMT_MPEG4:
+                control.id = V4L2_CID_MPEG_VIDEO_MPEG4_MIN_QP;
+                break;
+            default:
+                DEBUG_PRINT_ERROR("QP range set for invalid codec");
+                return false;
+        }
         control.value = min_qp;
 
         DEBUG_PRINT_LOW("Calling IOCTL set MIN_QP control id=%d, val=%d",
@@ -4900,10 +4954,22 @@ bool venc_dev::venc_set_session_qp_range(OMX_U32 min_qp, OMX_U32 max_qp)
             return false;
         }
 
-        if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8)
-            control.id = V4L2_CID_MPEG_VIDC_VIDEO_VP8_MAX_QP;
-        else
-            control.id = V4L2_CID_MPEG_VIDEO_H264_MAX_QP;
+        switch (m_sVenc_cfg.codectype) {
+            case V4L2_PIX_FMT_VP8:
+                control.id = V4L2_CID_MPEG_VIDEO_VPX_MAX_QP;
+                break;
+            case V4L2_PIX_FMT_HEVC:
+            case V4L2_PIX_FMT_H264:
+                control.id = V4L2_CID_MPEG_VIDEO_H264_MAX_QP;
+                break;
+            case V4L2_PIX_FMT_H263:
+            case V4L2_PIX_FMT_MPEG4:
+                control.id = V4L2_CID_MPEG_VIDEO_MPEG4_MAX_QP;
+                break;
+            default:
+                DEBUG_PRINT_ERROR("QP range set for invalid codec");
+                return false;
+        }
         control.value = max_qp;
 
         DEBUG_PRINT_LOW("Calling IOCTL set MAX_QP control id=%d, val=%d",
@@ -8047,7 +8113,11 @@ bool venc_dev::venc_check_for_pq(void)
         (m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) <=
         (m_pq.caps.max_mb_per_sec / ((m_sVenc_cfg.input_height * m_sVenc_cfg.input_width) / 256));
 
+#ifdef QLE_BUILD
     frame_rate_supported = (((operating_rate >> 16) > 0) && ((operating_rate >> 16) < 5)) ? false : frame_rate_supported;
+#else
+    frame_rate_supported = (((operating_rate >> 16) > 0) && (((operating_rate >> 16) < 5) || ((operating_rate >> 16) >= 120))) ? false : frame_rate_supported;
+#endif
 
     yuv_format_supported = ((m_sVenc_cfg.inputformat == V4L2_PIX_FMT_NV12 && (m_pq.caps.color_formats & BIT(COLOR_FMT_NV12)))
             || (m_sVenc_cfg.inputformat == V4L2_PIX_FMT_NV21 && (m_pq.caps.color_formats & BIT(COLOR_FMT_NV21)))
