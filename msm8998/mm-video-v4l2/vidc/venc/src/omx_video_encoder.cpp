@@ -574,6 +574,9 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
 
     OMX_INIT_STRUCT(&m_sConfigTemporalLayers, OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE);
 
+    OMX_INIT_STRUCT(&m_sParamAVTimerTimestampMode, QOMX_ENABLETYPE);
+    m_sParamAVTimerTimestampMode.bEnable = OMX_FALSE;
+
     m_state                   = OMX_StateLoaded;
     m_sExtraData = 0;
 
@@ -1784,6 +1787,17 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamIframeSizeType failed");
                     return OMX_ErrorUnsupportedSetting;
                 }
+                break;
+            }
+        case OMX_QTIIndexParamEnableAVTimerTimestamps:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
+                if (!handle->venc_set_param(paramData,
+                            (OMX_INDEXTYPE)OMX_QTIIndexParamEnableAVTimerTimestamps)) {
+                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamEnableAVTimerTimestamps failed");
+                    return OMX_ErrorUnsupportedSetting;
+                }
+                memcpy(&m_sParamAVTimerTimestampMode, paramData, sizeof(QOMX_ENABLETYPE));
                 break;
             }
         case OMX_IndexParamVideoSliceFMO:
