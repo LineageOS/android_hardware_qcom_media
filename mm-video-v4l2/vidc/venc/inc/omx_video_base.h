@@ -724,6 +724,7 @@ class omx_video: public qc_omx_component
         DescribeColorAspectsParams m_sConfigColorAspects;
         OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE m_sParamTemporalLayers;
         OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE m_sConfigTemporalLayers;
+        QOMX_ENABLETYPE m_sParamAVTimerTimestampMode;   // use VT-timestamps in gralloc-handle
 
         // fill this buffer queue
         omx_cmd_queue m_ftb_q;

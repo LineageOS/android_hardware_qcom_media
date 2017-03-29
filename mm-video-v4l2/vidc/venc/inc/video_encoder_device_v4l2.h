@@ -610,6 +610,7 @@ class venc_dev
 
         };
         BatchInfo mBatchInfo;
+        bool mUseAVTimerTimestamps;
 };
 
 enum instance_state {
