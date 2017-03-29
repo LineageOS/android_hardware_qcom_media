@@ -198,14 +198,6 @@ struct venc_bufferpayload{
 	unsigned long	filled_len;
 };
 
-struct venc_profile{
-	unsigned long	profile;
-};
-
-struct ven_profilelevel{
-	unsigned long	level;
-};
-
 struct	venc_voptimingcfg{
 	unsigned long	voptime_resolution;
 };
