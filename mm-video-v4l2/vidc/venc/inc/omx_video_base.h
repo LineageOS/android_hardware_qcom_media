@@ -300,6 +300,7 @@ class omx_video: public qc_omx_component
         virtual OMX_U32 dev_stop(void) = 0;
         virtual OMX_U32 dev_pause(void) = 0;
         virtual OMX_U32 dev_start(void) = 0;
+        virtual OMX_U32 dev_flush(unsigned) = 0;
         virtual OMX_U32 dev_resume(void) = 0;
         virtual OMX_U32 dev_start_done(void) = 0;
         virtual OMX_U32 dev_set_message_thread_id(pthread_t) = 0;

@@ -3210,6 +3210,33 @@ bool venc_dev::venc_reconfig_reqbufs()
     return true;
 }
 
+unsigned venc_dev::venc_flush( unsigned port)
+{
+    struct v4l2_encoder_cmd enc;
+    DEBUG_PRINT_LOW("in %s", __func__);
+
+    unsigned int cookie = 0;
+    for (unsigned int i = 0; i < (sizeof(fd_list)/sizeof(fd_list[0])); i++) {
+        cookie = fd_list[i];
+        if (cookie != 0) {
+            if (!ioctl(input_extradata_info.m_ion_dev, ION_IOC_FREE, &cookie)) {
+                DEBUG_PRINT_HIGH("Freed handle = %u", cookie);
+            }
+            fd_list[i] = 0;
+        }
+    }
+
+    enc.cmd = V4L2_QCOM_CMD_FLUSH;
+    enc.flags = V4L2_QCOM_CMD_FLUSH_OUTPUT | V4L2_QCOM_CMD_FLUSH_CAPTURE;
+
+    if (ioctl(m_nDriver_fd, VIDIOC_ENCODER_CMD, &enc)) {
+        DEBUG_PRINT_ERROR("Flush Port (%d) Failed ", port);
+        return -1;
+    }
+
+    return 0;
+}
+
 //allocating I/P memory from pmem and register with the device
 bool venc_dev::allocate_extradata(unsigned port)
 {

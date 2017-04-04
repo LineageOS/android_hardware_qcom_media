@@ -1278,6 +1278,11 @@ bool omx_video::execute_output_flush(void)
     }
 
     pthread_mutex_unlock(&m_lock);
+    /*Check if there are buffers with the Driver*/
+    if (dev_flush(PORT_INDEX_OUT)) {
+        DEBUG_PRINT_ERROR("ERROR: o/p dev_flush() Failed");
+        return false;
+    }
 
     return bRet;
 }
@@ -1333,6 +1338,11 @@ bool omx_video::execute_input_flush(void)
         }
     }
     pthread_mutex_unlock(&m_lock);
+    /*Check if there are buffers with the Driver*/
+    if (dev_flush(PORT_INDEX_IN)) {
+         DEBUG_PRINT_ERROR("ERROR: i/p dev_flush() Failed");
+         return false;
+    }
 
     return bRet;
 }
@@ -1405,6 +1415,11 @@ bool omx_video::execute_flush_all(void)
     }
 
     pthread_mutex_unlock(&m_lock);
+    /*Check if there are buffers with the Driver*/
+    if (dev_flush(PORT_INDEX_BOTH)) {
+         DEBUG_PRINT_ERROR("ERROR: dev_flush() Failed");
+         return false;
+    }
 
     return bRet;
 }

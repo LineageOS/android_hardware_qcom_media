@@ -2092,6 +2092,11 @@ OMX_U32 omx_venc::dev_start(void)
     return handle->venc_start();
 }
 
+OMX_U32 omx_venc::dev_flush(unsigned port)
+{
+    return handle->venc_flush(port);
+}
+
 OMX_U32 omx_venc::dev_resume(void)
 {
     return handle->venc_resume();
