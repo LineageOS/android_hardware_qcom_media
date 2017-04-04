@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2013, 2015, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2013, 2015-2017, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -524,6 +524,11 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
         DEBUG_PRINT_LOW("\n i/p actual cnt requested = %d\n", portDefn->nBufferCountActual);
         DEBUG_PRINT_LOW("\n i/p min cnt requested = %d\n", portDefn->nBufferCountMin);
         DEBUG_PRINT_LOW("\n i/p buffersize requested = %d\n", portDefn->nBufferSize);
+        if (portDefn->nBufferCountActual > MAX_NUM_INPUT_BUFFERS) {
+            DEBUG_PRINT_ERROR("ERROR: (In_PORT) actual count (%u) exceeds max(%u)",
+                    (unsigned int)portDefn->nBufferCountActual, (unsigned int)MAX_NUM_INPUT_BUFFERS);
+            return OMX_ErrorUnsupportedSetting;
+        }
         if(handle->venc_set_param(paramData,OMX_IndexParamPortDefinition) != true)
         {
           DEBUG_PRINT_ERROR("\nERROR: venc_set_param input failed");
@@ -572,6 +577,11 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
         DEBUG_PRINT_LOW("\n o/p actual cnt requested = %d\n", portDefn->nBufferCountActual);
         DEBUG_PRINT_LOW("\n o/p min cnt requested = %d\n", portDefn->nBufferCountMin);
         DEBUG_PRINT_LOW("\n o/p buffersize requested = %d\n", portDefn->nBufferSize);
+        if (portDefn->nBufferCountActual > MAX_NUM_OUTPUT_BUFFERS) {
+            DEBUG_PRINT_ERROR("ERROR: (Out_PORT) actual count (%u) exceeds max(%u)",
+                    (unsigned int)portDefn->nBufferCountActual, (unsigned int)MAX_NUM_OUTPUT_BUFFERS);
+            return OMX_ErrorUnsupportedSetting;
+        }
         if(handle->venc_set_param(paramData,OMX_IndexParamPortDefinition) != true)
         {
           DEBUG_PRINT_ERROR("\nERROR: venc_set_param output failed");
@@ -1616,7 +1626,14 @@ OMX_ERRORTYPE  omx_venc::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
     DEBUG_PRINT_LOW("Freeing the Output Memory\n");
     for(i=0; i< m_sOutPortDef.nBufferCountActual; i++ )
     {
-      free_output_buffer (&m_out_mem_ptr[i]);
+        if (BITMASK_PRESENT_U32(m_out_bm_count, i)) {
+            BITMASK_CLEAR_U32(m_out_bm_count, i);
+            free_output_buffer (&m_out_mem_ptr[i]);
+        }
+
+        if (release_output_done()) {
+            break;
+        }
     }
     free(m_out_mem_ptr);
     m_out_mem_ptr = NULL;
@@ -1632,7 +1649,14 @@ OMX_ERRORTYPE  omx_venc::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
     DEBUG_PRINT_LOW("Freeing the Input Memory\n");
     for(i=0; i<m_sInPortDef.nBufferCountActual; i++ )
     {
-      free_input_buffer (&m_inp_mem_ptr[i]);
+        if (BITMASK_PRESENT_U32(m_inp_bm_count, i)) {
+            BITMASK_CLEAR_U32(m_inp_bm_count, i);
+            free_input_buffer (&m_inp_mem_ptr[i]);
+        }
+
+        if (release_input_done()) {
+            break;
+        }
     }
 
 
