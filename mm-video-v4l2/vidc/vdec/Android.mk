@@ -57,6 +57,7 @@ include $(CLEAR_VARS)
 libmm-vdec-inc          := $(LOCAL_PATH)/inc
 libmm-vdec-inc          += $(TOP)/hardware/qcom/media/mm-video-v4l2/vidc/common/inc
 libmm-vdec-inc          += $(TOP)/hardware/qcom/media/mm-core/inc
+libmm-vdec-inc          += hardware/qcom/media/libplatformconfig
 libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/qcom/display
 libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/adreno
 libmm-vdec-inc          += $(TOP)/frameworks/native/include/media/openmax
@@ -103,6 +104,7 @@ LOCAL_PRELINK_MODULE    := false
 LOCAL_SHARED_LIBRARIES  := liblog libcutils libdl
 LOCAL_SHARED_LIBRARIES  += libc2dcolorconvert
 LOCAL_SHARED_LIBRARIES  += libqdMetaData
+LOCAL_SHARED_LIBRARIES  += libplatformconfig
 
 LOCAL_SRC_FILES         := src/ts_parser.cpp
 LOCAL_STATIC_LIBRARIES  := libOmxVidcCommon
