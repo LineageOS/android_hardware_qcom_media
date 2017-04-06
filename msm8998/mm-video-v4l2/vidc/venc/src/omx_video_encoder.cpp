@@ -2056,15 +2056,6 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                         return OMX_ErrorUnsupportedSetting;
                 }
                 m_sConfigFrameRotation.nRotation = pParam->nRotation;
-
-                // Update output-port resolution (since it might have been flipped by rotation)
-                if (handle->venc_get_dimensions(PORT_INDEX_OUT,
-                        &m_sOutPortDef.format.video.nFrameWidth,
-                        &m_sOutPortDef.format.video.nFrameHeight)) {
-                    DEBUG_PRINT_HIGH("set Rotation: updated dimensions = %u x %u",
-                            m_sOutPortDef.format.video.nFrameWidth,
-                            m_sOutPortDef.format.video.nFrameHeight);
-                }
                 break;
             }
         case OMX_QcomIndexConfigVideoFramePackingArrangement:
