@@ -1015,45 +1015,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter
             break;
         }
 
-        case OMX_QcomIndexParamVideoQPRange:
-        {
-            DEBUG_PRINT_LOW("set_parameter: OMX_QcomIndexParamVideoQPRange");
-            OMX_QCOM_VIDEO_PARAM_QPRANGETYPE *qp_range = (OMX_QCOM_VIDEO_PARAM_QPRANGETYPE*) paramData;
-            if (qp_range->nPortIndex == PORT_INDEX_OUT)
-            {
-                if ( (qp_range->minQP > 255) ||
-                     (qp_range->maxQP > 255)
-                   )
-                {
-                   DEBUG_PRINT_ERROR("ERROR: Out of range QP");
-                   eRet = OMX_ErrorBadParameter;
-                }
-
-                Prop.id = SWVENC_PROPERTY_ID_QP_RANGE;
-                Prop.info.qp_range.min_qp_packed =
-                 (qp_range->minQP << 16) | (qp_range->minQP) | (qp_range->minQP << 8);
-                Prop.info.qp_range.max_qp_packed =
-                 (qp_range->maxQP << 16) | (qp_range->maxQP) | (qp_range->maxQP << 8);
-
-                Ret = swvenc_setproperty(m_hSwVenc, &Prop);
-                if (Ret != SWVENC_S_SUCCESS)
-                {
-                   DEBUG_PRINT_ERROR("%s, swvenc_setproperty failed (%d)",
-                     __FUNCTION__, Ret);
-                   RETURN(OMX_ErrorUnsupportedSetting);
-                }
-
-                m_sSessionQPRange.minQP= qp_range->minQP;
-                m_sSessionQPRange.maxQP= qp_range->maxQP;
-            }
-            else
-            {
-                DEBUG_PRINT_ERROR("ERROR: Unsupported port Index for QP range setting");
-                eRet = OMX_ErrorBadPortIndex;
-            }
-            break;
-        }
-
         case OMX_QcomIndexPortDefn:
         {
             OMX_QCOM_PARAM_PORTDEFINITIONTYPE* pParam =
@@ -1722,6 +1683,23 @@ OMX_U32 omx_venc::dev_start(void)
    }
 
    m_stopped = false;
+
+   RETURN(0);
+}
+
+OMX_U32 omx_venc::dev_flush(unsigned port)
+{
+   ENTER_FUNC();
+   SWVENC_STATUS Ret;
+
+   (void)port;
+   Ret = swvenc_flush(m_hSwVenc);
+   if (Ret != SWVENC_S_SUCCESS)
+   {
+      DEBUG_PRINT_ERROR("%s, swvenc_flush failed (%d)",
+        __FUNCTION__, Ret);
+      RETURN(-1);
+   }
 
    RETURN(0);
 }

@@ -55,6 +55,9 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define MAX_HYB_HIERP_LAYERS 6
 #define MAX_AVC_HP_LAYERS (4)
 #define MAX_V4L2_BUFS 64 //VB2_MAX_FRAME
+#define ENABLE_I_QP 0x1
+#define ENABLE_P_QP 0x2
+#define ENABLE_B_QP 0x4
 
 enum hier_type {
     HIER_NONE = 0x0,
@@ -99,18 +102,7 @@ struct msm_venc_sessionqp {
     unsigned long    iframeqp;
     unsigned long    pframeqp;
     unsigned long    bframeqp;
-};
-
-struct msm_venc_initqp {
-    unsigned long    iframeqp;
-    unsigned long    pframeqp;
-    unsigned long    bframeqp;
-    unsigned long    enableinitqp;
-};
-
-struct msm_venc_qprange {
-    unsigned long    maxqp;
-    unsigned long    minqp;
+    unsigned long    enableqp;
 };
 
 struct msm_venc_ipb_qprange {
@@ -319,6 +311,7 @@ class venc_dev
         unsigned venc_stop(void);
         unsigned venc_pause(void);
         unsigned venc_start(void);
+        unsigned venc_flush(unsigned);
 #ifdef _ANDROID_ICS_
         bool venc_set_meta_mode(bool);
 #endif
@@ -483,9 +476,6 @@ class venc_dev
         struct msm_venc_allocatorproperty   m_sInput_buff_property;
         struct msm_venc_allocatorproperty   m_sOutput_buff_property;
         struct msm_venc_sessionqp           session_qp;
-        struct msm_venc_initqp              init_qp;
-        struct msm_venc_qprange             session_qp_range;
-        struct msm_venc_qprange             session_qp_values;
         struct msm_venc_ipb_qprange         session_ipb_qp_values;
         struct msm_venc_multiclicecfg       multislice;
         struct msm_venc_entropycfg          entropy;
@@ -513,8 +503,7 @@ class venc_dev
         bool venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames);
         bool venc_set_target_bitrate(OMX_U32 nTargetBitrate, OMX_U32 config);
         bool venc_set_ratectrl_cfg(OMX_VIDEO_CONTROLRATETYPE eControlRate);
-        bool venc_set_session_qp(OMX_U32 i_frame_qp, OMX_U32 p_frame_qp,OMX_U32 b_frame_qp);
-        bool venc_set_session_qp_range(OMX_U32 min_qp, OMX_U32 max_qp);
+        bool venc_set_session_qp_range(OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE *qp_range);
         bool venc_set_encode_framerate(OMX_U32 encode_framerate, OMX_U32 config);
         bool venc_set_intra_vop_refresh(OMX_BOOL intra_vop_refresh);
         bool venc_set_color_format(OMX_COLOR_FORMATTYPE color_format);
@@ -550,7 +539,7 @@ class venc_dev
         bool venc_validate_hybridhp_params(OMX_U32 layers, OMX_U32 bFrames, OMX_U32 count, int mode);
         bool venc_set_hierp_layers(OMX_U32 hierp_layers);
         bool venc_set_baselayerid(OMX_U32 baseid);
-        bool venc_set_qp(OMX_U32 nQp);
+        bool venc_set_qp(OMX_U32 i_frame_qp, OMX_U32 p_frame_qp,OMX_U32 b_frame_qp, OMX_U32 enable);
         bool venc_set_aspectratio(void *nSar);
         bool venc_set_priority(OMX_U32 priority);
         bool venc_set_session_priority(OMX_U32 priority);
