@@ -26,7 +26,7 @@ TARGETS_THAT_NEED_SW_VENC_MPEG4 := msm8909 msm8937
 TARGETS_THAT_NEED_SW_VENC_HEVC := msm8992
 TARGETS_THAT_SUPPORT_UBWC := msm8996 msm8998
 TARGETS_THAT_SUPPORT_VQZIP := msm8996 msm8998
-TARGETS_THAT_SUPPORT_PQ := msm8996 msm8998 sdm660 msm8953
+TARGETS_THAT_SUPPORT_PQ := msm8996 msm8998 msm8953
 TARGETS_THAT_USE_NV21 := sdm660 msm8953
 
 ifeq ($(TARGET_BOARD_PLATFORM),msm8610)
@@ -109,12 +109,14 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE                    := libOmxVenc
 LOCAL_MODULE_TAGS               := optional
+LOCAL_MODULE_PATH_32            := $(TARGET_OUT_VENDOR)/lib
+LOCAL_MODULE_PATH_64            := $(TARGET_OUT_VENDOR)/lib64
 LOCAL_CFLAGS                    := $(libmm-venc-def)
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 
 LOCAL_PRELINK_MODULE      := false
-LOCAL_SHARED_LIBRARIES    := liblog libutils libbinder libcutils \
+LOCAL_SHARED_LIBRARIES    := liblog libutils libcutils \
                              libdl libgui
 ifeq ($(BOARD_USES_ADRENO), true)
 LOCAL_SHARED_LIBRARIES    += libc2dcolorconvert
@@ -140,12 +142,14 @@ libmm-venc-inc      += $(TARGET_OUT_HEADERS)/mm-video/swvenc
 LOCAL_MODULE                    := libOmxSwVencMpeg4
 
 LOCAL_MODULE_TAGS               := optional
+LOCAL_MODULE_PATH_32            := $(TARGET_OUT_VENDOR)/lib
+LOCAL_MODULE_PATH_64            := $(TARGET_OUT_VENDOR)/lib64
 LOCAL_CFLAGS                    := $(libmm-venc-def)
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 
 LOCAL_PRELINK_MODULE      := false
-LOCAL_SHARED_LIBRARIES    := liblog libutils libbinder libcutils \
+LOCAL_SHARED_LIBRARIES    := liblog libutils libcutils \
                              libdl libgui
 LOCAL_SHARED_LIBRARIES    += libMpeg4SwEncoder
 ifeq ($(BOARD_USES_ADRENO), true)

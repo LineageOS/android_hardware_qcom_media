@@ -67,7 +67,6 @@ static ptrdiff_t x;
 //#include <binder/MemoryHeapIon.h>
 //#else
 #endif
-#include <binder/MemoryHeapBase.h>
 #include <ui/ANativeObjectBase.h>
 extern "C" {
 #include <utils/Log.h>
@@ -108,6 +107,7 @@ extern "C" {
 #include "ts_parser.h"
 #include "vidc_color_converter.h"
 #include "vidc_debug.h"
+#include "vidc_vendor_extensions.h"
 #ifdef _ANDROID_
 #include <cutils/properties.h>
 #else
@@ -117,32 +117,14 @@ extern "C" {
     OMX_API void * get_omx_component_factory_fn(void);
 }
 
-#ifdef _ANDROID_
-using namespace android;
-#ifdef USE_ION
-class VideoHeap : public MemoryHeapBase
-{
-    public:
-        VideoHeap(int devicefd, size_t size, void* base,ion_user_handle_t handle,int mapfd);
-        virtual ~VideoHeap() {}
-    private:
-        int m_ion_device_fd;
-        ion_user_handle_t m_ion_handle;
-};
-#else
-// local pmem heap object
-class VideoHeap : public MemoryHeapBase
-{
-    public:
-        VideoHeap(int fd, size_t size, void* base);
-        virtual ~VideoHeap() {}
-};
-#endif
-#endif // _ANDROID_
 //////////////////////////////////////////////////////////////////////////////
 //                       Module specific globals
 //////////////////////////////////////////////////////////////////////////////
 #define OMX_SPEC_VERSION  0x00000101
+#define OMX_INIT_STRUCT(_s_, _name_)         \
+    memset((_s_), 0x0, sizeof(_name_));      \
+(_s_)->nSize = sizeof(_name_);               \
+(_s_)->nVersion.nVersion = OMX_SPEC_VERSION  \
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -910,14 +892,6 @@ class omx_vdec: public qc_omx_component
         // encapsulate the waiting states.
         uint64_t m_flags;
 
-#ifdef _ANDROID_
-        // Heap pointer to frame buffers
-        struct vidc_heap {
-            sp<MemoryHeapBase>    video_heap_ptr;
-        };
-        struct vidc_heap *m_heap_ptr;
-        unsigned int m_heap_count;
-#endif //_ANDROID_
         // store I/P PORT state
         OMX_BOOL m_inp_bEnabled;
         // store O/P PORT state
@@ -1051,6 +1025,7 @@ class omx_vdec: public qc_omx_component
         OMX_U32 m_reconfig_width;
         OMX_U32 m_reconfig_height;
         bool m_smoothstreaming_mode;
+        bool m_decode_order_mode;
 
         bool m_input_pass_buffer_fd;
         DescribeColorAspectsParams m_client_color_space;
@@ -1128,11 +1103,6 @@ class omx_vdec: public qc_omx_component
 #endif
                 unsigned char *pmem_baseaddress[MAX_COUNT];
                 int pmem_fd[MAX_COUNT];
-                struct vidc_heap {
-                    sp<MemoryHeapBase>    video_heap_ptr;
-                };
-                struct vidc_heap m_heap_ptr[MAX_COUNT];
-
                 OMX_ERRORTYPE cache_ops(unsigned int index, unsigned int cmd);
                 inline OMX_ERRORTYPE cache_clean_buffer(unsigned int index) {
                     return cache_ops(index, ION_IOC_CLEAN_CACHES);
@@ -1304,6 +1274,16 @@ class omx_vdec: public qc_omx_component
                 }
         };
         client_extradata_info m_client_extradata_info;
+
+        OMX_ERRORTYPE get_vendor_extension_config(
+                OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext);
+        OMX_ERRORTYPE set_vendor_extension_config(
+                OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext);
+
+        void init_vendor_extensions (VendorExtensionStore&);
+
+        // list of extensions is not mutable after initialization
+        const VendorExtensionStore mVendorExtensionStore;
 };
 
 #ifdef _MSM8974_
