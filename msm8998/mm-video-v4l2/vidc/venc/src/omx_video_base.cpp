@@ -245,15 +245,6 @@ unsigned omx_video::omx_cmd_queue::get_q_msg_type()
 }
 
 
-
-#ifdef _ANDROID_
-VideoHeap::VideoHeap(int fd, size_t size, void* base)
-{
-    // dup file descriptor, map once, use pmem
-    init(dup(fd), base, size, 0 , MEM_DEVICE);
-}
-#endif // _ANDROID_
-
 /* ======================================================================
    FUNCTION
    omx_venc::omx_venc
@@ -2349,6 +2340,15 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
                 memcpy(configData, &m_sConfigTemporalLayers, sizeof(m_sConfigTemporalLayers));
                 break;
             }
+        case OMX_IndexConfigAndroidVendorExtension:
+            {
+                VALIDATE_OMX_PARAM_DATA(configData, OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE);
+
+                OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext =
+                    reinterpret_cast<OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *>(configData);
+                VALIDATE_OMX_VENDOR_EXTENSION_PARAM_DATA(ext);
+                return get_vendor_extension_config(ext);
+            }
 
         default:
             DEBUG_PRINT_ERROR("ERROR: unsupported index %d", (int) configIndex);
@@ -3001,6 +3001,14 @@ OMX_ERRORTYPE omx_video::free_input_buffer(OMX_BUFFERHEADERTYPE *bufferHdr)
 
     if (index < m_sInPortDef.nBufferCountActual && m_pInput_pmem) {
         auto_lock l(m_lock);
+
+        if (mUseProxyColorFormat) {
+            if (m_opq_pmem_q.m_size) {
+                unsigned long addr, p1, id;
+                m_opq_pmem_q.pop_entry(&addr, &p1, &id);
+                DEBUG_PRINT_LOW("Removed entry in m_opq_pmem_q: address %lu", addr);
+            }
+        }
 
         if (m_pInput_pmem[index].fd > 0 && input_use_buffer == false) {
             DEBUG_PRINT_LOW("FreeBuffer:: i/p AllocateBuffer case");
@@ -5471,3 +5479,8 @@ OMX_ERRORTYPE omx_video::push_empty_eos_buffer(OMX_HANDLETYPE hComp) {
     VIDC_TRACE_INT_LOW("ETB-pending", pending_input_buffers);
     return retVal;
 }
+
+// no code beyond this !
+
+// inline import of vendor extensions implementation
+#include "omx_video_extensions.hpp"

@@ -564,27 +564,6 @@ void *get_omx_component_factory_fn(void)
     return (new omx_vdec);
 }
 
-#ifdef _ANDROID_
-#ifdef USE_ION
-VideoHeap::VideoHeap(int devicefd, size_t size, void* base,
-        ion_user_handle_t handle, int ionMapfd)
-{
-    (void) devicefd;
-    (void) size;
-    (void) base;
-    (void) handle;
-    (void) ionMapfd;
-    //    ionInit(devicefd, base, size, 0 , MEM_DEVICE,handle,ionMapfd);
-}
-#else
-VideoHeap::VideoHeap(int fd, size_t size, void* base)
-{
-    // dup file descriptor, map once, use pmem
-    init(dup(fd), base, size, 0 , MEM_DEVICE);
-}
-#endif
-#endif // _ANDROID_
-
 bool is_platform_tp10capture_supported()
 {
     char platform_name[PROPERTY_VALUE_MAX] = {0};
@@ -630,9 +609,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_inp_bPopulated(OMX_FALSE),
     m_out_bPopulated(OMX_FALSE),
     m_flags(0),
-#ifdef _ANDROID_
-    m_heap_ptr(NULL),
-#endif
     m_inp_bEnabled(OMX_TRUE),
     m_out_bEnabled(OMX_TRUE),
     m_in_alloc_cnt(0),
@@ -840,6 +816,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_smoothstreaming_mode = false;
     m_smoothstreaming_width = 0;
     m_smoothstreaming_height = 0;
+    m_decode_order_mode = false;
     is_q6_platform = false;
     m_perf_control.send_hint_to_mpctl(true);
     m_input_pass_buffer_fd = false;
@@ -2772,6 +2749,12 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
                 eRet = OMX_ErrorInsufficientResources;
             }
         }
+    }
+
+    {
+        VendorExtensionStore *extStore = const_cast<VendorExtensionStore *>(&mVendorExtensionStore);
+        init_vendor_extensions(*extStore);
+        mVendorExtensionStore.dumpExtensions((const char *)role);
     }
 
     if (eRet != OMX_ErrorNone) {
@@ -4785,6 +4768,8 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                              eRet = OMX_ErrorUnsupportedSetting;
                                          }
                                      }
+                                     m_decode_order_mode =
+                                            pictureOrder->eOutputPictureOrder == QOMX_VIDEO_DECODE_ORDER;
                                      break;
                                  }
         case OMX_QcomIndexParamConcealMBMapExtraData:
@@ -5448,6 +5433,15 @@ OMX_ERRORTYPE  omx_vdec::get_config(OMX_IN OMX_HANDLETYPE      hComp,
 
             break;
         }
+        case OMX_IndexConfigAndroidVendorExtension:
+        {
+            VALIDATE_OMX_PARAM_DATA(configData, OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE);
+
+            OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext =
+                reinterpret_cast<OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *>(configData);
+            VALIDATE_OMX_VENDOR_EXTENSION_PARAM_DATA(ext);
+            return get_vendor_extension_config(ext);
+        }
         default:
         {
             DEBUG_PRINT_ERROR("get_config: unknown param %d",configIndex);
@@ -5690,6 +5684,15 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
         print_debug_hdr_color_info(&(params->sInfo), "Set Config HDR");
         memcpy(&m_client_hdr_info, params, sizeof(DescribeHDRStaticInfoParams));
         return ret;
+
+    } else if ((int)configIndex == (int)OMX_IndexConfigAndroidVendorExtension) {
+        VALIDATE_OMX_PARAM_DATA(configData, OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE);
+
+        OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext =
+                reinterpret_cast<OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *>(configData);
+        VALIDATE_OMX_VENDOR_EXTENSION_PARAM_DATA(ext);
+
+        return set_vendor_extension_config(ext);
     }
 
     return OMX_ErrorNotImplemented;
@@ -12687,7 +12690,6 @@ OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::free_output_buffer(
 #ifdef USE_ION
     omx->free_ion_memory(&op_buf_ion_info[index]);
 #endif
-    m_heap_ptr[index].video_heap_ptr = NULL;
     if (allocated_count > 0)
         allocated_count--;
     else
@@ -12760,11 +12762,7 @@ OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::allocate_buffers_color_conve
         omx->free_ion_memory(&op_buf_ion_info[i]);
         return OMX_ErrorInsufficientResources;
     }
-    m_heap_ptr[i].video_heap_ptr = new VideoHeap (
-            op_buf_ion_info[i].ion_device_fd,buffer_size_req,
-            pmem_baseaddress[i],op_buf_ion_info[i].ion_alloc_data.handle,pmem_fd[i]);
 #endif
-    m_pmem_info_client[i].pmem_fd = (unsigned long)m_heap_ptr[i].video_heap_ptr.get();
     m_pmem_info_client[i].offset = 0;
     m_platform_entry_client[i].entry = (void *)&m_pmem_info_client[i];
     m_platform_entry_client[i].type = OMX_QCOM_PLATFORM_PRIVATE_PMEM;
@@ -13371,3 +13369,9 @@ prefetch_exit:
         free(custom_data);
     }
 }
+
+
+// No code beyond this !
+
+// inline import of vendor-extensions implementation
+#include "omx_vdec_extensions.hpp"

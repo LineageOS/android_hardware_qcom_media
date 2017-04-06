@@ -112,12 +112,14 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE                    := libOmxVdec
 LOCAL_MODULE_TAGS               := optional
+LOCAL_MODULE_PATH_32            := $(TARGET_OUT_VENDOR)/lib
+LOCAL_MODULE_PATH_64            := $(TARGET_OUT_VENDOR)/lib64
 LOCAL_CFLAGS                    := $(libmm-vdec-def) -Werror
 LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-vdec-add-dep)
 
 LOCAL_PRELINK_MODULE    := false
-LOCAL_SHARED_LIBRARIES  := liblog libutils libbinder libcutils libdl libqdutils
+LOCAL_SHARED_LIBRARIES  := liblog libutils libcutils libdl libqdutils
 
 LOCAL_SHARED_LIBRARIES  += libqdMetaData
 
@@ -143,6 +145,8 @@ ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_NEED_SW_VDEC)),true)
 
 LOCAL_MODULE                  := libOmxSwVdec
 LOCAL_MODULE_TAGS             := optional
+LOCAL_MODULE_PATH_32          := $(TARGET_OUT_VENDOR)/lib
+LOCAL_MODULE_PATH_64          := $(TARGET_OUT_VENDOR)/lib64
 LOCAL_CFLAGS                  := $(libmm-vdec-def)
 LOCAL_C_INCLUDES              += $(libmm-vdec-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES := $(libmm-vdec-add-dep)
