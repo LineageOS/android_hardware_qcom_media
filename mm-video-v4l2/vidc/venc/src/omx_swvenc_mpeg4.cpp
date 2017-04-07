@@ -206,9 +206,11 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     m_sSessionQuantization.nQpP = 6;
     m_sSessionQuantization.nQpB = 2;
 
-    OMX_INIT_STRUCT(&m_sSessionQPRange, OMX_QCOM_VIDEO_PARAM_QPRANGETYPE);
+    OMX_INIT_STRUCT(&m_sSessionQPRange, OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE);
     m_sSessionQPRange.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
-    m_sSessionQPRange.minQP = 2;
+    m_sSessionQPRange.minIQP = 2;
+    m_sSessionQPRange.minPQP = 2;
+    m_sSessionQPRange.minBQP = 2;
 
     OMX_INIT_STRUCT(&m_sParamProfileLevel, OMX_VIDEO_PARAM_PROFILELEVELTYPE);
     m_sParamProfileLevel.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
@@ -372,8 +374,8 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     OMX_INIT_STRUCT(&m_sOutBufSupplier, OMX_PARAM_BUFFERSUPPLIERTYPE);
     m_sOutBufSupplier.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
 
-    OMX_INIT_STRUCT(&m_sParamInitqp, QOMX_EXTNINDEX_VIDEO_INITIALQP);
-    m_sParamInitqp.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
+    OMX_INIT_STRUCT(&m_sConfigQP, OMX_QCOM_VIDEO_CONFIG_QP);
+    m_sConfigQP.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
 
     // mp4 specific init
     OMX_INIT_STRUCT(&m_sParamMPEG4, OMX_VIDEO_PARAM_MPEG4TYPE);
@@ -411,8 +413,17 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     m_state                   = OMX_StateLoaded;
     m_sExtraData = 0;
 
-    m_capability.max_height = OMX_CORE_FWVGA_HEIGHT;
-    m_capability.max_width = OMX_CORE_FWVGA_WIDTH;
+    if (codec_type == OMX_VIDEO_CodingMPEG4)
+    {
+        m_capability.max_height = OMX_CORE_720P_HEIGHT;
+        m_capability.max_width = OMX_CORE_720P_WIDTH;
+    }
+    else if (codec_type == OMX_VIDEO_CodingH263)
+    {
+        m_capability.max_height = OMX_CORE_FWVGA_HEIGHT;
+        m_capability.max_width = OMX_CORE_FWVGA_WIDTH;
+    }
+
     m_capability.min_height = 32;
     m_capability.min_width = 32;
 
@@ -556,7 +567,10 @@ OMX_ERRORTYPE  omx_venc::set_parameter
 
                 /* set the frame attributes */
                 stride = VENUS_Y_STRIDE(COLOR_FMT_NV12, portDefn->format.video.nFrameWidth);
-                scanlines = VENUS_Y_SCANLINES(COLOR_FMT_NV12, portDefn->format.video.nSliceHeight);
+                //Slice height doesn't get updated so chroma offset calculation becomes incorrect .
+                //Using FrameHeight Instead , just for omx-test-app .
+                //scanlines = VENUS_Y_SCANLINES(COLOR_FMT_NV12, portDefn->format.video.nSliceHeight);
+                scanlines = VENUS_Y_SCANLINES(COLOR_FMT_NV12, portDefn->format.video.nFrameHeight);
                 Prop.id = SWVENC_PROPERTY_ID_FRAME_ATTRIBUTES;
                 Prop.info.frame_attributes.stride_luma = stride;
                 Prop.info.frame_attributes.stride_chroma = stride;
@@ -1617,10 +1631,6 @@ OMX_ERRORTYPE  omx_venc::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
     m_cmd_q.m_read = m_cmd_q.m_write =0;
     m_etb_q.m_read = m_etb_q.m_write =0;
 
-    /* Clear the strong reference */
-    DEBUG_PRINT_HIGH("Calling m_heap_ptr.clear()");
-    m_heap_ptr.clear();
-
     DEBUG_PRINT_HIGH("Calling swvenc_deinit()");
     swvenc_deinit(m_hSwVenc);
 
@@ -1724,14 +1734,10 @@ OMX_U32 omx_venc::dev_set_message_thread_id(pthread_t tid)
     RETURN(true);
 }
 
-bool omx_venc::dev_use_buf(void *buf_addr,unsigned port,unsigned index)
+bool omx_venc::dev_use_buf(unsigned port)
 {
     ENTER_FUNC();
-
-    (void)buf_addr;
     (void)port;
-    (void)index;
-
     RETURN(true);
 }
 
