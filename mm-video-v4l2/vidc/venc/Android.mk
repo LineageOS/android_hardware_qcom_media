@@ -28,6 +28,9 @@ TARGETS_THAT_SUPPORT_UBWC := msm8996 msm8998
 TARGETS_THAT_SUPPORT_VQZIP := msm8996 msm8998
 TARGETS_THAT_SUPPORT_PQ := msm8996 msm8998 sdm660 msm8953
 TARGETS_THAT_USE_NV21 := sdm660 msm8953
+TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_4 := msm8937
+TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_51 := msm8953 sdm660
+TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_52 := msm8996 msm8998
 
 ifeq ($(TARGET_BOARD_PLATFORM),msm8610)
 libmm-venc-def += -DMAX_RES_720P
@@ -98,6 +101,14 @@ endif
 
 # Common Dependencies
 libmm-venc-add-dep  := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
+
+ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_4)),true)
+libmm-venc-def += -DMAX_H264_LEVEL_4
+else ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_51)),true)
+libmm-venc-def += -DMAX_H264_LEVEL_51
+else ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_52)),true)
+libmm-venc-def += -DMAX_H264_LEVEL_52
+endif
 
 # ---------------------------------------------------------------------------------
 # 			Make the Shared library (libOmxVenc)
