@@ -5298,7 +5298,7 @@ bool venc_dev::venc_set_bitrate_type(OMX_U32 type)
 bool venc_dev::venc_set_layer_bitrates(OMX_U32 *layerBitrate, OMX_U32 numLayers)
 {
     DEBUG_PRINT_LOW("venc_set_layer_bitrates");
-    struct v4l2_ext_control ctrl[OMX_VIDEO_ANDROID_MAXTEMPORALLAYERS];
+    struct v4l2_ext_control ctrl[2];
     struct v4l2_ext_controls controls;
     int rc = 0;
     OMX_U32 i;
@@ -5313,21 +5313,24 @@ bool venc_dev::venc_set_layer_bitrates(OMX_U32 *layerBitrate, OMX_U32 numLayers)
             DEBUG_PRINT_ERROR("Invalid bitrate settings for layer %d", i);
             return false;
         } else {
-            ctrl[i].id = V4L2_CID_MPEG_VIDC_VENC_PARAM_LAYER_BITRATE;
-            ctrl[i].value = layerBitrate[i];
+            ctrl[0].id = V4L2_CID_MPEG_VIDC_VIDEO_LAYER_ID;
+            ctrl[0].value = i;
+            ctrl[1].id = V4L2_CID_MPEG_VIDC_VENC_PARAM_LAYER_BITRATE;
+            ctrl[1].value = layerBitrate[i];
+
+            controls.count = 2;
+            controls.ctrl_class = V4L2_CTRL_CLASS_MPEG;
+            controls.controls = ctrl;
+
+            rc = ioctl(m_nDriver_fd, VIDIOC_S_EXT_CTRLS, &controls);
+            if (rc) {
+                DEBUG_PRINT_ERROR("Failed to set layerwise bitrate %d", rc);
+                return false;
+            }
+
+            DEBUG_PRINT_LOW("Layerwise bitrate configured successfully for layer : %u bitrate : %u ",i, layerBitrate[i]);
         }
     }
-    controls.count = numLayers;
-    controls.ctrl_class = V4L2_CTRL_CLASS_MPEG;
-    controls.controls = ctrl;
-
-    rc = ioctl(m_nDriver_fd, VIDIOC_S_EXT_CTRLS, &controls);
-    if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set layerwise bitrate %d", rc);
-        return false;
-    }
-
-    DEBUG_PRINT_LOW("Layerwise bitrate configured successfully");
     return true;
 }
 
