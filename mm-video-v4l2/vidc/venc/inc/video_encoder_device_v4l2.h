@@ -425,8 +425,6 @@ class venc_dev
         struct venc_debug_cap m_debug;
         OMX_U32 m_nDriver_fd;
         int m_poll_efd;
-        bool m_profile_set;
-        bool m_level_set;
         int num_input_planes, num_output_planes;
         int etb, ebd, ftb, fbd;
         struct recon_buffer {
@@ -494,17 +492,17 @@ class venc_dev
         struct msm_venc_vpx_error_resilience vpx_err_resilience;
         struct msm_venc_priority            sess_priority;
         OMX_U32                             operating_rate;
-        int rc_off_level;
         struct msm_venc_hybrid_hp           hybrid_hp;
         struct msm_venc_color_space         color_space;
         msm_venc_temporal_layers            temporal_layers_config;
 
-        bool venc_set_profile_level(OMX_U32 eProfile,OMX_U32 eLevel);
+        bool venc_set_profile(OMX_U32 eProfile);
+        bool venc_set_level(OMX_U32 eLevel);
         bool venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames);
-        bool venc_set_target_bitrate(OMX_U32 nTargetBitrate, OMX_U32 config);
+        bool venc_set_target_bitrate(OMX_U32 nTargetBitrate);
         bool venc_set_ratectrl_cfg(OMX_VIDEO_CONTROLRATETYPE eControlRate);
         bool venc_set_session_qp_range(OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE *qp_range);
-        bool venc_set_encode_framerate(OMX_U32 encode_framerate, OMX_U32 config);
+        bool venc_set_encode_framerate(OMX_U32 encode_framerate);
         bool venc_set_intra_vop_refresh(OMX_BOOL intra_vop_refresh);
         bool venc_set_color_format(OMX_COLOR_FORMATTYPE color_format);
         bool venc_validate_profile_level(OMX_U32 *eProfile, OMX_U32 *eLevel);
