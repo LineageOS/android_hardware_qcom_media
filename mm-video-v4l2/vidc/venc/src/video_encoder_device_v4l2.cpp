@@ -2327,11 +2327,12 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
 #endif // _PQ_
                 break;
             }
-        case OMX_QcomIndexConfigVideoVencLowLatencyMode:
+        case OMX_QTIIndexParamLowLatencyMode:
             {
-                QOMX_ENABLETYPE *pParam = (QOMX_ENABLETYPE*)paramData;
+                QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE *pParam =
+                    (QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE*)paramData;
 
-                if (!venc_set_lowlatency_mode(pParam->bEnable)) {
+                if (!venc_set_lowlatency_mode(pParam->bEnableLowLatencyMode)) {
                      DEBUG_PRINT_ERROR("Setting low latency mode failed");
                      return OMX_ErrorUnsupportedSetting;
                 }

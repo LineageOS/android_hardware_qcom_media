@@ -4345,19 +4345,19 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
         case OMX_QTIIndexParamLowLatencyMode: {
                                struct v4l2_control control;
                                int rc = 0;
-                               QOMX_EXTNINDEX_VIDEO_VENC_LOW_LATENCY_MODE* pParam =
-                                   (QOMX_EXTNINDEX_VIDEO_VENC_LOW_LATENCY_MODE*)paramData;
-                               if (pParam->bLowLatencyMode) {
-                                   DEBUG_PRINT_HIGH("Enabling DECODE order");
-                                   time_stamp_dts.set_timestamp_reorder_mode(false);
-                                   control.id = V4L2_CID_MPEG_VIDC_VIDEO_OUTPUT_ORDER;
-                                   control.value = V4L2_MPEG_VIDC_VIDEO_OUTPUT_ORDER_DECODE;
-                                   rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control);
-                                   if (rc) {
-                                       DEBUG_PRINT_ERROR("Set picture order failed");
-                                       eRet = OMX_ErrorUnsupportedSetting;
-                                   }
-                               }
+                               QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE* pParam =
+                                   (QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE*)paramData;
+                                control.id = V4L2_CID_MPEG_VIDC_VIDEO_LOWLATENCY_MODE;
+                                if (pParam->bEnableLowLatencyMode)
+                                    control.value = V4L2_CID_MPEG_VIDC_VIDEO_LOWLATENCY_ENABLE;
+                                else
+                                    control.value = V4L2_CID_MPEG_VIDC_VIDEO_LOWLATENCY_DISABLE;
+
+                                rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control);
+                                if (rc) {
+                                    DEBUG_PRINT_ERROR("Set low latency failed");
+                                    eRet = OMX_ErrorUnsupportedSetting;
+                                }
                                break;
                            }
         case OMX_QcomIndexParamVideoDecoderPictureOrder: {

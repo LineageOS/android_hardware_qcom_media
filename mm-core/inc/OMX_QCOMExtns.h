@@ -582,10 +582,6 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     /* Configure ROI info */
     OMX_QTIIndexConfigVideoRoiInfo = 0x7F000059,
 
-    /* Encoder Low Latency mode */
-    /* Note: This will get deprecated */
-    OMX_QcomIndexConfigVideoVencLowLatencyMode = 0x7F00005A,
-
     /* Set Low Latency Mode */
     OMX_QTIIndexParamLowLatencyMode = 0x7F00005B,
 
