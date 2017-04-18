@@ -60,7 +60,9 @@ ifeq ($(call is-board-platform-in-list, $(MASTER_SIDE_CP_TARGET_LIST)),true)
 libmm-vdec-def += -DMASTER_SIDE_CP
 endif
 
+ifneq ($(TARGET_BOARD_PLATFORM),msm8909)
 libmm-vdec-def += -D_QUERY_DISP_RES_
+endif
 
 include $(CLEAR_VARS)
 
