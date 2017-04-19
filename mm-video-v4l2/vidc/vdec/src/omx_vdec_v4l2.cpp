@@ -589,16 +589,14 @@ VideoHeap::VideoHeap(int fd, size_t size, void* base)
 #endif
 #endif // _ANDROID_
 
+/*
+ * Placeholder function to enable 10-bit decoding
+ * for supported targets.
+ */
 bool is_platform_tp10capture_supported()
 {
-    char platform_name[PROPERTY_VALUE_MAX] = {0};
-    property_get("ro.board.platform", platform_name, "0");
-    if (!strncmp(platform_name, "msm8998", 7)) {
-        DEBUG_PRINT_HIGH("TP10 on capture port is supported");
-        return true;
-    }
-    DEBUG_PRINT_HIGH("TP10 on capture port is not supported");
-    return false;
+    DEBUG_PRINT_HIGH("TP10 on capture port is supported");
+    return true;
 }
 
 /* ======================================================================
