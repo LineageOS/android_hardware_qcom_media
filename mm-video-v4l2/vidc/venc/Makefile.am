@@ -61,9 +61,6 @@ if TARGETS_THAT_SUPPORT_UBWC
 AM_CPPFLAGS += -D_UBWC_
 endif
 
-#Hypervisor
-sources += ../common/src/hypv_intercept.cpp
-
 if TARGETS_THAT_SUPPORT_VQZIP
 AM_CPPFLAGS += -D_VQZIP_
 endif
@@ -87,6 +84,7 @@ AM_CPPFLAGS += -I$(top_srcdir)/libc2dcolorconvert/
 AM_CPPFLAGS += -I$(top_srcdir)/mm-core/inc/
 AM_CPPFLAGS += -I$(top_srcdir)/mm-core/src/common/
 AM_CPPFLAGS += -I$(top_srcdir)/libstagefrighthw/
+AM_CPPFLAGS += -I$(top_srcdir)/hyp-intercept
 
 sources = src/omx_video_base.cpp
 sources += src/omx_video_encoder.cpp
@@ -102,4 +100,5 @@ libOmxVenc_la_CFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) -fPIC
 libOmxVenc_la_LDFLAGS = -lstdc++ -lpthread -llog -lutils -lbinder -lcutils -lglib-2.0 -lbase -ldl -lpthread -shared -lqdMetaData
 #  -lc2d2 -lgui -lOmxCore -lgpustats -ldl -lpthread
 libOmxVenc_la_LDFLAGS += -version-info 0
-
+libOmxVenc_la_LDFLAGS += -L$(top_builddir)/hyp-intercept
+libOmxVenc_la_LDFLAGS += -lhypintercept

@@ -63,6 +63,7 @@ AM_CPPFLAGS += -I$(top_srcdir)/mm-video-v4l2/vidc/vdec/inc/
 AM_CPPFLAGS += -I$(top_srcdir)/libc2dcolorconvert/
 AM_CPPFLAGS += -I$(top_srcdir)/mm-core/inc/
 AM_CPPFLAGS += -I$(top_srcdir)/mm-core/src/common/
+AM_CPPFLAGS += -I$(top_srcdir)/hyp-intercept/
 
 c_sources         := src/frameparser.cpp
 c_sources         += src/h264_utils.cpp
@@ -80,4 +81,5 @@ libOmxVdec_la_SOURCES = $(c_sources)
 libOmxVdec_la_CFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) -fPIC
 libOmxVdec_la_CFLAGS += ../libc2d2colorconvert/libc2dcolorconvert.la
 libOmxVdec_la_LDFLAGS = -llog -lutils -lbinder -lcutils -ldl -lqdMetaData -lglib-2.0 -shared -version-info 0
-
+libOmxVdec_la_LDFLAGS += -L$(top_builddir)/hyp-intercept
+libOmxVdec_la_LDFLAGS += -lhypintercept

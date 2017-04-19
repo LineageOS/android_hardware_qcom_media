@@ -211,6 +211,7 @@ AC_SUBST([CFLAGS])
 
 AC_CONFIG_FILES([ \
         Makefile \
+	hyp-intercept/Makefile \
         mm-core/Makefile
         mm-video-v4l2/Makefile \
         mm-video-v4l2/vidc/Makefile \
