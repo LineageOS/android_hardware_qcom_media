@@ -12521,10 +12521,12 @@ void omx_vdec::buf_ref_remove()
                         out_dynamic_list[i].mapped_size);
         }
 
-         DEBUG_PRINT_LOW("buf_ref_remove: [REMOVED] fd = %u ref_count = %u",
-                 (unsigned int)out_dynamic_list[i].fd, (unsigned int)out_dynamic_list[i].ref_count);
-         close(out_dynamic_list[i].dup_fd);
-         out_dynamic_list[i].dup_fd = -1;
+        if (out_dynamic_list[i].dup_fd > -1) {
+            DEBUG_PRINT_LOW("buf_ref_remove: [REMOVED] fd = %u ref_count = %u",
+                    (unsigned int)out_dynamic_list[i].fd, (unsigned int)out_dynamic_list[i].ref_count);
+            close(out_dynamic_list[i].dup_fd);
+            out_dynamic_list[i].dup_fd = -1;
+        }
     }
     pthread_mutex_unlock(&m_lock);
 
