@@ -84,7 +84,7 @@ class omx_venc: public omx_video
         bool dev_get_peak_bitrate(OMX_U32 *);
         bool dev_get_batch_size(OMX_U32 *);
         bool dev_get_temporal_layer_caps(OMX_U32 * /*nMaxLayers*/,
-                OMX_U32 * /*nMaxBLayers*/);
+                OMX_U32 * /*nMaxBLayers*/, OMX_VIDEO_ANDROID_TEMPORALLAYERINGPATTERNTYPE */*SupportedPattern*/);
         bool dev_is_video_session_supported(OMX_U32 width, OMX_U32 height);
         bool dev_color_align(OMX_BUFFERHEADERTYPE *buffer, OMX_U32 width,
                         OMX_U32 height);

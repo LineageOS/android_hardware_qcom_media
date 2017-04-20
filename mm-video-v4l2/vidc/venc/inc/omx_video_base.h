@@ -310,7 +310,7 @@ class omx_video: public qc_omx_component
         virtual bool dev_get_batch_size(OMX_U32 *) = 0;
         virtual bool dev_buffer_ready_to_queue(OMX_BUFFERHEADERTYPE *buffer) = 0;
         virtual bool dev_get_temporal_layer_caps(OMX_U32 * /*nMaxLayers*/,
-                OMX_U32 * /*nMaxBLayers*/) = 0;
+                OMX_U32 * /*nMaxBLayers*/, OMX_VIDEO_ANDROID_TEMPORALLAYERINGPATTERNTYPE */*SupportedPattern*/) = 0;
 #ifdef _ANDROID_ICS_
         void omx_release_meta_buffer(OMX_BUFFERHEADERTYPE *buffer);
 #endif

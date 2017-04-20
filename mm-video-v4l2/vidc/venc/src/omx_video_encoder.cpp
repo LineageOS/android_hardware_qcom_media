@@ -1986,7 +1986,13 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
         case OMX_IndexConfigAndroidVideoTemporalLayering:
             {
                 VALIDATE_OMX_PARAM_DATA(configData, OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE);
-                DEBUG_PRINT_ERROR("Setting/modifying Temporal layers at run-time is not supported !");
+                OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE* pParam =
+                                (OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE*) configData;
+                if (!handle->venc_set_config(configData, (OMX_INDEXTYPE)OMX_IndexConfigAndroidVideoTemporalLayering)) {
+                    DEBUG_PRINT_ERROR("Failed to set OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE");
+                    return OMX_ErrorUnsupportedSetting;
+                }
+                memcpy(&m_sConfigTemporalLayers, pParam, sizeof(m_sConfigTemporalLayers));
                 return OMX_ErrorUnsupportedSetting;
             }
         case OMX_IndexConfigAndroidVendorExtension:
@@ -2202,8 +2208,8 @@ bool omx_venc::dev_get_batch_size(OMX_U32 *size)
 }
 
 bool omx_venc::dev_get_temporal_layer_caps(OMX_U32 *nMaxLayers,
-        OMX_U32 *nMaxBLayers) {
-    return handle->venc_get_temporal_layer_caps(nMaxLayers, nMaxBLayers);
+        OMX_U32 *nMaxBLayers, OMX_VIDEO_ANDROID_TEMPORALLAYERINGPATTERNTYPE *eSupportedPattern) {
+    return handle->venc_get_temporal_layer_caps(nMaxLayers, nMaxBLayers, eSupportedPattern);
 }
 
 bool omx_venc::dev_loaded_start()
