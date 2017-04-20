@@ -253,6 +253,15 @@ static const unsigned int hevc_profile_level_table[][MAX_PROFILE_PARAMS]= {
 
 #define BUFFER_LOG_LOC "/data/misc/media"
 
+static void init_extradata_info(struct extradata_buffer_info *info) {
+    if (!info)
+        return;
+    memset(info, 0, sizeof(*info));
+    info->m_ion_dev = -1;
+    info->ion.ion_device_fd = -1;
+    info->ion.fd_ion_data.fd = -1;
+}
+
 //constructor
 venc_dev::venc_dev(class omx_venc *venc_class)
 {
@@ -276,8 +285,8 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     deinterlace_enabled = false;
     pthread_mutex_init(&pause_resume_mlock, NULL);
     pthread_cond_init(&pause_resume_cond, NULL);
-    memset(&input_extradata_info, 0, sizeof(input_extradata_info));
-    memset(&output_extradata_info, 0, sizeof(output_extradata_info));
+    init_extradata_info(&input_extradata_info);
+    init_extradata_info(&output_extradata_info);
     memset(&idrperiod, 0, sizeof(idrperiod));
     memset(&multislice, 0, sizeof(multislice));
     memset (&slice_mode, 0 , sizeof(slice_mode));
@@ -1037,12 +1046,10 @@ void venc_dev::free_extradata(struct extradata_buffer_info *extradata_info)
         venc_handle->free_ion_memory(&extradata_info->ion);
     }
 
-    if (extradata_info->m_ion_dev)
+    if (extradata_info->m_ion_dev > -1)
         close(extradata_info->m_ion_dev);
 
-    memset(extradata_info, 0, sizeof(*extradata_info));
-    extradata_info->ion.fd_ion_data.fd = -1;
-    extradata_info->allocated = OMX_FALSE;
+    init_extradata_info(extradata_info);
 
 #endif // USE_ION
 }
@@ -7991,6 +7998,7 @@ venc_dev::venc_dev_pq::venc_dev_pq()
     configured_format = 0;
     is_pq_force_disable = 0;
     pthread_mutex_init(&lock, NULL);
+    init_extradata_info(&roi_extradata_info);
 }
 
 bool venc_dev::venc_dev_pq::init(unsigned long format)
@@ -8057,7 +8065,6 @@ bool venc_dev::venc_dev_pq::init(unsigned long format)
         mPQComputeStats = NULL;
     }
     memset(&pConfig, 0, sizeof(gpu_stats_lib_input_config));
-    memset(&roi_extradata_info, 0, sizeof(extradata_buffer_info));
     roi_extradata_info.size = 16 * 1024;            // Max size considering 4k
     roi_extradata_info.buffer_size = 16 * 1024;     // Max size considering 4k
     roi_extradata_info.port_index = OUTPUT_PORT;
