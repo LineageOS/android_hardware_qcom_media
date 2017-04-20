@@ -4345,19 +4345,19 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
         case OMX_QTIIndexParamLowLatencyMode: {
                                struct v4l2_control control;
                                int rc = 0;
-                               QOMX_EXTNINDEX_VIDEO_VENC_LOW_LATENCY_MODE* pParam =
-                                   (QOMX_EXTNINDEX_VIDEO_VENC_LOW_LATENCY_MODE*)paramData;
-                               if (pParam->bLowLatencyMode) {
-                                   DEBUG_PRINT_HIGH("Enabling DECODE order");
-                                   time_stamp_dts.set_timestamp_reorder_mode(false);
-                                   control.id = V4L2_CID_MPEG_VIDC_VIDEO_OUTPUT_ORDER;
-                                   control.value = V4L2_MPEG_VIDC_VIDEO_OUTPUT_ORDER_DECODE;
-                                   rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control);
-                                   if (rc) {
-                                       DEBUG_PRINT_ERROR("Set picture order failed");
-                                       eRet = OMX_ErrorUnsupportedSetting;
-                                   }
-                               }
+                               QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE* pParam =
+                                   (QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE*)paramData;
+                                control.id = V4L2_CID_MPEG_VIDC_VIDEO_LOWLATENCY_MODE;
+                                if (pParam->bEnableLowLatencyMode)
+                                    control.value = V4L2_CID_MPEG_VIDC_VIDEO_LOWLATENCY_ENABLE;
+                                else
+                                    control.value = V4L2_CID_MPEG_VIDC_VIDEO_LOWLATENCY_DISABLE;
+
+                                rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control);
+                                if (rc) {
+                                    DEBUG_PRINT_ERROR("Set low latency failed");
+                                    eRet = OMX_ErrorUnsupportedSetting;
+                                }
                                break;
                            }
         case OMX_QcomIndexParamVideoDecoderPictureOrder: {
@@ -8713,6 +8713,7 @@ OMX_ERRORTYPE omx_vdec::get_buffer_req(vdec_allocatorproperty *buffer_prop)
 {
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
     struct v4l2_requestbuffers bufreq;
+    struct v4l2_control control;
     unsigned int buf_size = 0, extra_data_size = 0, default_extra_data_size = 0;
     unsigned int final_extra_data_size = 0;
     struct v4l2_format fmt;
@@ -8725,51 +8726,27 @@ OMX_ERRORTYPE omx_vdec::get_buffer_req(vdec_allocatorproperty *buffer_prop)
         bufreq.type=V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
         fmt.type =V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
         fmt.fmt.pix_mp.pixelformat = output_capability;
+        control.id = V4L2_CID_MIN_BUFFERS_FOR_OUTPUT;
     } else if (buffer_prop->buffer_type == VDEC_BUFFER_TYPE_OUTPUT) {
         bufreq.type=V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
         fmt.type =V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
         fmt.fmt.pix_mp.pixelformat = capture_capability;
+        control.id = V4L2_CID_MIN_BUFFERS_FOR_CAPTURE;
     } else {
         eRet = OMX_ErrorBadParameter;
     }
-    if (eRet==OMX_ErrorNone) {
-        ret = ioctl(drv_ctx.video_driver_fd,VIDIOC_REQBUFS, &bufreq);
+    control.value = buffer_prop->mincount;
+    if (eRet == OMX_ErrorNone) {
+        ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_CTRL, &control);
     }
     if (ret) {
         DEBUG_PRINT_ERROR("Requesting buffer requirements failed");
         /*TODO: How to handle this case */
         eRet = OMX_ErrorInsufficientResources;
         return eRet;
-    } else {
-        bool is_res_1080p_or_below = (drv_ctx.video_resolution.frame_width <= 1920 &&
-                                     drv_ctx.video_resolution.frame_height <= 1088) ||
-                                     (drv_ctx.video_resolution.frame_height <= 1088 &&
-                                      drv_ctx.video_resolution.frame_width <= 1920);
-
-        int fps = drv_ctx.frame_rate.fps_numerator / (float)drv_ctx.frame_rate.fps_denominator;
-        bool fps_above_180 =  (fps >= 180 || operating_frame_rate >= 180) ? true : false;
-        bool increase_output = (buffer_prop->buffer_type == VDEC_BUFFER_TYPE_OUTPUT) && (bufreq.count >= 16);
-
-        if (increase_output && fps_above_180 &&
-            output_capability == V4L2_PIX_FMT_H264 &&
-            is_res_1080p_or_below) {
-            DEBUG_PRINT_LOW("High fps - fps = %d operating_rate = %d", fps, operating_frame_rate);
-            DEBUG_PRINT_LOW("getbufreq[output]: Increase buffer count (%d) to (%d) to support high fps",
-                            bufreq.count, bufreq.count + 10);
-            bufreq.count += 10;
-            ret = ioctl(drv_ctx.video_driver_fd,VIDIOC_REQBUFS, &bufreq);
-            if (ret) {
-                DEBUG_PRINT_ERROR("(Failed to set updated buffer count to driver");
-                eRet = OMX_ErrorInsufficientResources;
-                return eRet;
-            }
-            DEBUG_PRINT_LOW("new buf count = %d set to driver", bufreq.count);
-        }
-
-        buffer_prop->actualcount = bufreq.count;
-        buffer_prop->mincount = bufreq.count;
-        DEBUG_PRINT_HIGH("Count = %d",bufreq.count);
     }
+    buffer_prop->actualcount = buffer_prop->mincount = control.value;
+        DEBUG_PRINT_HIGH("Count = %d",bufreq.count);
     DEBUG_PRINT_LOW("GetBufReq IN: ActCnt(%d) Size(%u)",
             buffer_prop->actualcount, (unsigned int)buffer_prop->buffer_size);
 
@@ -8837,6 +8814,7 @@ OMX_ERRORTYPE omx_vdec::set_buffer_req(vdec_allocatorproperty *buffer_prop)
     unsigned buf_size = 0;
     struct v4l2_format fmt, c_fmt;
     struct v4l2_requestbuffers bufreq;
+    struct v4l2_control control;
     int ret = 0;
     DEBUG_PRINT_LOW("SetBufReq IN: ActCnt(%d) Size(%u)",
             buffer_prop->actualcount, (unsigned int)buffer_prop->buffer_size);
@@ -8882,7 +8860,15 @@ OMX_ERRORTYPE omx_vdec::set_buffer_req(vdec_allocatorproperty *buffer_prop)
             eRet = OMX_ErrorBadParameter;
         }
 
-        if (eRet==OMX_ErrorNone) {
+        control.value = buffer_prop->mincount;
+        if (eRet == OMX_ErrorNone) {
+            ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_CTRL, &control);
+            if (ret)
+                eRet = OMX_ErrorUndefined;
+        }
+
+        if (eRet == OMX_ErrorNone &&
+                        buffer_prop->actualcount >= (uint32_t)control.value) {
             ret = ioctl(drv_ctx.video_driver_fd,VIDIOC_REQBUFS, &bufreq);
         }
 
@@ -11116,7 +11102,6 @@ OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::set_buffer_req(
         return OMX_ErrorBadParameter;
     }
 
-    bool reqs_updated = false;
     if (enabled) {
         // disallow changing buffer size/count while we have active allocated buffers
         if (allocated_count > 0) {
@@ -11129,22 +11114,17 @@ OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::set_buffer_req(
     } else {
         if (buffer_size > omx->drv_ctx.op_buf.buffer_size) {
             omx->drv_ctx.op_buf.buffer_size = buffer_size;
-            reqs_updated = true;
         }
     }
 
     if (actual_count > omx->drv_ctx.op_buf.actualcount) {
         omx->drv_ctx.op_buf.actualcount = actual_count;
-        reqs_updated = true;
     }
 
-    if (reqs_updated) {
-        omx->drv_ctx.extradata_info.count = omx->drv_ctx.op_buf.actualcount;
-        omx->drv_ctx.extradata_info.size = omx->drv_ctx.extradata_info.count *
-                omx->drv_ctx.extradata_info.buffer_size;
-        return omx->set_buffer_req(&(omx->drv_ctx.op_buf));
-    }
-    return OMX_ErrorNone;
+    omx->drv_ctx.extradata_info.count = omx->drv_ctx.op_buf.actualcount;
+    omx->drv_ctx.extradata_info.size = omx->drv_ctx.extradata_info.count *
+            omx->drv_ctx.extradata_info.buffer_size;
+    return omx->set_buffer_req(&(omx->drv_ctx.op_buf));
 }
 
 OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::free_output_buffer(

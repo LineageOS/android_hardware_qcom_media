@@ -518,11 +518,11 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
 
     if (lowlatency)
     {
-        QOMX_ENABLETYPE low_latency;
-        low_latency.bEnable = OMX_TRUE;
+        QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE low_latency;
+        low_latency.bEnableLowLatencyMode = OMX_TRUE;
         DEBUG_PRINT_LOW("Enable lowlatency mode");
         if (!handle->venc_set_param(&low_latency,
-               (OMX_INDEXTYPE)OMX_QcomIndexConfigVideoVencLowLatencyMode)) {
+               (OMX_INDEXTYPE)OMX_QTIIndexParamLowLatencyMode)) {
             DEBUG_PRINT_ERROR("Failed enabling low latency mode");
         }
     }
@@ -1464,15 +1464,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     return OMX_ErrorUnsupportedSetting;
                 }
                 memcpy(&m_sSar, paramData, sizeof(m_sSar));
-                break;
-            }
-        case OMX_QcomIndexConfigVideoVencLowLatencyMode:
-            {
-                if(!handle->venc_set_param(paramData,
-                            (OMX_INDEXTYPE)OMX_QcomIndexConfigVideoVencLowLatencyMode)) {
-                    DEBUG_PRINT_ERROR("Request to Enable Low latency mode failed");
-                    return OMX_ErrorUnsupportedSetting;
-                }
                 break;
             }
         case OMX_QTIIndexParamVideoEnableRoiInfo:
