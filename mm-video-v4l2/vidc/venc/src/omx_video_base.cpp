@@ -1610,10 +1610,11 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     int supportedFormats[] = {
                         [0] = QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed,
                         [1] = QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m,
-                        [2] = QOMX_COLOR_Format32bitRGBA8888Compressed,
-                        [3] = QOMX_COLOR_Format32bitRGBA8888,
-                        [4] = QOMX_COLOR_FormatAndroidOpaque,
-                        [5] = OMX_COLOR_FormatYUV420SemiPlanar,
+                        [2] = QOMX_COLOR_FormatYVU420SemiPlanar,
+                        [3] = QOMX_COLOR_Format32bitRGBA8888Compressed,
+                        [4] = QOMX_COLOR_Format32bitRGBA8888,
+                        [5] = QOMX_COLOR_FormatAndroidOpaque,
+                        [6] = OMX_COLOR_FormatYUV420SemiPlanar,
                     };
 #else
                     //we support two formats
@@ -1623,8 +1624,9 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     //this can be extended in the future
                     int supportedFormats[] = {
                         [0] = QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m,
-                        [1] = QOMX_COLOR_FormatAndroidOpaque,
-                        [2] = OMX_COLOR_FormatYUV420SemiPlanar,
+                        [1] = QOMX_COLOR_FormatYVU420SemiPlanar,
+                        [2] = QOMX_COLOR_FormatAndroidOpaque,
+                        [3] = OMX_COLOR_FormatYUV420SemiPlanar,
                     };
 #endif
                     if (index > (sizeof(supportedFormats)/sizeof(*supportedFormats) - 1))
