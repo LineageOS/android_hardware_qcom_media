@@ -295,6 +295,7 @@ omx_video::omx_video():
     output_use_buffer (false),
     pending_input_buffers(0),
     pending_output_buffers(0),
+    allocate_native_handle(false),
     m_out_bm_count(0),
     m_inp_bm_count(0),
     m_flags(0),
@@ -3020,24 +3021,23 @@ OMX_ERRORTYPE omx_video::free_output_buffer(OMX_BUFFERHEADERTYPE *bufferHdr)
             if(!secure_session) {
                 munmap (m_pOutput_pmem[index].buffer,
                         m_pOutput_pmem[index].size);
-            } else {
+                close (m_pOutput_pmem[index].fd);
+            } else if (m_pOutput_pmem[index].buffer) {
+                native_handle_t *handle;
                 if (allocate_native_handle) {
-                    native_handle_t *handle = NULL;
                     handle = (native_handle_t *)m_pOutput_pmem[index].buffer;
-                    native_handle_close(handle);
-                    native_handle_delete(handle);
                 } else {
-                    char *data = (char*) m_pOutput_pmem[index].buffer;
-                    native_handle_t *handle = NULL;
-                    memcpy(&handle, data + sizeof(OMX_U32), sizeof(native_handle_t*));
-                    native_handle_delete(handle);
+                    handle = ((output_metabuffer *)m_pOutput_pmem[index].buffer)->nh;
                     free(m_pOutput_pmem[index].buffer);
                 }
+                native_handle_close(handle);
+                native_handle_delete(handle);
             }
-            close (m_pOutput_pmem[index].fd);
 #ifdef USE_ION
             free_ion_memory(&m_pOutput_ion[index]);
 #endif
+
+            m_pOutput_pmem[index].buffer = NULL;
             m_pOutput_pmem[index].fd = -1;
         } else if ( m_pOutput_pmem[index].fd > 0 && (output_use_buffer == true
                     && m_use_output_pmem == OMX_FALSE)) {
