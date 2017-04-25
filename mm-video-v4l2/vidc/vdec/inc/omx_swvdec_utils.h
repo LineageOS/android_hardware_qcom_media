@@ -115,7 +115,7 @@ private:
     pthread_mutex_t                   m_mutex; ///< mutex
 };
 
-#define DIAG_FILE_PATH "/data/misc/media" ///< file path
+#define DIAG_FILE_PATH "/data/vendor/media" ///< file path
 
 /// OMX SwVdec diagnostics class
 class omx_swvdec_diag
