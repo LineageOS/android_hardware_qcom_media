@@ -2643,14 +2643,13 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                 }
                 break;
             }
-#ifdef SUPPORT_CONFIG_INTRA_REFRESH
         case OMX_IndexConfigAndroidIntraRefresh:
             {
                 OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE *intra_refresh = (OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE *)configData;
                 DEBUG_PRINT_LOW("OMX_IndexConfigAndroidIntraRefresh : num frames = %d", intra_refresh->nRefreshPeriod);
 
                 if (intra_refresh->nPortIndex == (OMX_U32) PORT_INDEX_OUT) {
-                    OMX_U32 mb_size = m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC ? 32 : 16;
+                    OMX_U32 mb_size = 16;
                     OMX_U32 num_mbs_per_frame = (ALIGN(m_sVenc_cfg.dvs_height, mb_size)/mb_size) * (ALIGN(m_sVenc_cfg.dvs_width, mb_size)/mb_size);
                     OMX_U32 num_intra_refresh_mbs = 0;
                     if (intra_refresh->nRefreshPeriod) {
@@ -2666,7 +2665,6 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                 }
                 break;
             }
-#endif
         case OMX_QTIIndexConfigVideoBlurResolution:
         {
              OMX_QTI_VIDEO_CONFIG_BLURINFO *blur = (OMX_QTI_VIDEO_CONFIG_BLURINFO *)configData;

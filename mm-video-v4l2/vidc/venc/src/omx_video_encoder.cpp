@@ -315,11 +315,9 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     m_sIntraRefresh.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
     m_sIntraRefresh.eRefreshMode = OMX_VIDEO_IntraRefreshMax;
 
-#ifdef SUPPORT_CONFIG_INTRA_REFRESH
     OMX_INIT_STRUCT(&m_sConfigIntraRefresh, OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE);
     m_sConfigIntraRefresh.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
     m_sConfigIntraRefresh.nRefreshPeriod = 0;
-#endif
 
     OMX_INIT_STRUCT(&m_sConfigColorAspects, DescribeColorAspectsParams);
     m_sConfigColorAspects.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
@@ -1934,7 +1932,6 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                 pthread_mutex_unlock(&timestamp.m_lock);
                 break;
             }
-#ifdef SUPPORT_CONFIG_INTRA_REFRESH
        case OMX_IndexConfigAndroidIntraRefresh:
            {
                 VALIDATE_OMX_PARAM_DATA(configData, OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE);
@@ -1954,7 +1951,6 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                 }
                break;
            }
-#endif
         case OMX_QTIIndexConfigVideoBlurResolution:
            {
                 VALIDATE_OMX_PARAM_DATA(configData, OMX_QTI_VIDEO_CONFIG_BLURINFO);

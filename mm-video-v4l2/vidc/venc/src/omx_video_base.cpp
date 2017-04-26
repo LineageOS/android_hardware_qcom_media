@@ -2129,7 +2129,6 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
                memcpy(pParam, &m_sBaseLayerID, sizeof(m_sBaseLayerID));
                break;
            }
-#ifdef SUPPORT_CONFIG_INTRA_REFRESH
        case OMX_IndexConfigAndroidIntraRefresh:
            {
                VALIDATE_OMX_PARAM_DATA(configData, OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE);
@@ -2139,7 +2138,6 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
                memcpy(pParam, &m_sConfigIntraRefresh, sizeof(m_sConfigIntraRefresh));
                break;
            }
-#endif
        case OMX_QTIIndexConfigVideoBlurResolution:
            {
                VALIDATE_OMX_PARAM_DATA(configData, OMX_QTI_VIDEO_CONFIG_BLURINFO);

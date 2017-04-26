@@ -717,9 +717,7 @@ class omx_video: public qc_omx_component
         } timestamp;
         OMX_U32 m_sExtraData;
         OMX_U32 m_input_msg_id;
-#ifdef SUPPORT_CONFIG_INTRA_REFRESH
         OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE m_sConfigIntraRefresh;
-#endif
         OMX_QTI_VIDEO_CONFIG_BLURINFO       m_blurInfo;
         DescribeColorAspectsParams m_sConfigColorAspects;
         OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE m_sParamTemporalLayers;
