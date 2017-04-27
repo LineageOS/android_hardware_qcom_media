@@ -4275,53 +4275,56 @@ bool venc_dev::venc_set_qp(OMX_U32 i_frame_qp, OMX_U32 p_frame_qp,OMX_U32 b_fram
     int rc;
     struct v4l2_control control;
 
-    session_qp.enableqp = 0;
-    if(enable & ENABLE_I_QP) {
-        control.id = V4L2_CID_MPEG_VIDC_VIDEO_I_FRAME_QP;
-        control.value = i_frame_qp;
+    control.id = V4L2_CID_MPEG_VIDC_VIDEO_I_FRAME_QP;
+    control.value = i_frame_qp;
 
-        DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
-        rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
+    DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
+    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
-        if (rc) {
-            DEBUG_PRINT_ERROR("Failed to set control");
-            return false;
-        }
-        DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
-        session_qp.iframeqp = control.value;
-        session_qp.enableqp = session_qp.enableqp | ENABLE_I_QP;
+    if (rc) {
+        DEBUG_PRINT_ERROR("Failed to set control");
+        return false;
     }
+    DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
+    session_qp.iframeqp = control.value;
 
-    if(enable & ENABLE_P_QP) {
-        control.id = V4L2_CID_MPEG_VIDC_VIDEO_P_FRAME_QP;
-        control.value = p_frame_qp;
+    control.id = V4L2_CID_MPEG_VIDC_VIDEO_P_FRAME_QP;
+    control.value = p_frame_qp;
 
-        DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
-        rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
+    DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
+    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
-        if (rc) {
-            DEBUG_PRINT_ERROR("Failed to set control");
-            return false;
-        }
-        DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
-        session_qp.pframeqp = control.value;
-        session_qp.enableqp = session_qp.enableqp | ENABLE_P_QP;
+    if (rc) {
+        DEBUG_PRINT_ERROR("Failed to set control");
+        return false;
     }
+    DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
+    session_qp.pframeqp = control.value;
 
-    if (enable & ENABLE_B_QP) {
-        control.id = V4L2_CID_MPEG_VIDC_VIDEO_B_FRAME_QP;
-        control.value = b_frame_qp;
-        DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
+    control.id = V4L2_CID_MPEG_VIDC_VIDEO_B_FRAME_QP;
+    control.value = b_frame_qp;
+    DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
 
-        rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-        if (rc) {
-            DEBUG_PRINT_ERROR("Failed to set control");
-            return false;
-        }
-        DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
-        session_qp.bframeqp = control.value;
-        session_qp.enableqp = session_qp.enableqp | ENABLE_B_QP;
+    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
+    if (rc) {
+        DEBUG_PRINT_ERROR("Failed to set control");
+        return false;
     }
+    DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
+    session_qp.bframeqp = control.value;
+
+    control.id = V4L2_CID_MPEG_VIDC_VIDEO_QP_MASK;
+    control.value = enable;
+
+    DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
+    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
+
+    if (rc) {
+        DEBUG_PRINT_ERROR("Failed to set control");
+        return false;
+    }
+    DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
+    session_qp.enableqp = control.value;
 
     return true;
 }
