@@ -4644,37 +4644,23 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             }
             if (metabuffer->nPortIndex == OMX_CORE_OUTPUT_PORT_INDEX) {
 
-                    if (m_out_mem_ptr) {
-                        DEBUG_PRINT_ERROR("Enable/Disable dynamic-buffer-mode is not allowed since Output port is not free !");
-                        eRet = OMX_ErrorInvalidState;
-                        break;
-                    }
-                    //set property dynamic buffer mode to driver.
-                    /*struct v4l2_control control;
-                    struct v4l2_format fmt;
-                    control.id = V4L2_CID_MPEG_VIDC_VIDEO_ALLOC_MODE_OUTPUT;
-                    if (metabuffer->bStoreMetaData == true) {
-                        control.value = V4L2_MPEG_VIDC_VIDEO_DYNAMIC;
-                    } else {
-                        control.value = V4L2_MPEG_VIDC_VIDEO_STATIC;
-                    }
-                    int rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL,&control);
-                    if (!rc) {
-                        DEBUG_PRINT_HIGH("%s buffer mode",
-                           (metabuffer->bStoreMetaData == true)? "Enabled dynamic" : "Disabled dynamic");
-                               dynamic_buf_mode = metabuffer->bStoreMetaData;
-                    } else {
-                        DEBUG_PRINT_ERROR("Failed to %s buffer mode",
-                           (metabuffer->bStoreMetaData == true)? "enable dynamic" : "disable dynamic");
-                        eRet = OMX_ErrorUnsupportedSetting;
-                    }*/
-                } else {
-                    DEBUG_PRINT_ERROR(
-                       "OMX_QcomIndexParamVideoMetaBufferMode not supported for port: %u",
-                       (unsigned int)metabuffer->nPortIndex);
-                    eRet = OMX_ErrorUnsupportedSetting;
+                if (m_out_mem_ptr) {
+                    DEBUG_PRINT_ERROR("Enable/Disable dynamic-buffer-mode is not allowed since Output port is not free !");
+                    eRet = OMX_ErrorInvalidState;
+                    break;
                 }
-                break;
+
+                dynamic_buf_mode = metabuffer->bStoreMetaData;
+                DEBUG_PRINT_HIGH("%s buffer mode",
+                    (metabuffer->bStoreMetaData == true)? "Enabled dynamic" : "Disabled dynamic");
+
+            } else {
+                DEBUG_PRINT_ERROR(
+                   "OMX_QcomIndexParamVideoMetaBufferMode not supported for port: %u",
+                   (unsigned int)metabuffer->nPortIndex);
+                eRet = OMX_ErrorUnsupportedSetting;
+            }
+            break;
         }
         case OMX_QcomIndexParamVideoDownScalar:
         {
@@ -8296,45 +8282,6 @@ int omx_vdec::async_message_process (void *context, void* message)
                                    omx->drv_ctx.ptr_outputbuffer[v4l2_buf_ptr->index].pmem_fd);
                    }
 
-                   if (omxhdr && !omx->output_flush_progress &&
-                           !(v4l2_buf_ptr->flags & V4L2_QCOM_BUF_FLAG_DECODEONLY) &&
-                           !(v4l2_buf_ptr->flags & V4L2_QCOM_BUF_FLAG_EOS)) {
-                       unsigned int index = v4l2_buf_ptr->index;
-                       unsigned int extra_idx = EXTRADATA_IDX(omx->drv_ctx.num_planes);
-                       omx->time_stamp_dts.remove_time_stamp(
-                               omxhdr->nTimeStamp,
-                               (omx->drv_ctx.interlace != VDEC_InterlaceFrameProgressive)
-                               ?true:false);
-                       plane[0].bytesused = 0;
-                       plane[0].m.userptr =
-                           (unsigned long)omx->drv_ctx.ptr_outputbuffer[index].bufferaddr -
-                           (unsigned long)omx->drv_ctx.ptr_outputbuffer[index].offset;
-                       plane[0].reserved[0] = omx->drv_ctx.ptr_outputbuffer[index].pmem_fd;
-                       plane[0].reserved[1] = omx->drv_ctx.ptr_outputbuffer[index].offset;
-                       plane[0].data_offset = 0;
-                       v4l2_buf_ptr->flags = 0x0;
-                       if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
-                           plane[extra_idx].bytesused = 0;
-                           plane[extra_idx].length = omx->drv_ctx.extradata_info.buffer_size;
-                           plane[extra_idx].m.userptr = (long unsigned int) (omx->drv_ctx.extradata_info.uaddr + index * omx->drv_ctx.extradata_info.buffer_size);
-#ifdef USE_ION
-                           plane[extra_idx].reserved[0] = omx->drv_ctx.extradata_info.ion.fd_ion_data.fd;
-#endif
-                           plane[extra_idx].reserved[1] = v4l2_buf_ptr->index * omx->drv_ctx.extradata_info.buffer_size;
-                           plane[extra_idx].data_offset = 0;
-                       } else if (extra_idx >= VIDEO_MAX_PLANES) {
-                           DEBUG_PRINT_ERROR("Extradata index higher than expected: %u", extra_idx);
-                           return -1;
-                       }
-
-                       DEBUG_PRINT_LOW("SENDING FTB TO F/W from async_message_process - fd[0] = %d fd[1] = %d offset[1] = %d in_flush = %d",
-                               plane[0].reserved[0],plane[extra_idx].reserved[0], plane[extra_idx].reserved[1], omx->output_flush_progress);
-                       if(ioctl(omx->drv_ctx.video_driver_fd, VIDIOC_QBUF, v4l2_buf_ptr)) {
-                            DEBUG_PRINT_ERROR("Failed to queue buffer back to driver: %d, %d, %d", v4l2_buf_ptr->length, v4l2_buf_ptr->m.planes[0].reserved[0], v4l2_buf_ptr->m.planes[1].reserved[0]);
-                            return -1;
-                       }
-                       break;
-                   }
                    if (v4l2_buf_ptr->flags & V4L2_QCOM_BUF_DATA_CORRUPT) {
                        omxhdr->nFlags |= OMX_BUFFERFLAG_DATACORRUPT;
                    }
