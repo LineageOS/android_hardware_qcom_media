@@ -60,10 +60,6 @@ ifeq ($(call is-board-platform-in-list, $(MASTER_SIDE_CP_TARGET_LIST)),true)
 libmm-vdec-def += -DMASTER_SIDE_CP
 endif
 
-ifneq ($(TARGET_BOARD_PLATFORM),msm8909)
-libmm-vdec-def += -D_QUERY_DISP_RES_
-endif
-
 include $(CLEAR_VARS)
 
 # Common Includes
@@ -75,7 +71,6 @@ libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/adreno
 libmm-vdec-inc          += $(TOP)/frameworks/native/include/media/openmax
 libmm-vdec-inc          += $(TOP)/frameworks/native/include/media/hardware
 libmm-vdec-inc      	+= $(TOP)/hardware/qcom/media/libc2dcolorconvert
-libmm-vdec-inc      	+= $(TOP)/frameworks/av/include/media/stagefright
 libmm-vdec-inc      	+= $(TARGET_OUT_HEADERS)/mm-video/SwVdec
 libmm-vdec-inc      	+= $(TARGET_OUT_HEADERS)/mm-video/swvdec
 libmm-vdec-inc      	+= $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
@@ -117,7 +112,7 @@ LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-vdec-add-dep)
 
 LOCAL_PRELINK_MODULE    := false
-LOCAL_SHARED_LIBRARIES  := liblog libutils libcutils libdl libqdutils
+LOCAL_SHARED_LIBRARIES  := liblog libcutils libdl
 
 LOCAL_SHARED_LIBRARIES  += libqdMetaData
 
