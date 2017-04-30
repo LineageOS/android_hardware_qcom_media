@@ -556,6 +556,9 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
 
     OMX_INIT_STRUCT(&m_sConfigTemporalLayers, OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE);
 
+    OMX_INIT_STRUCT(&m_sParamAVTimerTimestampMode, QOMX_ENABLETYPE);
+    m_sParamAVTimerTimestampMode.bEnable = OMX_FALSE;
+
     m_state                   = OMX_StateLoaded;
     m_sExtraData = 0;
 
@@ -600,6 +603,13 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     }
 
     DEBUG_PRINT_INFO("Component_init : %s : return = 0x%x", m_nkind, eRet);
+
+    {
+        VendorExtensionStore *extStore = const_cast<VendorExtensionStore *>(&mVendorExtensionStore);
+        init_vendor_extensions(*extStore);
+        mVendorExtensionStore.dumpExtensions((const char *)m_nkind);
+    }
+
     return eRet;
 init_error:
     handle->venc_close();
@@ -1658,6 +1668,17 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                         OMX_VIDEO_ANDROID_MAXTEMPORALLAYERS * sizeof(OMX_U32));
                 break;
             }
+        case OMX_QTIIndexParamEnableAVTimerTimestamps:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
+                if (!handle->venc_set_param(paramData,
+                            (OMX_INDEXTYPE)OMX_QTIIndexParamEnableAVTimerTimestamps)) {
+                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamEnableAVTimerTimestamps failed");
+                    return OMX_ErrorUnsupportedSetting;
+                }
+                memcpy(&m_sParamAVTimerTimestampMode, paramData, sizeof(QOMX_ENABLETYPE));
+                break;
+            }
         case OMX_IndexParamVideoSliceFMO:
         default:
             {
@@ -1922,6 +1943,15 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                 } else {
                     m_sConfigFrameRotation.nRotation = pParam->nRotation;
                 }
+
+                // Update output-port resolution (since it might have been flipped by rotation)
+                if (handle->venc_get_dimensions(PORT_INDEX_OUT,
+                        &m_sOutPortDef.format.video.nFrameWidth,
+                        &m_sOutPortDef.format.video.nFrameHeight)) {
+                    DEBUG_PRINT_HIGH("set Rotation: updated dimensions = %u x %u",
+                            m_sOutPortDef.format.video.nFrameWidth,
+                            m_sOutPortDef.format.video.nFrameHeight);
+                }
                 break;
             }
         case OMX_QcomIndexConfigVideoFramePackingArrangement:
@@ -2117,6 +2147,17 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                memcpy(&m_sConfigColorAspects, configData, sizeof(m_sConfigColorAspects));
                break;
            }
+        case OMX_IndexConfigAndroidVendorExtension:
+            {
+                VALIDATE_OMX_PARAM_DATA(configData, OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE);
+
+                OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext =
+                    reinterpret_cast<OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *>(configData);
+                VALIDATE_OMX_VENDOR_EXTENSION_PARAM_DATA(ext);
+
+                return set_vendor_extension_config(ext);
+            }
+
         default:
             DEBUG_PRINT_ERROR("ERROR: unsupported index %d", (int) configIndex);
             break;
