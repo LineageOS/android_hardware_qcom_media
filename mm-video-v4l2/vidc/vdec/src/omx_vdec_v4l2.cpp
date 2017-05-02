@@ -54,6 +54,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <media/hardware/HardwareAPI.h>
 #include <sys/eventfd.h>
+#include <nativebase/nativebase.h>
 #include "PlatformConfig.h"
 
 #if !defined(_ANDROID_) || defined(SYS_IOCTL)
