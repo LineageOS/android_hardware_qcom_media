@@ -51,6 +51,7 @@ This module contains the implementation of the OpenMAX core & component.
 #include <stdlib.h>
 #include <media/hardware/HardwareAPI.h>
 #include <media/msm_media_info.h>
+#include <nativebase/nativebase.h>
 
 #ifndef _ANDROID_
 #include <sys/ioctl.h>
