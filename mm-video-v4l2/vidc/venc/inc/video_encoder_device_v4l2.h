@@ -203,11 +203,6 @@ struct msm_venc_slice_delivery {
     unsigned long enable;
 };
 
-struct msm_venc_hierlayers {
-    unsigned int numlayers;
-    enum hier_type hier_mode;
-};
-
 struct msm_venc_ltrinfo {
     unsigned int enabled;
     unsigned int count;
@@ -233,15 +228,6 @@ struct msm_venc_priority {
     OMX_U32 priority;
 };
 
-struct msm_venc_hybrid_hp {
-   unsigned int nSize;
-   unsigned int nKeyFrameInterval;
-   unsigned int nTemporalLayerBitrateRatio[OMX_VIDEO_MAX_HP_LAYERS];
-   unsigned int nMinQuantizer;
-   unsigned int nMaxQuantizer;
-   unsigned int nHpLayers;
-};
-
 struct msm_venc_color_space {
     OMX_U32 primaries;
     OMX_U32 range;
@@ -260,6 +246,9 @@ struct msm_venc_temporal_layers {
     OMX_U32 nTemporalLayerBitrateRatio[OMX_VIDEO_ANDROID_MAXTEMPORALLAYERS];
     // Layerwise ratio: eg [L0=25%, L1=25%, L2=25%, L3=25%]
     OMX_U32 nTemporalLayerBitrateFraction[OMX_VIDEO_ANDROID_MAXTEMPORALLAYERS];
+    OMX_U32 nKeyFrameInterval;
+    OMX_U32 nMinQuantizer;
+    OMX_U32 nMaxQuantizer;
 };
 
 enum v4l2_ports {
@@ -333,6 +322,7 @@ class venc_dev
         bool venc_h264_transform_8x8(OMX_BOOL enable);
         bool venc_get_profile_level(OMX_U32 *eProfile,OMX_U32 *eLevel);
         bool venc_get_seq_hdr(void *, unsigned, unsigned *);
+        bool venc_get_dimensions(OMX_U32 portIndex, OMX_U32 *w, OMX_U32 *h);
         bool venc_loaded_start(void);
         bool venc_loaded_stop(void);
         bool venc_loaded_start_done(void);
@@ -345,9 +335,10 @@ class venc_dev
         bool venc_get_peak_bitrate(OMX_U32 *peakbitrate);
         bool venc_get_batch_size(OMX_U32 *size);
         bool venc_get_temporal_layer_caps(OMX_U32 * /*nMaxLayers*/,
-                OMX_U32 * /*nMaxBLayers*/);
+                OMX_U32 * /*nMaxBLayers*/, OMX_VIDEO_ANDROID_TEMPORALLAYERINGPATTERNTYPE */*SupportedPattern*/);
+        bool venc_check_for_hybrid_hp(OMX_VIDEO_ANDROID_TEMPORALLAYERINGPATTERNTYPE ePattern);
+        bool venc_check_for_hierp(OMX_VIDEO_ANDROID_TEMPORALLAYERINGPATTERNTYPE ePattern);
         bool venc_get_output_log_flag();
-        bool venc_check_valid_config();
         int venc_output_log_buffers(const char *buffer_addr, int buffer_len);
         int venc_input_log_buffers(OMX_BUFFERHEADERTYPE *buffer, int fd, int plane_offset,
                         unsigned long inputformat);
@@ -484,7 +475,6 @@ class venc_dev
         struct msm_venc_video_capability    capability;
         struct msm_venc_idrperiod           idrperiod;
         struct msm_venc_slice_delivery      slice_mode;
-        struct msm_venc_hierlayers          hier_layers;
         struct msm_venc_vui_timing_info     vui_timing_info;
         struct msm_venc_vqzip_sei_info      vqzip_sei_info;
         struct msm_venc_peak_bitrate        peak_bitrate;
@@ -492,7 +482,6 @@ class venc_dev
         struct msm_venc_vpx_error_resilience vpx_err_resilience;
         struct msm_venc_priority            sess_priority;
         OMX_U32                             operating_rate;
-        struct msm_venc_hybrid_hp           hybrid_hp;
         struct msm_venc_color_space         color_space;
         msm_venc_temporal_layers            temporal_layers_config;
 
@@ -529,12 +518,10 @@ class venc_dev
         bool venc_set_searchrange();
         bool venc_set_vpx_error_resilience(OMX_BOOL enable);
         bool venc_set_vqzip_sei_type(OMX_BOOL enable);
-        bool venc_set_hybrid_hierp(QOMX_EXTNINDEX_VIDEO_HYBRID_HP_MODE* hhp);
         bool venc_set_batch_size(OMX_U32 size);
         bool venc_calibrate_gop();
         bool venc_set_vqzip_defaults();
         int venc_get_index_from_fd(OMX_U32 ion_fd, OMX_U32 buffer_fd);
-        bool venc_validate_hybridhp_params(OMX_U32 layers, OMX_U32 bFrames, OMX_U32 count, int mode);
         bool venc_set_hierp_layers(OMX_U32 hierp_layers);
         bool venc_set_baselayerid(OMX_U32 baseid);
         bool venc_set_qp(OMX_U32 i_frame_qp, OMX_U32 p_frame_qp,OMX_U32 b_frame_qp, OMX_U32 enable);
@@ -610,6 +597,7 @@ class venc_dev
 
         };
         BatchInfo mBatchInfo;
+        bool mUseAVTimerTimestamps;
 };
 
 enum instance_state {

@@ -208,15 +208,6 @@ unsigned omx_video::omx_cmd_queue::get_q_msg_type()
 }
 
 
-
-#ifdef _ANDROID_
-VideoHeap::VideoHeap(int fd, size_t size, void* base)
-{
-    // dup file descriptor, map once, use pmem
-    init(dup(fd), base, size, 0 , MEM_DEVICE);
-}
-#endif // _ANDROID_
-
 /* ======================================================================
    FUNCTION
    omx_venc::omx_venc
@@ -1987,7 +1978,7 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE *pLayerInfo =
                         reinterpret_cast<OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE*>(paramData);
                 if (!dev_get_temporal_layer_caps(&m_sParamTemporalLayers.nLayerCountMax,
-                        &m_sParamTemporalLayers.nBLayerCountMax)) {
+                        &m_sParamTemporalLayers.nBLayerCountMax, &m_sParamTemporalLayers.eSupportedPatterns)) {
                     DEBUG_PRINT_ERROR("Failed to get temporal layer capabilities");
                     eRet = OMX_ErrorHardware;
                 }
@@ -2129,7 +2120,6 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
                memcpy(pParam, &m_sBaseLayerID, sizeof(m_sBaseLayerID));
                break;
            }
-#ifdef SUPPORT_CONFIG_INTRA_REFRESH
        case OMX_IndexConfigAndroidIntraRefresh:
            {
                VALIDATE_OMX_PARAM_DATA(configData, OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE);
@@ -2139,7 +2129,6 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
                memcpy(pParam, &m_sConfigIntraRefresh, sizeof(m_sConfigIntraRefresh));
                break;
            }
-#endif
        case OMX_QTIIndexConfigVideoBlurResolution:
            {
                VALIDATE_OMX_PARAM_DATA(configData, OMX_QTI_VIDEO_CONFIG_BLURINFO);

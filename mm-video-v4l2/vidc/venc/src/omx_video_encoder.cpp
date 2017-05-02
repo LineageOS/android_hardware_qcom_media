@@ -315,11 +315,9 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     m_sIntraRefresh.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
     m_sIntraRefresh.eRefreshMode = OMX_VIDEO_IntraRefreshMax;
 
-#ifdef SUPPORT_CONFIG_INTRA_REFRESH
     OMX_INIT_STRUCT(&m_sConfigIntraRefresh, OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE);
     m_sConfigIntraRefresh.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
     m_sConfigIntraRefresh.nRefreshPeriod = 0;
-#endif
 
     OMX_INIT_STRUCT(&m_sConfigColorAspects, DescribeColorAspectsParams);
     m_sConfigColorAspects.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
@@ -488,6 +486,9 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     m_sParamTemporalLayers.eSupportedPatterns = OMX_VIDEO_AndroidTemporalLayeringPatternAndroid;
 
     OMX_INIT_STRUCT(&m_sConfigTemporalLayers, OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE);
+
+    OMX_INIT_STRUCT(&m_sParamAVTimerTimestampMode, QOMX_ENABLETYPE);
+    m_sParamAVTimerTimestampMode.bEnable = OMX_FALSE;
 
     m_state                   = OMX_StateLoaded;
     m_sExtraData = 0;
@@ -1520,6 +1521,17 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 }
                 break;
             }
+        case OMX_QTIIndexParamEnableAVTimerTimestamps:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
+                if (!handle->venc_set_param(paramData,
+                            (OMX_INDEXTYPE)OMX_QTIIndexParamEnableAVTimerTimestamps)) {
+                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamEnableAVTimerTimestamps failed");
+                    return OMX_ErrorUnsupportedSetting;
+                }
+                memcpy(&m_sParamAVTimerTimestampMode, paramData, sizeof(QOMX_ENABLETYPE));
+                break;
+            }
         case OMX_IndexParamVideoSliceFMO:
         default:
             {
@@ -1748,6 +1760,15 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                         return OMX_ErrorUnsupportedSetting;
                 }
                 m_sConfigFrameRotation.nRotation = pParam->nRotation;
+
+                // Update output-port resolution (since it might have been flipped by rotation)
+                if (handle->venc_get_dimensions(PORT_INDEX_OUT,
+                        &m_sOutPortDef.format.video.nFrameWidth,
+                        &m_sOutPortDef.format.video.nFrameHeight)) {
+                    DEBUG_PRINT_HIGH("set Rotation: updated dimensions = %u x %u",
+                            m_sOutPortDef.format.video.nFrameWidth,
+                            m_sOutPortDef.format.video.nFrameHeight);
+                }
                 break;
             }
         case OMX_QcomIndexConfigVideoFramePackingArrangement:
@@ -1911,7 +1932,6 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                 pthread_mutex_unlock(&timestamp.m_lock);
                 break;
             }
-#ifdef SUPPORT_CONFIG_INTRA_REFRESH
        case OMX_IndexConfigAndroidIntraRefresh:
            {
                 VALIDATE_OMX_PARAM_DATA(configData, OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE);
@@ -1931,7 +1951,6 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                 }
                break;
            }
-#endif
         case OMX_QTIIndexConfigVideoBlurResolution:
            {
                 VALIDATE_OMX_PARAM_DATA(configData, OMX_QTI_VIDEO_CONFIG_BLURINFO);
@@ -1967,7 +1986,13 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
         case OMX_IndexConfigAndroidVideoTemporalLayering:
             {
                 VALIDATE_OMX_PARAM_DATA(configData, OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE);
-                DEBUG_PRINT_ERROR("Setting/modifying Temporal layers at run-time is not supported !");
+                OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE* pParam =
+                                (OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE*) configData;
+                if (!handle->venc_set_config(configData, (OMX_INDEXTYPE)OMX_IndexConfigAndroidVideoTemporalLayering)) {
+                    DEBUG_PRINT_ERROR("Failed to set OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE");
+                    return OMX_ErrorUnsupportedSetting;
+                }
+                memcpy(&m_sConfigTemporalLayers, pParam, sizeof(m_sConfigTemporalLayers));
                 return OMX_ErrorUnsupportedSetting;
             }
         case OMX_IndexConfigAndroidVendorExtension:
@@ -2059,11 +2084,6 @@ OMX_ERRORTYPE  omx_venc::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
     m_cmd_q.m_read = m_cmd_q.m_write =0;
     m_etb_q.m_read = m_etb_q.m_write =0;
 
-#ifdef _ANDROID_
-    // Clear the strong reference
-    DEBUG_PRINT_HIGH("Calling m_heap_ptr.clear()");
-    m_heap_ptr.clear();
-#endif // _ANDROID_
     DEBUG_PRINT_HIGH("Calling venc_close()");
     if (handle) {
         handle->venc_close();
@@ -2188,8 +2208,8 @@ bool omx_venc::dev_get_batch_size(OMX_U32 *size)
 }
 
 bool omx_venc::dev_get_temporal_layer_caps(OMX_U32 *nMaxLayers,
-        OMX_U32 *nMaxBLayers) {
-    return handle->venc_get_temporal_layer_caps(nMaxLayers, nMaxBLayers);
+        OMX_U32 *nMaxBLayers, OMX_VIDEO_ANDROID_TEMPORALLAYERINGPATTERNTYPE *eSupportedPattern) {
+    return handle->venc_get_temporal_layer_caps(nMaxLayers, nMaxBLayers, eSupportedPattern);
 }
 
 bool omx_venc::dev_loaded_start()
