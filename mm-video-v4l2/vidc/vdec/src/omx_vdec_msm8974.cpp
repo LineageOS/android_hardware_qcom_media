@@ -55,6 +55,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <media/hardware/HardwareAPI.h>
 #include <media/msm_media_info.h>
 #include <OMX_VideoExt.h>
+#include <nativebase/nativebase.h>
 
 #ifndef _ANDROID_
 #include <sys/ioctl.h>
