@@ -1694,7 +1694,7 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
 
 bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
 {
-    DEBUG_PRINT_LOW("venc_set_param:: venc-720p");
+    DEBUG_PRINT_LOW("venc_set_param index 0x%x", index);
     struct v4l2_format fmt;
     struct v4l2_requestbuffers bufreq;
     int ret;
@@ -2085,12 +2085,12 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 if (pParam->nPortIndex == PORT_INDEX_OUT) {
                     if (venc_set_slice_delivery_mode(pParam->bEnable) == false) {
                         DEBUG_PRINT_ERROR("Setting slice delivery mode failed");
-                        return OMX_ErrorUnsupportedSetting;
+                        return false;
                     }
                 } else {
                     DEBUG_PRINT_ERROR("OMX_QcomIndexEnableSliceDeliveryMode "
                             "called on wrong port(%u)", (unsigned int)pParam->nPortIndex);
-                    return OMX_ErrorBadPortIndex;
+                    return false;
                 }
 
                 break;
@@ -2142,7 +2142,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 DEBUG_PRINT_LOW("set inband sps/pps: %d", pParam->bEnable);
                 if(venc_set_inband_video_header(pParam->bEnable) == false) {
                     DEBUG_PRINT_ERROR("ERROR: set inband sps/pps failed");
-                    return OMX_ErrorUnsupportedSetting;
+                    return false;
                 }
 
                 break;
@@ -2155,7 +2155,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 DEBUG_PRINT_LOW("set AU Delimiters: %d", pParam->bEnable);
                 if(venc_set_au_delimiter(pParam->bEnable) == false) {
                     DEBUG_PRINT_ERROR("ERROR: set AU delimiter failed");
-                    return OMX_ErrorUnsupportedSetting;
+                    return false;
                 }
 
                 break;
@@ -2168,7 +2168,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 DEBUG_PRINT_LOW("set Entropy info : %d", pParam->bCabac);
                 if(venc_set_entropy_config (pParam->bCabac, 0) == false) {
                     DEBUG_PRINT_ERROR("ERROR: set Entropy failed");
-                    return OMX_ErrorUnsupportedSetting;
+                    return false;
                 }
 
                 break;
@@ -2308,12 +2308,12 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 if (pParam->nPortIndex == PORT_INDEX_OUT) {
                     DEBUG_PRINT_ERROR("For the moment, client-driven batching not supported"
                             " on output port");
-                    return OMX_ErrorUnsupportedSetting;
+                    return false;
                 }
 
                 if (!venc_set_batch_size(pParam->nU32)) {
                      DEBUG_PRINT_ERROR("Failed setting batch size as %d", pParam->nU32);
-                     return OMX_ErrorUnsupportedSetting;
+                     return false;
                 }
                 break;
             }
@@ -2321,7 +2321,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
             {
                 if (!venc_set_aspectratio(paramData)) {
                     DEBUG_PRINT_ERROR("ERROR: Setting OMX_QcomIndexParamVencAspectRatio failed");
-                    return OMX_ErrorUnsupportedSetting;
+                    return false;
                 }
                 break;
             }
@@ -2337,14 +2337,14 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 if (m_sVenc_cfg.codectype != V4L2_PIX_FMT_H264 &&
                         m_sVenc_cfg.codectype != V4L2_PIX_FMT_HEVC) {
                     DEBUG_PRINT_ERROR("OMX_QTIIndexParamVideoEnableRoiInfo is not supported for %lu codec", m_sVenc_cfg.codectype);
-                    return OMX_ErrorUnsupportedSetting;
+                    return false;
                 }
                 control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
                 control.value = V4L2_MPEG_VIDC_EXTRADATA_ROI_QP;
                 DEBUG_PRINT_LOW("Setting param OMX_QTIIndexParamVideoEnableRoiInfo");
                 if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
                     DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamVideoEnableRoiInfo failed");
-                    return OMX_ErrorUnsupportedSetting;
+                    return false;
                 }
                 m_roi_enabled = true;
 #ifdef _PQ_
@@ -2361,7 +2361,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
 
                 if (!venc_set_lowlatency_mode(pParam->bEnableLowLatencyMode)) {
                      DEBUG_PRINT_ERROR("Setting low latency mode failed");
-                     return OMX_ErrorUnsupportedSetting;
+                     return false;
                 }
                 break;
             }
@@ -2393,11 +2393,11 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 if (!isCBR) {
                     DEBUG_PRINT_ERROR("venc_set_param: OMX_QTIIndexParamIframeSizeType not allowed for this configuration isCBR(%d)",
                         isCBR);
-                    return OMX_ErrorUnsupportedSetting;
+                    return false;
                 }
                 if (!venc_set_iframesize_type(pParam->eType)) {
                     DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamIframeSizeType failed");
-                    return OMX_ErrorUnsupportedSetting;
+                    return false;
                 }
                 break;
             }
@@ -2408,12 +2408,10 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 DEBUG_PRINT_INFO("AVTimer timestamps enabled");
                 break;
             }
-        case OMX_IndexParamVideoSliceFMO:
         default:
             DEBUG_PRINT_ERROR("ERROR: Unsupported parameter in venc_set_param: %u",
                     index);
             break;
-            //case
     }
 
     return true;
