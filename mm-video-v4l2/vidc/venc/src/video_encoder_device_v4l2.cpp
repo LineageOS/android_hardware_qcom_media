@@ -2422,11 +2422,6 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
 
     DEBUG_PRINT_LOW("Inside venc_set_config");
 
-    if(streaming[OUTPUT_PORT] && streaming[CAPTURE_PORT]) {
-        DEBUG_PRINT_ERROR("venc_set_config not allowed run time for following usecases");
-        return false;
-    }
-
     switch ((int)index) {
         case OMX_IndexConfigVideoBitrate:
             {
