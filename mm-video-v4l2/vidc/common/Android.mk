@@ -24,7 +24,6 @@ libmm-vidc-inc      := $(LOCAL_PATH)/inc
 libmm-vidc-inc      += $(TOP)/hardware/qcom/media/mm-core/inc
 libmm-vidc-inc      += $(TARGET_OUT_HEADERS)/qcom/display
 libmm-vidc-inc      += $(TOP)/hardware/qcom/media/libc2dcolorconvert
-libmm-vidc-inc      += $(TOP)/frameworks/av/include/media/stagefright
 libmm-vidc-inc      += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 
 LOCAL_MODULE                    := libOmxVidcCommon
@@ -33,7 +32,7 @@ LOCAL_CFLAGS                    := $(libmm-vidc-def)
 LOCAL_C_INCLUDES                := $(libmm-vidc-inc)
 
 LOCAL_PRELINK_MODULE      := false
-LOCAL_SHARED_LIBRARIES    := liblog libutils libcutils libdl
+LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl
 
 LOCAL_SRC_FILES   := src/extra_data_handler.cpp
 LOCAL_SRC_FILES   += src/vidc_color_converter.cpp
