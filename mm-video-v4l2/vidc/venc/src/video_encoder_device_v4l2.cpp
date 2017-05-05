@@ -2595,6 +2595,7 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                 pTemporalParams.nPLayerCountActual = pParam->nPLayerCountActual;
                 pTemporalParams.bBitrateRatiosSpecified = pParam->bBitrateRatiosSpecified;
                 pTemporalParams.ePattern = pParam->ePattern;
+                pTemporalParams.nLayerCountMax = temporal_layers_config.nMaxLayers;
 
                 for (; i < pTemporalParams.nPLayerCountActual; ++i) {
                     pTemporalParams.nBitrateRatios[i] = pParam->nBitrateRatios[i];
@@ -6098,7 +6099,7 @@ OMX_ERRORTYPE venc_dev::venc_set_temporal_layers(
             bUseHybridHP = false;
             DEBUG_PRINT_ERROR("Failed to set hybrid HP. Try HierP");
         }
-        temporal_layers_config.nMaxLayers = control.value;
+        temporal_layers_config.nMaxLayers = control.value + 1;
     }
 
     if (!bUseHybridHP) {
@@ -6123,7 +6124,7 @@ OMX_ERRORTYPE venc_dev::venc_set_temporal_layers(
 
         DEBUG_PRINT_LOW("Setting HP with max layers: %u  num layers : %u\n",control.value,
                         pTemporalParams->nPLayerCountActual - 1);
-        temporal_layers_config.nMaxLayers = control.value;
+        temporal_layers_config.nMaxLayers = control.value + 1;
         if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
             DEBUG_PRINT_ERROR("Failed to set max HP layers to %u", control.value);
             return OMX_ErrorUnsupportedSetting;
