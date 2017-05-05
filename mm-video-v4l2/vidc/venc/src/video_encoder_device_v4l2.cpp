@@ -198,6 +198,7 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     memset (&slice_mode, 0 , sizeof(slice_mode));
     memset(&m_sVenc_cfg, 0, sizeof(m_sVenc_cfg));
     memset(&rate_ctrl, 0, sizeof(rate_ctrl));
+    rate_ctrl.rcmode = V4L2_CID_MPEG_VIDC_VIDEO_RATE_CONTROL_VBR_CFR;
     memset(&bitrate, 0, sizeof(bitrate));
     memset(&intra_period, 0, sizeof(intra_period));
     memset(&codec_profile, 0, sizeof(codec_profile));
@@ -6585,6 +6586,15 @@ bool venc_dev::venc_set_ratectrl_cfg(OMX_VIDEO_CONTROLRATETYPE eControlRate)
         }
     }
 #endif
+
+    // force re-calculation of level since RC is updated
+    {
+        m_level_set = false;
+        if (venc_set_profile_level(codec_profile.profile, 0)) {
+            DEBUG_PRINT_HIGH("updated level=%lu after setting RC mode",
+                    profile_level.level);
+        }
+    }
 
     return status;
 }
