@@ -1799,6 +1799,7 @@ void omx_vdec::process_event_cb(void *ctxt, unsigned char id)
                                         if (p2 == OMX_IndexParamPortDefinition) {
                                             DEBUG_PRINT_HIGH("Rxd PORT_RECONFIG: OMX_IndexParamPortDefinition");
                                             pThis->in_reconfig = true;
+                                            pThis->prev_n_filled_len = 0;
                                             pThis->m_need_turbo &= ~TURBO_MODE_HIGH_FPS;
                                         }  else if (p2 == OMX_IndexConfigCommonOutputCrop) {
                                             DEBUG_PRINT_HIGH("Rxd PORT_RECONFIG: OMX_IndexConfigCommonOutputCrop");
@@ -7995,11 +7996,15 @@ OMX_ERRORTYPE  omx_vdec::set_callbacks(OMX_IN OMX_HANDLETYPE        hComp,
         OMX_IN OMX_PTR             appData)
 {
     (void) hComp;
+
+    if (!callbacks)
+        return OMX_ErrorBadParameter;
+
     m_cb       = *callbacks;
     DEBUG_PRINT_LOW("Callbacks Set %p %p %p",m_cb.EmptyBufferDone,\
             m_cb.EventHandler,m_cb.FillBufferDone);
     m_app_data =    appData;
-    return OMX_ErrorNotImplemented;
+    return OMX_ErrorNone;
 }
 
 /* ======================================================================
@@ -9153,11 +9158,6 @@ int omx_vdec::async_message_process (void *context, void* message)
                    vdec_msg->msgdata.output_frame.bufferaddr =
                        omx->drv_ctx.ptr_outputbuffer[v4l2_buf_ptr->index].bufferaddr;
 
-                   if (vdec_msg->msgdata.output_frame.len)
-                       memcpy(&omx->drv_ctx.frame_size,
-                               &vdec_msg->msgdata.output_frame.framesize,
-                               sizeof(struct vdec_framesize));
-
                    DEBUG_PRINT_LOW("[RespBufDone] Fd(%d) Buf(%p) Ts(%lld) PicType(%u) Flags (0x%x)"
                            " FillLen(%u) Crop: L(%u) T(%u) R(%u) B(%u)",
                            omx->drv_ctx.ptr_outputbuffer[v4l2_buf_ptr->index].pmem_fd,
@@ -9193,6 +9193,10 @@ int omx_vdec::async_message_process (void *context, void* message)
                                vdec_msg->msgdata.output_frame.framesize.top,
                                vdec_msg->msgdata.output_frame.framesize.right,
                                vdec_msg->msgdata.output_frame.framesize.bottom);
+
+                       memcpy(&omx->drv_ctx.frame_size,
+                               &vdec_msg->msgdata.output_frame.framesize,
+                               sizeof(struct vdec_framesize));
 
                        omx->drv_ctx.video_resolution.frame_width =
                                vdec_msg->msgdata.output_frame.picsize.frame_width;
@@ -12956,10 +12960,12 @@ void omx_vdec::buf_ref_remove()
                         out_dynamic_list[i].mapped_size);
         }
 
-         DEBUG_PRINT_LOW("buf_ref_remove: [REMOVED] fd = %u ref_count = %u",
-                 (unsigned int)out_dynamic_list[i].fd, (unsigned int)out_dynamic_list[i].ref_count);
-         close(out_dynamic_list[i].dup_fd);
-         out_dynamic_list[i].dup_fd = -1;
+        if (out_dynamic_list[i].dup_fd > -1) {
+            DEBUG_PRINT_LOW("buf_ref_remove: [REMOVED] fd = %u ref_count = %u",
+                    (unsigned int)out_dynamic_list[i].fd, (unsigned int)out_dynamic_list[i].ref_count);
+            close(out_dynamic_list[i].dup_fd);
+            out_dynamic_list[i].dup_fd = -1;
+        }
     }
     pthread_mutex_unlock(&m_lock);
 

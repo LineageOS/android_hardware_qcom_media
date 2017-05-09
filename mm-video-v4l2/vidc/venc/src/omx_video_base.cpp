@@ -1610,10 +1610,11 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     int supportedFormats[] = {
                         [0] = QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed,
                         [1] = QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m,
-                        [2] = QOMX_COLOR_Format32bitRGBA8888Compressed,
-                        [3] = QOMX_COLOR_Format32bitRGBA8888,
-                        [4] = QOMX_COLOR_FormatAndroidOpaque,
-                        [5] = OMX_COLOR_FormatYUV420SemiPlanar,
+                        [2] = QOMX_COLOR_FormatYVU420SemiPlanar,
+                        [3] = QOMX_COLOR_Format32bitRGBA8888Compressed,
+                        [4] = QOMX_COLOR_Format32bitRGBA8888,
+                        [5] = QOMX_COLOR_FormatAndroidOpaque,
+                        [6] = OMX_COLOR_FormatYUV420SemiPlanar,
                     };
 #else
                     //we support two formats
@@ -1623,8 +1624,9 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     //this can be extended in the future
                     int supportedFormats[] = {
                         [0] = QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m,
-                        [1] = QOMX_COLOR_FormatAndroidOpaque,
-                        [2] = OMX_COLOR_FormatYUV420SemiPlanar,
+                        [1] = QOMX_COLOR_FormatYVU420SemiPlanar,
+                        [2] = QOMX_COLOR_FormatAndroidOpaque,
+                        [3] = OMX_COLOR_FormatYUV420SemiPlanar,
                     };
 #endif
                     if (index > (sizeof(supportedFormats)/sizeof(*supportedFormats) - 1))
@@ -3061,24 +3063,23 @@ OMX_ERRORTYPE omx_video::free_output_buffer(OMX_BUFFERHEADERTYPE *bufferHdr)
             if(!secure_session) {
                 munmap (m_pOutput_pmem[index].buffer,
                         m_pOutput_pmem[index].size);
-            } else {
+                close (m_pOutput_pmem[index].fd);
+            } else if (m_pOutput_pmem[index].buffer) {
+                native_handle_t *handle;
                 if (allocate_native_handle) {
-                    native_handle_t *handle = NULL;
                     handle = (native_handle_t *)m_pOutput_pmem[index].buffer;
-                    native_handle_close(handle);
-                    native_handle_delete(handle);
                 } else {
-                    char *data = (char*) m_pOutput_pmem[index].buffer;
-                    native_handle_t *handle = NULL;
-                    memcpy(&handle, data + sizeof(OMX_U32), sizeof(native_handle_t*));
-                    native_handle_delete(handle);
+                    handle = ((output_metabuffer *)m_pOutput_pmem[index].buffer)->nh;
                     free(m_pOutput_pmem[index].buffer);
                 }
+                native_handle_close(handle);
+                native_handle_delete(handle);
             }
-            close (m_pOutput_pmem[index].fd);
 #ifdef USE_ION
             free_ion_memory(&m_pOutput_ion[index]);
 #endif
+
+            m_pOutput_pmem[index].buffer = NULL;
             m_pOutput_pmem[index].fd = -1;
         } else if ( m_pOutput_pmem[index].fd > 0 && (output_use_buffer == true
                     && m_use_output_pmem == OMX_FALSE)) {
@@ -4144,11 +4145,15 @@ OMX_ERRORTYPE  omx_video::set_callbacks(OMX_IN OMX_HANDLETYPE        hComp,
         OMX_IN OMX_PTR             appData)
 {
     (void)hComp;
+
+    if (!callbacks)
+       return OMX_ErrorBadParameter;
+
     m_pCallbacks       = *callbacks;
     DEBUG_PRINT_LOW("Callbacks Set %p %p %p",m_pCallbacks.EmptyBufferDone,\
             m_pCallbacks.EventHandler,m_pCallbacks.FillBufferDone);
     m_app_data =    appData;
-    return OMX_ErrorNotImplemented;
+    return OMX_ErrorNone;
 }
 
 
