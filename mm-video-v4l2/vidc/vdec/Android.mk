@@ -29,7 +29,7 @@ libmm-vdec-def += -DMAX_RES_1080P_EBI
 TARGETS_THAT_USE_HEVC_ADSP_HEAP := msm8226 msm8974
 TARGETS_THAT_HAVE_VENUS_HEVC := apq8084 msm8994 msm8996
 TARGETS_THAT_SUPPORT_UBWC := msm8996 msm8953 msm8998 sdm660
-TARGETS_THAT_NEED_SW_VDEC := msm8937
+TARGETS_THAT_NEED_SW_VDEC := msm8937 msm8909
 
 ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_USE_HEVC_ADSP_HEAP)),true)
 libmm-vdec-def += -D_HEVC_USE_ADSP_HEAP_
@@ -60,8 +60,6 @@ ifeq ($(call is-board-platform-in-list, $(MASTER_SIDE_CP_TARGET_LIST)),true)
 libmm-vdec-def += -DMASTER_SIDE_CP
 endif
 
-libmm-vdec-def += -D_QUERY_DISP_RES_
-
 include $(CLEAR_VARS)
 
 # Common Includes
@@ -73,7 +71,6 @@ libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/adreno
 libmm-vdec-inc          += $(TOP)/frameworks/native/include/media/openmax
 libmm-vdec-inc          += $(TOP)/frameworks/native/include/media/hardware
 libmm-vdec-inc      	+= $(TOP)/hardware/qcom/media/libc2dcolorconvert
-libmm-vdec-inc      	+= $(TOP)/frameworks/av/include/media/stagefright
 libmm-vdec-inc      	+= $(TARGET_OUT_HEADERS)/mm-video/SwVdec
 libmm-vdec-inc      	+= $(TARGET_OUT_HEADERS)/mm-video/swvdec
 libmm-vdec-inc      	+= $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
@@ -115,7 +112,7 @@ LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-vdec-add-dep)
 
 LOCAL_PRELINK_MODULE    := false
-LOCAL_SHARED_LIBRARIES  := liblog libutils libcutils libdl libqdutils
+LOCAL_SHARED_LIBRARIES  := liblog libcutils libdl
 
 LOCAL_SHARED_LIBRARIES  += libqdMetaData
 
