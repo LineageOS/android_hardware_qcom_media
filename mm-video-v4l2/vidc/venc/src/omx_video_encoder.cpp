@@ -1993,7 +1993,7 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                     return OMX_ErrorUnsupportedSetting;
                 }
                 memcpy(&m_sConfigTemporalLayers, pParam, sizeof(m_sConfigTemporalLayers));
-                return OMX_ErrorUnsupportedSetting;
+                break;
             }
         case OMX_IndexConfigAndroidVendorExtension:
             {
