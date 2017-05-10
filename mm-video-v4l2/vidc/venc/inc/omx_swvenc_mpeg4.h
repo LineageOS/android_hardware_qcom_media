@@ -29,6 +29,9 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __OMX_VENC__H
 #define __OMX_VENC__H
 
+#define VEN_EXTRADATA_SLICEINFO     0x100
+#define VEN_EXTRADATA_MBINFO        0x400
+
 #include <unistd.h>
 #include "omx_video_base.h"
 #include "video_encoder_device_v4l2.h"
@@ -105,6 +108,11 @@ class omx_venc: public omx_video
         venc_debug_cap m_debug;
         bool m_bSeqHdrRequested;
 
+        int  m_pipe_in;
+        int  m_pipe_out;
+        OMX_VIDEO_PARAM_MPEG4TYPE m_sParamMPEG4;
+        OMX_VIDEO_PARAM_H263TYPE m_sParamH263;
+
         OMX_U32 dev_stop(void);
         OMX_U32 dev_pause(void);
         OMX_U32 dev_start(void);
@@ -112,7 +120,7 @@ class omx_venc: public omx_video
         OMX_U32 dev_resume(void);
         OMX_U32 dev_start_done(void);
         OMX_U32 dev_set_message_thread_id(pthread_t);
-        bool dev_use_buf( void *,unsigned,unsigned);
+        bool dev_use_buf( unsigned);
         bool dev_free_buf( void *,unsigned);
         bool dev_empty_buf(void *, void *,unsigned,unsigned);
         bool dev_fill_buf(void *, void *,unsigned,unsigned);
@@ -129,7 +137,8 @@ class omx_venc: public omx_video
         bool dev_get_peak_bitrate(OMX_U32 *);
         bool dev_get_batch_size(OMX_U32 *);
         bool dev_get_temporal_layer_caps(OMX_U32 * /*nMaxLayers*/,
-                    OMX_U32 * /*nMaxBLayers*/) {
+                    OMX_U32 * /*nMaxBLayers*/,
+                    OMX_VIDEO_ANDROID_TEMPORALLAYERINGPATTERNTYPE */*SupportedPattern*/) {
             return false;
         }
         bool dev_is_video_session_supported(OMX_U32 width, OMX_U32 height);

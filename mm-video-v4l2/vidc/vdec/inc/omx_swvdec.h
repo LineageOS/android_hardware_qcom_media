@@ -95,6 +95,14 @@ struct vdec_ion {
     struct ion_allocation_data ion_alloc_data;
 };
 
+struct vdec_bufferpayload {
+	void *bufferaddr;
+	size_t buffer_len;
+	int pmem_fd;
+	size_t offset;
+	size_t mmaped_size;
+};
+
 typedef struct {
     OMX_BUFFERHEADERTYPE      buffer_header;
     struct vdec_ion           ion_info;

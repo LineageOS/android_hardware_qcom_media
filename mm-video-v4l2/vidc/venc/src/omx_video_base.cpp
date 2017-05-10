@@ -2171,7 +2171,7 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
                 }
                 break;
             }
-        case OMX_IndexParamAndroidVideoTemporalLayering:
+        case OMX_IndexConfigAndroidVideoTemporalLayering:
             {
                 VALIDATE_OMX_PARAM_DATA(configData, OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE);
                 OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE *layerConfig =
