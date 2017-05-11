@@ -5403,7 +5403,7 @@ OMX_ERRORTYPE  omx_vdec::get_config(OMX_IN OMX_HANDLETYPE      hComp,
             print_debug_color_aspects(&(m_internal_color_space.sAspects), "GetConfig Internal");
 
             if (params->bRequestingDataSpace) {
-                DEBUG_PRINT_ERROR("Does not handle dataspace request");
+                DEBUG_PRINT_HIGH("Does not handle dataspace request");
                 return OMX_ErrorUnsupportedSetting;
             }
             if (m_internal_color_space.bDataSpaceChanged == OMX_TRUE) {
@@ -5746,7 +5746,6 @@ OMX_ERRORTYPE  omx_vdec::get_extension_index(OMX_IN OMX_HANDLETYPE      hComp,
     } else if (extn_equals(paramName, "OMX.google.android.index.useAndroidNativeBuffer2")) {
         *indexType = (OMX_INDEXTYPE)OMX_GoogleAndroidIndexUseAndroidNativeBuffer2;
     } else if (extn_equals(paramName, "OMX.google.android.index.useAndroidNativeBuffer")) {
-        DEBUG_PRINT_ERROR("Extension: %s is supported", paramName);
         *indexType = (OMX_INDEXTYPE)OMX_GoogleAndroidIndexUseAndroidNativeBuffer;
     } else if (extn_equals(paramName, "OMX.google.android.index.getAndroidNativeBufferUsage")) {
         *indexType = (OMX_INDEXTYPE)OMX_GoogleAndroidIndexGetAndroidNativeBufferUsage;
@@ -5787,7 +5786,7 @@ OMX_ERRORTYPE  omx_vdec::get_extension_index(OMX_IN OMX_HANDLETYPE      hComp,
     } else if (extn_equals(paramName, "OMX.google.android.index.describeHDRStaticInfo")) {
         *indexType = (OMX_INDEXTYPE)OMX_QTIIndexConfigDescribeHDRColorInfo;
     } else {
-        DEBUG_PRINT_ERROR("Extension: %s not implemented", paramName);
+        DEBUG_PRINT_HIGH("Extension: %s not implemented", paramName);
         return OMX_ErrorNotImplemented;
     }
     return OMX_ErrorNone;
