@@ -1550,10 +1550,13 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
         OMX_U32 port)
 {
     struct v4l2_format fmt;
-    struct v4l2_requestbuffers bufreq;
     unsigned int buf_size = 0, extra_data_size = 0, client_extra_data_size = 0;
     int ret;
     int extra_idx = 0;
+    struct v4l2_control control;
+    unsigned int actualCount = 0;
+
+    memset(&control, 0, sizeof(control));
 
     if (port == 0) {
         fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
@@ -1563,40 +1566,38 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
         fmt.fmt.pix_mp.colorspace = V4L2_COLORSPACE_470_SYSTEM_BG;
         ret = ioctl(m_nDriver_fd, VIDIOC_G_FMT, &fmt);
         m_sInput_buff_property.datasize=fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
-        bufreq.memory = V4L2_MEMORY_USERPTR;
 
-        if (*actual_buff_count)
-            bufreq.count = *actual_buff_count;
-        else
-            bufreq.count = 2;
+        control.id = V4L2_CID_MIN_BUFFERS_FOR_OUTPUT;
+
+        ret = ioctl(m_nDriver_fd,  VIDIOC_G_CTRL, &control);
+        if (ret || (unsigned int)control.value > MAX_V4L2_BUFS) {
+            DEBUG_PRINT_ERROR("Driver returned invalid data port = %d ret = %d Count = %d",
+                port, ret, (unsigned int)control.value);
+            return false;
+        }
+        DEBUG_PRINT_LOW("Port = %d Driver returned count = %d", port, control.value);
 
         // Increase buffer-header count for metadata-mode on input port
         // to improve buffering and reduce bottlenecks in clients
-        if (metadatamode && (bufreq.count < 9)) {
+        if (metadatamode) {
             DEBUG_PRINT_LOW("FW returned buffer count = %d , overwriting with 9",
-                bufreq.count);
-            bufreq.count = 9;
+                actualCount);
+            actualCount = 9;
         }
 
         if (m_sVenc_cfg.input_height * m_sVenc_cfg.input_width >= 3840*2160) {
-            DEBUG_PRINT_LOW("Increasing buffer count = %d to 11", bufreq.count);
-            bufreq.count = 11;
+            DEBUG_PRINT_LOW("Increasing buffer count = %d to 11", actualCount);
+            actualCount = 11;
         }
 
-        int actualCount = bufreq.count;
         // Request MAX_V4L2_BUFS from V4L2 in batch mode.
         // Keep the original count for the client
         if (metadatamode && mBatchSize) {
-            bufreq.count = MAX_V4L2_BUFS;
+            actualCount = MAX_V4L2_BUFS;
         }
 
-        bufreq.type=V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
-        ret = ioctl(m_nDriver_fd,VIDIOC_REQBUFS, &bufreq);
+        actualCount = MAX((unsigned int)control.value, actualCount);
 
-        if (ret) {
-            DEBUG_PRINT_ERROR("VIDIOC_REQBUFS OUTPUT_MPLANE Failed");
-            return false;
-        }
         fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
         fmt.fmt.pix_mp.height = m_sVenc_cfg.input_height;
         fmt.fmt.pix_mp.width = m_sVenc_cfg.input_width;
@@ -1604,11 +1605,7 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
         ret = ioctl(m_nDriver_fd, VIDIOC_G_FMT, &fmt);
         m_sInput_buff_property.datasize=fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
 
-        if (metadatamode && mBatchSize) {
-            m_sInput_buff_property.mincount = m_sInput_buff_property.actualcount = actualCount;
-        } else {
-            m_sInput_buff_property.mincount = m_sInput_buff_property.actualcount = bufreq.count;
-        }
+        m_sInput_buff_property.mincount = m_sInput_buff_property.actualcount = actualCount;
 
         *min_buff_count = m_sInput_buff_property.mincount;
         *actual_buff_count = m_sInput_buff_property.actualcount;
@@ -1649,28 +1646,26 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
 
         ret = ioctl(m_nDriver_fd, VIDIOC_G_FMT, &fmt);
         m_sOutput_buff_property.datasize=fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
-        bufreq.memory = V4L2_MEMORY_USERPTR;
 
+        control.id = V4L2_CID_MIN_BUFFERS_FOR_CAPTURE;
+
+        ret = ioctl(m_nDriver_fd,  VIDIOC_G_CTRL, &control);
+        if (ret || (unsigned int)control.value > MAX_V4L2_BUFS) {
+            DEBUG_PRINT_ERROR("Driver returned invalid data port = %d ret = %d Count = %d",
+                port, ret, (unsigned int)control.value);
+            return false;
+        }
+        actualCount = control.value;
+        DEBUG_PRINT_LOW("Port = %d Driver returned count = %d", port, control.value);
         if (mBatchSize) {
             // If we're in batch mode, we'd like to end up in a situation where
             // driver is able to own mBatchSize buffers and we'd also own atleast
             // mBatchSize buffers
-            bufreq.count = MAX(*actual_buff_count, mBatchSize) + mBatchSize;
-        } else if (*actual_buff_count) {
-            bufreq.count = *actual_buff_count;
-        } else {
-            bufreq.count = 2;
+            actualCount = MAX((unsigned int)control.value, mBatchSize) + mBatchSize;
         }
 
-        bufreq.type=V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-        ret = ioctl(m_nDriver_fd,VIDIOC_REQBUFS, &bufreq);
+        m_sOutput_buff_property.mincount = m_sOutput_buff_property.actualcount = actualCount;
 
-        if (ret) {
-            DEBUG_PRINT_ERROR("VIDIOC_REQBUFS CAPTURE_MPLANE Failed");
-            return false;
-        }
-
-        m_sOutput_buff_property.mincount = m_sOutput_buff_property.actualcount = bufreq.count;
         *min_buff_count = m_sOutput_buff_property.mincount;
         *actual_buff_count = m_sOutput_buff_property.actualcount;
         *buff_size = m_sOutput_buff_property.datasize;
