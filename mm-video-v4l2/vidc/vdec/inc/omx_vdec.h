@@ -297,9 +297,11 @@ enum vdec_output_fromat {
 };
 
 enum vdec_interlaced_format {
-	VDEC_InterlaceFrameProgressive = 0x1,
-	VDEC_InterlaceInterleaveFrameTopFieldFirst = 0x2,
-	VDEC_InterlaceInterleaveFrameBottomFieldFirst = 0x4
+    VDEC_InterlaceFrameProgressive = 0x1,
+    VDEC_InterlaceInterleaveFrameTopFieldFirst = 0x2,
+    VDEC_InterlaceInterleaveFrameBottomFieldFirst = 0x4,
+    VDEC_InterlaceFrameTopFieldFirst = 0x8,
+    VDEC_InterlaceFrameBottomFieldFirst = 0x10,
 };
 
 enum vdec_output_order {

@@ -4919,32 +4919,6 @@ OMX_ERRORTYPE  omx_vdec::get_config(OMX_IN OMX_HANDLETYPE      hComp,
     }
 
     switch ((unsigned long)configIndex) {
-        case OMX_QcomIndexConfigInterlaced: {
-                                VALIDATE_OMX_PARAM_DATA(configData, OMX_QCOM_CONFIG_INTERLACETYPE);
-                                OMX_QCOM_CONFIG_INTERLACETYPE *configFmt =
-                                    (OMX_QCOM_CONFIG_INTERLACETYPE *) configData;
-                                if (configFmt->nPortIndex == 1) {
-                                    if (configFmt->nIndex == 0) {
-                                        configFmt->eInterlaceType = OMX_QCOM_InterlaceFrameProgressive;
-                                    } else if (configFmt->nIndex == 1) {
-                                        configFmt->eInterlaceType =
-                                            OMX_QCOM_InterlaceInterleaveFrameTopFieldFirst;
-                                    } else if (configFmt->nIndex == 2) {
-                                        configFmt->eInterlaceType =
-                                            OMX_QCOM_InterlaceInterleaveFrameBottomFieldFirst;
-                                    } else {
-                                        DEBUG_PRINT_ERROR("get_config: OMX_QcomIndexConfigInterlaced:"
-                                                " NoMore Interlaced formats");
-                                        eRet = OMX_ErrorNoMore;
-                                    }
-
-                                } else {
-                                    DEBUG_PRINT_ERROR("get_config: Bad port index %d queried on only o/p port",
-                                            (int)configFmt->nPortIndex);
-                                    eRet = OMX_ErrorBadPortIndex;
-                                }
-                                break;
-                            }
         case OMX_QcomIndexQueryNumberOfVideoDecInstance: {
                                      VALIDATE_OMX_PARAM_DATA(configData, QOMX_VIDEO_QUERY_DECODER_INSTANCES);
                                      QOMX_VIDEO_QUERY_DECODER_INSTANCES *decoderinstances =
@@ -7886,14 +7860,6 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
                 output_capability == V4L2_PIX_FMT_MPEG2)
             is_duplicate_ts_valid = false;
 
-        if ((output_capability == V4L2_PIX_FMT_H264 ||
-                output_capability == V4L2_PIX_FMT_H264_MVC) &&
-                is_interlaced) {
-            if (buffer->nFlags & QOMX_VIDEO_BUFFERFLAG_MBAFF) {
-                is_interlaced = false;
-            }
-        }
-
         if (buffer->nFilledLen > 0) {
             time_stamp_dts.get_next_timestamp(buffer,
                     is_interlaced && is_duplicate_ts_valid);
@@ -9789,7 +9755,6 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
             switch ((unsigned long)data->eType) {
                 case MSM_VIDC_EXTRADATA_INTERLACE_VIDEO:
                     struct msm_vidc_interlace_payload *payload;
-                    OMX_U32 interlace_color_format;
                     payload = (struct msm_vidc_interlace_payload *)(void *)data->data;
                     if (payload) {
                         enable = OMX_InterlaceFrameProgressive;
@@ -9805,38 +9770,27 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                                 drv_ctx.interlace = VDEC_InterlaceInterleaveFrameBottomFieldFirst;
                                 enable = OMX_InterlaceInterleaveFrameBottomFieldFirst;
                                 break;
+                            case MSM_VIDC_INTERLACE_FRAME_TOPFIELDFIRST:
+                                drv_ctx.interlace = VDEC_InterlaceFrameTopFieldFirst;
+                                enable = OMX_InterlaceFrameTopFieldFirst;
+                                break;
+                           case MSM_VIDC_INTERLACE_FRAME_BOTTOMFIELDFIRST:
+                                drv_ctx.interlace = VDEC_InterlaceFrameBottomFieldFirst;
+                                enable = OMX_InterlaceFrameBottomFieldFirst;
+                                break;
                             default:
                                 DEBUG_PRINT_LOW("default case - set to progressive");
                                 drv_ctx.interlace = VDEC_InterlaceFrameProgressive;
                         }
-                        switch (payload->color_format) {
-                           case MSM_VIDC_HAL_INTERLACE_COLOR_FORMAT_NV12:
-                               interlace_color_format = (int)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
-                               break;
-                           case MSM_VIDC_HAL_INTERLACE_COLOR_FORMAT_NV12_UBWC:
-                               interlace_color_format = (int)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed;
-                               break;
-                           default:
-                               interlace_color_format = (int)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
-                               DEBUG_PRINT_ERROR("Error - Unknown color format hint for interlaced frame");
-                        }
                     }
 
                     if (m_enable_android_native_buffers) {
-                        DEBUG_PRINT_LOW("setMetaData INTERLACED format:%d color_format: %x enable:%d mbaff:%d",
-                                         payload->format, interlace_color_format ,enable,
-                                        (p_buf_hdr->nFlags & QOMX_VIDEO_BUFFERFLAG_MBAFF)?true:false);
+                        DEBUG_PRINT_LOW("setMetaData INTERLACED format:%d enable:%d",
+                                        payload->format, enable);
 
                         setMetaData((private_handle_t *)native_buffer[buf_index].privatehandle,
                                PP_PARAM_INTERLACED, (void*)&enable);
 
-                        if (interlace_color_format == QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m) {
-                            setMetaData((private_handle_t *)native_buffer[buf_index].privatehandle,
-                               LINEAR_FORMAT, (void*)&interlace_color_format);
-                        } else if (interlace_color_format == QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed) {
-                            setMetaData((private_handle_t *)native_buffer[buf_index].privatehandle,
-                               LINEAR_FORMAT, NULL);
-                        }
                     }
                     if (client_extradata & OMX_INTERLACE_EXTRADATA) {
                         append_interlace_extradata(p_extra, payload->format);
@@ -10452,6 +10406,14 @@ void omx_vdec::append_interlace_extradata(OMX_OTHER_EXTRADATATYPE *extra,
         interlace_format->bInterlaceFormat = OMX_TRUE;
         interlace_format->nInterlaceFormats = OMX_InterlaceInterleaveFrameBottomFieldFirst;
         drv_ctx.interlace = VDEC_InterlaceInterleaveFrameBottomFieldFirst;
+    } else if (interlaced_format_type == MSM_VIDC_INTERLACE_FRAME_TOPFIELDFIRST) {
+        interlace_format->bInterlaceFormat = OMX_TRUE;
+        interlace_format->nInterlaceFormats = OMX_InterlaceFrameTopFieldFirst;
+        drv_ctx.interlace = VDEC_InterlaceFrameTopFieldFirst;
+    } else if (interlaced_format_type == MSM_VIDC_INTERLACE_FRAME_BOTTOMFIELDFIRST) {
+        interlace_format->bInterlaceFormat = OMX_TRUE;
+        interlace_format->nInterlaceFormats = OMX_InterlaceFrameBottomFieldFirst;
+        drv_ctx.interlace = VDEC_InterlaceFrameBottomFieldFirst;
     } else {
         //default case - set to progressive
         interlace_format->bInterlaceFormat = OMX_FALSE;
@@ -10523,6 +10485,10 @@ void omx_vdec::append_frame_info_extradata(OMX_OTHER_EXTRADATATYPE *extra,
         frame_info->interlaceType = OMX_QCOM_InterlaceInterleaveFrameTopFieldFirst;
     else if (drv_ctx.interlace == VDEC_InterlaceInterleaveFrameBottomFieldFirst)
         frame_info->interlaceType = OMX_QCOM_InterlaceInterleaveFrameBottomFieldFirst;
+    else if (drv_ctx.interlace == VDEC_InterlaceFrameTopFieldFirst)
+        frame_info->interlaceType = OMX_QCOM_InterlaceFrameTopFieldFirst;
+    else if (drv_ctx.interlace == VDEC_InterlaceFrameBottomFieldFirst)
+        frame_info->interlaceType = OMX_QCOM_InterlaceFrameBottomFieldFirst;
     else
         frame_info->interlaceType = OMX_QCOM_InterlaceFrameProgressive;
     memset(&frame_info->aspectRatio, 0, sizeof(frame_info->aspectRatio));
