@@ -10,7 +10,7 @@ LOCAL_SHARED_LIBRARIES := liblog libdl
 
 LOCAL_MODULE_TAGS := optional
 
-LOCAL_MODULE := libhypintercept
+LOCAL_MODULE := libhypv_intercept
 
 LOCAL_MODULE_PATH_32      := $(TARGET_OUT_VENDOR)/lib
 LOCAL_MODULE_PATH_64      := $(TARGET_OUT_VENDOR)/lib64

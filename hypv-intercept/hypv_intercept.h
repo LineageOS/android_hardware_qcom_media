@@ -26,21 +26,22 @@ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --------------------------------------------------------------------------*/
-#ifndef __HYPV_INTERCEPT_H
-#define __HYPV_INTERCEPT_H
+#ifndef __HYPV_INTERCEPT_H__
+#define __HYPV_INTERCEPT_H__
 
-typedef void* V4L2FE_HANDLE;
-typedef int (*v4l2fe_callback_handler_t)(void *context, void *message);
+typedef void* HVFE_HANDLE;
+typedef int (*hvfe_callback_handler_t)(void *context, void *message);
 
-struct v4l2fe_callback_t
+struct hvfe_callback_t
 {
-    v4l2fe_callback_handler_t handler;
+    hvfe_callback_handler_t handler;
     void* context;
 };
 
 int hypv_init();
-int hypv_open(const char *str, int flag, v4l2fe_callback_t* cb);
+int hypv_open(const char *str, int flag, hvfe_callback_t* cb);
 int hypv_ioctl(int fd, int cmd, void *data);
 int hypv_close(int fd);
 int hypv_deinit();
+
 #endif

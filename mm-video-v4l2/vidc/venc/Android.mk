@@ -97,6 +97,7 @@ libmm-venc-inc      += $(TARGET_OUT_HEADERS)/adreno
 libmm-venc-inc      += frameworks/native/include/media/hardware
 libmm-venc-inc      += frameworks/native/include/media/openmax
 libmm-venc-inc      += hardware/qcom/media/libc2dcolorconvert
+libmm-venc-inc      += hardware/qcom/media/hypv-intercept
 libmm-venc-inc      += $(TARGET_OUT_HEADERS)/libvqzip
 libmm-venc-inc      += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_PQ)),true)
@@ -133,13 +134,13 @@ LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl
 ifeq ($(BOARD_USES_ADRENO), true)
 LOCAL_SHARED_LIBRARIES    += libc2dcolorconvert
 endif # ($(BOARD_USES_ADRENO), true)
+LOCAL_SHARED_LIBRARIES += libhypv_intercept
 LOCAL_SHARED_LIBRARIES += libqdMetaData
 LOCAL_STATIC_LIBRARIES    := libOmxVidcCommon
 
 LOCAL_SRC_FILES   := src/omx_video_base.cpp
 LOCAL_SRC_FILES   += src/omx_video_encoder.cpp
 LOCAL_SRC_FILES   += src/video_encoder_device_v4l2.cpp
-LOCAL_SRC_FILES   += ../common/src/hypv_intercept.cpp
 
 include $(BUILD_SHARED_LIBRARY)
 

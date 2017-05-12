@@ -1363,10 +1363,10 @@ bool venc_dev::venc_open(OMX_U32 codec)
             DEBUG_PRINT_ERROR("hypervisor init failed");
             return OMX_ErrorInsufficientResources;
         }
-        v4l2fe_callback_t v4l2cb;
-        v4l2cb.handler = async_message_process_v4l2;
-        v4l2cb.context = (void *) this;
-        m_nDriver_fd = hypv_open(device_name, O_RDWR, &v4l2cb);
+        hvfe_callback_t hvfe_cb;
+        hvfe_cb.handler = async_message_process_v4l2;
+        hvfe_cb.context = (void *) this;
+        m_nDriver_fd = hypv_open(device_name, O_RDWR, &hvfe_cb);
     } else {
         m_nDriver_fd = open(device_name, O_RDWR);
     }

@@ -2342,10 +2342,10 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
             DEBUG_PRINT_ERROR("hypervisor init failed");
             return OMX_ErrorInsufficientResources;
         }
-        v4l2fe_callback_t v4l2cb;
-        v4l2cb.handler = async_message_process;
-        v4l2cb.context = (void *)this;
-        drv_ctx.video_driver_fd = hypv_open(device_name, O_RDWR, &v4l2cb);
+        hvfe_callback_t hvfe_cb;
+        hvfe_cb.handler = async_message_process;
+        hvfe_cb.context = (void *)this;
+        drv_ctx.video_driver_fd = hypv_open(device_name, O_RDWR, &hvfe_cb);
     } else {
         drv_ctx.video_driver_fd = open(device_name, O_RDWR);
     }

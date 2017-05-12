@@ -73,10 +73,11 @@ libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/qcom/display
 libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/adreno
 libmm-vdec-inc          += $(TOP)/frameworks/native/include/media/openmax
 libmm-vdec-inc          += $(TOP)/frameworks/native/include/media/hardware
-libmm-vdec-inc      	+= $(TOP)/hardware/qcom/media/libc2dcolorconvert
-libmm-vdec-inc      	+= $(TARGET_OUT_HEADERS)/mm-video/SwVdec
-libmm-vdec-inc      	+= $(TARGET_OUT_HEADERS)/mm-video/swvdec
-libmm-vdec-inc      	+= $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+libmm-vdec-inc          += $(TOP)/hardware/qcom/media/libc2dcolorconvert
+libmm-vdec-inc          += $(TOP)/hardware/qcom/media/hypv-intercept
+libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/mm-video/SwVdec
+libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/mm-video/swvdec
+libmm-vdec-inc          += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 
 ifeq ($(PLATFORM_SDK_VERSION), 18)  #JB_MR2
 libmm-vdec-def += -DANDROID_JELLYBEAN_MR2=1
@@ -128,7 +129,7 @@ LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-vdec-add-dep)
 LOCAL_PRELINK_MODULE    := false
 LOCAL_SHARED_LIBRARIES  := liblog libcutils libdl
 
-LOCAL_SHARED_LIBRARIES  += libqdMetaData
+LOCAL_SHARED_LIBRARIES  += libqdMetaData libhypv_intercept
 
 LOCAL_SRC_FILES         := src/frameparser.cpp
 LOCAL_SRC_FILES         += src/h264_utils.cpp
@@ -137,7 +138,6 @@ LOCAL_SRC_FILES         += src/mp4_utils.cpp
 LOCAL_SRC_FILES         += src/hevc_utils.cpp
 LOCAL_STATIC_LIBRARIES  := libOmxVidcCommon
 LOCAL_SRC_FILES         += src/omx_vdec_v4l2.cpp
-LOCAL_SRC_FILES         += ../common/src/hypv_intercept.cpp
 
 include $(BUILD_SHARED_LIBRARY)
 
