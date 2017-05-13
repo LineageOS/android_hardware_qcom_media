@@ -484,6 +484,8 @@ class venc_dev
         struct msm_venc_color_space         color_space;
         msm_venc_temporal_layers            temporal_layers_config;
 
+        bool venc_query_cap(struct v4l2_queryctrl &cap);
+        bool venc_validate_range(OMX_S32 id, OMX_S32 val);
         bool venc_set_profile(OMX_U32 eProfile);
         bool venc_set_level(OMX_U32 eLevel);
         bool venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames);
@@ -504,6 +506,7 @@ class venc_dev
         bool venc_set_slice_delivery_mode(OMX_U32 enable);
         bool venc_set_extradata(OMX_U32 extra_data, OMX_BOOL enable);
         bool venc_set_idr_period(OMX_U32 nPFrames, OMX_U32 nIDRPeriod);
+        bool venc_reconfigure_intra_period();
         bool venc_reconfig_reqbufs();
         bool venc_set_vpe_rotation(OMX_S32 rotation_angle);
         bool venc_set_ltrmode(OMX_U32 enable, OMX_U32 count);
