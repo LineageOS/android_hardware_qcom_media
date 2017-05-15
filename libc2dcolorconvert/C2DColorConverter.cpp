@@ -433,10 +433,10 @@ size_t C2DColorConverter::calcStride(ColorConvertFormat format, size_t width)
         case RGB565:
             return ALIGN(width, ALIGN32) * 2; // RGB565 has width as twice
         case RGBA8888:
-	if (mSrcStride)
-		return mSrcStride * 4;
-	else
-		return ALIGN(width, ALIGN32) * 4;
+            if (mSrcStride)
+                return mSrcStride * 4;
+            else
+                return ALIGN(width, ALIGN32) * 4;
         case YCbCr420Tile:
             return ALIGN(width, ALIGN128);
         case YCbCr420SP:
@@ -544,6 +544,7 @@ size_t C2DColorConverter::calcSize(ColorConvertFormat format, size_t width, size
             break;
         case NV12_UBWC:
             size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12_UBWC, width, height);
+            break;
         default:
             break;
     }

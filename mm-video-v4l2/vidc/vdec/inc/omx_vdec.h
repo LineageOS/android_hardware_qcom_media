@@ -52,6 +52,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <color_metadata.h>
 #include "VideoAPI.h"
 #include "HardwareAPI.h"
+#include <unordered_map>
 
 static ptrdiff_t x;
 
@@ -489,6 +490,8 @@ struct extradata_info {
     OMX_U32 output_width;
     OMX_U32 output_height;
 };
+
+typedef std::unordered_map <int, int> ColorSubMapping;
 
 // OMX video decoder class
 class omx_vdec: public qc_omx_component
@@ -1213,6 +1216,7 @@ class omx_vdec: public qc_omx_component
                 void init_members();
                 bool color_convert_mode;
                 ColorConvertFormat dest_format;
+                ColorConvertFormat src_format;
                 class omx_c2d_conv c2d;
                 unsigned int allocated_count;
                 unsigned int buffer_size_req;
@@ -1223,6 +1227,7 @@ class omx_vdec: public qc_omx_component
                 OMX_QCOM_PLATFORM_PRIVATE_ENTRY     m_platform_entry_client[MAX_COUNT];
                 OMX_QCOM_PLATFORM_PRIVATE_PMEM_INFO m_pmem_info_client[MAX_COUNT];
                 OMX_BUFFERHEADERTYPE  m_out_mem_ptr_client[MAX_COUNT];
+                ColorSubMapping mMapOutput2Convert;
 #ifdef USE_ION
                 struct vdec_ion op_buf_ion_info[MAX_COUNT];
 #endif

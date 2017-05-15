@@ -4160,23 +4160,17 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                     }
                                     enum vdec_output_fromat op_format;
                                     if (portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
-                                            QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m ||
-                                            portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
-                                            QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mMultiView ||
-                                            portFmt->eColorFormat == OMX_COLOR_FormatYUV420Planar ||
-                                            portFmt->eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar) {
+                                                     QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m ||
+                                        portFmt->eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar) {
                                         op_format = (enum vdec_output_fromat)VDEC_YUV_FORMAT_NV12;
+                                        fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12;
                                     } else if (portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
-                                            QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed) {
+                                                   QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed ||
+                                               portFmt->eColorFormat == OMX_COLOR_FormatYUV420Planar) {
                                         op_format = (enum vdec_output_fromat)VDEC_YUV_FORMAT_NV12_UBWC;
-                                    } else
-                                        eRet = OMX_ErrorBadParameter;
-
-                                    if (portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
-                                            QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed) {
                                         fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12_UBWC;
                                     } else {
-                                        fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12;
+                                        eRet = OMX_ErrorBadParameter;
                                     }
 
                                     if (eRet == OMX_ErrorNone) {
@@ -10790,6 +10784,12 @@ omx_vdec::allocate_color_convert_buf::allocate_color_convert_buf()
     dest_format = YCbCr420P;
     m_c2d_width = 0;
     m_c2d_height = 0;
+
+    mMapOutput2Convert.insert( {
+            {VDEC_YUV_FORMAT_NV12, NV12_128m},
+            {VDEC_YUV_FORMAT_NV12_UBWC, NV12_UBWC},
+            //TODO: TP10 {VDEC_YUV_FORMAT_NV12_TP10_UBWC, NV12_TP10},
+        });
 }
 
 void omx_vdec::allocate_color_convert_buf::set_vdec_client(void *client)
@@ -10837,6 +10837,17 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
     }
     pthread_mutex_lock(&omx->c_lock);
 
+    ColorSubMapping::const_iterator
+        found =  mMapOutput2Convert.find(omx->drv_ctx.output_format);
+    if (found == mMapOutput2Convert.end()) {
+        DEBUG_PRINT_HIGH("%s: Could not find the color conversion "
+                         "mapping for %#X. Setting to default NV12",
+                         __func__, omx->drv_ctx.output_format);
+        src_format = NV12_128m;
+    } else {
+        src_format = (ColorConvertFormat) found->second;;
+    }
+
     memset(&fmt, 0x0, sizeof(struct v4l2_format));
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     fmt.fmt.pix_mp.pixelformat = omx->capture_capability;
@@ -10846,6 +10857,7 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
 
     bool resolution_upgrade = (height > m_c2d_height ||
             width > m_c2d_width);
+    bool is_interlaced = omx->drv_ctx.interlace != VDEC_InterlaceFrameProgressive;
     if (resolution_upgrade) {
         // resolution upgraded ? ensure we are yet to allocate;
         // failing which, c2d buffers will never be reallocated and bad things will happen
@@ -10864,9 +10876,11 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
         goto fail_update_buf_req;
     }
     c2d.close();
-    status = c2d.open(height,
-            width,
-            NV12_128m,dest_format);
+
+    DEBUG_PRINT_INFO("%s: Open C2D interface for %#X -> %#X, interlaced (%d)",
+                                     __func__, src_format, dest_format, is_interlaced);
+    status = c2d.open(height, width, src_format, dest_format);
+
     if (status) {
         status = c2d.get_buffer_size(C2D_INPUT,src_size);
         if (status)
@@ -10927,8 +10941,6 @@ bool omx_vdec::allocate_color_convert_buf::set_color_format(
         (drv_color_format != (OMX_COLOR_FORMATTYPE)
                 QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mMultiView) &&
         (drv_color_format != (OMX_COLOR_FORMATTYPE)
-                QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed) &&
-        (drv_color_format != (OMX_COLOR_FORMATTYPE)
                 QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed);
 
     dest_color_format_c2d_enable = (dest_color_format != (OMX_COLOR_FORMATTYPE)
@@ -10938,14 +10950,10 @@ bool omx_vdec::allocate_color_convert_buf::set_color_format(
 
     if (status && drv_colorformat_c2d_enable && dest_color_format_c2d_enable) {
         DEBUG_PRINT_LOW("Enabling C2D");
-        if ((dest_color_format != OMX_COLOR_FormatYUV420Planar) &&
-           (dest_color_format != OMX_COLOR_FormatYUV420SemiPlanar)) {
-            DEBUG_PRINT_ERROR("Unsupported color format for c2d");
-            status = false;
-        } else {
+        if (dest_color_format == OMX_COLOR_FormatYUV420Planar ||
+            dest_color_format == OMX_COLOR_FormatYUV420SemiPlanar ) {
             ColorFormat = dest_color_format;
-            dest_format = (dest_color_format == OMX_COLOR_FormatYUV420Planar) ?
-                    YCbCr420P : YCbCr420SP;
+            dest_format = dest_color_format == OMX_COLOR_FormatYUV420Planar? YCbCr420P: YCbCr420SP;
             if (enabled)
                 c2d.destroy();
             enabled = false;
@@ -10954,6 +10962,10 @@ bool omx_vdec::allocate_color_convert_buf::set_color_format(
                 status = false;
             } else
                 enabled = true;
+        } else {
+            DEBUG_PRINT_ERROR("Unsupported output color format for c2d (%d)",
+                              dest_color_format);
+            status = false;
         }
     } else {
         if (enabled)
