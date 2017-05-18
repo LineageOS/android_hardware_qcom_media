@@ -1554,9 +1554,10 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
     int ret;
     int extra_idx = 0;
     struct v4l2_control control;
-    unsigned int actualCount = 0;
+    unsigned int minCount = 0;
 
     memset(&control, 0, sizeof(control));
+    memset(&fmt, 0, sizeof(fmt));
 
     if (port == 0) {
         fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
@@ -1565,47 +1566,60 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
         fmt.fmt.pix_mp.pixelformat = m_sVenc_cfg.inputformat;
         fmt.fmt.pix_mp.colorspace = V4L2_COLORSPACE_470_SYSTEM_BG;
         ret = ioctl(m_nDriver_fd, VIDIOC_G_FMT, &fmt);
+        if (ret) {
+            DEBUG_PRINT_ERROR("set format failed, type %d, wxh %dx%d, format %#x, colorspace %d\n",
+                fmt.type, fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height,
+                fmt.fmt.pix_mp.pixelformat, fmt.fmt.pix_mp.colorspace);
+            return false;
+        }
         m_sInput_buff_property.datasize=fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
 
         control.id = V4L2_CID_MIN_BUFFERS_FOR_OUTPUT;
-
         ret = ioctl(m_nDriver_fd,  VIDIOC_G_CTRL, &control);
         if (ret || (unsigned int)control.value > MAX_V4L2_BUFS) {
-            DEBUG_PRINT_ERROR("Driver returned invalid data port = %d ret = %d Count = %d",
+            DEBUG_PRINT_ERROR("Driver returned invalid data, port = %d ret = %d Count = %d",
                 port, ret, (unsigned int)control.value);
             return false;
         }
-        DEBUG_PRINT_LOW("Port = %d Driver returned count = %d", port, control.value);
 
         // Increase buffer-header count for metadata-mode on input port
         // to improve buffering and reduce bottlenecks in clients
         if (metadatamode) {
             DEBUG_PRINT_LOW("FW returned buffer count = %d , overwriting with 9",
-                actualCount);
-            actualCount = 9;
+                control.value);
+            minCount = 9;
         }
 
         if (m_sVenc_cfg.input_height * m_sVenc_cfg.input_width >= 3840*2160) {
-            DEBUG_PRINT_LOW("Increasing buffer count = %d to 11", actualCount);
-            actualCount = 11;
+            DEBUG_PRINT_LOW("Increasing buffer count = %d to 11", minCount);
+            minCount = 11;
         }
 
         // Request MAX_V4L2_BUFS from V4L2 in batch mode.
         // Keep the original count for the client
         if (metadatamode && mBatchSize) {
-            actualCount = MAX_V4L2_BUFS;
+            minCount = MAX_V4L2_BUFS;
+            DEBUG_PRINT_LOW("Set buffer count = %d as metadata mode and batchmode enabled", minCount);
         }
 
-        actualCount = MAX((unsigned int)control.value, actualCount);
+        minCount = MAX((unsigned int)control.value, minCount);
+        m_sInput_buff_property.mincount = minCount;
 
         fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
         fmt.fmt.pix_mp.height = m_sVenc_cfg.input_height;
         fmt.fmt.pix_mp.width = m_sVenc_cfg.input_width;
         fmt.fmt.pix_mp.pixelformat = m_sVenc_cfg.inputformat;
         ret = ioctl(m_nDriver_fd, VIDIOC_G_FMT, &fmt);
+        if (ret) {
+            DEBUG_PRINT_ERROR("get format failed, type %d, wxh %dx%d, format %#x\n",
+                fmt.type, fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height,
+                fmt.fmt.pix_mp.pixelformat);
+            return false;
+        }
         m_sInput_buff_property.datasize=fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
 
-        m_sInput_buff_property.mincount = m_sInput_buff_property.actualcount = actualCount;
+        if (m_sInput_buff_property.actualcount < m_sInput_buff_property.mincount)
+            m_sInput_buff_property.actualcount = m_sInput_buff_property.mincount;
 
         *min_buff_count = m_sInput_buff_property.mincount;
         *actual_buff_count = m_sInput_buff_property.actualcount;
@@ -1638,6 +1652,13 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
         fmt.fmt.pix_mp.pixelformat = m_sVenc_cfg.codectype;
 
         ret = ioctl(m_nDriver_fd, VIDIOC_S_FMT, &fmt);
+        if (ret) {
+            DEBUG_PRINT_ERROR("set format failed, type %d, wxh %dx%d, format %#x\n",
+                fmt.type, fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height,
+                fmt.fmt.pix_mp.pixelformat);
+            return false;
+        }
+
         m_sOutput_buff_property.datasize=fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
         fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
         fmt.fmt.pix_mp.height = m_sVenc_cfg.dvs_height;
@@ -1645,6 +1666,12 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
         fmt.fmt.pix_mp.pixelformat = m_sVenc_cfg.codectype;
 
         ret = ioctl(m_nDriver_fd, VIDIOC_G_FMT, &fmt);
+        if (ret) {
+            DEBUG_PRINT_ERROR("get format failed, type %d, wxh %dx%d, format %#x\n",
+                fmt.type, fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height,
+                fmt.fmt.pix_mp.pixelformat);
+            return false;
+        }
         m_sOutput_buff_property.datasize=fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
 
         control.id = V4L2_CID_MIN_BUFFERS_FOR_CAPTURE;
@@ -1655,16 +1682,19 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
                 port, ret, (unsigned int)control.value);
             return false;
         }
-        actualCount = control.value;
-        DEBUG_PRINT_LOW("Port = %d Driver returned count = %d", port, control.value);
+        minCount = control.value;
+
         if (mBatchSize) {
             // If we're in batch mode, we'd like to end up in a situation where
             // driver is able to own mBatchSize buffers and we'd also own atleast
             // mBatchSize buffers
-            actualCount = MAX((unsigned int)control.value, mBatchSize) + mBatchSize;
+            minCount = MAX((unsigned int)control.value, mBatchSize) + mBatchSize;
+            DEBUG_PRINT_LOW("set min count %d as mBatchSize %d", minCount, mBatchSize);
         }
+        m_sOutput_buff_property.mincount = minCount;
 
-        m_sOutput_buff_property.mincount = m_sOutput_buff_property.actualcount = actualCount;
+        if (m_sOutput_buff_property.actualcount < m_sOutput_buff_property.mincount)
+            m_sOutput_buff_property.actualcount = m_sOutput_buff_property.mincount;
 
         *min_buff_count = m_sOutput_buff_property.mincount;
         *actual_buff_count = m_sOutput_buff_property.actualcount;
@@ -1684,6 +1714,11 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
         output_extradata_info.size = output_extradata_info.buffer_size * output_extradata_info.count;
     }
 
+    DEBUG_PRINT_HIGH("venc_get_buf_req: port %d, wxh %dx%d, format %#x, driver min count %d, "
+        "updated min count %d, act count %d, size %d, num planes %d",
+        port, fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height, fmt.fmt.pix_mp.pixelformat,
+        control.value, *min_buff_count, *actual_buff_count, *buff_size, fmt.fmt.pix_mp.num_planes);
+
     return true;
 }
 
@@ -1700,14 +1735,9 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
             {
                 OMX_PARAM_PORTDEFINITIONTYPE *portDefn;
                 portDefn = (OMX_PARAM_PORTDEFINITIONTYPE *) paramData;
-                DEBUG_PRINT_LOW("venc_set_param: OMX_IndexParamPortDefinition");
 
                 if (portDefn->nPortIndex == PORT_INDEX_IN) {
                     if (!venc_set_encode_framerate(portDefn->format.video.xFramerate)) {
-                        return false;
-                    }
-
-                    if (!venc_set_color_format(portDefn->format.video.eColorFormat)) {
                         return false;
                     }
 #ifdef _PQ_
@@ -1721,11 +1751,30 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                             DEBUG_PRINT_ERROR("ERROR: Failed to set search range");
                         }
                     }
+
+                    unsigned long inputformat = venc_get_color_format(portDefn->format.video.eColorFormat);
+
                     if (m_sVenc_cfg.input_height != portDefn->format.video.nFrameHeight ||
-                            m_sVenc_cfg.input_width != portDefn->format.video.nFrameWidth) {
-                        DEBUG_PRINT_LOW("Basic parameter has changed");
+                            m_sVenc_cfg.input_width != portDefn->format.video.nFrameWidth ||
+                            m_sInput_buff_property.actualcount != portDefn->nBufferCountActual ||
+                            m_sVenc_cfg.inputformat != inputformat) {
+
+                        DEBUG_PRINT_LOW("venc_set_param: OMX_IndexParamPortDefinition: port: %u, WxH %lux%lu --> %ux%u, count %lu --> %u, format %#lx --> %#lx",
+                            portDefn->nPortIndex, m_sVenc_cfg.input_width, m_sVenc_cfg.input_height,
+                            portDefn->format.video.nFrameWidth, portDefn->format.video.nFrameHeight,
+                            m_sInput_buff_property.actualcount, portDefn->nBufferCountActual,
+                            m_sVenc_cfg.inputformat, inputformat);
+
+                        if (portDefn->nBufferCountActual < m_sInput_buff_property.mincount) {
+                            DEBUG_PRINT_LOW("Actual count %u is less than driver mincount %lu on port %u",
+                                portDefn->nBufferCountActual, m_sInput_buff_property.mincount, portDefn->nPortIndex);
+                            return false;
+                        }
+
                         m_sVenc_cfg.input_height = portDefn->format.video.nFrameHeight;
                         m_sVenc_cfg.input_width = portDefn->format.video.nFrameWidth;
+                        m_sVenc_cfg.inputformat = inputformat;
+                        m_sInput_buff_property.actualcount = portDefn->nBufferCountActual;
 
                         memset(&fmt, 0, sizeof(fmt));
                         fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
@@ -1733,85 +1782,94 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                         fmt.fmt.pix_mp.width = m_sVenc_cfg.input_width;
                         fmt.fmt.pix_mp.pixelformat = m_sVenc_cfg.inputformat;
                         fmt.fmt.pix_mp.colorspace = V4L2_COLORSPACE_470_SYSTEM_BG;
-
                         if (ioctl(m_nDriver_fd, VIDIOC_S_FMT, &fmt)) {
-                            DEBUG_PRINT_ERROR("VIDIOC_S_FMT OUTPUT_MPLANE Failed");
+                            DEBUG_PRINT_ERROR("set format failed, type %d, wxh %dx%d, pixelformat %#x, colorspace %#x",
+                                 fmt.type, fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height,
+                                 fmt.fmt.pix_mp.pixelformat, fmt.fmt.pix_mp.colorspace);
                             hw_overload = errno == EBUSY;
                             return false;
                         }
-
                         m_sInput_buff_property.datasize=fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
+
                         bufreq.memory = V4L2_MEMORY_USERPTR;
                         bufreq.count = portDefn->nBufferCountActual;
                         bufreq.type=V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
-
                         if (ioctl(m_nDriver_fd,VIDIOC_REQBUFS, &bufreq)) {
-                            DEBUG_PRINT_ERROR("VIDIOC_REQBUFS OUTPUT_MPLANE Failed");
+                            DEBUG_PRINT_ERROR("reqbufs failed, type %d, count %d", bufreq.type, bufreq.count);
                             return false;
                         }
 
-                        if (bufreq.count == portDefn->nBufferCountActual)
-                            m_sInput_buff_property.mincount = m_sInput_buff_property.actualcount = bufreq.count;
-
-                        if (portDefn->nBufferCountActual >= m_sInput_buff_property.mincount)
-                            m_sInput_buff_property.actualcount = portDefn->nBufferCountActual;
                         if (num_input_planes > 1)
                             input_extradata_info.count = m_sInput_buff_property.actualcount + 1;
 
+                    } else {
+                        DEBUG_PRINT_LOW("venc_set_param: OMX_IndexParamPortDefinition: parameters not changed on port %d",
+                            portDefn->nPortIndex);
                     }
-
-                    DEBUG_PRINT_LOW("input: actual: %u, min: %u, count_req: %u",
-                            (unsigned int)portDefn->nBufferCountActual, (unsigned int)m_sInput_buff_property.mincount, bufreq.count);
                 } else if (portDefn->nPortIndex == PORT_INDEX_OUT) {
-                    m_sVenc_cfg.dvs_height = portDefn->format.video.nFrameHeight;
-                    m_sVenc_cfg.dvs_width = portDefn->format.video.nFrameWidth;
 
-                    memset(&fmt, 0, sizeof(fmt));
-                    fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-                    fmt.fmt.pix_mp.height = m_sVenc_cfg.dvs_height;
-                    fmt.fmt.pix_mp.width = m_sVenc_cfg.dvs_width;
-                    fmt.fmt.pix_mp.pixelformat = m_sVenc_cfg.codectype;
+                    unsigned long codectype = venc_get_codectype(portDefn->format.video.eCompressionFormat);
 
-                    if (ioctl(m_nDriver_fd, VIDIOC_S_FMT, &fmt)) {
-                        DEBUG_PRINT_ERROR("VIDIOC_S_FMT CAPTURE_MPLANE Failed");
-                        hw_overload = errno == EBUSY;
-                        return false;
-                    }
+                    if (m_sVenc_cfg.dvs_height != portDefn->format.video.nFrameHeight ||
+                            m_sVenc_cfg.dvs_width != portDefn->format.video.nFrameWidth ||
+                            m_sOutput_buff_property.actualcount != portDefn->nBufferCountActual ||
+                            m_sVenc_cfg.codectype != codectype) {
 
-                    m_sOutput_buff_property.datasize = fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
+                        DEBUG_PRINT_LOW("venc_set_param: OMX_IndexParamPortDefinition: port: %u, WxH %lux%lu --> %ux%u, count %lu --> %u, format %#lx --> %#lx",
+                            portDefn->nPortIndex, m_sVenc_cfg.dvs_width, m_sVenc_cfg.dvs_height,
+                            portDefn->format.video.nFrameWidth, portDefn->format.video.nFrameHeight,
+                            m_sInput_buff_property.actualcount, portDefn->nBufferCountActual,
+                            m_sVenc_cfg.codectype, codectype);
 
-                    if (!venc_set_target_bitrate(portDefn->format.video.nBitrate)) {
-                        return false;
-                    }
-
-                        m_sOutput_buff_property.actualcount = portDefn->nBufferCountActual;
-                        bufreq.memory = V4L2_MEMORY_USERPTR;
-                        bufreq.count = portDefn->nBufferCountActual;
-                        bufreq.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-
-                        if (ioctl(m_nDriver_fd,VIDIOC_REQBUFS, &bufreq)) {
-                            DEBUG_PRINT_ERROR("ERROR: Request for setting o/p buffer count failed: requested: %u, current: %u",
-                                    (unsigned int)portDefn->nBufferCountActual, (unsigned int)m_sOutput_buff_property.actualcount);
+                        if (portDefn->nBufferCountActual < m_sOutput_buff_property.mincount) {
+                            DEBUG_PRINT_LOW("Actual count %u is less than driver mincount %lu on port %u",
+                                portDefn->nBufferCountActual, m_sOutput_buff_property.mincount, portDefn->nPortIndex);
                             return false;
                         }
 
-                        if (bufreq.count == portDefn->nBufferCountActual)
-                            m_sOutput_buff_property.mincount = m_sOutput_buff_property.actualcount = bufreq.count;
+                        m_sVenc_cfg.dvs_height = portDefn->format.video.nFrameHeight;
+                        m_sVenc_cfg.dvs_width = portDefn->format.video.nFrameWidth;
+                        m_sVenc_cfg.codectype = codectype;
+                        m_sOutput_buff_property.actualcount = portDefn->nBufferCountActual;
 
-                        if (portDefn->nBufferCountActual >= m_sOutput_buff_property.mincount)
-                            m_sOutput_buff_property.actualcount = portDefn->nBufferCountActual;
+                        memset(&fmt, 0, sizeof(fmt));
+                        fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+                        fmt.fmt.pix_mp.height = m_sVenc_cfg.dvs_height;
+                        fmt.fmt.pix_mp.width = m_sVenc_cfg.dvs_width;
+                        fmt.fmt.pix_mp.pixelformat = m_sVenc_cfg.codectype;
+                        if (ioctl(m_nDriver_fd, VIDIOC_S_FMT, &fmt)) {
+                            DEBUG_PRINT_ERROR("set format failed, type %d, wxh %dx%d, pixelformat %#x",
+                                 fmt.type, fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height,
+                                 fmt.fmt.pix_mp.pixelformat);
+                            hw_overload = errno == EBUSY;
+                            return false;
+                        }
+                        m_sOutput_buff_property.datasize = fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
+
+                        if (!venc_set_target_bitrate(portDefn->format.video.nBitrate)) {
+                            return false;
+                        }
+
+                        bufreq.memory = V4L2_MEMORY_USERPTR;
+                        bufreq.count = portDefn->nBufferCountActual;
+                        bufreq.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+                        if (ioctl(m_nDriver_fd,VIDIOC_REQBUFS, &bufreq)) {
+                            DEBUG_PRINT_ERROR("reqbufs failed, type %d, count %d", bufreq.type, bufreq.count);
+                            return false;
+                        }
 
                         if (num_output_planes > 1)
                             output_extradata_info.count = m_sOutput_buff_property.actualcount;
 
-                    DEBUG_PRINT_LOW("Output: actual: %u, min: %u, count_req: %u",
-                            (unsigned int)portDefn->nBufferCountActual, (unsigned int)m_sOutput_buff_property.mincount, bufreq.count);
+                    } else {
+                        DEBUG_PRINT_LOW("venc_set_param: OMX_IndexParamPortDefinition: parameters not changed on port %d",
+                            portDefn->nPortIndex);
+                    }
                 } else {
-                    DEBUG_PRINT_ERROR("ERROR: Invalid Port Index for OMX_IndexParamPortDefinition");
+                    DEBUG_PRINT_ERROR("ERROR: Invalid Port Index (%d) for OMX_IndexParamPortDefinition", portDefn->nPortIndex);
                 }
-
-                break;
             }
+            break;
         case OMX_IndexParamVideoPortFormat:
             {
                 OMX_VIDEO_PARAM_PORTFORMATTYPE *portFmt;
@@ -3181,21 +3239,23 @@ bool venc_dev::venc_reconfig_reqbufs()
 {
     struct v4l2_requestbuffers bufreq;
 
+    DEBUG_PRINT_HIGH("venc_reconfig_reqbufs: output_mplane %lu, capture_mplane %lu",
+        m_sInput_buff_property.actualcount, m_sOutput_buff_property.actualcount);
+
     bufreq.memory = V4L2_MEMORY_USERPTR;
     bufreq.count = m_sInput_buff_property.actualcount;
     bufreq.type=V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
     if(ioctl(m_nDriver_fd,VIDIOC_REQBUFS, &bufreq)) {
-            DEBUG_PRINT_ERROR("VIDIOC_REQBUFS OUTPUT_MPLANE Failed when resume");
-            return false;
+        DEBUG_PRINT_ERROR("VIDIOC_REQBUFS: OUTPUT_MPLANE (count %d) failed", bufreq.count);
+        return false;
     }
 
     bufreq.memory = V4L2_MEMORY_USERPTR;
     bufreq.count = m_sOutput_buff_property.actualcount;
     bufreq.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-    if(ioctl(m_nDriver_fd,VIDIOC_REQBUFS, &bufreq))
-    {
-            DEBUG_PRINT_ERROR("ERROR: Request for setting o/p buffer count failed when resume");
-            return false;
+    if(ioctl(m_nDriver_fd,VIDIOC_REQBUFS, &bufreq)) {
+        DEBUG_PRINT_ERROR("VIDIOC_REQBUFS: CAPTURE_MPLANE (count %d) failed", bufreq.count);
+        return false;
     }
     return true;
 }
@@ -4271,7 +4331,7 @@ bool venc_dev::venc_set_qp(OMX_U32 i_frame_qp, OMX_U32 p_frame_qp,OMX_U32 b_fram
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
     if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set control");
+        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
         return false;
     }
     DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
@@ -4284,7 +4344,7 @@ bool venc_dev::venc_set_qp(OMX_U32 i_frame_qp, OMX_U32 p_frame_qp,OMX_U32 b_fram
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
     if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set control");
+        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
         return false;
     }
     DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
@@ -4296,7 +4356,7 @@ bool venc_dev::venc_set_qp(OMX_U32 i_frame_qp, OMX_U32 p_frame_qp,OMX_U32 b_fram
 
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
     if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set control");
+        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
         return false;
     }
     DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
@@ -4309,7 +4369,7 @@ bool venc_dev::venc_set_qp(OMX_U32 i_frame_qp, OMX_U32 p_frame_qp,OMX_U32 b_fram
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
     if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set control");
+        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
         return false;
     }
     DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
@@ -4411,7 +4471,7 @@ bool venc_dev::venc_set_profile(OMX_U32 eProfile)
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
     if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set control");
+        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
         return false;
     }
 
@@ -4584,7 +4644,7 @@ bool venc_dev::venc_set_level(OMX_U32 eLevel)
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
     if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set control");
+        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
         return false;
     }
 
@@ -4653,7 +4713,7 @@ bool venc_dev::venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames)
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
     if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set control");
+        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
         return false;
     }
 
@@ -4665,7 +4725,7 @@ bool venc_dev::venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames)
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
     if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set control");
+        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
         return false;
     }
 
@@ -4679,7 +4739,7 @@ bool venc_dev::venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames)
         rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
         if (rc) {
-            DEBUG_PRINT_ERROR("Failed to set control");
+        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
             return false;
         }
         idrperiod.idrperiod = 1;
@@ -4712,7 +4772,7 @@ bool venc_dev::venc_set_idr_period(OMX_U32 nPFrames, OMX_U32 nIDRPeriod)
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
     if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set control");
+        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
         return false;
     }
 
@@ -4737,7 +4797,7 @@ bool venc_dev::venc_set_entropy_config(OMX_BOOL enable, OMX_U32 i_cabac_level)
         rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
         if (rc) {
-            DEBUG_PRINT_ERROR("Failed to set control");
+            DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
             return false;
         }
 
@@ -4758,7 +4818,7 @@ bool venc_dev::venc_set_entropy_config(OMX_BOOL enable, OMX_U32 i_cabac_level)
         rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
         if (rc) {
-            DEBUG_PRINT_ERROR("Failed to set control");
+            DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
             return false;
         }
 
@@ -4771,7 +4831,7 @@ bool venc_dev::venc_set_entropy_config(OMX_BOOL enable, OMX_U32 i_cabac_level)
         rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
         if (rc) {
-            DEBUG_PRINT_ERROR("Failed to set control");
+            DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
             return false;
         }
 
@@ -4802,7 +4862,7 @@ bool venc_dev::venc_set_multislice_cfg(OMX_INDEXTYPE Codec, OMX_U32 nSlicesize) 
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
     if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set control");
+        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
         return false;
     }
 
@@ -4817,7 +4877,7 @@ bool venc_dev::venc_set_multislice_cfg(OMX_INDEXTYPE Codec, OMX_U32 nSlicesize) 
         rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
         if (rc) {
-            DEBUG_PRINT_ERROR("Failed to set control");
+        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
             return false;
         }
 
@@ -4857,7 +4917,7 @@ bool venc_dev::venc_set_intra_refresh(OMX_VIDEO_INTRAREFRESHTYPE ir_mode, OMX_U3
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control_mode);
 
     if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set control");
+        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control_mode.id, control_mode.value);
         return false;
     }
 
@@ -4867,7 +4927,7 @@ bool venc_dev::venc_set_intra_refresh(OMX_VIDEO_INTRAREFRESHTYPE ir_mode, OMX_U3
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control_mbs);
 
     if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set control");
+        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control_mbs.id, control_mbs.value);
         return false;
     }
 
@@ -4934,7 +4994,7 @@ bool venc_dev::venc_set_error_resilience(OMX_VIDEO_PARAM_ERRORCORRECTIONTYPE* er
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
     if (rc) {
-       DEBUG_PRINT_ERROR("Failed to set Slice mode control");
+        DEBUG_PRINT_ERROR("Failed to set Slice mode control, value %d", control.value);
         return false;
     }
 
@@ -4949,7 +5009,7 @@ bool venc_dev::venc_set_error_resilience(OMX_VIDEO_PARAM_ERRORCORRECTIONTYPE* er
         rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
         if (rc) {
-            DEBUG_PRINT_ERROR("Failed to set MAX MB control");
+            DEBUG_PRINT_ERROR("Failed to set MAX MB control, value %d", control.value);
             return false;
         }
     }
@@ -4979,6 +5039,7 @@ bool venc_dev::venc_set_inloop_filter(OMX_VIDEO_AVCLOOPFILTERTYPE loopfilter)
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
     if (rc) {
+        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
         return false;
     }
 
@@ -4993,6 +5054,7 @@ bool venc_dev::venc_set_inloop_filter(OMX_VIDEO_AVCLOOPFILTERTYPE loopfilter)
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
     if (rc) {
+        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
         return false;
     }
 
@@ -5003,6 +5065,7 @@ bool venc_dev::venc_set_inloop_filter(OMX_VIDEO_AVCLOOPFILTERTYPE loopfilter)
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
     if (rc) {
+        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
         return false;
     }
 
@@ -5030,9 +5093,8 @@ bool venc_dev::venc_set_target_bitrate(OMX_U32 nTargetBitrate)
 
     DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-
     if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set control");
+        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
         return false;
     }
 
@@ -5092,6 +5154,62 @@ bool venc_dev::venc_set_encode_framerate(OMX_U32 encode_framerate)
     m_sVenc_cfg.fps_num = frame_rate_cfg.fps_numerator;
 
     return true;
+}
+
+unsigned long venc_dev::venc_get_codectype(OMX_VIDEO_CODINGTYPE eCompressionFormat)
+{
+    unsigned long codectype = V4L2_PIX_FMT_H264;
+
+    switch ((int)eCompressionFormat) {
+    case OMX_VIDEO_CodingAVC:
+        codectype = V4L2_PIX_FMT_H264;
+        break;
+    case OMX_VIDEO_CodingVP8:
+        codectype = V4L2_PIX_FMT_VP8;
+        break;
+    case OMX_VIDEO_CodingVP9:
+        codectype = V4L2_PIX_FMT_VP9;
+        break;
+    case OMX_VIDEO_CodingHEVC:
+        codectype = V4L2_PIX_FMT_HEVC;
+        break;
+    default:
+        DEBUG_PRINT_ERROR("Unsupported eCompressionFormat %#x", eCompressionFormat);
+        codectype = V4L2_PIX_FMT_H264;
+        break;
+    }
+
+    return codectype;
+}
+
+unsigned long venc_dev::venc_get_color_format(OMX_COLOR_FORMATTYPE eColorFormat)
+{
+    unsigned long format = V4L2_DEFAULT_OUTPUT_COLOR_FMT;
+
+    switch ((int)eColorFormat) {
+    case OMX_COLOR_FormatYUV420SemiPlanar:
+    case QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m:
+        format = V4L2_PIX_FMT_NV12;
+        break;
+    case QOMX_COLOR_FormatYVU420SemiPlanar:
+        format = V4L2_PIX_FMT_NV21;
+        break;
+    case QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed:
+        format = V4L2_PIX_FMT_NV12_UBWC;
+        break;
+    case QOMX_COLOR_Format32bitRGBA8888:
+        format = V4L2_PIX_FMT_RGB32;
+        break;
+    case QOMX_COLOR_Format32bitRGBA8888Compressed:
+        format = V4L2_PIX_FMT_RGBA8888_UBWC;
+        break;
+    default:
+        DEBUG_PRINT_ERROR("Unsupported eColorFormat %#x", eColorFormat);
+        format = V4L2_DEFAULT_OUTPUT_COLOR_FMT;
+        break;
+    }
+
+    return format;
 }
 
 bool venc_dev::venc_set_color_format(OMX_COLOR_FORMATTYPE color_format)
