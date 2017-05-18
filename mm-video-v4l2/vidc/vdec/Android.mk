@@ -96,10 +96,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE                    := libOmxVdec
 LOCAL_MODULE_TAGS               := optional
-LOCAL_PROPRIETARY_MODULE        := true
-LOCAL_MODULE_OWNER              := qti
-LOCAL_MODULE_PATH_32            := $(TARGET_OUT_VENDOR)/lib
-LOCAL_MODULE_PATH_64            := $(TARGET_OUT_VENDOR)/lib64
+LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libmm-vdec-def) -Werror
 LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-vdec-add-dep)
@@ -127,10 +124,7 @@ ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_NEED_SW_VDEC)),true)
 
 LOCAL_MODULE                  := libOmxSwVdec
 LOCAL_MODULE_TAGS             := optional
-LOCAL_PROPRIETARY_MODULE      := true
-LOCAL_MODULE_OWNER            := qti
-LOCAL_MODULE_PATH_32          := $(TARGET_OUT_VENDOR)/lib
-LOCAL_MODULE_PATH_64          := $(TARGET_OUT_VENDOR)/lib64
+LOCAL_VENDOR_MODULE           := true
 LOCAL_CFLAGS                  := $(libmm-vdec-def)
 LOCAL_C_INCLUDES              += $(libmm-vdec-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES := $(libmm-vdec-add-dep)
