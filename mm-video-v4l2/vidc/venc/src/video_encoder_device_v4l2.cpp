@@ -3081,11 +3081,9 @@ unsigned venc_dev::venc_start(void)
 
     venc_config_print();
 
-    if(resume_in_stopped){
-        /*set buffercount when restarted*/
-        venc_reconfig_reqbufs();
-        resume_in_stopped = 0;
-    }
+    /* set buffercount before start */
+    venc_reconfig_reqbufs();
+    resume_in_stopped = 0;
 
     /* Check if slice_delivery mode is enabled & max slices is sufficient for encoding complete frame */
     if (slice_mode.enable && multislice.mslice_size &&
