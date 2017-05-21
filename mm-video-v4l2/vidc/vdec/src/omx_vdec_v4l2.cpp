@@ -4160,23 +4160,17 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                     }
                                     enum vdec_output_fromat op_format;
                                     if (portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
-                                            QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m ||
-                                            portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
-                                            QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mMultiView ||
-                                            portFmt->eColorFormat == OMX_COLOR_FormatYUV420Planar ||
-                                            portFmt->eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar) {
+                                                     QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m ||
+                                        portFmt->eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar) {
                                         op_format = (enum vdec_output_fromat)VDEC_YUV_FORMAT_NV12;
+                                        fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12;
                                     } else if (portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
-                                            QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed) {
+                                                   QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed ||
+                                               portFmt->eColorFormat == OMX_COLOR_FormatYUV420Planar) {
                                         op_format = (enum vdec_output_fromat)VDEC_YUV_FORMAT_NV12_UBWC;
-                                    } else
-                                        eRet = OMX_ErrorBadParameter;
-
-                                    if (portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
-                                            QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed) {
                                         fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12_UBWC;
                                     } else {
-                                        fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12;
+                                        eRet = OMX_ErrorBadParameter;
                                     }
 
                                     if (eRet == OMX_ErrorNone) {
@@ -4919,32 +4913,6 @@ OMX_ERRORTYPE  omx_vdec::get_config(OMX_IN OMX_HANDLETYPE      hComp,
     }
 
     switch ((unsigned long)configIndex) {
-        case OMX_QcomIndexConfigInterlaced: {
-                                VALIDATE_OMX_PARAM_DATA(configData, OMX_QCOM_CONFIG_INTERLACETYPE);
-                                OMX_QCOM_CONFIG_INTERLACETYPE *configFmt =
-                                    (OMX_QCOM_CONFIG_INTERLACETYPE *) configData;
-                                if (configFmt->nPortIndex == 1) {
-                                    if (configFmt->nIndex == 0) {
-                                        configFmt->eInterlaceType = OMX_QCOM_InterlaceFrameProgressive;
-                                    } else if (configFmt->nIndex == 1) {
-                                        configFmt->eInterlaceType =
-                                            OMX_QCOM_InterlaceInterleaveFrameTopFieldFirst;
-                                    } else if (configFmt->nIndex == 2) {
-                                        configFmt->eInterlaceType =
-                                            OMX_QCOM_InterlaceInterleaveFrameBottomFieldFirst;
-                                    } else {
-                                        DEBUG_PRINT_ERROR("get_config: OMX_QcomIndexConfigInterlaced:"
-                                                " NoMore Interlaced formats");
-                                        eRet = OMX_ErrorNoMore;
-                                    }
-
-                                } else {
-                                    DEBUG_PRINT_ERROR("get_config: Bad port index %d queried on only o/p port",
-                                            (int)configFmt->nPortIndex);
-                                    eRet = OMX_ErrorBadPortIndex;
-                                }
-                                break;
-                            }
         case OMX_QcomIndexQueryNumberOfVideoDecInstance: {
                                      VALIDATE_OMX_PARAM_DATA(configData, QOMX_VIDEO_QUERY_DECODER_INSTANCES);
                                      QOMX_VIDEO_QUERY_DECODER_INSTANCES *decoderinstances =
@@ -7886,14 +7854,6 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
                 output_capability == V4L2_PIX_FMT_MPEG2)
             is_duplicate_ts_valid = false;
 
-        if ((output_capability == V4L2_PIX_FMT_H264 ||
-                output_capability == V4L2_PIX_FMT_H264_MVC) &&
-                is_interlaced) {
-            if (buffer->nFlags & QOMX_VIDEO_BUFFERFLAG_MBAFF) {
-                is_interlaced = false;
-            }
-        }
-
         if (buffer->nFilledLen > 0) {
             time_stamp_dts.get_next_timestamp(buffer,
                     is_interlaced && is_duplicate_ts_valid);
@@ -9789,7 +9749,6 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
             switch ((unsigned long)data->eType) {
                 case MSM_VIDC_EXTRADATA_INTERLACE_VIDEO:
                     struct msm_vidc_interlace_payload *payload;
-                    OMX_U32 interlace_color_format;
                     payload = (struct msm_vidc_interlace_payload *)(void *)data->data;
                     if (payload) {
                         enable = OMX_InterlaceFrameProgressive;
@@ -9805,38 +9764,27 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                                 drv_ctx.interlace = VDEC_InterlaceInterleaveFrameBottomFieldFirst;
                                 enable = OMX_InterlaceInterleaveFrameBottomFieldFirst;
                                 break;
+                            case MSM_VIDC_INTERLACE_FRAME_TOPFIELDFIRST:
+                                drv_ctx.interlace = VDEC_InterlaceFrameTopFieldFirst;
+                                enable = OMX_InterlaceFrameTopFieldFirst;
+                                break;
+                           case MSM_VIDC_INTERLACE_FRAME_BOTTOMFIELDFIRST:
+                                drv_ctx.interlace = VDEC_InterlaceFrameBottomFieldFirst;
+                                enable = OMX_InterlaceFrameBottomFieldFirst;
+                                break;
                             default:
                                 DEBUG_PRINT_LOW("default case - set to progressive");
                                 drv_ctx.interlace = VDEC_InterlaceFrameProgressive;
                         }
-                        switch (payload->color_format) {
-                           case MSM_VIDC_HAL_INTERLACE_COLOR_FORMAT_NV12:
-                               interlace_color_format = (int)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
-                               break;
-                           case MSM_VIDC_HAL_INTERLACE_COLOR_FORMAT_NV12_UBWC:
-                               interlace_color_format = (int)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed;
-                               break;
-                           default:
-                               interlace_color_format = (int)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
-                               DEBUG_PRINT_ERROR("Error - Unknown color format hint for interlaced frame");
-                        }
                     }
 
                     if (m_enable_android_native_buffers) {
-                        DEBUG_PRINT_LOW("setMetaData INTERLACED format:%d color_format: %x enable:%d mbaff:%d",
-                                         payload->format, interlace_color_format ,enable,
-                                        (p_buf_hdr->nFlags & QOMX_VIDEO_BUFFERFLAG_MBAFF)?true:false);
+                        DEBUG_PRINT_LOW("setMetaData INTERLACED format:%d enable:%d",
+                                        payload->format, enable);
 
                         setMetaData((private_handle_t *)native_buffer[buf_index].privatehandle,
                                PP_PARAM_INTERLACED, (void*)&enable);
 
-                        if (interlace_color_format == QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m) {
-                            setMetaData((private_handle_t *)native_buffer[buf_index].privatehandle,
-                               LINEAR_FORMAT, (void*)&interlace_color_format);
-                        } else if (interlace_color_format == QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed) {
-                            setMetaData((private_handle_t *)native_buffer[buf_index].privatehandle,
-                               LINEAR_FORMAT, NULL);
-                        }
                     }
                     if (client_extradata & OMX_INTERLACE_EXTRADATA) {
                         append_interlace_extradata(p_extra, payload->format);
@@ -10452,6 +10400,14 @@ void omx_vdec::append_interlace_extradata(OMX_OTHER_EXTRADATATYPE *extra,
         interlace_format->bInterlaceFormat = OMX_TRUE;
         interlace_format->nInterlaceFormats = OMX_InterlaceInterleaveFrameBottomFieldFirst;
         drv_ctx.interlace = VDEC_InterlaceInterleaveFrameBottomFieldFirst;
+    } else if (interlaced_format_type == MSM_VIDC_INTERLACE_FRAME_TOPFIELDFIRST) {
+        interlace_format->bInterlaceFormat = OMX_TRUE;
+        interlace_format->nInterlaceFormats = OMX_InterlaceFrameTopFieldFirst;
+        drv_ctx.interlace = VDEC_InterlaceFrameTopFieldFirst;
+    } else if (interlaced_format_type == MSM_VIDC_INTERLACE_FRAME_BOTTOMFIELDFIRST) {
+        interlace_format->bInterlaceFormat = OMX_TRUE;
+        interlace_format->nInterlaceFormats = OMX_InterlaceFrameBottomFieldFirst;
+        drv_ctx.interlace = VDEC_InterlaceFrameBottomFieldFirst;
     } else {
         //default case - set to progressive
         interlace_format->bInterlaceFormat = OMX_FALSE;
@@ -10523,6 +10479,10 @@ void omx_vdec::append_frame_info_extradata(OMX_OTHER_EXTRADATATYPE *extra,
         frame_info->interlaceType = OMX_QCOM_InterlaceInterleaveFrameTopFieldFirst;
     else if (drv_ctx.interlace == VDEC_InterlaceInterleaveFrameBottomFieldFirst)
         frame_info->interlaceType = OMX_QCOM_InterlaceInterleaveFrameBottomFieldFirst;
+    else if (drv_ctx.interlace == VDEC_InterlaceFrameTopFieldFirst)
+        frame_info->interlaceType = OMX_QCOM_InterlaceFrameTopFieldFirst;
+    else if (drv_ctx.interlace == VDEC_InterlaceFrameBottomFieldFirst)
+        frame_info->interlaceType = OMX_QCOM_InterlaceFrameBottomFieldFirst;
     else
         frame_info->interlaceType = OMX_QCOM_InterlaceFrameProgressive;
     memset(&frame_info->aspectRatio, 0, sizeof(frame_info->aspectRatio));
@@ -10824,6 +10784,12 @@ omx_vdec::allocate_color_convert_buf::allocate_color_convert_buf()
     dest_format = YCbCr420P;
     m_c2d_width = 0;
     m_c2d_height = 0;
+
+    mMapOutput2Convert.insert( {
+            {VDEC_YUV_FORMAT_NV12, NV12_128m},
+            {VDEC_YUV_FORMAT_NV12_UBWC, NV12_UBWC},
+            //TODO: TP10 {VDEC_YUV_FORMAT_NV12_TP10_UBWC, NV12_TP10},
+        });
 }
 
 void omx_vdec::allocate_color_convert_buf::set_vdec_client(void *client)
@@ -10871,6 +10837,17 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
     }
     pthread_mutex_lock(&omx->c_lock);
 
+    ColorSubMapping::const_iterator
+        found =  mMapOutput2Convert.find(omx->drv_ctx.output_format);
+    if (found == mMapOutput2Convert.end()) {
+        DEBUG_PRINT_HIGH("%s: Could not find the color conversion "
+                         "mapping for %#X. Setting to default NV12",
+                         __func__, omx->drv_ctx.output_format);
+        src_format = NV12_128m;
+    } else {
+        src_format = (ColorConvertFormat) found->second;;
+    }
+
     memset(&fmt, 0x0, sizeof(struct v4l2_format));
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     fmt.fmt.pix_mp.pixelformat = omx->capture_capability;
@@ -10880,6 +10857,7 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
 
     bool resolution_upgrade = (height > m_c2d_height ||
             width > m_c2d_width);
+    bool is_interlaced = omx->drv_ctx.interlace != VDEC_InterlaceFrameProgressive;
     if (resolution_upgrade) {
         // resolution upgraded ? ensure we are yet to allocate;
         // failing which, c2d buffers will never be reallocated and bad things will happen
@@ -10898,9 +10876,11 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
         goto fail_update_buf_req;
     }
     c2d.close();
-    status = c2d.open(height,
-            width,
-            NV12_128m,dest_format);
+
+    DEBUG_PRINT_INFO("%s: Open C2D interface for %#X -> %#X, interlaced (%d)",
+                                     __func__, src_format, dest_format, is_interlaced);
+    status = c2d.open(height, width, src_format, dest_format);
+
     if (status) {
         status = c2d.get_buffer_size(C2D_INPUT,src_size);
         if (status)
@@ -10961,8 +10941,6 @@ bool omx_vdec::allocate_color_convert_buf::set_color_format(
         (drv_color_format != (OMX_COLOR_FORMATTYPE)
                 QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mMultiView) &&
         (drv_color_format != (OMX_COLOR_FORMATTYPE)
-                QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed) &&
-        (drv_color_format != (OMX_COLOR_FORMATTYPE)
                 QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed);
 
     dest_color_format_c2d_enable = (dest_color_format != (OMX_COLOR_FORMATTYPE)
@@ -10972,14 +10950,10 @@ bool omx_vdec::allocate_color_convert_buf::set_color_format(
 
     if (status && drv_colorformat_c2d_enable && dest_color_format_c2d_enable) {
         DEBUG_PRINT_LOW("Enabling C2D");
-        if ((dest_color_format != OMX_COLOR_FormatYUV420Planar) &&
-           (dest_color_format != OMX_COLOR_FormatYUV420SemiPlanar)) {
-            DEBUG_PRINT_ERROR("Unsupported color format for c2d");
-            status = false;
-        } else {
+        if (dest_color_format == OMX_COLOR_FormatYUV420Planar ||
+            dest_color_format == OMX_COLOR_FormatYUV420SemiPlanar ) {
             ColorFormat = dest_color_format;
-            dest_format = (dest_color_format == OMX_COLOR_FormatYUV420Planar) ?
-                    YCbCr420P : YCbCr420SP;
+            dest_format = dest_color_format == OMX_COLOR_FormatYUV420Planar? YCbCr420P: YCbCr420SP;
             if (enabled)
                 c2d.destroy();
             enabled = false;
@@ -10988,6 +10962,10 @@ bool omx_vdec::allocate_color_convert_buf::set_color_format(
                 status = false;
             } else
                 enabled = true;
+        } else {
+            DEBUG_PRINT_ERROR("Unsupported output color format for c2d (%d)",
+                              dest_color_format);
+            status = false;
         }
     } else {
         if (enabled)
