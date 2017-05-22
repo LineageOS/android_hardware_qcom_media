@@ -94,9 +94,9 @@ LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 LOCAL_PRELINK_MODULE      := false
 LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl
 
-ifeq ($(BOARD_USES_ADRENO), true)
+# ifeq ($(BOARD_USES_ADRENO), true)
 LOCAL_SHARED_LIBRARIES    += libc2dcolorconvert
-endif # ($(BOARD_USES_ADRENO), true)
+# endif # ($(BOARD_USES_ADRENO), true)
 LOCAL_SHARED_LIBRARIES += libqdMetaData
 LOCAL_STATIC_LIBRARIES    := libOmxVidcCommon
 
@@ -126,9 +126,9 @@ LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 LOCAL_PRELINK_MODULE      := false
 LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl
 LOCAL_SHARED_LIBRARIES    += libMpeg4SwEncoder
-ifeq ($(BOARD_USES_ADRENO), true)
+# ifeq ($(BOARD_USES_ADRENO), true)
 LOCAL_SHARED_LIBRARIES    += libc2dcolorconvert
-endif # ($(BOARD_USES_ADRENO), true)
+# endif # ($(BOARD_USES_ADRENO), true)
 LOCAL_STATIC_LIBRARIES    := libOmxVidcCommon
 
 LOCAL_SRC_FILES   := src/omx_video_base.cpp

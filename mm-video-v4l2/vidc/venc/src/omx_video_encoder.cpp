@@ -634,13 +634,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                             (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FormatAndroidOpaque) {
                         m_sInPortDef.format.video.eColorFormat = (OMX_COLOR_FORMATTYPE)
                             QOMX_DEFAULT_COLOR_FMT;
-                        if (!mUseProxyColorFormat) {
-                            if (!c2d_conv.init()) {
-                                DEBUG_PRINT_ERROR("C2D init failed");
-                                return OMX_ErrorUnsupportedSetting;
-                            }
-                            DEBUG_PRINT_HIGH("C2D init is successful");
-                        }
                         mUseProxyColorFormat = true;
                         m_input_msg_id = OMX_COMPONENT_GENERATE_ETB_OPQ;
                     } else
@@ -723,13 +716,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                             (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FormatAndroidOpaque) {
                         m_sInPortFormat.eColorFormat = (OMX_COLOR_FORMATTYPE)
                             QOMX_DEFAULT_COLOR_FMT;
-                        if (!mUseProxyColorFormat) {
-                            if (!c2d_conv.init()) {
-                                DEBUG_PRINT_ERROR("C2D init failed");
-                                return OMX_ErrorUnsupportedSetting;
-                            }
-                            DEBUG_PRINT_HIGH("C2D init is successful");
-                        }
                         mUseProxyColorFormat = true;
                         m_input_msg_id = OMX_COMPONENT_GENERATE_ETB_OPQ;
                     } else

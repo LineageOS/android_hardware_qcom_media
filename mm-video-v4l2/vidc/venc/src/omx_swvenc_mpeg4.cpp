@@ -49,6 +49,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ENTER_FUNC() DEBUG_PRINT_HIGH("ENTERING: %s",__FUNCTION__)
 #define EXIT_FUNC()  DEBUG_PRINT_HIGH("EXITING: %s",__FUNCTION__)
 #define RETURN(x)    EXIT_FUNC(); return x;
+#undef ALIGN
 #define ALIGN(value,alignment) (((value) + (alignment-1)) & (~(alignment-1)))
 
 #define BUFFER_LOG_LOC "/data/misc/media"
@@ -715,15 +716,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter
                     m_sInPortFormat.eColorFormat =
                         (OMX_COLOR_FORMATTYPE) QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
                     color_format = SWVENC_COLOR_FORMAT_NV12;
-                    if (!mUseProxyColorFormat)
-                    {
-                       if (!c2d_conv.init())
-                       {
-                          DEBUG_PRINT_ERROR("C2D init failed");
-                          return OMX_ErrorUnsupportedSetting;
-                       }
-                       DEBUG_PRINT_ERROR("C2D init is successful");
-                    }
                     mUseProxyColorFormat = true;
                     m_input_msg_id = OMX_COMPONENT_GENERATE_ETB_OPQ;
                 }

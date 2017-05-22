@@ -55,6 +55,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define YUV_STATS_LIBRARY_NAME "libgpustats.so" // UBWC case: use GPU library
 
+#undef ALIGN
 #define ALIGN(x, to_align) ((((unsigned long) x) + (to_align - 1)) & ~(to_align - 1))
 #define EXTRADATA_IDX(__num_planes) ((__num_planes) ? (__num_planes) - 1 : 0)
 #define MAXDPB 16

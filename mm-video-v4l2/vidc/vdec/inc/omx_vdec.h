@@ -55,6 +55,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <unordered_map>
 #include <media/msm_media_info.h>
 
+#include "C2DColorConverter.h"
+
 static ptrdiff_t x;
 
 extern "C" {
@@ -100,7 +102,6 @@ extern "C" {
 #include "qc_omx_component.h"
 #include <media/msm_vidc.h>
 #include "ts_parser.h"
-#include "vidc_color_converter.h"
 #include "vidc_debug.h"
 #include "vidc_vendor_extensions.h"
 #ifdef _ANDROID_
@@ -247,6 +248,8 @@ extern "C" {
 
 //#define DEFAULT_EXTRADATA (OMX_FRAMEINFO_EXTRADATA|OMX_INTERLACE_EXTRADATA)
 
+using namespace android;
+
 enum port_indexes {
     OMX_CORE_INPUT_PORT_INDEX        =0,
     OMX_CORE_OUTPUT_PORT_INDEX       =1,
@@ -295,7 +298,7 @@ enum vdec_codec {
 	VDEC_CODECTYPE_VP9 = 0x10,
 };
 
-enum vdec_output_fromat {
+enum vdec_output_format {
 	VDEC_YUV_FORMAT_NV12 = 0x1,
 	VDEC_YUV_FORMAT_TILE_4x2 = 0x2,
 	VDEC_YUV_FORMAT_NV12_UBWC = 0x3,
@@ -431,7 +434,7 @@ struct extradata_buffer_info {
 struct video_driver_context {
     int video_driver_fd;
     enum vdec_codec decoder_format;
-    enum vdec_output_fromat output_format;
+    enum vdec_output_format output_format;
     enum vdec_interlaced_format interlace;
     enum vdec_output_order picture_order;
     struct vdec_framesize frame_size;
@@ -497,6 +500,7 @@ struct extradata_info {
 };
 
 typedef std::unordered_map <int, int> ColorSubMapping;
+typedef std::unordered_map <int, ColorSubMapping> DecColorMapping;
 
 // OMX video decoder class
 class omx_vdec: public qc_omx_component
@@ -1209,7 +1213,7 @@ class omx_vdec: public qc_omx_component
         {
             public:
                 allocate_color_convert_buf();
-                ~allocate_color_convert_buf();
+                ~allocate_color_convert_buf() {};
                 void set_vdec_client(void *);
                 void update_client();
                 bool set_color_format(OMX_COLOR_FORMATTYPE dest_color_format);
@@ -1236,7 +1240,7 @@ class omx_vdec: public qc_omx_component
                 bool color_convert_mode;
                 ColorConvertFormat dest_format;
                 ColorConvertFormat src_format;
-                class omx_c2d_conv c2d;
+                C2DColorConverter c2dcc;
                 unsigned int allocated_count;
                 unsigned int buffer_size_req;
                 unsigned int buffer_alignment_req;
@@ -1246,6 +1250,7 @@ class omx_vdec: public qc_omx_component
                 OMX_QCOM_PLATFORM_PRIVATE_ENTRY     m_platform_entry_client[MAX_COUNT];
                 OMX_QCOM_PLATFORM_PRIVATE_PMEM_INFO m_pmem_info_client[MAX_COUNT];
                 OMX_BUFFERHEADERTYPE  m_out_mem_ptr_client[MAX_COUNT];
+                DecColorMapping mMapOutput2DriverColorFormat;
                 ColorSubMapping mMapOutput2Convert;
 #ifdef USE_ION
                 struct vdec_ion op_buf_ion_info[MAX_COUNT];
