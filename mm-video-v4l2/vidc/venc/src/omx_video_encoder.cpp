@@ -2133,6 +2133,10 @@ bool omx_venc::dev_buffer_ready_to_queue(OMX_BUFFERHEADERTYPE *buffer)
 {
     bool bRet = true;
 
+    /* do not defer the buffer if m_TimeStamp is not initialized */
+    if (!timestamp.m_TimeStamp)
+        return true;
+
     pthread_mutex_lock(&timestamp.m_lock);
 
     if ((OMX_U64)buffer->nTimeStamp == (OMX_U64)timestamp.m_TimeStamp) {
