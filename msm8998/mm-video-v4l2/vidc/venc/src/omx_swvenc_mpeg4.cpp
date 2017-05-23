@@ -1655,9 +1655,6 @@ OMX_ERRORTYPE  omx_venc::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
     m_etb_q.m_read = m_etb_q.m_write =0;
 
     /* Clear the strong reference */
-    DEBUG_PRINT_HIGH("Calling m_heap_ptr.clear()");
-    m_heap_ptr.clear();
-
     DEBUG_PRINT_HIGH("Calling swvenc_deinit()");
     swvenc_deinit(m_hSwVenc);
 
