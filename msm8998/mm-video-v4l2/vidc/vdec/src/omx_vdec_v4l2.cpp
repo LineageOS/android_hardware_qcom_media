@@ -1039,7 +1039,7 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool split_opb_dpb_with_same_colo
     int rc = 0;
     bool cpu_access = (capture_capability != V4L2_PIX_FMT_NV12_UBWC) &&
         capture_capability != V4L2_PIX_FMT_NV12_TP10_UBWC;
-    bool tp10_enable = !cpu_access &&
+    bool tp10_enable = !drv_ctx.idr_only_decoding &&
         dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10;
     bool dither_enable = true;
 
@@ -1060,6 +1060,7 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool split_opb_dpb_with_same_colo
     if (tp10_enable && !dither_enable) {
         drv_ctx.output_format = VDEC_YUV_FORMAT_NV12_TP10_UBWC;
         capture_capability = V4L2_PIX_FMT_NV12_TP10_UBWC;
+        cpu_access = false;
 
         memset(&fmt, 0x0, sizeof(struct v4l2_format));
         fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
@@ -1074,7 +1075,6 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool split_opb_dpb_with_same_colo
             DEBUG_PRINT_ERROR("%s: Failed set format on capture mplane", __func__);
             return OMX_ErrorUnsupportedSetting;
         }
-
     }
 
 
@@ -1878,7 +1878,7 @@ void omx_vdec::process_event_cb(void *ctxt, unsigned char id)
                                         }
 
                                         if (pThis->m_cb.EventHandler) {
-                                            uint32_t frame_data[4];
+                                            uint32_t frame_data[7];
                                             frame_data[0] = (p2 == OMX_IndexParamPortDefinition) ?
                                                 pThis->m_reconfig_height : pThis->rectangle.nHeight;
                                             frame_data[1] = (p2 == OMX_IndexParamPortDefinition) ?
@@ -1889,6 +1889,9 @@ void omx_vdec::process_event_cb(void *ctxt, unsigned char id)
 
                                             frame_data[3] = (p2 == OMX_IndexParamPortDefinition) ?
                                                 frame_data[1] : pThis->drv_ctx.video_resolution.frame_width;
+                                            frame_data[4] = pThis->dpb_bit_depth;
+                                            frame_data[5] = pThis->m_color_space;
+                                            frame_data[6] = pThis->m_dither_config;
 
                                             pThis->m_cb.EventHandler(&pThis->m_cmp, pThis->m_app_data,
                                                     OMX_EventPortSettingsChanged, p1, p2, (void*) frame_data );
