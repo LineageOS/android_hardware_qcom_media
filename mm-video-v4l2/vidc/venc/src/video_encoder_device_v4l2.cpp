@@ -4540,7 +4540,7 @@ bool venc_dev::venc_set_profile(OMX_U32 eProfile)
             return false;
         }
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8) {
-        //TODO: Set VP8 level/profile currently based on driver change
+        //In driver VP8 profile is hardcoded. No need to set anything from here
         return true;
     }  else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
         control.id = V4L2_CID_MPEG_VIDC_VIDEO_HEVC_PROFILE;
@@ -4642,9 +4642,26 @@ bool venc_dev::venc_set_level(OMX_U32 eLevel)
                 break;
         }
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8) {
-        //TODO: Set VP8 level/profile currently based on driver change
         control.id = V4L2_CID_MPEG_VIDC_VIDEO_VP8_PROFILE_LEVEL;
-        control.value = V4L2_MPEG_VIDC_VIDEO_VP8_UNUSED;
+        switch (eLevel) {
+            case OMX_VIDEO_VP8Level_Version0:
+                control.value = V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_0;
+                break;
+            case OMX_VIDEO_VP8Level_Version1:
+                control.value = V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_1;
+                break;
+            case OMX_VIDEO_VP8Level_Version2:
+                control.value = V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_2;
+                break;
+            case OMX_VIDEO_VP8Level_Version3:
+                control.value = V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_3;
+                break;
+            case OMX_VIDEO_VP8LevelUnknown:
+            case OMX_VIDEO_VP8LevelMax:
+            default:
+                control.value = V4L2_MPEG_VIDC_VIDEO_VP8_UNUSED;
+                break;
+        }
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
         control.id = V4L2_CID_MPEG_VIDC_VIDEO_HEVC_TIER_LEVEL;
         switch (eLevel) {
