@@ -1190,11 +1190,11 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 AllocateNativeHandleParams* allocateNativeHandleParams = (AllocateNativeHandleParams *) paramData;
 
                 if (!secure_session) {
-                    DEBUG_PRINT_ERROR("Enable/Disable allocate-native-handle allowed only in secure session");
+                    DEBUG_PRINT_HIGH("Enable/Disable allocate-native-handle allowed only in secure session");
                     eRet = OMX_ErrorUnsupportedSetting;
                     break;
                 } else if (allocateNativeHandleParams->nPortIndex != PORT_INDEX_OUT) {
-                    DEBUG_PRINT_ERROR("Enable/Disable allocate-native-handle allowed only on Output port!");
+                    DEBUG_PRINT_HIGH("Enable/Disable allocate-native-handle allowed only on Output port!");
                     eRet = OMX_ErrorUnsupportedSetting;
                     break;
                 } else if (m_out_mem_ptr) {
@@ -1356,7 +1356,7 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                             "valid for input port only in secure session");
                             return OMX_ErrorUnsupportedSetting;
                 } else {
-                    DEBUG_PRINT_ERROR("set_parameter: metamode is "
+                    DEBUG_PRINT_HIGH("set_parameter: metamode is "
                             "valid for input port only");
                     eRet = OMX_ErrorUnsupportedIndex;
                 }
