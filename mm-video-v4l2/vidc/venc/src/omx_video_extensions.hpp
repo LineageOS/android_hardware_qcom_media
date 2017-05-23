@@ -105,7 +105,7 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
             return OMX_ErrorNotImplemented;
         }
     }
-    return setStatus ? OMX_ErrorNone : OMX_ErrorUndefined;
+    return setStatus ? OMX_ErrorNone : OMX_ErrorUnsupportedSetting;
 }
 
 OMX_ERRORTYPE omx_video::set_vendor_extension_config(
@@ -124,7 +124,7 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
     OMX_ERRORTYPE err = OMX_ErrorNone;
     err = vExt.isConfigValid(ext);
     if (err != OMX_ErrorNone) {
-        return err;
+        return OMX_ErrorUnsupportedSetting;
     }
 
     // mark this as set, regardless of set_config succeeding/failing.
