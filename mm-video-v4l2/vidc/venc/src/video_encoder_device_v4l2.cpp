@@ -356,7 +356,7 @@ void* venc_dev::async_venc_message_thread (void *input)
         }
 
         if ((pfds[1].revents & POLLIN) || (pfds[1].revents & POLLERR)) {
-            DEBUG_PRINT_ERROR("async_venc_message_thread interrupted to be exited");
+            DEBUG_PRINT_HIGH("async_venc_message_thread interrupted to be exited");
             break;
         }
 
@@ -4003,7 +4003,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         // Moment of truth... actual colorspace is known here..
                         ColorSpace_t colorSpace = ITU_R_601;
                         if (getMetaData(handle, GET_COLOR_SPACE, &colorSpace) == 0) {
-                            DEBUG_PRINT_INFO("ENC_CONFIG: gralloc ColorSpace = %d (601=%d 601_FR=%d 709=%d)",
+                            DEBUG_PRINT_HIGH("ENC_CONFIG: gralloc ColorSpace = %d (601=%d 601_FR=%d 709=%d)",
                                     colorSpace, ITU_R_601, ITU_R_601_FR, ITU_R_709);
                         }
 
@@ -4014,7 +4014,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         bool isUBWC = (handle->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED) && is_gralloc_source_ubwc;
                         if (handle->format == HAL_PIXEL_FORMAT_NV12_ENCODEABLE) {
                             m_sVenc_cfg.inputformat = isUBWC ? V4L2_PIX_FMT_NV12_UBWC : V4L2_PIX_FMT_NV12;
-                            DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = NV12 %s", isUBWC ? "UBWC" : "Linear");
+                            DEBUG_PRINT_HIGH("ENC_CONFIG: Input Color = NV12 %s", isUBWC ? "UBWC" : "Linear");
                         } else if (handle->format == HAL_PIXEL_FORMAT_RGBA_8888) {
                             // In case of RGB, conversion to YUV is handled within encoder.
                             // Disregard the Colorspace in gralloc-handle in case of RGB and use
@@ -4022,10 +4022,10 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                             //   [b] 601 for UBWC case     : Venus can convert to 601-LR or FR. use LR for now.
                             colorSpace = ITU_R_601;
                             m_sVenc_cfg.inputformat = isUBWC ? V4L2_PIX_FMT_RGBA8888_UBWC : V4L2_PIX_FMT_RGB32;
-                            DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = RGBA8888 %s", isUBWC ? "UBWC" : "Linear");
+                            DEBUG_PRINT_HIGH("ENC_CONFIG: Input Color = RGBA8888 %s", isUBWC ? "UBWC" : "Linear");
                         } else if (handle->format == QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m) {
                             m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV12;
-                            DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = NV12 Linear");
+                            DEBUG_PRINT_HIGH("ENC_CONFIG: Input Color = NV12 Linear");
                         }
 
                         // If device recommendation (persist.vidc.enc.csc.enable) is to use 709, force CSC
@@ -4080,7 +4080,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                                 break;
                             }
                         }
-                        DEBUG_PRINT_INFO("ENC_CONFIG: selected ColorSpace = %d (601=%d 601_FR=%d 709=%d)",
+                        DEBUG_PRINT_HIGH("ENC_CONFIG: selected ColorSpace = %d (601=%d 601_FR=%d 709=%d)",
                                     colorSpace, ITU_R_601, ITU_R_601_FR, ITU_R_709);
                         venc_set_colorspace(primary, range, transfer, matrix);
 
