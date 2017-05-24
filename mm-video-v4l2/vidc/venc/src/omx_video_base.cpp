@@ -1439,7 +1439,6 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
     unsigned int height=0,width = 0;
 
-    DEBUG_PRINT_LOW("get_parameter:");
     if (m_state == OMX_StateInvalid) {
         DEBUG_PRINT_ERROR("ERROR: Get Param in Invalid State");
         return OMX_ErrorInvalidState;
@@ -1455,15 +1454,13 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 OMX_PARAM_PORTDEFINITIONTYPE *portDefn;
                 portDefn = (OMX_PARAM_PORTDEFINITIONTYPE *) paramData;
 
-                DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamPortDefinition");
+                DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamPortDefinition: port %d", portDefn->nPortIndex);
                 if (portDefn->nPortIndex == (OMX_U32) PORT_INDEX_IN) {
                     dev_get_buf_req (&m_sInPortDef.nBufferCountMin,
                         &m_sInPortDef.nBufferCountActual,
                         &m_sInPortDef.nBufferSize,
                         m_sInPortDef.nPortIndex);
-                    DEBUG_PRINT_LOW("m_sInPortDef: size = %u, min cnt = %u, actual cnt = %u",
-                            (unsigned int)m_sInPortDef.nBufferSize, (unsigned int)m_sInPortDef.nBufferCountMin,
-                            (unsigned int)m_sInPortDef.nBufferCountActual);
+
                     memcpy(portDefn, &m_sInPortDef, sizeof(m_sInPortDef));
 #ifdef _ANDROID_ICS_
                     if (meta_mode_enable) {
@@ -1483,14 +1480,19 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                             &m_sOutPortDef.nBufferSize,
                             m_sOutPortDef.nPortIndex);
                     }
-                    DEBUG_PRINT_LOW("m_sOutPortDef: size = %u, min cnt = %u, actual cnt = %u",
-                            (unsigned int)m_sOutPortDef.nBufferSize, (unsigned int)m_sOutPortDef.nBufferCountMin,
-                            (unsigned int)m_sOutPortDef.nBufferCountActual);
+
                     memcpy(portDefn, &m_sOutPortDef, sizeof(m_sOutPortDef));
                 } else {
                     DEBUG_PRINT_ERROR("ERROR: GetParameter called on Bad Port Index");
                     eRet = OMX_ErrorBadPortIndex;
                 }
+
+                DEBUG_PRINT_HIGH("get_parameter: OMX_IndexParamPortDefinition: port %d, wxh %dx%d, min %d, actual %d, size %d, colorformat %#x, compression format %#x",
+                    portDefn->nPortIndex, portDefn->format.video.nFrameWidth,
+                    portDefn->format.video.nFrameHeight, portDefn->nBufferCountMin,
+                    portDefn->nBufferCountActual, portDefn->nBufferSize,
+                    portDefn->format.video.eColorFormat, portDefn->format.video.eCompressionFormat);
+
                 break;
             }
         case OMX_IndexParamVideoInit:

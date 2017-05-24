@@ -592,9 +592,11 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 VALIDATE_OMX_PARAM_DATA(paramData, OMX_PARAM_PORTDEFINITIONTYPE);
                 OMX_PARAM_PORTDEFINITIONTYPE *portDefn;
                 portDefn = (OMX_PARAM_PORTDEFINITIONTYPE *) paramData;
-                DEBUG_PRINT_LOW("set_parameter: OMX_IndexParamPortDefinition H= %d, W = %d",
-                        (int)portDefn->format.video.nFrameHeight,
-                        (int)portDefn->format.video.nFrameWidth);
+
+                DEBUG_PRINT_HIGH("set_parameter: OMX_IndexParamPortDefinition: port %d, wxh %dx%d, min %d, actual %d, size %d, colorformat %#x, compression format %#x",
+                    portDefn->nPortIndex, portDefn->format.video.nFrameHeight, portDefn->format.video.nFrameWidth,
+                    portDefn->nBufferCountMin, portDefn->nBufferCountActual, portDefn->nBufferSize,
+                    portDefn->format.video.eColorFormat, portDefn->format.video.eCompressionFormat);
 
                 if (PORT_INDEX_IN == portDefn->nPortIndex) {
                     if (!dev_is_video_session_supported(portDefn->format.video.nFrameWidth,
@@ -603,9 +605,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                         omx_report_unsupported_setting();
                         return OMX_ErrorUnsupportedSetting;
                     }
-                    DEBUG_PRINT_LOW("i/p actual cnt requested = %u", (unsigned int)portDefn->nBufferCountActual);
-                    DEBUG_PRINT_LOW("i/p min cnt requested = %u", (unsigned int)portDefn->nBufferCountMin);
-                    DEBUG_PRINT_LOW("i/p buffersize requested = %u", (unsigned int)portDefn->nBufferSize);
                     if (portDefn->nBufferCountActual > MAX_NUM_INPUT_BUFFERS) {
                         DEBUG_PRINT_ERROR("ERROR: (In_PORT) actual count (%u) exceeds max(%u)",
                                 (unsigned int)portDefn->nBufferCountActual, (unsigned int)MAX_NUM_INPUT_BUFFERS);
@@ -628,8 +627,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                 OMX_ErrorUnsupportedSetting;
                     }
 
-                    DEBUG_PRINT_LOW("i/p previous actual cnt = %u", (unsigned int)m_sInPortDef.nBufferCountActual);
-                    DEBUG_PRINT_LOW("i/p previous min cnt = %u", (unsigned int)m_sInPortDef.nBufferCountMin);
                     memcpy(&m_sInPortDef, portDefn,sizeof(OMX_PARAM_PORTDEFINITIONTYPE));
 
 #ifdef _ANDROID_ICS_
@@ -662,9 +659,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                             m_sOutPortDef.nPortIndex);
                     m_sInPortDef.nBufferCountActual = portDefn->nBufferCountActual;
                 } else if (PORT_INDEX_OUT == portDefn->nPortIndex) {
-                    DEBUG_PRINT_LOW("o/p actual cnt requested = %u", (unsigned int)portDefn->nBufferCountActual);
-                    DEBUG_PRINT_LOW("o/p min cnt requested = %u", (unsigned int)portDefn->nBufferCountMin);
-                    DEBUG_PRINT_LOW("o/p buffersize requested = %u", (unsigned int)portDefn->nBufferSize);
 
                     if (portDefn->nBufferCountActual > MAX_NUM_OUTPUT_BUFFERS) {
                         DEBUG_PRINT_ERROR("ERROR: (Out_PORT) actual count (%u) exceeds max(%u)",
@@ -695,8 +689,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                             m_sOutPortDef.nPortIndex);
                     update_profile_level(); //framerate , bitrate
 
-                    DEBUG_PRINT_LOW("o/p previous actual cnt = %u", (unsigned int)m_sOutPortDef.nBufferCountActual);
-                    DEBUG_PRINT_LOW("o/p previous min cnt = %u", (unsigned int)m_sOutPortDef.nBufferCountMin);
                     m_sOutPortDef.nBufferCountActual = portDefn->nBufferCountActual;
                 } else {
                     DEBUG_PRINT_ERROR("ERROR: Set_parameter: Bad Port idx %d",
@@ -2140,6 +2132,10 @@ bool omx_venc::dev_use_buf(unsigned port)
 bool omx_venc::dev_buffer_ready_to_queue(OMX_BUFFERHEADERTYPE *buffer)
 {
     bool bRet = true;
+
+    /* do not defer the buffer if m_TimeStamp is not initialized */
+    if (!timestamp.m_TimeStamp)
+        return true;
 
     pthread_mutex_lock(&timestamp.m_lock);
 
