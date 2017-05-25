@@ -5938,7 +5938,7 @@ OMX_ERRORTYPE omx_vdec::allocate_extradata()
         }
     }
 #endif
-    if (!m_other_extradata) {
+    if (drv_ctx.extradata_info.buffer_size && !m_other_extradata) {
         m_other_extradata = (OMX_OTHER_EXTRADATATYPE *)malloc(drv_ctx.extradata_info.buffer_size);
         if (!m_other_extradata) {
             DEBUG_PRINT_ERROR("Failed to alloc memory\n");
@@ -7076,6 +7076,7 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
                              drv_ctx.op_buf.actualcount);
         if (!drv_ctx.ptr_outputbuffer || !drv_ctx.ptr_respbuffer) {
             DEBUG_PRINT_ERROR("Failed to alloc drv_ctx.ptr_outputbuffer or drv_ctx.ptr_respbuffer ");
+            free(pPtr);
             return OMX_ErrorInsufficientResources;
         }
 
@@ -10725,6 +10726,7 @@ OMX_ERRORTYPE omx_vdec::allocate_output_headers()
                              drv_ctx.op_buf.actualcount);
         if (!drv_ctx.ptr_outputbuffer || !drv_ctx.ptr_respbuffer) {
             DEBUG_PRINT_ERROR("Failed to alloc drv_ctx.ptr_outputbuffer or drv_ctx.ptr_respbuffer");
+            free(pPtr);
             return OMX_ErrorInsufficientResources;
         }
 
@@ -10733,6 +10735,7 @@ OMX_ERRORTYPE omx_vdec::allocate_output_headers()
                       calloc (sizeof(struct vdec_ion),drv_ctx.op_buf.actualcount);
         if (!drv_ctx.op_buf_ion_info) {
             DEBUG_PRINT_ERROR("Failed to alloc drv_ctx.op_buf_ion_info");
+            free(pPtr);
             return OMX_ErrorInsufficientResources;
         }
 #endif
