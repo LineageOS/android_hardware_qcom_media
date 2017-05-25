@@ -496,7 +496,7 @@ class venc_dev
         bool venc_set_intra_vop_refresh(OMX_BOOL intra_vop_refresh);
         bool venc_set_color_format(OMX_COLOR_FORMATTYPE color_format);
         bool venc_validate_profile_level(OMX_U32 *eProfile, OMX_U32 *eLevel);
-        bool venc_set_multislice_cfg(OMX_INDEXTYPE codec, OMX_U32 slicesize);
+        bool venc_set_multislice_cfg(OMX_U32 slicemode, OMX_U32 slicesize);
         bool venc_set_entropy_config(OMX_BOOL enable, OMX_U32 i_cabac_level);
         bool venc_set_inloop_filter(OMX_VIDEO_AVCLOOPFILTERTYPE loop_filter);
         bool venc_set_intra_refresh (OMX_VIDEO_INTRAREFRESHTYPE intrarefresh, OMX_U32 irMBs);

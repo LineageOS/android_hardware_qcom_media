@@ -1998,7 +1998,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                         return false;
                     }
 
-                    if (!venc_set_multislice_cfg(OMX_IndexParamVideoAvc, pParam->nSliceHeaderSpacing)) {
+                    if (!venc_set_multislice_cfg(V4L2_MPEG_VIDEO_MULTI_SICE_MODE_MAX_MB, pParam->nSliceHeaderSpacing)) {
                         DEBUG_PRINT_ERROR("WARNING: Unsuccessful in updating slice_config");
                         return false;
                     }
@@ -4979,19 +4979,40 @@ bool venc_dev::venc_set_entropy_config(OMX_BOOL enable, OMX_U32 i_cabac_level)
     return true;
 }
 
-bool venc_dev::venc_set_multislice_cfg(OMX_INDEXTYPE Codec, OMX_U32 nSlicesize) // MB
+bool venc_dev::venc_set_multislice_cfg(OMX_U32 nSlicemode, OMX_U32 nSlicesize)
 {
     int rc;
+    int slice_id = 0;
     struct v4l2_control control;
     bool status = true;
 
-    if ((Codec != OMX_IndexParamVideoH263)  && (nSlicesize)) {
-        control.value =  V4L2_MPEG_VIDEO_MULTI_SICE_MODE_MAX_MB;
-    } else {
-        control.value =  V4L2_MPEG_VIDEO_MULTI_SLICE_MODE_SINGLE;
+    if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_H263 || nSlicesize == 0) {
+        nSlicemode = V4L2_MPEG_VIDEO_MULTI_SLICE_MODE_SINGLE;
+        nSlicesize = 0;
     }
 
-    control.id = V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MODE;
+    if (nSlicemode == V4L2_MPEG_VIDEO_MULTI_SICE_MODE_MAX_MB) {
+        if (!venc_validate_range(V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MAX_MB, nSlicesize)) {
+            DEBUG_PRINT_ERROR("Invalid settings, hardware doesn't support %u as slicesize", nSlicesize);
+            return false;
+        }
+        slice_id = V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MAX_MB;
+
+    } else if (nSlicemode == V4L2_MPEG_VIDEO_MULTI_SICE_MODE_MAX_BYTES) {
+        if (!venc_validate_range(V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MAX_BYTES, nSlicesize)) {
+            DEBUG_PRINT_ERROR("Invalid settings, hardware doesn't support %u as slicesize", nSlicesize);
+            return false;
+        }
+        slice_id = V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MAX_BYTES;
+
+    } else if (nSlicesize) {
+        DEBUG_PRINT_ERROR("Invalid settings, unexpected slicemode = %u and slice size = %u", nSlicemode, nSlicesize);
+        return false;
+    }
+
+    control.id    = V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MODE;
+    control.value = nSlicemode;
+
     DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
@@ -5001,24 +5022,26 @@ bool venc_dev::venc_set_multislice_cfg(OMX_INDEXTYPE Codec, OMX_U32 nSlicesize) 
     }
 
     DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
-    multislice.mslice_mode=control.value;
 
-    if (multislice.mslice_mode!=V4L2_MPEG_VIDEO_MULTI_SLICE_MODE_SINGLE) {
-
-        control.id = V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MAX_MB;
-        control.value = nSlicesize;
-        DEBUG_PRINT_LOW("Calling SLICE_MB IOCTL set control for id=%d, val=%d", control.id, control.value);
-        rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-
-        if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
-            return false;
-        }
-
-        DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
-        multislice.mslice_size=control.value;
-
+    if (nSlicemode == V4L2_MPEG_VIDEO_MULTI_SLICE_MODE_SINGLE) {
+        return status;
     }
+
+    control.id    = slice_id;
+    control.value = nSlicesize;
+
+    DEBUG_PRINT_LOW("Calling SLICE_MB IOCTL set control for id=%d, val=%d", control.id, control.value);
+    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
+
+    if (rc) {
+        DEBUG_PRINT_ERROR("Failed to set control");
+        return false;
+    }
+
+    DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
+
+    multislice.mslice_mode = nSlicemode;
+    multislice.mslice_size = nSlicesize;
 
     return status;
 }
@@ -5109,48 +5132,9 @@ bool venc_dev::venc_set_error_resilience(OMX_VIDEO_PARAM_ERRORCORRECTIONTYPE* er
         resynchMarkerSpacingBytes = error_resilience->nResynchMarkerSpacing;
         resynchMarkerSpacingBytes = ALIGN(resynchMarkerSpacingBytes, 8) >> 3;
     }
-    if (( m_sVenc_cfg.codectype != V4L2_PIX_FMT_H263) &&
-            (error_resilience->nResynchMarkerSpacing)) {
-        multislice_cfg.mslice_mode = VEN_MSLICE_CNT_BYTE;
-        multislice_cfg.mslice_size = resynchMarkerSpacingBytes;
-        control.id = V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MODE;
-        control.value = V4L2_MPEG_VIDEO_MULTI_SICE_MODE_MAX_BYTES;
-    } else {
-        multislice_cfg.mslice_mode = VEN_MSLICE_OFF;
-        multislice_cfg.mslice_size = 0;
-        control.id = V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MODE;
-        control.value =  V4L2_MPEG_VIDEO_MULTI_SLICE_MODE_SINGLE;
-    }
 
-    DEBUG_PRINT_LOW("%s(): mode = %lu, size = %lu", __func__,
-            multislice_cfg.mslice_mode, multislice_cfg.mslice_size);
-    DEBUG_PRINT_ERROR("Calling IOCTL set control for id=%x, val=%d", control.id, control.value);
-    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
+    status = venc_set_multislice_cfg(V4L2_MPEG_VIDEO_MULTI_SICE_MODE_MAX_BYTES, resynchMarkerSpacingBytes);
 
-    if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set Slice mode control, value %d", control.value);
-        return false;
-    }
-
-    DEBUG_PRINT_ERROR("Success IOCTL set control for id=%x, value=%d", control.id, control.value);
-    multislice.mslice_mode=control.value;
-
-    if(multislice_cfg.mslice_mode == VEN_MSLICE_CNT_BYTE) {
-        control.id = V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MAX_BYTES;
-        control.value = resynchMarkerSpacingBytes;
-        DEBUG_PRINT_ERROR("Calling IOCTL set control for id=%x, val=%d", control.id, control.value);
-
-        rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-
-        if (rc) {
-            DEBUG_PRINT_ERROR("Failed to set MAX MB control, value %d", control.value);
-            return false;
-        }
-    }
-
-    DEBUG_PRINT_ERROR("Success IOCTL set control for id=%x, value=%d", control.id, control.value);
-    multislice.mslice_mode = multislice_cfg.mslice_mode;
-    multislice.mslice_size = multislice_cfg.mslice_size;
     return status;
 }
 
