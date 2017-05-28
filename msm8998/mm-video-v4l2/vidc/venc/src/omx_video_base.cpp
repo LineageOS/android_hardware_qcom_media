@@ -1819,7 +1819,6 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_INTRAREFRESHTYPE);
                 OMX_VIDEO_PARAM_INTRAREFRESHTYPE* intrarefresh = (OMX_VIDEO_PARAM_INTRAREFRESHTYPE*)paramData;
                 DEBUG_PRINT_LOW("OMX_IndexParamVideoIntraRefresh");
-                DEBUG_PRINT_ERROR("OMX_IndexParamVideoIntraRefresh GET");
                 intrarefresh->eRefreshMode = m_sIntraRefresh.eRefreshMode;
                 intrarefresh->nCirMBs = m_sIntraRefresh.nCirMBs;
                 break;
@@ -2110,7 +2109,7 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 if (!dev_get_temporal_layer_caps(&m_sParamTemporalLayers.nLayerCountMax,
                         &m_sParamTemporalLayers.nBLayerCountMax)) {
                     DEBUG_PRINT_ERROR("Failed to get temporal layer capabilities");
-                    eRet = OMX_ErrorHardware;
+                    eRet = OMX_ErrorUnsupportedIndex;
                 }
                 memcpy(pLayerInfo, &m_sParamTemporalLayers, sizeof(m_sParamTemporalLayers));
                 break;
@@ -2305,7 +2304,7 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
                     reinterpret_cast<DescribeColorAspectsParams*>(configData);
                 DEBUG_PRINT_LOW("get_config: OMX_QTIIndexConfigDescribeColorAspects");
                 if (pParam->bRequestingDataSpace) {
-                    DEBUG_PRINT_ERROR("Does not handle dataspace request");
+                    DEBUG_PRINT_HIGH("Does not handle dataspace request");
                     return OMX_ErrorUnsupportedSetting;
                 }
                 if (pParam->bDataSpaceChanged == OMX_TRUE) {
@@ -2314,14 +2313,14 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
                     // If the dataspace says RGB, recommend 601-limited;
                     // since that is the destination colorspace that C2D or Venus will convert to.
                     if (pParam->nPixelFormat == HAL_PIXEL_FORMAT_RGBA_8888) {
-                        DEBUG_PRINT_INFO("get_config (dataspace changed): ColorSpace: Recommend 601-limited for RGBA8888");
+                        DEBUG_PRINT_HIGH("get_config (dataspace changed): ColorSpace: Recommend 601-limited for RGBA8888");
                         pParam->sAspects.mPrimaries = ColorAspects::PrimariesBT601_6_625;
                         pParam->sAspects.mRange = ColorAspects::RangeLimited;
                         pParam->sAspects.mTransfer = ColorAspects::TransferSMPTE170M;
                         pParam->sAspects.mMatrixCoeffs = ColorAspects::MatrixBT601_6;
                     } else {
                         // For IMPLEMENTATION_DEFINED (or anything else), stick to client's defaults.
-                        DEBUG_PRINT_INFO("get_config (dataspace changed): ColorSpace: use client-default for format=%x",
+                        DEBUG_PRINT_HIGH("get_config (dataspace changed): ColorSpace: use client-default for format=%x",
                                 pParam->nPixelFormat);
                     }
                     print_debug_color_aspects(&(pParam->sAspects), "get_config (dataspace changed) recommended");
@@ -2351,7 +2350,7 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
             }
 
         default:
-            DEBUG_PRINT_ERROR("ERROR: unsupported index %d", (int) configIndex);
+            DEBUG_PRINT_HIGH("WARNING: get_config: unsupported index %x", (int) configIndex);
             return OMX_ErrorUnsupportedIndex;
     }
     return OMX_ErrorNone;
@@ -4686,7 +4685,7 @@ OMX_ERRORTYPE omx_video::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVE
                 profileLevelType->eProfile = OMX_VIDEO_H263ProfileBaseline;
                 profileLevelType->eLevel   = OMX_VIDEO_H263Level70;
             } else {
-                DEBUG_PRINT_ERROR("get_parameter: OMX_IndexParamVideoProfileLevelQuerySupported nProfileIndex ret NoMore %d", (int)profileLevelType->nProfileIndex);
+                DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoProfileLevelQuerySupported nProfileIndex ret NoMore %d", (int)profileLevelType->nProfileIndex);
                 eRet = OMX_ErrorNoMore;
             }
         } else if (m_sOutPortDef.format.video.eCompressionFormat == OMX_VIDEO_CodingMPEG4) {
@@ -4697,7 +4696,7 @@ OMX_ERRORTYPE omx_video::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVE
                 profileLevelType->eProfile = OMX_VIDEO_MPEG4ProfileAdvancedSimple;
                 profileLevelType->eLevel   = OMX_VIDEO_MPEG4Level5;
             } else {
-                DEBUG_PRINT_ERROR("get_parameter: OMX_IndexParamVideoProfileLevelQuerySupported nProfileIndex ret NoMore %d", (int)profileLevelType->nProfileIndex);
+                DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoProfileLevelQuerySupported nProfileIndex ret NoMore %d", (int)profileLevelType->nProfileIndex);
                 eRet = OMX_ErrorNoMore;
             }
         }
@@ -4768,7 +4767,7 @@ OMX_ERRORTYPE omx_video::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVE
                 profileLevelType->eProfile = OMX_VIDEO_H263ProfileBaseline;
                 profileLevelType->eLevel   = OMX_VIDEO_H263Level70;
             } else {
-                DEBUG_PRINT_ERROR("get_parameter: OMX_IndexParamVideoProfileLevelQuerySupported nProfileIndex ret NoMore %u", (unsigned int)profileLevelType->nProfileIndex);
+                DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoProfileLevelQuerySupported nProfileIndex ret NoMore %u", (unsigned int)profileLevelType->nProfileIndex);
                 eRet = OMX_ErrorNoMore;
             }
         } else if (m_sOutPortDef.format.video.eCompressionFormat == OMX_VIDEO_CodingMPEG4) {
@@ -4779,7 +4778,7 @@ OMX_ERRORTYPE omx_video::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVE
                 profileLevelType->eProfile = OMX_VIDEO_MPEG4ProfileAdvancedSimple;
                 profileLevelType->eLevel   = OMX_VIDEO_MPEG4Level5;
             } else {
-                DEBUG_PRINT_ERROR("get_parameter: OMX_IndexParamVideoProfileLevelQuerySupported nProfileIndex ret NoMore %u", (unsigned int)profileLevelType->nProfileIndex);
+                DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoProfileLevelQuerySupported nProfileIndex ret NoMore %u", (unsigned int)profileLevelType->nProfileIndex);
                 eRet = OMX_ErrorNoMore;
             }
         } else if (m_sOutPortDef.format.video.eCompressionFormat == OMX_VIDEO_CodingVP8) {
