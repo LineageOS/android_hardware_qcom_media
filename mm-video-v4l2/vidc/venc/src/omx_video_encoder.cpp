@@ -139,20 +139,20 @@ omx_venc::omx_venc()
 #endif
     bframes = entropy = 0;
     char property_value[PROPERTY_VALUE_MAX] = {0};
-    property_get("vidc.debug.level", property_value, "1");
+    property_get("vendor.vidc.debug.level", property_value, "1");
     debug_level = strtoul(property_value, NULL, 16);
     property_value[0] = '\0';
-    property_get("vidc.debug.bframes", property_value, "0");
+    property_get("vendor.vidc.debug.bframes", property_value, "0");
     bframes = atoi(property_value);
     property_value[0] = '\0';
-    property_get("vidc.debug.entropy", property_value, "1");
+    property_get("vendor.vidc.debug.entropy", property_value, "1");
     entropy = !!atoi(property_value);
     property_value[0] = '\0';
-    property_get("vidc.debug.perf.mode", property_value, "0");
+    property_get("vendor.vidc.debug.perf.mode", property_value, "0");
     perfmode = atoi(property_value);
     property_value[0] = '\0';
     handle = NULL;
-    property_get("vidc.debug.lowlatency", property_value, "0");
+    property_get("vendor.vidc.debug.lowlatency", property_value, "0");
     lowlatency = atoi(property_value);
     property_value[0] = '\0';
     m_perf_control.send_hint_to_mpctl(true);
