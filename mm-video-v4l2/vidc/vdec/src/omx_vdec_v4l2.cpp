@@ -254,8 +254,16 @@ void* async_message_thread (void *input)
                 tmp_color_space = (ptr[4] == MSM_VIDC_BT2020 ? (omx_vdec::BT2020):
                                    (omx_vdec:: EXCEPT_BT2020));
                 event_fields_changed |= (omx->m_color_space != tmp_color_space);
-                event_fields_changed |= (omx->drv_ctx.video_resolution.frame_height != ptr[0]);
-                event_fields_changed |= (omx->drv_ctx.video_resolution.frame_width != ptr[1]);
+
+                /*
+                 * If the resolution is different due to 16\32 pixel alignment,
+                 * let's handle as Sufficient. Ex : 1080 & 1088 or 2160 & 2176.
+                 * When FBD comes, component updates the clients with actual
+                 * resolution through set_buffer_geometry.
+                 */
+
+                 event_fields_changed |= (omx->drv_ctx.video_resolution.frame_height != ptr[7]);
+                 event_fields_changed |= (omx->drv_ctx.video_resolution.frame_width != ptr[8]);
 
                 if (event_fields_changed) {
                     DEBUG_PRINT_HIGH("VIDC Port Reconfig Old Resolution(H,W) = (%d,%d) New Resolution(H,W) = (%d,%d))",
@@ -2175,7 +2183,7 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
     struct v4l2_requestbuffers bufreq;
     struct v4l2_control control;
     struct v4l2_frmsizeenum frmsize;
-    unsigned int   alignment = 0,buffer_size = 0;
+    unsigned int   alignment = 0,buffer_size = 0, nBufCount = 0;
     int fds[2];
     int r,ret=0;
     bool codec_ambiguous = false;
@@ -2183,6 +2191,8 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
     char property_value[PROPERTY_VALUE_MAX] = {0};
     FILE *soc_file = NULL;
     char buffer[10];
+    struct v4l2_ext_control ctrl[1];
+    struct v4l2_ext_controls controls;
 
 #ifdef _ANDROID_
     char platform_name[PROPERTY_VALUE_MAX];
@@ -2296,12 +2306,14 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         drv_ctx.decoder_format = VDEC_CODECTYPE_MPEG2;
         output_capability = V4L2_PIX_FMT_MPEG2;
         eCompressionFormat = OMX_VIDEO_CodingMPEG2;
+        nBufCount = 6;
     } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.avc",\
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_decoder.avc",OMX_MAX_STRINGNAME_SIZE);
         drv_ctx.decoder_format = VDEC_CODECTYPE_H264;
         output_capability=V4L2_PIX_FMT_H264;
         eCompressionFormat = OMX_VIDEO_CodingAVC;
+        nBufCount = 8;
         if (is_thulium_v1) {
             arbitrary_bytes = true;
             DEBUG_PRINT_HIGH("Enable arbitrary_bytes for h264");
@@ -2312,12 +2324,14 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         drv_ctx.decoder_format = VDEC_CODECTYPE_MVC;
         output_capability = V4L2_PIX_FMT_H264_MVC;
         eCompressionFormat = (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingMVC;
+        nBufCount = 8;
     } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.hevc",\
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_decoder.hevc",OMX_MAX_STRINGNAME_SIZE);
         drv_ctx.decoder_format = VDEC_CODECTYPE_HEVC;
         output_capability = V4L2_PIX_FMT_HEVC;
         eCompressionFormat = (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingHevc;
+        nBufCount = 8;
     } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.vp8",    \
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_decoder.vp8",OMX_MAX_STRINGNAME_SIZE);
@@ -2325,6 +2339,7 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         output_capability = V4L2_PIX_FMT_VP8;
         eCompressionFormat = OMX_VIDEO_CodingVP8;
         arbitrary_bytes = false;
+        nBufCount = 6;
     } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.vp9",    \
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_decoder.vp9",OMX_MAX_STRINGNAME_SIZE);
@@ -2332,6 +2347,7 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         output_capability = V4L2_PIX_FMT_VP9;
         eCompressionFormat = OMX_VIDEO_CodingVP9;
         arbitrary_bytes = false;
+        nBufCount = 11;
     } else {
         DEBUG_PRINT_ERROR("ERROR:Unknown Component");
         eRet = OMX_ErrorInvalidComponentName;
@@ -2524,6 +2540,19 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         property_get("vidc.disable.split.mode",property_value,"0");
         m_disable_split_mode = atoi(property_value);
         DEBUG_PRINT_HIGH("split mode is %s", m_disable_split_mode ? "disabled" : "enabled");
+
+        ctrl[0].id = V4L2_CID_MIN_BUFFERS_FOR_CAPTURE;
+        ctrl[0].value = nBufCount;
+
+        controls.count = 1;
+        controls.ctrl_class = V4L2_CTRL_CLASS_USER;
+        controls.controls = ctrl;
+
+        ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_EXT_CTRLS, &controls);
+        if (ret < 0)
+            DEBUG_PRINT_HIGH("Failed to set OUTPUT Buffer count Err = %d Count = %d",
+                ret, nBufCount);
+
 #endif
         m_state = OMX_StateLoaded;
 #ifdef DEFAULT_EXTRADATA
