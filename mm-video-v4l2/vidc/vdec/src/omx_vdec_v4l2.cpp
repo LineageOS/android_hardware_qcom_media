@@ -115,6 +115,7 @@ extern "C" {
 #define Log2(number, power)  { OMX_U32 temp = number; power = 0; while( (0 == (temp & 0x1)) &&  power < 16) { temp >>=0x1; power++; } }
 #define Q16ToFraction(q,num,den) { OMX_U32 power; Log2(q,power);  num = q >> power; den = 0x1 << (16 - power); }
 #define EXTRADATA_IDX(__num_planes) ((__num_planes) ? (__num_planes) - 1 : 0)
+#undef ALIGN
 #define ALIGN(x, to_align) ((((unsigned) x) + (to_align - 1)) & ~(to_align - 1))
 
 #define DEFAULT_EXTRADATA (OMX_INTERLACE_EXTRADATA | OMX_FRAMEPACK_EXTRADATA | OMX_OUTPUTCROP_EXTRADATA \
@@ -145,6 +146,8 @@ extern "C" {
 
 #define MIN(x,y) (((x) < (y)) ? (x) : (y))
 #define MAX(x,y) (((x) > (y)) ? (x) : (y))
+
+using namespace android;
 
 static OMX_U32 maxSmoothStreamingWidth = 1920;
 static OMX_U32 maxSmoothStreamingHeight = 1088;
@@ -4175,16 +4178,16 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                         DEBUG_PRINT_ERROR("%s: Failed to get format on capture mplane", __func__);
                                         return OMX_ErrorBadParameter;
                                     }
-                                    enum vdec_output_fromat op_format;
+                                    enum vdec_output_format op_format;
                                     if (portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
                                                      QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m ||
                                         portFmt->eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar) {
-                                        op_format = (enum vdec_output_fromat)VDEC_YUV_FORMAT_NV12;
+                                        op_format = (enum vdec_output_format)VDEC_YUV_FORMAT_NV12;
                                         fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12;
                                     } else if (portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
                                                    QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed ||
                                                portFmt->eColorFormat == OMX_COLOR_FormatYUV420Planar) {
-                                        op_format = (enum vdec_output_fromat)VDEC_YUV_FORMAT_NV12_UBWC;
+                                        op_format = (enum vdec_output_format)VDEC_YUV_FORMAT_NV12_UBWC;
                                         fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12_UBWC;
                                     } else {
                                         eRet = OMX_ErrorBadParameter;
@@ -10962,10 +10965,19 @@ omx_vdec::allocate_color_convert_buf::allocate_color_convert_buf()
     m_c2d_width = 0;
     m_c2d_height = 0;
 
+    mMapOutput2DriverColorFormat[VDEC_YUV_FORMAT_NV12][-1] =
+                        QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
+    mMapOutput2DriverColorFormat[VDEC_YUV_FORMAT_NV12][VDEC_CODECTYPE_MVC] =
+                        QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mMultiView;
+    mMapOutput2DriverColorFormat[VDEC_YUV_FORMAT_NV12_UBWC][-1] =
+                        QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed;
+    mMapOutput2DriverColorFormat[VDEC_YUV_FORMAT_NV12_TP10_UBWC][-1] =
+                     QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed;
+
     mMapOutput2Convert.insert( {
             {VDEC_YUV_FORMAT_NV12, NV12_128m},
             {VDEC_YUV_FORMAT_NV12_UBWC, NV12_UBWC},
-            //TODO: TP10 {VDEC_YUV_FORMAT_NV12_TP10_UBWC, NV12_TP10},
+            {VDEC_YUV_FORMAT_NV12_TP10_UBWC, NV12_TP10},
         });
 }
 
@@ -10991,11 +11003,6 @@ void omx_vdec::allocate_color_convert_buf::init_members()
         pmem_fd[i] = -1;
 }
 
-omx_vdec::allocate_color_convert_buf::~allocate_color_convert_buf()
-{
-    c2d.destroy();
-}
-
 bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
 {
     bool status = true;
@@ -11010,7 +11017,7 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
     }
     if (!enabled) {
         DEBUG_PRINT_HIGH("No color conversion required");
-        return status;
+        return true;
     }
     pthread_mutex_lock(&omx->c_lock);
 
@@ -11042,46 +11049,58 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
             DEBUG_PRINT_ERROR("Cannot change C2D buffer requirements with %d active allocations",
                     allocated_count);
             status = false;
-            goto fail_update_buf_req;
         }
     }
 
-    if (omx->drv_ctx.output_format != VDEC_YUV_FORMAT_NV12 &&
+    if (status != false) {
+        if (omx->drv_ctx.output_format != VDEC_YUV_FORMAT_NV12 &&
             ColorFormat != OMX_COLOR_FormatYUV420Planar) {
-        DEBUG_PRINT_ERROR("update_buffer_req: Unsupported color conversion");
-        status = false;
-        goto fail_update_buf_req;
-    }
-    c2d.close();
-
-    DEBUG_PRINT_INFO("%s: Open C2D interface for %#X -> %#X, interlaced (%d)",
-                                     __func__, src_format, dest_format, is_interlaced);
-    status = c2d.open(height, width, src_format, dest_format);
-
-    if (status) {
-        status = c2d.get_buffer_size(C2D_INPUT,src_size);
-        if (status)
-            status = c2d.get_buffer_size(C2D_OUTPUT,destination_size);
-    }
-    if (status) {
-        if (!src_size || src_size > omx->drv_ctx.op_buf.buffer_size ||
-                !destination_size) {
-            DEBUG_PRINT_ERROR("ERROR: Size mismatch in C2D src_size %d"
-                    "driver size %u destination size %d",
-                    src_size, (unsigned int)omx->drv_ctx.op_buf.buffer_size,
-                    destination_size);
+            DEBUG_PRINT_ERROR("update_buffer_req: Unsupported color conversion");
             status = false;
-            c2d.close();
-            buffer_size_req = 0;
-            // TODO: make this fatal. Driver is not supposed to quote size
-            //  smaller than what C2D needs !!
         } else {
-            buffer_size_req = destination_size;
-            m_c2d_height = height;
-            m_c2d_width = width;
+            ColorSubMapping::const_iterator
+                found =  mMapOutput2Convert.find(
+                                                 omx->drv_ctx.output_format);
+            if (found == mMapOutput2Convert.end()) {
+                src_format = NV12_128m;
+            } else {
+                src_format = (ColorConvertFormat) found->second;;
+            }
+
+            DEBUG_PRINT_INFO("C2D: Set Resolution, Interlace(%d) Convertion(%#X -> %#X)"
+                             " src(%dX%d) dest(%dX%d)", omx->drv_ctx.interlace,
+                             src_format, dest_format, width,
+                             omx->drv_ctx.interlace !=
+                                  VDEC_InterlaceFrameProgressive?(height+1)/2 : height,
+                             width, height);
+            status = c2dcc.setResolution(width,
+                                         omx->drv_ctx.interlace !=
+                                         VDEC_InterlaceFrameProgressive?
+                                         (height+1)/2 : height,
+                                         width, height,
+                                         src_format, dest_format,
+                                         0,0);
+            if (status) {
+                src_size = c2dcc.getBuffSize(C2D_INPUT);
+                destination_size = c2dcc.getBuffSize(C2D_OUTPUT);
+
+                if (!src_size || src_size > omx->drv_ctx.op_buf.buffer_size ||
+                    !destination_size) {
+                    DEBUG_PRINT_ERROR("ERROR: Size mismatch in C2D src_size %d"
+                                      "driver size %u destination size %d",
+                                      src_size, (unsigned int)omx->drv_ctx.op_buf.buffer_size,
+                                      destination_size);
+                    buffer_size_req = 0;
+                    // TODO: make this fatal. Driver is not supposed to quote size
+                    //  smaller than what C2D needs !!
+                } else {
+                    buffer_size_req = destination_size;
+                    m_c2d_height = height;
+                    m_c2d_width = width;
+                }
+            }
         }
     }
-fail_update_buf_req:
     pthread_mutex_unlock(&omx->c_lock);
     return status;
 }
@@ -11097,23 +11116,8 @@ bool omx_vdec::allocate_color_convert_buf::set_color_format(
         return false;
     }
     pthread_mutex_lock(&omx->c_lock);
-    if (omx->drv_ctx.output_format == VDEC_YUV_FORMAT_NV12)
-        if (omx->drv_ctx.decoder_format == VDEC_CODECTYPE_MVC)
-            drv_color_format = (OMX_COLOR_FORMATTYPE)
-                QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mMultiView;
-        else
-            drv_color_format = (OMX_COLOR_FORMATTYPE)
-                QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
-     else if (omx->drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_UBWC) {
-         drv_color_format = (OMX_COLOR_FORMATTYPE)
-                  QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed;
-     } else if (omx->drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_TP10_UBWC) {
-            drv_color_format = (OMX_COLOR_FORMATTYPE)
-                    QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed;
-     } else {
-        DEBUG_PRINT_ERROR("Incorrect color format");
-        status = false;
-    }
+    status = get_color_format (drv_color_format);
+
     drv_colorformat_c2d_enable = (drv_color_format != dest_color_format) &&
         (drv_color_format != (OMX_COLOR_FORMATTYPE)
                 QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mMultiView) &&
@@ -11131,22 +11135,14 @@ bool omx_vdec::allocate_color_convert_buf::set_color_format(
             dest_color_format == OMX_COLOR_FormatYUV420SemiPlanar ) {
             ColorFormat = dest_color_format;
             dest_format = dest_color_format == OMX_COLOR_FormatYUV420Planar? YCbCr420P: YCbCr420SP;
-            if (enabled)
-                c2d.destroy();
-            enabled = false;
-            if (!c2d.init()) {
-                DEBUG_PRINT_ERROR("open failed for c2d");
-                status = false;
-            } else
-                enabled = true;
+            enabled = true;
         } else {
             DEBUG_PRINT_ERROR("Unsupported output color format for c2d (%d)",
                               dest_color_format);
             status = false;
+            enabled = false;
         }
     } else {
-        if (enabled)
-            c2d.destroy();
         enabled = false;
     }
     pthread_mutex_unlock(&omx->c_lock);
@@ -11179,13 +11175,17 @@ OMX_BUFFERHEADERTYPE* omx_vdec::allocate_color_convert_buf::get_il_buf_hdr()
     if (index < omx->drv_ctx.op_buf.actualcount) {
         m_out_mem_ptr_client[index].nFlags = (bufadd->nFlags & OMX_BUFFERFLAG_EOS);
         m_out_mem_ptr_client[index].nTimeStamp = bufadd->nTimeStamp;
-        bool status;
+        bool status = false;
         if (!omx->in_reconfig && !omx->output_flush_progress && bufadd->nFilledLen) {
             pthread_mutex_lock(&omx->c_lock);
             cache_clean_buffer(index);
-            status = c2d.convert(omx->drv_ctx.ptr_outputbuffer[index].pmem_fd,
-                    omx->m_out_mem_ptr->pBuffer, bufadd->pBuffer, pmem_fd[index],
-                    pmem_baseaddress[index], pmem_baseaddress[index]);
+
+            DEBUG_PRINT_INFO("C2D: Start color convertion");
+            status = c2dcc.convertC2D(omx->drv_ctx.ptr_outputbuffer[index].pmem_fd,
+                                      omx->m_out_mem_ptr->pBuffer, bufadd->pBuffer,
+                                      pmem_fd[index], pmem_baseaddress[index],
+                                      pmem_baseaddress[index]);
+
             if (!status) {
                 DEBUG_PRINT_ERROR("Failed color conversion %d", status);
                 m_out_mem_ptr_client[index].nFilledLen = 0;
@@ -11193,7 +11193,7 @@ OMX_BUFFERHEADERTYPE* omx_vdec::allocate_color_convert_buf::get_il_buf_hdr()
                 return &m_out_mem_ptr_client[index];
             } else {
                 unsigned int filledLen = 0;
-                c2d.get_output_filled_length(filledLen);
+                c2dcc.getBuffFilledLen(C2D_OUTPUT, filledLen);
                 m_out_mem_ptr_client[index].nFilledLen = filledLen;
                 cache_clean_invalidate_buffer(index);
             }
@@ -11231,13 +11231,8 @@ OMX_BUFFERHEADERTYPE* omx_vdec::allocate_color_convert_buf::get_il_buf_hdr()
     if (!enabled)
         buffer_size = omx->drv_ctx.op_buf.buffer_size;
     else {
-        if (!c2d.get_buffer_size(C2D_OUTPUT,buffer_size)) {
-            DEBUG_PRINT_ERROR("Get buffer size failed");
-            status = false;
-            goto fail_get_buffer_size;
-        }
+        buffer_size = c2dcc.getBuffSize(C2D_OUTPUT);
     }
-fail_get_buffer_size:
     pthread_mutex_unlock(&omx->c_lock);
     return status;
 }
@@ -11314,7 +11309,6 @@ OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::free_output_buffer(
         allocated_count = 0;
     if (!allocated_count) {
         pthread_mutex_lock(&omx->c_lock);
-        c2d.close();
         init_members();
         pthread_mutex_unlock(&omx->c_lock);
     }
@@ -11411,18 +11405,22 @@ bool omx_vdec::allocate_color_convert_buf::get_color_format(OMX_COLOR_FORMATTYPE
 {
     bool status = true;
     if (!enabled) {
-        if (omx->drv_ctx.output_format == VDEC_YUV_FORMAT_NV12) {
-            if (omx->drv_ctx.decoder_format == VDEC_CODECTYPE_MVC)
+        for (auto& x: mMapOutput2DriverColorFormat) {
+            DecColorMapping::const_iterator
+                found = mMapOutput2DriverColorFormat.find(omx->drv_ctx.output_format);
+            if (found == mMapOutput2DriverColorFormat.end()) {
+                status = false;
+            } else {
+                ColorSubMapping::const_iterator
+                    subFound = found->second.find(omx->drv_ctx.decoder_format);
+                if (subFound == found->second.end()) {
                     dest_color_format = (OMX_COLOR_FORMATTYPE)
-                        QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mMultiView;
-                else
-                    dest_color_format = (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
-        } else if (omx->drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_UBWC){
-             dest_color_format = (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed;
-        } else if (omx->drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_TP10_UBWC){
-             dest_color_format = (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed;
-        } else
-            status = false;
+                                             found->second.find(-1)->second;
+                } else {
+                    dest_color_format = (OMX_COLOR_FORMATTYPE) subFound->second;
+                }
+            }
+        }
     } else {
         if (ColorFormat == OMX_COLOR_FormatYUV420Planar ||
             ColorFormat == OMX_COLOR_FormatYUV420SemiPlanar) {

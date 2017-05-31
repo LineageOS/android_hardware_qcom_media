@@ -78,6 +78,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define SZ_4K                       0x1000
 #define SZ_1M                       0x100000
+#undef ALIGN
 #define ALIGN(x, to_align) ((((unsigned long) x) + (to_align - 1)) & ~(to_align - 1))
 
 #ifndef ION_FLAG_CP_BITSTREAM
@@ -2803,7 +2804,6 @@ OMX_ERRORTYPE omx_video::free_input_buffer(OMX_BUFFERHEADERTYPE *bufferHdr)
         if (!mUseProxyColorFormat)
             return OMX_ErrorNone;
         else {
-            c2d_conv.close();
             opaque_buffer_hdr[index] = NULL;
         }
     }
@@ -4586,134 +4586,6 @@ void omx_video::omx_release_meta_buffer(OMX_BUFFERHEADERTYPE *buffer)
     }
 }
 #endif
-omx_video::omx_c2d_conv::omx_c2d_conv()
-{
-    c2dcc = NULL;
-    mLibHandle = NULL;
-    mConvertOpen = NULL;
-    mConvertClose = NULL;
-    src_format = NV12_128m;
-    pthread_mutex_init(&c_lock, NULL);
-}
-
-bool omx_video::omx_c2d_conv::init()
-{
-    bool status = true;
-    if (mLibHandle || mConvertOpen || mConvertClose) {
-        DEBUG_PRINT_ERROR("omx_c2d_conv::init called twice");
-        status = false;
-    }
-    if (status) {
-        mLibHandle = dlopen("libc2dcolorconvert.so", RTLD_LAZY);
-        if (mLibHandle) {
-            mConvertOpen = (createC2DColorConverter_t *)
-                dlsym(mLibHandle,"createC2DColorConverter");
-            mConvertClose = (destroyC2DColorConverter_t *)
-                dlsym(mLibHandle,"destroyC2DColorConverter");
-            if (!mConvertOpen || !mConvertClose)
-                status = false;
-        } else
-            status = false;
-    }
-    if (!status && mLibHandle) {
-        dlclose(mLibHandle);
-        mLibHandle = NULL;
-        mConvertOpen = NULL;
-        mConvertClose = NULL;
-    }
-    return status;
-}
-
-bool omx_video::omx_c2d_conv::convert(int src_fd, void *src_base, void *src_viraddr,
-        int dest_fd, void *dest_base, void *dest_viraddr)
-{
-    int result;
-    if (!src_viraddr || !dest_viraddr || !c2dcc || !src_base || !dest_base) {
-        DEBUG_PRINT_ERROR("Invalid arguments omx_c2d_conv::convert");
-        return false;
-    }
-    pthread_mutex_lock(&c_lock);
-    result =  c2dcc->convertC2D(src_fd, src_base, src_viraddr,
-            dest_fd, dest_base, dest_viraddr);
-    pthread_mutex_unlock(&c_lock);
-    DEBUG_PRINT_LOW("Color convert status %d",result);
-    return ((result < 0)?false:true);
-}
-
-bool omx_video::omx_c2d_conv::open(unsigned int height,unsigned int width,
-        ColorConvertFormat src, ColorConvertFormat dest, unsigned int src_stride,
-        unsigned int flags)
-{
-    bool status = false;
-    pthread_mutex_lock(&c_lock);
-    if (!c2dcc) {
-        c2dcc = mConvertOpen(width, height, width, height,
-                src, dest, flags, src_stride);
-        if (c2dcc) {
-            src_format = src;
-            status = true;
-        } else
-            DEBUG_PRINT_ERROR("mConvertOpen failed");
-    }
-    pthread_mutex_unlock(&c_lock);
-    return status;
-}
-
-void omx_video::omx_c2d_conv::close()
-{
-    if (mLibHandle) {
-        pthread_mutex_lock(&c_lock);
-        if (mConvertClose && c2dcc)
-            mConvertClose(c2dcc);
-        pthread_mutex_unlock(&c_lock);
-        c2dcc = NULL;
-    }
-}
-omx_video::omx_c2d_conv::~omx_c2d_conv()
-{
-    DEBUG_PRINT_HIGH("Destroy C2D instance");
-    if (mLibHandle) {
-        if (mConvertClose && c2dcc) {
-            pthread_mutex_lock(&c_lock);
-            mConvertClose(c2dcc);
-            pthread_mutex_unlock(&c_lock);
-        }
-        dlclose(mLibHandle);
-    }
-    c2dcc = NULL;
-    mLibHandle = NULL;
-    mConvertOpen = NULL;
-    mConvertClose = NULL;
-    pthread_mutex_destroy(&c_lock);
-}
-
-int omx_video::omx_c2d_conv::get_src_format()
-{
-    int format = -1;
-    if (src_format == NV12_128m) {
-        format = HAL_PIXEL_FORMAT_NV12_ENCODEABLE;
-    } else if (src_format == RGBA8888) {
-        format = HAL_PIXEL_FORMAT_RGBA_8888;
-    }
-    return format;
-}
-
-bool omx_video::omx_c2d_conv::get_buffer_size(int port,unsigned int &buf_size)
-{
-    int cret = 0;
-    bool ret = false;
-    C2DBuffReq bufferreq;
-    if (c2dcc) {
-        bufferreq.size = 0;
-        pthread_mutex_lock(&c_lock);
-        cret = c2dcc->getBuffReq(port,&bufferreq);
-        pthread_mutex_unlock(&c_lock);
-        DEBUG_PRINT_LOW("Status of getbuffer is %d", cret);
-        ret = (cret)?false:true;
-        buf_size = bufferreq.size;
-    }
-    return ret;
-}
 
 bool omx_video::is_conv_needed(int hal_fmt, int hal_flags)
 {
@@ -4795,36 +4667,42 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
       updated correctly*/
 
     if (buffer->nFilledLen > 0 && handle) {
-        if (c2d_opened && handle->format != c2d_conv.get_src_format()) {
-            c2d_conv.close();
-            c2d_opened = false;
-        }
 
-        if (!c2d_opened) {
-            mUsesColorConversion = is_conv_needed(handle->format, handle->flags);
-            if (mUsesColorConversion) {
-                DEBUG_PRINT_INFO("open Color conv forW: %u, H: %u",
-                        (unsigned int)m_sInPortDef.format.video.nFrameWidth,
-                        (unsigned int)m_sInPortDef.format.video.nFrameHeight);
-                if (!c2d_conv.open(m_sInPortDef.format.video.nFrameHeight,
-                            m_sInPortDef.format.video.nFrameWidth,
-                            RGBA8888, NV12_128m, handle->width, handle->flags)) {
-                    m_pCallbacks.EmptyBufferDone(hComp,m_app_data,buffer);
-                    DEBUG_PRINT_ERROR("Color conv open failed");
-                    return OMX_ErrorBadParameter;
-                }
-                c2d_opened = true;
-                if (!dev_set_format(NV12_128m))
-                    DEBUG_PRINT_ERROR("cannot set color format");
+        mUsesColorConversion = is_conv_needed(handle->format, handle->flags);
+        if (mUsesColorConversion) {
+            DEBUG_PRINT_INFO("open Color conv forW: %u, H: %u",
+                             (unsigned int)m_sInPortDef.format.video.nFrameWidth,
+                             (unsigned int)m_sInPortDef.format.video.nFrameHeight);
 
-                dev_get_buf_req (&m_sInPortDef.nBufferCountMin,
-                    &m_sInPortDef.nBufferCountActual,
-                    &m_sInPortDef.nBufferSize,
-                    m_sInPortDef.nPortIndex);
+            ColorConvertFormat c2dSrcFmt = RGBA8888;
+            ColorConvertFormat c2dDestFmt = NV12_UBWC;
+            ColorMapping::const_iterator found =
+                c2dcc.mMapPixelFormat2Covertor.find(handle->format);
 
+            if (found != c2dcc.mMapPixelFormat2Covertor.end()) {
+                c2dSrcFmt = (ColorConvertFormat)found->second;
             }
+
+            if (!c2dcc.setResolution(m_sInPortDef.format.video.nFrameHeight,
+                                     m_sInPortDef.format.video.nFrameWidth,
+                                     m_sInPortDef.format.video.nFrameHeight,
+                                     m_sInPortDef.format.video.nFrameWidth,
+                                     c2dSrcFmt, c2dDestFmt,
+                                     handle->flags, handle->width)) {
+                m_pCallbacks.EmptyBufferDone(hComp,m_app_data,buffer);
+                DEBUG_PRINT_ERROR("SetResolution failed");
+                return OMX_ErrorBadParameter;
+            }
+            if (!dev_set_format(c2dDestFmt))
+                DEBUG_PRINT_ERROR("cannot set color format");
+
+            dev_get_buf_req (&m_sInPortDef.nBufferCountMin,
+                             &m_sInPortDef.nBufferCountActual,
+                             &m_sInPortDef.nBufferSize,
+                             m_sInPortDef.nPortIndex);
         }
     }
+
     if (input_flush_progress == true) {
         m_pCallbacks.EmptyBufferDone(hComp,m_app_data,buffer);
         DEBUG_PRINT_ERROR("ERROR: ETBProxyA: Input flush in progress");
@@ -4920,22 +4798,22 @@ OMX_ERRORTYPE omx_video::convert_queue_buffer(OMX_HANDLETYPE hComp,
         if (uva == MAP_FAILED) {
             ret = OMX_ErrorBadParameter;
         } else {
-            if (!c2d_conv.convert(Input_pmem_info.fd, uva, uva,
-                        m_pInput_pmem[index].fd, pdest_frame->pBuffer, pdest_frame->pBuffer)) {
+            if (!c2dcc.convertC2D(Input_pmem_info.fd, uva,
+                                  uva, m_pInput_pmem[index].fd,
+                                  pdest_frame->pBuffer,
+                                  pdest_frame->pBuffer)) {
                 DEBUG_PRINT_ERROR("Color Conversion failed");
                 ret = OMX_ErrorBadParameter;
             } else {
                 unsigned int buf_size = 0;
-                if (!c2d_conv.get_buffer_size(C2D_OUTPUT,buf_size))
-                    ret = OMX_ErrorBadParameter;
-                else {
-                    pdest_frame->nOffset = 0;
-                    pdest_frame->nFilledLen = buf_size;
-                    pdest_frame->nTimeStamp = psource_frame->nTimeStamp;
-                    pdest_frame->nFlags = psource_frame->nFlags;
-                    DEBUG_PRINT_LOW("Buffer header %p Filled len size %u",
-                            pdest_frame, (unsigned int)pdest_frame->nFilledLen);
-                }
+                buf_size = c2dcc.getBuffSize(C2D_OUTPUT);
+                pdest_frame->nOffset = 0;
+                pdest_frame->nFilledLen = buf_size;
+                pdest_frame->nTimeStamp = psource_frame->nTimeStamp;
+                pdest_frame->nFlags = psource_frame->nFlags;
+                DEBUG_PRINT_LOW("Buffer header %p Filled len size %u",
+                                pdest_frame,
+                                (unsigned int)pdest_frame->nFilledLen);
             }
             munmap(uva,Input_pmem_info.size);
         }
