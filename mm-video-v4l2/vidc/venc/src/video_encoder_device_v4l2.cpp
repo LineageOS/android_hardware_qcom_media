@@ -188,6 +188,9 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     mBatchSize = 0;
     deinterlace_enabled = false;
     m_roi_enabled = false;
+    m_profile_set = false;
+    m_level_set = false;
+    rc_off_level = 0;
     pthread_mutex_init(&m_roilock, NULL);
     pthread_mutex_init(&pause_resume_mlock, NULL);
     pthread_cond_init(&pause_resume_cond, NULL);
