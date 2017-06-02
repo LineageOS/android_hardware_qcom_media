@@ -3520,6 +3520,8 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                                if (!is_down_scalar_enabled)
                                                    eRet = get_buffer_req(&drv_ctx.op_buf);
                                            }
+                                           if (eRet != OMX_ErrorNone)
+                                               break;
                                        }
                                    }
                                    if (m_custom_buffersize.input_buffersize
