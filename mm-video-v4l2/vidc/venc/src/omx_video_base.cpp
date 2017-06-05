@@ -328,6 +328,8 @@ omx_video::omx_video():
     property_get("ro.board.platform", platform_name, "0");
     strlcpy(m_platform, platform_name, sizeof(m_platform));
 #endif
+
+    pthread_mutex_init(&m_buf_lock, NULL);
 }
 
 
@@ -369,6 +371,7 @@ omx_video::~omx_video()
     sem_destroy(&m_cmd_lock);
     DEBUG_PRINT_HIGH("m_etb_count = %" PRIu64 ", m_fbd_count = %" PRIu64, m_etb_count,
             m_fbd_count);
+    pthread_mutex_destroy(&m_buf_lock);
     DEBUG_PRINT_HIGH("omx_video: Destructor exit");
     DEBUG_PRINT_HIGH("Exiting OMX Video Encoder ...");
 }
@@ -2703,6 +2706,7 @@ OMX_ERRORTYPE  omx_video::use_output_buffer(
         return OMX_ErrorBadParameter;
     }
 
+    auto_lock l(m_buf_lock);
     if (!m_out_mem_ptr) {
         output_use_buffer = true;
         int nBufHdrSize        = 0;
@@ -3652,6 +3656,7 @@ OMX_ERRORTYPE  omx_video::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
                 nPortIndex, (unsigned int)m_sOutPortDef.nBufferCountActual);
         if (nPortIndex < m_sOutPortDef.nBufferCountActual &&
                 BITMASK_PRESENT(&m_out_bm_count, nPortIndex)) {
+            auto_lock l(m_buf_lock);
             // Clear the bit associated with it.
             BITMASK_CLEAR(&m_out_bm_count,nPortIndex);
             m_sOutPortDef.bPopulated = OMX_FALSE;
