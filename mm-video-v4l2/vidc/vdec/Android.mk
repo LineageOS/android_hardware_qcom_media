@@ -110,7 +110,7 @@ LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-vdec-add-dep)
 
 LOCAL_PRELINK_MODULE    := false
-LOCAL_SHARED_LIBRARIES  := liblog libcutils libdl
+LOCAL_SHARED_LIBRARIES  := liblog libcutils libdl libutils
 LOCAL_SHARED_LIBRARIES  += libc2dcolorconvert
 LOCAL_SHARED_LIBRARIES  += libqdMetaData
 LOCAL_SHARED_LIBRARIES  += libplatformconfig
@@ -139,7 +139,7 @@ LOCAL_C_INCLUDES              += $(libmm-vdec-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES := $(libmm-vdec-add-dep)
 
 LOCAL_PRELINK_MODULE          := false
-LOCAL_SHARED_LIBRARIES        := liblog libcutils libc2dcolorconvert
+LOCAL_SHARED_LIBRARIES        := liblog libcutils libc2dcolorconvert libutils
 LOCAL_SHARED_LIBRARIES        += libswvdec
 
 LOCAL_SRC_FILES               := src/omx_swvdec.cpp
