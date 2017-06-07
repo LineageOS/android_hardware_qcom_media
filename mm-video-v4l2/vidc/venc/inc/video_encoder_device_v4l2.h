@@ -454,6 +454,7 @@ class venc_dev
     private:
         OMX_U32                             m_codec;
         struct msm_venc_basecfg             m_sVenc_cfg;
+        struct msm_venc_rotation            m_rotation;
         struct msm_venc_ratectrlcfg         rate_ctrl;
         struct msm_venc_targetbitrate       bitrate;
         struct msm_venc_intraperiod         intra_period;
