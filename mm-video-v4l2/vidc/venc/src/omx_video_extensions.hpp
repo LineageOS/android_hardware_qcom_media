@@ -78,6 +78,9 @@ void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
 
     ADD_EXTENSION("qti-ext-enc-ltr", OMX_QcomIndexConfigVideoLTRMark, OMX_DirInput)
     ADD_PARAM_END("mark-frame", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-enc-dynamic-frame-rate", OMX_IndexConfigVideoFramerate, OMX_DirOutput)
+    ADD_PARAM_END("frame-rate", OMX_AndroidVendorValueInt32)
 }
 
 OMX_ERRORTYPE omx_video::get_vendor_extension_config(
@@ -178,6 +181,11 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
         case OMX_QcomIndexConfigVideoLTRMark:
         {
             setStatus &= vExt.setParamInt32(ext, "mark-frame", m_sConfigLTRMark.nID);
+            break;
+        }
+        case OMX_IndexConfigVideoFramerate:
+        {
+            setStatus &= vExt.setParamInt32(ext, "frame-rate", m_sConfigFramerate.xEncodeFramerate);
             break;
         }
         default:
@@ -493,6 +501,25 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
                     NULL, (OMX_INDEXTYPE)QOMX_IndexConfigVideoLTRMark, &ltrMark);
             if (err != OMX_ErrorNone) {
                 DEBUG_PRINT_ERROR("set_config: OMX_QcomIndexConfigVideoLTRMark failed !");
+            }
+
+            break;
+        }
+        case OMX_IndexConfigVideoFramerate:
+        {
+            OMX_CONFIG_FRAMERATETYPE rateParam;
+            memcpy(&rateParam, &m_sConfigFramerate, sizeof(OMX_CONFIG_FRAMERATETYPE));
+            valueSet |= vExt.readParamInt32(ext, "frame-rate", (OMX_S32 *)&rateParam.xEncodeFramerate);
+            if (!valueSet) {
+                break;
+            }
+            DEBUG_PRINT_HIGH("VENDOR-EXT: set_config: OMX_IndexConfigVideoFramerate : %d",
+                    rateParam.xEncodeFramerate);
+
+            err = set_config(
+                    NULL, OMX_IndexConfigVideoFramerate, &rateParam);
+            if (err != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("set_config: OMX_IndexConfigVideoFramerate failed !");
             }
 
             break;
