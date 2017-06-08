@@ -1731,10 +1731,12 @@ typedef struct QOMX_INDEXTIMESTAMPREORDER {
 } QOMX_INDEXTIMESTAMPREORDER;
 
 typedef struct QOMX_INDEXDOWNSCALAR {
-        OMX_U32 nSize;
-        OMX_VERSIONTYPE nVersion;
-        OMX_U32 nPortIndex;
-        OMX_BOOL bEnable;
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    OMX_BOOL bEnable;
+    OMX_U32 nOutputWidth;
+    OMX_U32 nOutputHeight;
 } QOMX_INDEXDOWNSCALAR;
 
 typedef struct QOMX_VIDEO_CUSTOM_BUFFERSIZE {

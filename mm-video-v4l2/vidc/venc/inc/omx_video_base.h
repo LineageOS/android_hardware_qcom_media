@@ -673,6 +673,7 @@ class omx_video: public qc_omx_component
         OMX_QCOM_VIDEO_CONFIG_QP m_sConfigQP;
         QOMX_EXTNINDEX_VIDEO_VENC_SAR m_sSar;
         QOMX_VIDEO_H264ENTROPYCODINGTYPE m_sParamEntropy;
+        QOMX_INDEXDOWNSCALAR m_sParamDownScalar;
         PrependSPSPPSToIDRFramesParams m_sPrependSPSPPS;
         struct timestamp_info {
             OMX_U64 m_TimeStamp;
