@@ -582,6 +582,10 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     OMX_INIT_STRUCT(&m_sParamAVTimerTimestampMode, QOMX_ENABLETYPE);
     m_sParamAVTimerTimestampMode.bEnable = OMX_FALSE;
 
+    OMX_INIT_STRUCT(&m_sConfigQP, OMX_SKYPE_VIDEO_CONFIG_QP);
+    m_sConfigQP.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
+    m_sConfigQP.nQP = 30;
+
     OMX_INIT_STRUCT(&m_sParamControlInputQueue , QOMX_ENABLETYPE);
     m_sParamControlInputQueue.bEnable = OMX_FALSE;
 

@@ -85,6 +85,13 @@ void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
 
     ADD_EXTENSION("qti-ext-enc-input-trigger", OMX_IndexConfigTimePosition, OMX_DirInput)
     ADD_PARAM_END("timestamp", OMX_AndroidVendorValueInt64)
+
+    ADD_EXTENSION("qti-ext-enc-frame-qp", OMX_QcomIndexConfigQp, OMX_DirInput)
+    ADD_PARAM_END("value", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-enc-base-layer-pid", OMX_QcomIndexConfigBaseLayerId, OMX_DirInput)
+    ADD_PARAM_END("value", OMX_AndroidVendorValueInt32)
+
 }
 
 OMX_ERRORTYPE omx_video::get_vendor_extension_config(
@@ -148,17 +155,17 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
             setStatus &= vExt.setParamInt32(ext, "use-frame", m_sConfigLTRUse.nID);
             break;
         }
-        case  OMX_QcomIndexConfigVideoLTRMark:
+        case OMX_QcomIndexConfigVideoLTRMark:
         {
             break;
         }
-        case  OMX_QcomIndexParamVencAspectRatio:
+        case OMX_QcomIndexParamVencAspectRatio:
         {
             setStatus &= vExt.setParamInt32(ext, "width", m_sSar.nSARWidth);
             setStatus &= vExt.setParamInt32(ext, "height", m_sSar.nSARHeight);
             break;
         }
-        case  OMX_QcomIndexParamIndexExtraDataType:
+        case OMX_QcomIndexParamIndexExtraDataType:
         {
             char exType[OMX_MAX_STRINGVALUE_SIZE+1];
             memset (exType,0, (sizeof(char)*OMX_MAX_STRINGVALUE_SIZE));
@@ -221,6 +228,16 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
         case OMX_IndexConfigTimePosition:
         {
             setStatus &= vExt.setParamInt64(ext, "timestamp", m_sConfigInputTrigTS.nTimestamp);
+            break;
+        }
+        case OMX_QcomIndexConfigQp:
+        {
+            setStatus &= vExt.setParamInt32(ext, "value", m_sConfigQP.nQP);
+            break;
+        }
+        case OMX_QcomIndexConfigBaseLayerId:
+        {
+            setStatus &= vExt.setParamInt32(ext, "value", m_sBaseLayerID.nPID);
             break;
         }
         default:
@@ -406,12 +423,12 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
             err = set_config(
                     NULL, (OMX_INDEXTYPE)QOMX_IndexConfigVideoLTRMark, &ltrMarkParam);
             if (err != OMX_ErrorNone) {
-                DEBUG_PRINT_ERROR("set_param: OMX_QcomIndexConfigVideoLTRMark failed !");
+                DEBUG_PRINT_ERROR("set_config: OMX_QcomIndexConfigVideoLTRMark failed !");
             }
 
             break;
         }
-        case  OMX_QcomIndexParamVencAspectRatio:
+        case OMX_QcomIndexParamVencAspectRatio:
         {
             QOMX_EXTNINDEX_VIDEO_VENC_SAR aspectRatioParam;
             OMX_INIT_STRUCT(&aspectRatioParam, QOMX_EXTNINDEX_VIDEO_VENC_SAR);
@@ -426,11 +443,47 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
             err = set_parameter(
                     NULL, (OMX_INDEXTYPE)OMX_QcomIndexParamVencAspectRatio, &aspectRatioParam);
             if (err != OMX_ErrorNone) {
-                DEBUG_PRINT_ERROR("set_config: OMX_QcomIndexParamVencAspectRatio failed !");
+                DEBUG_PRINT_ERROR("set_param: OMX_QcomIndexParamVencAspectRatio failed !");
             }
             break;
         }
-        case  OMX_QcomIndexParamIndexExtraDataType:
+        case OMX_QcomIndexConfigQp:
+        {
+            OMX_SKYPE_VIDEO_CONFIG_QP qpValueParam;
+            memcpy(&qpValueParam, &m_sConfigQP, sizeof(OMX_SKYPE_VIDEO_CONFIG_QP));
+            valueSet |= vExt.readParamInt32(ext, "value", (OMX_S32 *)&(qpValueParam.nQP));
+            if (!valueSet) {
+                break;
+            }
+            DEBUG_PRINT_HIGH("VENDOR-EXT: OMX_QcomIndexConfigQp = %d ", qpValueParam.nQP);
+
+            err = set_config(
+                    NULL, (OMX_INDEXTYPE)OMX_QcomIndexConfigQp, &qpValueParam);
+            if (err != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("set_config: OMX_QcomIndexConfigQp failed !");
+            }
+            break;
+        }
+        case OMX_QcomIndexConfigBaseLayerId:
+        {
+            OMX_SKYPE_VIDEO_CONFIG_BASELAYERPID baseLayerPid;
+            memcpy(&baseLayerPid, &m_sBaseLayerID,
+                   sizeof(OMX_SKYPE_VIDEO_CONFIG_BASELAYERPID));
+            OMX_INIT_STRUCT(&baseLayerPid, OMX_SKYPE_VIDEO_CONFIG_BASELAYERPID);
+            valueSet |= vExt.readParamInt32(ext, "value", (OMX_S32 *)&(baseLayerPid.nPID));
+            if (!valueSet) {
+                break;
+            }
+            DEBUG_PRINT_HIGH("VENDOR-EXT: Config BaseLayerPID = %d ", baseLayerPid.nPID);
+
+            err = set_config(
+                    NULL, (OMX_INDEXTYPE)OMX_QcomIndexConfigBaseLayerId, &baseLayerPid);
+            if (err != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("set_config: OMX_QcomIndexConfigBaseLayerId failed !");
+            }
+            break;
+        }
+        case OMX_QcomIndexParamIndexExtraDataType:
         {
             QOMX_INDEXEXTRADATATYPE extraDataParam;
             char exType[OMX_MAX_STRINGVALUE_SIZE];
