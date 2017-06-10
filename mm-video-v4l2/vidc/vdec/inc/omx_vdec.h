@@ -207,6 +207,8 @@ extern "C" {
             sizeof(OMX_QCOM_EXTRADATA_VQZIPSEI) + 3)&(~3))
 #define OMX_USERDATA_EXTRADATA_SIZE ((sizeof(OMX_OTHER_EXTRADATATYPE) +\
             + 3)&(~3))
+#define OMX_OUTPUTCROP_EXTRADATA_SIZE ((sizeof(OMX_OTHER_EXTRADATATYPE) +\
+            sizeof(OMX_QCOM_OUTPUT_CROP) + 3)&(~3))
 
 /* STATUS CODES */
 /* Base value for status codes */
@@ -380,6 +382,13 @@ struct vdec_sep_metadatainfo {
 	uint32_t buffer_size;
 };
 
+struct vdec_misrinfo {
+        uint32_t misr_dpb_luma;
+        uint32_t misr_dpb_chroma;
+        uint32_t misr_opb_luma;
+        uint32_t misr_opb_chroma;
+};
+
 struct vdec_output_frameinfo {
 	void *bufferaddr;
 	size_t offset;
@@ -394,6 +403,7 @@ struct vdec_output_frameinfo {
 	enum vdec_interlaced_format interlaced_format;
 	struct vdec_aspectratioinfo aspect_ratio_info;
 	struct vdec_sep_metadatainfo metadata_info;
+        struct vdec_misrinfo misrinfo[2];
 };
 
 union vdec_msgdata {
@@ -497,6 +507,7 @@ struct extradata_info {
     OMX_CONFIG_RECTTYPE output_crop_rect;
     OMX_U32 output_width;
     OMX_U32 output_height;
+    OMX_QCOM_MISR_INFO misr_info[2];
 };
 
 typedef std::unordered_map <int, int> ColorSubMapping;
@@ -904,6 +915,8 @@ class omx_vdec: public qc_omx_component
         void append_user_extradata(OMX_OTHER_EXTRADATATYPE *extra, OMX_OTHER_EXTRADATATYPE *p_user);
         void append_concealmb_extradata(OMX_OTHER_EXTRADATATYPE *extra,
                 OMX_OTHER_EXTRADATATYPE *p_concealmb, OMX_U8 *conceal_mb_data);
+        void append_outputcrop_extradata(OMX_OTHER_EXTRADATATYPE *extra,
+                struct msm_vidc_output_crop_payload *output_crop_payload);
         void append_framepack_extradata(OMX_OTHER_EXTRADATATYPE *extra,
                 struct msm_vidc_s3d_frame_packing_payload *s3d_frame_packing_payload);
         void append_qp_extradata(OMX_OTHER_EXTRADATATYPE *extra,
