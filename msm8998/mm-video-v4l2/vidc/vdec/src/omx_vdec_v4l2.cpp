@@ -5414,20 +5414,25 @@ OMX_ERRORTYPE  omx_vdec::get_config(OMX_IN OMX_HANDLETYPE      hComp,
             VALIDATE_OMX_PARAM_DATA(configData, DescribeColorAspectsParams);
             DescribeColorAspectsParams *params = (DescribeColorAspectsParams *)configData;
 
-            print_debug_color_aspects(&(m_client_color_space.sAspects), "GetConfig Client");
-            print_debug_color_aspects(&(m_internal_color_space.sAspects), "GetConfig Internal");
-
             if (params->bRequestingDataSpace) {
                 DEBUG_PRINT_HIGH("Does not handle dataspace request");
                 return OMX_ErrorUnsupportedSetting;
             }
-            if (m_internal_color_space.bDataSpaceChanged == OMX_TRUE) {
-                DEBUG_PRINT_LOW("Updating Client's color aspects with internal");
-                memcpy(&(m_client_color_space.sAspects),
-                        &(m_internal_color_space.sAspects), sizeof(ColorAspects));
-                m_internal_color_space.bDataSpaceChanged = OMX_FALSE;
-            }
-            memcpy(&(params->sAspects), &(m_client_color_space.sAspects), sizeof(ColorAspects));
+
+            print_debug_color_aspects(&(m_client_color_space.sAspects), "GetConfig Client");
+            print_debug_color_aspects(&(m_internal_color_space.sAspects), "GetConfig Internal");
+
+            const ColorAspects &streamColor = m_internal_color_space.sAspects;
+            const ColorAspects &defaultColor = m_client_color_space.sAspects;
+
+            params->sAspects.mPrimaries = streamColor.mPrimaries != ColorAspects::PrimariesUnspecified ?
+                    streamColor.mPrimaries : defaultColor.mPrimaries;
+            params->sAspects.mTransfer = streamColor.mTransfer != ColorAspects::TransferUnspecified ?
+                    streamColor.mTransfer : defaultColor.mTransfer;
+            params->sAspects.mMatrixCoeffs = streamColor.mMatrixCoeffs != ColorAspects::MatrixUnspecified ?
+                    streamColor.mMatrixCoeffs : defaultColor.mMatrixCoeffs;
+            params->sAspects.mRange = streamColor.mRange != ColorAspects::RangeUnspecified ?
+                    streamColor.mRange : defaultColor.mRange;
 
             break;
         }
@@ -11014,9 +11019,10 @@ void omx_vdec::convert_color_space_info(OMX_U32 primaries, OMX_U32 range,
     }
 }
 
-void omx_vdec::print_debug_color_aspects(ColorAspects *aspects, const char *prefix) {
-        DEBUG_PRINT_HIGH("%s : Color aspects : Primaries = %d Range = %d Transfer = %d MatrixCoeffs = %d",
-                prefix, aspects->mPrimaries, aspects->mRange, aspects->mTransfer, aspects->mMatrixCoeffs);
+void omx_vdec::print_debug_color_aspects(ColorAspects *a, const char *prefix) {
+        DEBUG_PRINT_HIGH("%s : Color aspects : Primaries = %d(%s) Range = %d(%s) Tx = %d(%s) Matrix = %d(%s)",
+                prefix, a->mPrimaries, asString(a->mPrimaries), a->mRange, asString(a->mRange),
+                a->mTransfer, asString(a->mTransfer), a->mMatrixCoeffs, asString(a->mMatrixCoeffs));
 }
 
 void omx_vdec::prepare_color_aspects_metadata(OMX_U32 primaries, OMX_U32 range,
@@ -11202,7 +11208,6 @@ bool omx_vdec::handle_color_space_info(void *data,
             m_internal_color_space.sAspects.mMatrixCoeffs != aspects->mMatrixCoeffs ||
             m_internal_color_space.sAspects.mRange != aspects->mRange) {
         memcpy(&(m_internal_color_space.sAspects), aspects, sizeof(ColorAspects));
-        m_internal_color_space.bDataSpaceChanged = OMX_TRUE;
 
         m_color_mdata.colorPrimaries = color_mdata->colorPrimaries;
         m_color_mdata.range = color_mdata->range;
