@@ -79,6 +79,11 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define OMX_VIDEO_LEVEL_UNKNOWN 0
 
+#define VENC_BFRAME_MAX_COUNT       1
+#define VENC_BFRAME_MAX_FPS         60
+#define VENC_BFRAME_MAX_HEIGHT      1920
+#define VENC_BFRAME_MAX_WIDTH       1088
+
 //constructor
 venc_dev::venc_dev(class omx_venc *venc_class)
 {
@@ -471,6 +476,32 @@ static OMX_ERRORTYPE subscribe_to_events(int fd)
     }
 
     return eRet;
+}
+
+bool inline venc_dev::venc_query_cap(struct v4l2_queryctrl &cap) {
+
+    if (ioctl(m_nDriver_fd, VIDIOC_QUERYCTRL, &cap)) {
+        DEBUG_PRINT_ERROR("Query caps for id = %u failed\n", cap.id);
+        return false;
+    }
+    return true;
+}
+
+bool inline venc_dev::venc_validate_range(OMX_S32 id, OMX_S32 val) {
+
+    struct v4l2_queryctrl cap;
+    memset(&cap, 0, sizeof(struct v4l2_queryctrl));
+
+    cap.id = id;
+    if (venc_query_cap(cap)) {
+        if (val >= cap.minimum && val <= cap.maximum) {
+            return true;
+        } else {
+            DEBUG_PRINT_ERROR("id = %u, value = %u, min = %u, max = %u\n",
+                cap.id, val, cap.minimum, cap.maximum);
+        }
+    }
+    return false;
 }
 
 void venc_dev::get_roi_for_timestamp(struct roidata &roi, OMX_TICKS timestamp)
@@ -1967,7 +1998,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                         return false;
                     }
 
-                    if (!venc_set_multislice_cfg(OMX_IndexParamVideoAvc, pParam->nSliceHeaderSpacing)) {
+                    if (!venc_set_multislice_cfg(V4L2_MPEG_VIDEO_MULTI_SICE_MODE_MAX_MB, pParam->nSliceHeaderSpacing)) {
                         DEBUG_PRINT_ERROR("WARNING: Unsuccessful in updating slice_config");
                         return false;
                     }
@@ -2941,7 +2972,6 @@ unsigned venc_dev::venc_stop( void)
             stopped = 1;
             /*set flag to re-configure when started again*/
             resume_in_stopped = 1;
-
         }
     }
 
@@ -3060,9 +3090,14 @@ unsigned venc_dev::venc_start(void)
     if (vqzip_sei_info.enabled && !venc_set_vqzip_defaults())
         return 1;
 
+    if (!venc_reconfigure_intra_period()) {
+        DEBUG_PRINT_ERROR("Reconfiguring intra period failed");
+        return 0;
+    }
+
     // re-configure the temporal layers as RC-mode and key-frame interval
     // might have changed since the client last configured the layers.
-    if (temporal_layers_config.nPLayers) {
+    if (temporal_layers_config.nPLayers > 1) {
         if (venc_set_temporal_layers_internal() != OMX_ErrorNone) {
             DEBUG_PRINT_ERROR("Re-configuring temporal layers failed !");
         } else {
@@ -4668,6 +4703,105 @@ bool venc_dev::venc_set_voptiming_cfg( OMX_U32 TimeIncRes)
     return true;
 }
 
+bool venc_dev::venc_reconfigure_intra_period()
+{
+    int  rc;
+    bool isValidResolution   = false;
+    bool isValidFps          = false;
+    bool isValidProfileLevel = false;
+    bool isValidLayerCount   = false;
+    bool enableBframes       = false;
+    bool isValidLtrSetting   = false;
+    bool isValidRcMode       = false;
+    struct v4l2_control control;
+
+    DEBUG_PRINT_LOW("venc_reconfigure_intra_period");
+
+    if ((m_sVenc_cfg.input_width <= VENC_BFRAME_MAX_WIDTH && m_sVenc_cfg.input_width <= VENC_BFRAME_MAX_HEIGHT) ||
+        (m_sVenc_cfg.input_width <= VENC_BFRAME_MAX_HEIGHT && m_sVenc_cfg.input_width <= VENC_BFRAME_MAX_WIDTH)) {
+        isValidResolution = true;
+    }
+
+    if ((m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) <= VENC_BFRAME_MAX_FPS) {
+        isValidFps = true;
+    }
+
+    if ((codec_profile.profile == V4L2_MPEG_VIDEO_H264_PROFILE_MAIN)             ||
+        (codec_profile.profile == V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN)        ||
+        (codec_profile.profile == V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10)      ||
+        (codec_profile.profile == V4L2_MPEG_VIDEO_H264_PROFILE_HIGH))   {
+        isValidProfileLevel = true;
+    }
+
+    if (temporal_layers_config.nPLayers <= 1) {
+        isValidLayerCount = true;
+    }
+
+    if ((rate_ctrl.rcmode == V4L2_CID_MPEG_VIDC_VIDEO_RATE_CONTROL_VBR_CFR) ||
+        (rate_ctrl.rcmode == V4L2_CID_MPEG_VIDC_VIDEO_RATE_CONTROL_VBR_VFR) ||
+        (rate_ctrl.rcmode == V4L2_CID_MPEG_VIDC_VIDEO_RATE_CONTROL_MBR_CFR) ||
+        (rate_ctrl.rcmode == V4L2_CID_MPEG_VIDC_VIDEO_RATE_CONTROL_MBR_VFR)) {
+            isValidRcMode = true;
+    }
+
+    isValidLtrSetting = ltrinfo.enabled ? false : true;
+
+    enableBframes = isValidResolution   &&
+                    isValidFps          &&
+                    isValidProfileLevel &&
+                    isValidLayerCount   &&
+                    isValidLtrSetting   &&
+                    isValidRcMode;
+
+    DEBUG_PRINT_LOW("B-frame enablement = %u; Conditions for Resolution = %u, FPS = %u, Profile/Level = %u"
+                     " Layer condition = %u, LTR = %u, RC = %u\n",
+        enableBframes, isValidResolution, isValidFps, isValidProfileLevel,
+        isValidLayerCount, isValidLtrSetting, isValidRcMode);
+
+    if (enableBframes && intra_period.num_bframes == 0) {
+        intra_period.num_bframes = VENC_BFRAME_MAX_COUNT;
+        intra_period.num_pframes = intra_period.num_pframes / (1 + intra_period.num_bframes);
+    } else if (!enableBframes && intra_period.num_bframes > 0) {
+        intra_period.num_pframes = intra_period.num_pframes + (intra_period.num_pframes * intra_period.num_bframes);
+        intra_period.num_bframes = 0;
+    } else {
+        // Values already set for nP/B frames are correct
+        return true;
+    }
+
+    if (!venc_calibrate_gop())
+    {
+        DEBUG_PRINT_ERROR("Invalid settings, Hybrid HP enabled with LTR OR Hier-pLayers OR bframes");
+        return false;
+    }
+
+    control.id    = V4L2_CID_MPEG_VIDC_VIDEO_NUM_P_FRAMES;
+    control.value = intra_period.num_pframes;
+
+    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
+
+    if (rc) {
+        DEBUG_PRINT_ERROR("Failed to set control V4L2_CID_MPEG_VIDC_VIDEO_NUM_P_FRAMES");
+        return false;
+    }
+
+    DEBUG_PRINT_LOW("Success IOCTL set control for V4L2_CID_MPEG_VIDC_VIDEO_NUM_P_FRAMES value=%d", control.value);
+
+    control.id    = V4L2_CID_MPEG_VIDC_VIDEO_NUM_B_FRAMES;
+    control.value = intra_period.num_bframes;
+
+    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
+
+    if (rc) {
+        DEBUG_PRINT_ERROR("Failed to set control V4L2_CID_MPEG_VIDC_VIDEO_NUM_B_FRAMES");
+        return false;
+    }
+
+    DEBUG_PRINT_LOW("Success IOCTL set control for V4L2_CID_MPEG_VIDC_VIDEO_NUM_B_FRAMES value=%lu", intra_period.num_bframes);
+
+    return true;
+}
+
 bool venc_dev::venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames)
 {
 
@@ -4677,17 +4811,27 @@ bool venc_dev::venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames)
     int pframe = 0, bframe = 0;
     char property_value[PROPERTY_VALUE_MAX] = {0};
 
+    if ((streaming[OUTPUT_PORT] || streaming[CAPTURE_PORT]) && (intra_period.num_bframes != nBFrames)) {
+        DEBUG_PRINT_ERROR("Invalid settings, Cannot change B frame count dynamically");
+        return false;
+    }
+
     if ((codec_profile.profile != V4L2_MPEG_VIDEO_MPEG4_PROFILE_ADVANCED_SIMPLE) &&
-            (codec_profile.profile != V4L2_MPEG_VIDEO_H264_PROFILE_MAIN) &&
-            (codec_profile.profile != V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN) &&
-            (codec_profile.profile != V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10) &&
-            (codec_profile.profile != V4L2_MPEG_VIDEO_H264_PROFILE_HIGH)) {
+        (codec_profile.profile != V4L2_MPEG_VIDEO_H264_PROFILE_MAIN)             &&
+        (codec_profile.profile != V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN)        &&
+        (codec_profile.profile != V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10)      &&
+        (codec_profile.profile != V4L2_MPEG_VIDEO_H264_PROFILE_HIGH)) {
         nBFrames=0;
     }
 
-    if (temporal_layers_config.hier_mode == HIER_P_HYBRID && nBFrames) {
-        DEBUG_PRINT_ERROR("Invalid settings, bframes cannot be enabled with HybridHP. Resetting it to 0");
+    if (temporal_layers_config.nPLayers > 1 && nBFrames) {
+        DEBUG_PRINT_ERROR("Invalid settings, bframes cannot be enabled with HP. Resetting it to 0");
         nBFrames = 0;
+    }
+
+    if (!venc_validate_range(V4L2_CID_MPEG_VIDC_VIDEO_NUM_B_FRAMES, nBFrames) || (nBFrames > VENC_BFRAME_MAX_COUNT)) {
+        DEBUG_PRINT_ERROR("Invalid settings, hardware doesn't support %u bframes", nBFrames);
+        return false;
     }
 
     intra_period.num_pframes = nPFrames;
@@ -4697,14 +4841,6 @@ bool venc_dev::venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames)
     {
         DEBUG_PRINT_ERROR("Invalid settings, Hybrid HP enabled with LTR OR Hier-pLayers OR bframes");
         return false;
-    }
-
-    if (m_sVenc_cfg.input_width * m_sVenc_cfg.input_height >= 3840 * 2160 &&
-        (property_get("vidc.enc.disable_bframes", property_value, "0") && atoi(property_value))) {
-        intra_period.num_pframes = intra_period.num_pframes + intra_period.num_bframes;
-        intra_period.num_bframes = 0;
-        DEBUG_PRINT_LOW("Warning: Disabling B frames for UHD recording pFrames = %lu bFrames = %lu",
-                         intra_period.num_pframes, intra_period.num_bframes);
     }
 
     control.id = V4L2_CID_MPEG_VIDC_VIDEO_NUM_P_FRAMES;
@@ -4720,7 +4856,6 @@ bool venc_dev::venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames)
 
     control.id = V4L2_CID_MPEG_VIDC_VIDEO_NUM_B_FRAMES;
     control.value = intra_period.num_bframes;
-    DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
     if (rc) {
@@ -4844,19 +4979,40 @@ bool venc_dev::venc_set_entropy_config(OMX_BOOL enable, OMX_U32 i_cabac_level)
     return true;
 }
 
-bool venc_dev::venc_set_multislice_cfg(OMX_INDEXTYPE Codec, OMX_U32 nSlicesize) // MB
+bool venc_dev::venc_set_multislice_cfg(OMX_U32 nSlicemode, OMX_U32 nSlicesize)
 {
     int rc;
+    int slice_id = 0;
     struct v4l2_control control;
     bool status = true;
 
-    if ((Codec != OMX_IndexParamVideoH263)  && (nSlicesize)) {
-        control.value =  V4L2_MPEG_VIDEO_MULTI_SICE_MODE_MAX_MB;
-    } else {
-        control.value =  V4L2_MPEG_VIDEO_MULTI_SLICE_MODE_SINGLE;
+    if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_H263 || nSlicesize == 0) {
+        nSlicemode = V4L2_MPEG_VIDEO_MULTI_SLICE_MODE_SINGLE;
+        nSlicesize = 0;
     }
 
-    control.id = V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MODE;
+    if (nSlicemode == V4L2_MPEG_VIDEO_MULTI_SICE_MODE_MAX_MB) {
+        if (!venc_validate_range(V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MAX_MB, nSlicesize)) {
+            DEBUG_PRINT_ERROR("Invalid settings, hardware doesn't support %u as slicesize", nSlicesize);
+            return false;
+        }
+        slice_id = V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MAX_MB;
+
+    } else if (nSlicemode == V4L2_MPEG_VIDEO_MULTI_SICE_MODE_MAX_BYTES) {
+        if (!venc_validate_range(V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MAX_BYTES, nSlicesize)) {
+            DEBUG_PRINT_ERROR("Invalid settings, hardware doesn't support %u as slicesize", nSlicesize);
+            return false;
+        }
+        slice_id = V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MAX_BYTES;
+
+    } else if (nSlicesize) {
+        DEBUG_PRINT_ERROR("Invalid settings, unexpected slicemode = %u and slice size = %u", nSlicemode, nSlicesize);
+        return false;
+    }
+
+    control.id    = V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MODE;
+    control.value = nSlicemode;
+
     DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
@@ -4866,24 +5022,26 @@ bool venc_dev::venc_set_multislice_cfg(OMX_INDEXTYPE Codec, OMX_U32 nSlicesize) 
     }
 
     DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
-    multislice.mslice_mode=control.value;
 
-    if (multislice.mslice_mode!=V4L2_MPEG_VIDEO_MULTI_SLICE_MODE_SINGLE) {
-
-        control.id = V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MAX_MB;
-        control.value = nSlicesize;
-        DEBUG_PRINT_LOW("Calling SLICE_MB IOCTL set control for id=%d, val=%d", control.id, control.value);
-        rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-
-        if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
-            return false;
-        }
-
-        DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
-        multislice.mslice_size=control.value;
-
+    if (nSlicemode == V4L2_MPEG_VIDEO_MULTI_SLICE_MODE_SINGLE) {
+        return status;
     }
+
+    control.id    = slice_id;
+    control.value = nSlicesize;
+
+    DEBUG_PRINT_LOW("Calling SLICE_MB IOCTL set control for id=%d, val=%d", control.id, control.value);
+    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
+
+    if (rc) {
+        DEBUG_PRINT_ERROR("Failed to set control");
+        return false;
+    }
+
+    DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
+
+    multislice.mslice_mode = nSlicemode;
+    multislice.mslice_size = nSlicesize;
 
     return status;
 }
@@ -4974,48 +5132,9 @@ bool venc_dev::venc_set_error_resilience(OMX_VIDEO_PARAM_ERRORCORRECTIONTYPE* er
         resynchMarkerSpacingBytes = error_resilience->nResynchMarkerSpacing;
         resynchMarkerSpacingBytes = ALIGN(resynchMarkerSpacingBytes, 8) >> 3;
     }
-    if (( m_sVenc_cfg.codectype != V4L2_PIX_FMT_H263) &&
-            (error_resilience->nResynchMarkerSpacing)) {
-        multislice_cfg.mslice_mode = VEN_MSLICE_CNT_BYTE;
-        multislice_cfg.mslice_size = resynchMarkerSpacingBytes;
-        control.id = V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MODE;
-        control.value = V4L2_MPEG_VIDEO_MULTI_SICE_MODE_MAX_BYTES;
-    } else {
-        multislice_cfg.mslice_mode = VEN_MSLICE_OFF;
-        multislice_cfg.mslice_size = 0;
-        control.id = V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MODE;
-        control.value =  V4L2_MPEG_VIDEO_MULTI_SLICE_MODE_SINGLE;
-    }
 
-    DEBUG_PRINT_LOW("%s(): mode = %lu, size = %lu", __func__,
-            multislice_cfg.mslice_mode, multislice_cfg.mslice_size);
-    DEBUG_PRINT_ERROR("Calling IOCTL set control for id=%x, val=%d", control.id, control.value);
-    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
+    status = venc_set_multislice_cfg(V4L2_MPEG_VIDEO_MULTI_SICE_MODE_MAX_BYTES, resynchMarkerSpacingBytes);
 
-    if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set Slice mode control, value %d", control.value);
-        return false;
-    }
-
-    DEBUG_PRINT_ERROR("Success IOCTL set control for id=%x, value=%d", control.id, control.value);
-    multislice.mslice_mode=control.value;
-
-    if(multislice_cfg.mslice_mode == VEN_MSLICE_CNT_BYTE) {
-        control.id = V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MAX_BYTES;
-        control.value = resynchMarkerSpacingBytes;
-        DEBUG_PRINT_ERROR("Calling IOCTL set control for id=%x, val=%d", control.id, control.value);
-
-        rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-
-        if (rc) {
-            DEBUG_PRINT_ERROR("Failed to set MAX MB control, value %d", control.value);
-            return false;
-        }
-    }
-
-    DEBUG_PRINT_ERROR("Success IOCTL set control for id=%x, value=%d", control.id, control.value);
-    multislice.mslice_mode = multislice_cfg.mslice_mode;
-    multislice.mslice_size = multislice_cfg.mslice_size;
     return status;
 }
 
@@ -5309,13 +5428,13 @@ bool venc_dev::venc_calibrate_gop()
          * below calculations we are ignoring +1 . Ignoring +1 in below
          * calculations is not a mistake but intentional.
          */
-        gop_size = MAX(sub_gop_size, ROUND(nPframes + nBframes, sub_gop_size));
+        gop_size = MAX(sub_gop_size, ROUND(nPframes + (nPframes * nBframes), sub_gop_size));
         num_sub_gops_in_a_gop = gop_size/sub_gop_size;
         if (nBframes) { /*Hier-B case*/
         /*
             * Frame Type--> I  B  B  B  P  B  B  B  P  I  B  B  P ...
             * Layer -->     0  2  1  2  0  2  1  2  0  0  2  1  2 ...
-            * nPframes = 2, nBframes = 6, nLayers = 3
+            * nPframes = 2, nBframes = 3, nLayers = 3
             *
             * Intention is to keep the intraperiod as close as possible to what is desired
             * by the client while adjusting nPframes and nBframes to meet other constraints.
@@ -5326,7 +5445,7 @@ bool venc_dev::venc_calibrate_gop()
             *    Output of this fn: nPframes = 7, nBframes = 7, nLayers = 2
             */
             nPframes = num_sub_gops_in_a_gop;
-            nBframes = gop_size - nPframes;
+            nBframes = sub_gop_size - 1;
         } else { /*Hier-P case*/
             /*
             * Frame Type--> I  P  P  P  P  P  P  P  I  P  P  P  P ...
@@ -5344,19 +5463,11 @@ bool venc_dev::venc_calibrate_gop()
             nPframes = gop_size - 1;
         }
     } else { /*Single-layer encoding*/
-        if (nBframes) {
-            /* I  P  B  B  B  P  B  B  B   P   B   B   B   I   P   B   B...
-            *  1  2  3  4  5  6  7  8  9  10  11  12  13  14  15  16  17...
-            * nPframes = 3, nBframes = 9, nLayers = 0
-            *
-            * ratio is rounded,
-            * eg1: nPframes = 9, nBframes = 11 => ratio = 1
-            * eg2: nPframes = 9, nBframes = 16 => ratio = 2
+            /*
+            * No special handling needed for single layer
             */
-            ratio = MAX(1, MIN((nBframes + (nPframes >> 1))/nPframes, 3));
-            nBframes = ratio * nPframes;
-        }
     }
+
     DEBUG_PRINT_LOW("P/B Frames changed from: %ld/%ld to %d/%d",
         intra_period.num_pframes, intra_period.num_bframes, nPframes, nBframes);
     intra_period.num_pframes = nPframes;
@@ -5557,7 +5668,7 @@ bool venc_dev::venc_set_vpe_rotation(OMX_S32 rotation_angle)
         DEBUG_PRINT_LOW("Rotation (%u) Flipping wxh to %lux%lu",
                 rotation_angle, m_sVenc_cfg.dvs_width, m_sVenc_cfg.dvs_height);
     }
- 
+
     fmt.fmt.pix_mp.height = m_sVenc_cfg.dvs_height;
     fmt.fmt.pix_mp.width = m_sVenc_cfg.dvs_width;
     fmt.fmt.pix_mp.pixelformat = m_sVenc_cfg.codectype;
@@ -6256,8 +6367,8 @@ OMX_ERRORTYPE venc_dev::venc_set_temporal_layers(
 
     // Set intra period even if nBrames is previously 0
     // This will internally calibrate gop and recalculate  and set pframe
-    // Setting bframes -> 0 : Workaround for now
-    if(!venc_set_intra_period(intra_period.num_pframes, 0)) {
+
+    if(!venc_set_intra_period(intra_period.num_pframes, intra_period.num_bframes)) {
         DEBUG_PRINT_ERROR("Failed to set nPframes/nBframes\n");
         return OMX_ErrorUndefined;
     }

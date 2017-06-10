@@ -140,12 +140,6 @@ static const char* MEM_DEVICE = "/dev/ion";
 #define VEN_MSG_HW_OVERLOAD	11
 #define VEN_MSG_MAX_CLIENTS	12
 
-/*Different methods of Multi slice selection.*/
-#define VEN_MSLICE_OFF	1
-#define VEN_MSLICE_CNT_MB	2 /*number of MBscount per slice*/
-#define VEN_MSLICE_CNT_BYTE	3 /*number of bytes count per slice.*/
-#define VEN_MSLICE_GOB	4 /*Multi slice by GOB for H.263 only.*/
-
 #define MAX_NUM_INPUT_BUFFERS 64
 #define MAX_NUM_OUTPUT_BUFFERS 64
 
