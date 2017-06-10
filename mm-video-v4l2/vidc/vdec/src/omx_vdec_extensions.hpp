@@ -33,8 +33,9 @@ void omx_vdec::init_vendor_extensions (VendorExtensionStore &store) {
 
     ADD_EXTENSION("qti-ext-dec-picture-order", OMX_QcomIndexParamVideoDecoderPictureOrder, OMX_DirOutput)
     ADD_PARAM_END("enable", OMX_AndroidVendorValueInt32)
+    ADD_EXTENSION("qti-ext-dec-dither", OMX_QTIIndexParamDitherControl, OMX_DirOutput)
+    ADD_PARAM_END("control", OMX_AndroidVendorValueInt32)
 }
-
 
 OMX_ERRORTYPE omx_vdec::get_vendor_extension_config(
                 OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext) {
@@ -60,6 +61,11 @@ OMX_ERRORTYPE omx_vdec::get_vendor_extension_config(
         case OMX_QcomIndexParamVideoDecoderPictureOrder:
         {
             setStatus &= vExt.setParamInt32(ext, "enable", m_decode_order_mode);
+            break;
+        }
+        case OMX_QTIIndexParamDitherControl:
+        {
+            setStatus &= vExt.setParamInt32(ext, "control", m_dither_config);
             break;
         }
         default:
@@ -115,6 +121,31 @@ OMX_ERRORTYPE omx_vdec::set_vendor_extension_config(
                     NULL, (OMX_INDEXTYPE)OMX_QcomIndexParamVideoDecoderPictureOrder, &decParam);
             if (err != OMX_ErrorNone) {
                 DEBUG_PRINT_ERROR("set_config: OMX_QcomIndexParamVideoDecoderPictureOrder failed !");
+            }
+            break;
+        }
+        case OMX_QTIIndexParamDitherControl:
+        {
+            OMX_S32 dither_control_type = 0;
+            valueSet |= vExt.readParamInt32(ext, "control", &dither_control_type);
+            if (!valueSet) {
+                break;
+            }
+            DEBUG_PRINT_HIGH("VENDOR-EXT: set_config: OMX_QTIIndexParamDitherControl : %d",
+                    dither_control_type);
+
+            QOMX_VIDEO_DITHER_CONTROL decParam;
+            OMX_INIT_STRUCT(&decParam, QOMX_VIDEO_DITHER_CONTROL);
+            if(dither_control_type == 0 )
+                 decParam.eDitherType = QOMX_DITHER_DISABLE;
+            else if(dither_control_type == 1)
+                decParam.eDitherType = QOMX_DITHER_COLORSPACE_EXCEPT_BT2020;
+            else if(dither_control_type == 2)
+                decParam.eDitherType = QOMX_DITHER_ALL_COLORSPACE;
+            err = set_parameter(
+                    NULL, (OMX_INDEXTYPE)OMX_QTIIndexParamDitherControl, &decParam);
+            if (err != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("set_config: OMX_QTIIndexParamDitherControl failed !");
             }
             break;
         }
