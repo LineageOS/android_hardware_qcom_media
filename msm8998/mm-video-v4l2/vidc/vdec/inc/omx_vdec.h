@@ -79,6 +79,7 @@ extern "C" {
 #endif // _ANDROID_
 
 #if defined (_ANDROID_HONEYCOMB_) || defined (_ANDROID_ICS_)
+#define STRINGIFY_ENUMS
 #include <media/hardware/HardwareAPI.h>
 #endif
 
