@@ -4474,6 +4474,11 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                eRet = enable_extradata(OMX_INTERLACE_EXTRADATA, false,
                                        ((QOMX_ENABLETYPE *)paramData)->bEnable);
                                break;
+        case OMX_QcomIndexParamOutputCropExtraData:
+                               VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
+                               eRet = enable_extradata(OMX_OUTPUTCROP_EXTRADATA, false,
+                                       ((QOMX_ENABLETYPE *)paramData)->bEnable);
+                               break;
         case OMX_QcomIndexParamH264TimeInfo:
                                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
                                eRet = enable_extradata(OMX_TIMEINFO_EXTRADATA, false,
@@ -5299,6 +5304,8 @@ OMX_ERRORTYPE  omx_vdec::get_extension_index(OMX_IN OMX_HANDLETYPE      hComp,
         *indexType = (OMX_INDEXTYPE)OMX_QcomIndexParamVideoInputBitsInfoExtraData;
     } else if (extn_equals(paramName, OMX_QCOM_INDEX_PARAM_VIDEO_EXTNUSER_EXTRADATA)) {
         *indexType = (OMX_INDEXTYPE)OMX_QcomIndexEnableExtnUserData;
+    } else if (extn_equals(paramName, OMX_QCOM_INDEX_PARAM_VIDEO_EXTNOUTPUTCROP_EXTRADATA)) {
+        *indexType = (OMX_INDEXTYPE)OMX_QcomIndexParamOutputCropExtraData;
     }
 #if defined (_ANDROID_HONEYCOMB_) || defined (_ANDROID_ICS_)
     else if (extn_equals(paramName, "OMX.google.android.index.enableAndroidNativeBuffers")) {

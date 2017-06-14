@@ -1751,6 +1751,7 @@ typedef struct QOMX_VIDEO_CUSTOM_BUFFERSIZE {
 #define OMX_QCOM_INDEX_PARAM_VIDEO_QP_EXTRADATA "OMX.QCOM.index.param.video.QPExtradata"
 #define OMX_QCOM_INDEX_PARAM_VIDEO_INPUTBITSINFO_EXTRADATA "OMX.QCOM.index.param.video.InputBitsInfoExtradata"
 #define OMX_QCOM_INDEX_PARAM_VIDEO_EXTNUSER_EXTRADATA "OMX.QCOM.index.param.video.ExtnUserExtraData"
+#define OMX_QCOM_INDEX_PARAM_VIDEO_EXTNOUTPUTCROP_EXTRADATA "OMX.QCOM.index.param.video.ExtnOutputCropExtraData"
 #define OMX_QCOM_INDEX_CONFIG_VIDEO_FRAMEPACKING_INFO "OMX.QCOM.index.config.video.FramePackingInfo"
 #define OMX_QCOM_INDEX_PARAM_VIDEO_MPEG2SEQDISP_EXTRADATA "OMX.QCOM.index.param.video.Mpeg2SeqDispExtraData"
 
