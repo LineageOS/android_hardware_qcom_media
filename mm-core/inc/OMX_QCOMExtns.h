@@ -628,6 +628,9 @@ enum OMX_QCOM_EXTN_INDEXTYPE
 
     /* use av-timer ticks as timestamp (used by VT-client) */
     OMX_QTIIndexParamEnableAVTimerTimestamps = 0x7F000071,
+
+    /* Output Crop extradata (includes MISR) */
+    OMX_QcomIndexParamOutputCropExtraData = 0x7F000072,
 };
 
 /**
@@ -1263,6 +1266,29 @@ typedef struct OMX_QCOM_CONFIG_INTERLACETYPE
 
 #define MAX_PAN_SCAN_WINDOWS 4
 
+typedef struct OMX_QCOM_MISR_INFO {
+    OMX_U32 misr_dpb_luma;
+    OMX_U32 misr_dpb_chroma;
+    OMX_U32 misr_opb_luma;
+    OMX_U32 misr_opb_chroma;
+} OMX_QCOM_MISR_INFO;
+
+typedef struct OMX_QCOM_OUTPUT_CROP {
+    OMX_U32 size;
+    OMX_U32 version;
+    OMX_U32 port_index;
+    OMX_U32 left;
+    OMX_U32 top;
+    OMX_U32 display_width;
+    OMX_U32 display_height;
+    OMX_U32 width;
+    OMX_U32 height;
+    OMX_U32 frame_num;
+    OMX_U32 bit_depth_y;
+    OMX_U32 bit_depth_c;
+    OMX_QCOM_MISR_INFO misr_info[2];
+} OMX_QCOM_OUTPUT_CROP;
+
 typedef struct OMX_QCOM_PANSCAN
 {
    OMX_U32 numWindows;
@@ -1430,6 +1456,7 @@ typedef enum OMX_QCOM_EXTRADATATYPE
     OMX_ExtraDataDisplayColourSEI =        0x7F000011,
     OMX_ExtraDataLightLevelSEI =           0x7F000012,
     OMX_ExtraDataEncoderOverrideQPInfo =   0x7F000013,
+    OMX_ExtraDataOutputCropInfo =          0x7F000014,
 } OMX_QCOM_EXTRADATATYPE;
 
 typedef struct  OMX_STREAMINTERLACEFORMATTYPE {

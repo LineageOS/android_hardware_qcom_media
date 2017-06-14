@@ -1234,7 +1234,7 @@ bool venc_dev::venc_open(OMX_U32 codec)
     m_sVenc_cfg.fps_den = 1;
     m_sVenc_cfg.targetbitrate = 64000;
     m_sVenc_cfg.inputformat= V4L2_DEFAULT_OUTPUT_COLOR_FMT;
-
+    m_rotation.rotation = 0;
     m_codec = codec;
 
     if (codec == OMX_VIDEO_CodingAVC) {
@@ -5635,17 +5635,31 @@ bool venc_dev::venc_set_vpe_rotation(OMX_S32 rotation_angle)
     int rc;
     struct v4l2_format fmt;
     struct v4l2_requestbuffers bufreq;
+    bool flip_dimensions = false;
+
+    if ((OMX_S32)m_rotation.rotation == rotation_angle) {
+        DEBUG_PRINT_HIGH("venc_set_vpe_rotation: rotation (%d) not changed", rotation_angle);
+        return true;
+    }
 
     control.id = V4L2_CID_MPEG_VIDC_VIDEO_ROTATION;
-    if (rotation_angle == 0)
+    if (rotation_angle == 0) {
         control.value = V4L2_CID_MPEG_VIDC_VIDEO_ROTATION_NONE;
-    else if (rotation_angle == 90)
+        if (m_rotation.rotation == 90 || m_rotation.rotation == 270)
+            flip_dimensions = true;
+    } else if (rotation_angle == 90) {
         control.value = V4L2_CID_MPEG_VIDC_VIDEO_ROTATION_90;
-    else if (rotation_angle == 180)
+        if (m_rotation.rotation == 0 || m_rotation.rotation == 180)
+            flip_dimensions = true;
+    } else if (rotation_angle == 180) {
         control.value = V4L2_CID_MPEG_VIDC_VIDEO_ROTATION_180;
-    else if (rotation_angle == 270)
+        if (m_rotation.rotation == 90 || m_rotation.rotation == 270)
+            flip_dimensions = true;
+    } else if (rotation_angle == 270) {
         control.value = V4L2_CID_MPEG_VIDC_VIDEO_ROTATION_270;
-    else {
+        if (m_rotation.rotation == 0 || m_rotation.rotation == 180)
+            flip_dimensions = true;
+    } else {
         DEBUG_PRINT_ERROR("Failed to find valid rotation angle");
         return false;
     }
@@ -5658,9 +5672,12 @@ bool venc_dev::venc_set_vpe_rotation(OMX_S32 rotation_angle)
     }
     DEBUG_PRINT_LOW("Success IOCTL set control for id=%x, value=%d", control.id, control.value);
 
+    /* successfully set rotation_angle, save it */
+    m_rotation.rotation = rotation_angle;
+
     memset(&fmt, 0, sizeof(fmt));
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-    if (rotation_angle == 90 || rotation_angle == 270) {
+    if (flip_dimensions) {
         OMX_U32 nWidth = m_sVenc_cfg.dvs_height;
         OMX_U32 nHeight = m_sVenc_cfg.dvs_width;
         m_sVenc_cfg.dvs_height = nHeight;
