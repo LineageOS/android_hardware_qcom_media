@@ -972,7 +972,6 @@ omx_vdec::~omx_vdec()
     close(m_poll_efd);
     if (m_hypervisor) {
         hypv_close(drv_ctx.video_driver_fd);
-        hypv_deinit();
     } else {
         close(drv_ctx.video_driver_fd);
     }
@@ -2338,10 +2337,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
     }
 
     if (m_hypervisor) {
-        if (hypv_init() < 0) {
-            DEBUG_PRINT_ERROR("hypervisor init failed");
-            return OMX_ErrorInsufficientResources;
-        }
         hvfe_callback_t hvfe_cb;
         hvfe_cb.handler = async_message_process;
         hvfe_cb.context = (void *)this;

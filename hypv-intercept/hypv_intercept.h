@@ -38,10 +38,8 @@ struct hvfe_callback_t
     void* context;
 };
 
-int hypv_init();
 int hypv_open(const char *str, int flag, hvfe_callback_t* cb);
 int hypv_ioctl(int fd, int cmd, void *data);
 int hypv_close(int fd);
-int hypv_deinit();
 
 #endif

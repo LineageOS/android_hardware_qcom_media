@@ -1359,10 +1359,6 @@ bool venc_dev::venc_open(OMX_U32 codec)
         supported_rc_modes = (RC_ALL & ~RC_CBR_CFR);
     }
     if (m_hypervisor) {
-        if (hypv_init() < 0) {
-            DEBUG_PRINT_ERROR("hypervisor init failed");
-            return OMX_ErrorInsufficientResources;
-        }
         hvfe_callback_t hvfe_cb;
         hvfe_cb.handler = async_message_process_v4l2;
         hvfe_cb.context = (void *) this;
@@ -1661,7 +1657,6 @@ void venc_dev::venc_close()
         close(m_poll_efd);
         if (m_hypervisor) {
             hypv_close(m_nDriver_fd);
-            hypv_deinit();
         } else {
             close(m_nDriver_fd);
         }

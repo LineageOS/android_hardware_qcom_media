@@ -50,38 +50,28 @@ typedef int (*video_fe_close_func)(HVFE_HANDLE);
 #define HYPV_HANDLE_SIGNATURE_MASK  0xffff0000
 #define HYPV_HANDLE_MASK            0x0000ffff
 
-
-enum hypv_which_build_t
-{
-    HYPV_NOT_INITIAILIZED = 0xdeadbeef,
-    HYPV_HYPERVISOR_BUILD = 1
-};
-
-static void *glib_handle = NULL;
+static void *hvfe_lib_handle = NULL;
 static video_fe_open_func video_fe_open = NULL;
 static video_fe_ioctl_func video_fe_ioctl = NULL;
 static video_fe_close_func video_fe_close = NULL;
-static hypv_which_build_t ghypv_which_build = HYPV_NOT_INITIAILIZED;
-static pthread_mutex_t g_hvfe_handle_storage_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t g_hvfe_handle_lock = PTHREAD_MUTEX_INITIALIZER;
 static HVFE_HANDLE g_hvfe_handle_storage[MAX_HVFE_HANDLE_STORAGE];
 static int g_hvfe_handle_count  = 0;
-static int g_hypv_init_count = 0;
 
-#define IS_HYPERVISOR_VIDEO(fd) ((ghypv_which_build == HYPV_HYPERVISOR_BUILD) &&\
-                                 ((fd & HYPV_HANDLE_SIGNATURE_MASK)==HYPV_HANDLE_SIGNATURE))
+#define IS_HYPERVISOR_VIDEO_HANDLE(fd) ((fd & HYPV_HANDLE_SIGNATURE_MASK)==HYPV_HANDLE_SIGNATURE)
+#define HYP_INITIALIZED  (g_hvfe_handle_count > 0)
 
 static int add_to_hvfe_handle_storage(HVFE_HANDLE handle_to_store)
 {
     int rc = 0;
 
-    pthread_mutex_lock(&g_hvfe_handle_storage_lock);
     if (g_hvfe_handle_count >= MAX_HVFE_HANDLE_STORAGE) {
         DEBUG_PRINT_ERROR("reached max handle count");
         rc = -1;
     } else {
         int i;
 
-        for(i = 0; i < MAX_HVFE_HANDLE_STORAGE; i++) {
+        for (i = 0; i < MAX_HVFE_HANDLE_STORAGE; i++) {
             if (g_hvfe_handle_storage[i] == 0) {
                 g_hvfe_handle_storage[i] = handle_to_store;
                 rc = i;
@@ -95,80 +85,85 @@ static int add_to_hvfe_handle_storage(HVFE_HANDLE handle_to_store)
         }
     }
 
-    pthread_mutex_unlock(&g_hvfe_handle_storage_lock);
+    return rc;
+}
+
+static int hypv_init(void)
+{
+    int rc = 0;
+
+    hvfe_lib_handle = dlopen("libhyp_video_fe.so", RTLD_NOW);
+    if (hvfe_lib_handle == NULL) {
+        DEBUG_PRINT_ERROR("failed to open libhyp_video_fe");
+        rc = -1;
+    } else {
+        video_fe_open = (video_fe_open_func)dlsym(hvfe_lib_handle, "video_fe_open");
+        if (video_fe_open == NULL) {
+            DEBUG_PRINT_ERROR("failed to get video_fe_open handle");
+            rc = -1;
+        } else {
+            video_fe_ioctl = (video_fe_ioctl_func)dlsym(hvfe_lib_handle, "video_fe_ioctl");
+            if (video_fe_ioctl == NULL) {
+                DEBUG_PRINT_ERROR("failed to get video_fe_ioctl handle");
+                rc = -1;
+            } else {
+                video_fe_close = (video_fe_close_func)dlsym(hvfe_lib_handle, "video_fe_close");
+                if (video_fe_close == 0) {
+                    DEBUG_PRINT_ERROR("failed to get video_fe_close handle");
+                    rc = -1;
+                }//video_fe_close
+            } //video_fe_ioctl
+        } //video_fe_open
+    } //hvfe_lib_handle
+
+    if (rc < 0 && hvfe_lib_handle) {
+        dlclose(hvfe_lib_handle);
+        hvfe_lib_handle = NULL;
+    }
 
     return rc;
 }
 
-int hypv_init(void)
+static void hypv_deinit(void)
 {
-    int rc = 0;
+    dlclose(hvfe_lib_handle);
+    hvfe_lib_handle = NULL;
 
-    pthread_mutex_lock(&g_hvfe_handle_storage_lock);
-
-    if (ghypv_which_build == HYPV_NOT_INITIAILIZED) {
-        glib_handle = dlopen("libhyp_video_fe.so", RTLD_NOW);
-        if (glib_handle == NULL) {
-            DEBUG_PRINT_ERROR("failed to open libhyp_video_fe");
-            rc = -1;
-        } else {
-            ghypv_which_build = HYPV_HYPERVISOR_BUILD;
-            g_hvfe_handle_count = 0;
-            memset(g_hvfe_handle_storage, 0, sizeof(HVFE_HANDLE)*MAX_HVFE_HANDLE_STORAGE);
-            video_fe_open = (video_fe_open_func)dlsym(glib_handle, "video_fe_open");
-            if (video_fe_open == NULL) {
-                DEBUG_PRINT_ERROR("failed to get video_fe_open handle");
-                rc = -1;
-            } else {
-                video_fe_ioctl = (video_fe_ioctl_func)dlsym(glib_handle, "video_fe_ioctl");
-                if (video_fe_ioctl == NULL) {
-                    DEBUG_PRINT_ERROR("failed to get video_fe_ioctl handle");
-                    rc = -1;
-                } else {
-                    video_fe_close = (video_fe_close_func)dlsym(glib_handle, "video_fe_close");
-                    if (video_fe_close == 0) {
-                        DEBUG_PRINT_ERROR("failed to get video_fe_close handle");
-                        rc = -1;
-                    }//video_fe_close
-                } //video_fe_iocl
-            } //video_fe_open
-        } //glib_handle
-    }//initialize
-
-    if (rc == 0)
-        g_hypv_init_count++;
-
-    pthread_mutex_unlock(&g_hvfe_handle_storage_lock);
-
-    return rc;
+    return;
 }
 
 int hypv_open(const char *str, int flag, hvfe_callback_t* cb)
 {
     int rc = 0;
 
-    if (ghypv_which_build == HYPV_NOT_INITIAILIZED) {
-        DEBUG_PRINT_ERROR("hypervisor not initialized");
-        rc = -1;
-    } else if (ghypv_which_build == HYPV_HYPERVISOR_BUILD) {
-        HVFE_HANDLE hvfe_handle = video_fe_open(str, flag, cb);
-        DEBUG_PRINT_INFO("video_fe_open handle=%p", hvfe_handle);
-        if (hvfe_handle == NULL) {
-            DEBUG_PRINT_ERROR("video_fe_open failed");
-            rc = -1;
-        } else {
-            int fd = 0;
-
-            fd = add_to_hvfe_handle_storage(hvfe_handle);
-            if (fd < 0) {
-                DEBUG_PRINT_ERROR("failed to store hvfe handle");
-                video_fe_close(hvfe_handle);
-                rc = -1;
-            } else {
-                rc = (HYPV_HANDLE_SIGNATURE | fd);
-            }
+    pthread_mutex_lock(&g_hvfe_handle_lock);
+    if (!HYP_INITIALIZED) {
+        if ((rc = hypv_init()) < 0) {
+            DEBUG_PRINT_ERROR("hypervisor init failed");
+            pthread_mutex_unlock(&g_hvfe_handle_lock);
+            return rc;
         }
     }
+
+    HVFE_HANDLE hvfe_handle = video_fe_open(str, flag, cb);
+    DEBUG_PRINT_INFO("video_fe_open handle=%p", hvfe_handle);
+    if (hvfe_handle == NULL) {
+        DEBUG_PRINT_ERROR("video_fe_open failed");
+        rc = -1;
+    } else {
+        int fd = add_to_hvfe_handle_storage(hvfe_handle);
+        if (fd < 0) {
+            DEBUG_PRINT_ERROR("failed to store hvfe handle");
+            video_fe_close(hvfe_handle);
+            rc = -1;
+        } else {
+            rc = (HYPV_HANDLE_SIGNATURE | fd);
+        }
+    }
+    pthread_mutex_unlock(&g_hvfe_handle_lock);
+
+    if (rc < 0)
+        hypv_deinit();
 
     return rc;
 }
@@ -177,10 +172,12 @@ int hypv_ioctl(int fd, int cmd, void *data)
 {
     int rc = 0;
 
-    if (ghypv_which_build == HYPV_NOT_INITIAILIZED) {
+    if (!HYP_INITIALIZED) {
         DEBUG_PRINT_ERROR("hypervisor not initialized");
-        rc = -1;
-    } else if (IS_HYPERVISOR_VIDEO(fd)) {
+        return -1;
+    }
+
+    if (IS_HYPERVISOR_VIDEO_HANDLE(fd)) {
         int fd_index = fd & HYPV_HANDLE_MASK;
         if (fd_index >= MAX_HVFE_HANDLE_STORAGE) {
             DEBUG_PRINT_ERROR("invalid fd_index=%d", fd_index);
@@ -201,10 +198,12 @@ int hypv_close(int fd)
 {
     int rc = 0;
 
-    if (ghypv_which_build == HYPV_NOT_INITIAILIZED) {
+    if (!HYP_INITIALIZED) {
         DEBUG_PRINT_ERROR("hypervisor not initialized");
-        rc = -1;
-    } else if (IS_HYPERVISOR_VIDEO(fd)) {
+        return -1;
+    }
+
+    if (IS_HYPERVISOR_VIDEO_HANDLE(fd)) {
         int fd_index = fd & HYPV_HANDLE_MASK;
 
         if ((fd_index >= MAX_HVFE_HANDLE_STORAGE) || (fd_index < 0)) {
@@ -212,39 +211,15 @@ int hypv_close(int fd)
             rc = -1;
         } else {
             int handle_count = 0;
-            pthread_mutex_lock(&g_hvfe_handle_storage_lock);
+            pthread_mutex_lock(&g_hvfe_handle_lock);
             rc = video_fe_close(g_hvfe_handle_storage[fd_index]);
             g_hvfe_handle_storage[fd_index] = 0;
-            g_hvfe_handle_count--;
-            pthread_mutex_unlock(&g_hvfe_handle_storage_lock);
+            if (--g_hvfe_handle_count == 0)
+                hypv_deinit();
+            pthread_mutex_unlock(&g_hvfe_handle_lock);
         }
     } else {
         rc = close(fd);
-    }
-
-    return rc;
-}
-
-int hypv_deinit()
-{
-    int rc = 0;
-
-    if (ghypv_which_build == HYPV_NOT_INITIAILIZED) {
-        DEBUG_PRINT_ERROR("hypervisor not initialized");
-        rc = -1;
-    } else {
-        int init_count = 0;
-
-        pthread_mutex_lock(&g_hvfe_handle_storage_lock);
-        init_count = --g_hypv_init_count;
-        pthread_mutex_unlock(&g_hvfe_handle_storage_lock);
-        if (init_count == 0) {
-            if (glib_handle != NULL) {
-                dlclose(glib_handle);
-                glib_handle = NULL;
-            }
-            ghypv_which_build = HYPV_NOT_INITIAILIZED;
-        }
     }
 
     return rc;
