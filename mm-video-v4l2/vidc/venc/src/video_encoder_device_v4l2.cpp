@@ -188,6 +188,9 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     mBatchSize = 0;
     deinterlace_enabled = false;
     m_roi_enabled = false;
+    m_profile_set = false;
+    m_level_set = false;
+    rc_off_level = 0;
     pthread_mutex_init(&m_roilock, NULL);
     pthread_mutex_init(&pause_resume_mlock, NULL);
     pthread_cond_init(&pause_resume_cond, NULL);
@@ -230,13 +233,13 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     memset(&temporal_layers_config, 0x0, sizeof(temporal_layers_config));
 
     char property_value[PROPERTY_VALUE_MAX] = {0};
-    property_get("vidc.enc.log.in", property_value, "0");
+    property_get("vendor.vidc.enc.log.in", property_value, "0");
     m_debug.in_buffer_log = atoi(property_value);
 
-    property_get("vidc.enc.log.out", property_value, "0");
+    property_get("vendor.vidc.enc.log.out", property_value, "0");
     m_debug.out_buffer_log = atoi(property_value);
 
-    property_get("vidc.enc.log.extradata", property_value, "0");
+    property_get("vendor.vidc.enc.log.extradata", property_value, "0");
     m_debug.extradata_log = atoi(property_value);
 
 #ifdef _UBWC_
@@ -251,7 +254,7 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     is_gralloc_source_ubwc = 0;
 #endif
 
-    property_get("persist.vidc.enc.csc.enable", property_value, "0");
+    property_get("persist.vendor.vidc.enc.csc.enable", property_value, "0");
     if(!(strncmp(property_value, "1", PROPERTY_VALUE_MAX)) ||
             !(strncmp(property_value, "true", PROPERTY_VALUE_MAX))) {
         is_csc_enabled = 1;
@@ -260,7 +263,7 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     }
 
 #ifdef _PQ_
-    property_get("vidc.enc.disable.pq", property_value, "0");
+    property_get("vendor.vidc.enc.disable.pq", property_value, "0");
     if(!(strncmp(property_value, "1", PROPERTY_VALUE_MAX)) ||
         !(strncmp(property_value, "true", PROPERTY_VALUE_MAX))) {
         m_pq.is_pq_force_disable = 1;
@@ -1279,7 +1282,7 @@ bool venc_dev::venc_open(OMX_U32 codec)
     char buffer[10];
 
     property_get("ro.board.platform", platform_name, "0");
-    property_get("vidc.enc.narrow.searchrange", property_value, "0");
+    property_get("vendor.vidc.enc.narrow.searchrange", property_value, "0");
     enable_mv_narrow_searchrange = atoi(property_value);
 
     if (!strncmp(platform_name, "msm8610", 7)) {
@@ -1507,7 +1510,7 @@ bool venc_dev::venc_open(OMX_U32 codec)
             DEBUG_PRINT_ERROR("Failed to set V4L2_CID_MPEG_VIDC_VIDEO_NUM_P_FRAME\n");
     }
 
-    property_get("vidc.debug.turbo", property_value, "0");
+    property_get("vendor.vidc.debug.turbo", property_value, "0");
     if (atoi(property_value)) {
         DEBUG_PRINT_HIGH("Turbo mode debug property enabled");
         control.id = V4L2_CID_MPEG_VIDC_SET_PERF_LEVEL;
@@ -5432,7 +5435,7 @@ bool venc_dev::venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames)
     }
 
     if (m_sVenc_cfg.input_width * m_sVenc_cfg.input_height >= 3840 * 2160 &&
-        (property_get("vidc.enc.disable_bframes", property_value, "0") && atoi(property_value))) {
+        (property_get("vendor.vidc.enc.disable_bframes", property_value, "0") && atoi(property_value))) {
         intra_period.num_pframes = intra_period.num_pframes + intra_period.num_bframes;
         intra_period.num_bframes = 0;
         DEBUG_PRINT_LOW("Warning: Disabling B frames for UHD recording pFrames = %lu bFrames = %lu",
@@ -5440,7 +5443,7 @@ bool venc_dev::venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames)
     }
 
     if (m_sVenc_cfg.input_width * m_sVenc_cfg.input_height >= 5376 * 2688 &&
-        (property_get("vidc.enc.disable_pframes", property_value, "0") && atoi(property_value))) {
+        (property_get("vendor.vidc.enc.disable_pframes", property_value, "0") && atoi(property_value))) {
           intra_period.num_pframes = 0;
           DEBUG_PRINT_LOW("Warning: Disabling P frames for 5k/6k resolutions pFrames = %lu bFrames = %lu",
           intra_period.num_pframes, intra_period.num_bframes);

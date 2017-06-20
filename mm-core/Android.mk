@@ -50,6 +50,8 @@ else ifeq ($(TARGET_BOARD_PLATFORM),msm8953)
 MM_CORE_TARGET = msm8953
 else ifeq ($(TARGET_BOARD_PLATFORM),msm8998)
 MM_CORE_TARGET = msm8998
+else ifeq ($(TARGET_BOARD_PLATFORM),apq8098_latv)
+MM_CORE_TARGET = msm8998
 else ifeq ($(TARGET_BOARD_PLATFORM),sdm660)
 MM_CORE_TARGET = sdm660
 else
@@ -98,18 +100,17 @@ LOCAL_C_INCLUDES        += $(LOCAL_PATH)/inc
 LOCAL_PRELINK_MODULE    := false
 LOCAL_MODULE            := libOmxCore
 LOCAL_MODULE_TAGS       := optional
-LOCAL_MODULE_PATH_32    := $(TARGET_OUT_VENDOR)/lib
-LOCAL_MODULE_PATH_64    := $(TARGET_OUT_VENDOR)/lib64
+LOCAL_VENDOR_MODULE     := true
 LOCAL_SHARED_LIBRARIES  := liblog libdl libcutils
 LOCAL_CFLAGS            := $(OMXCORE_CFLAGS)
 
-#ifneq (,$(filter msm8996 msm8998 sdm660,$(TARGET_BOARD_PLATFORM)))
+#ifneq (,$(filter msm8996 msm8998 apq8098_latv sdm660,$(TARGET_BOARD_PLATFORM)))
 #LOCAL_SHARED_LIBRARIES  += libgpustats
 #endif
 
 LOCAL_SRC_FILES         := src/common/omx_core_cmp.cpp
 LOCAL_SRC_FILES         += src/common/qc_omx_core.c
-ifneq (,$(filter msm8916 msm8994 msm8909 msm8937 msm8996 msm8992 msm8952 msm8953 msm8998 sdm660,$(TARGET_BOARD_PLATFORM)))
+ifneq (,$(filter msm8916 msm8994 msm8909 msm8937 msm8996 msm8992 msm8952 msm8953 msm8998 apq8098_latv sdm660,$(TARGET_BOARD_PLATFORM)))
 LOCAL_SRC_FILES         += src/$(MM_CORE_TARGET)/registry_table_android.c
 else
 LOCAL_SRC_FILES         += src/$(MM_CORE_TARGET)/qc_registry_table_android.c
@@ -128,18 +129,17 @@ LOCAL_C_INCLUDES        += $(LOCAL_PATH)/inc
 LOCAL_PRELINK_MODULE    := false
 LOCAL_MODULE            := libmm-omxcore
 LOCAL_MODULE_TAGS       := optional
-LOCAL_MODULE_PATH_32    := $(TARGET_OUT_VENDOR)/lib
-LOCAL_MODULE_PATH_64    := $(TARGET_OUT_VENDOR)/lib64
+LOCAL_VENDOR_MODULE     := true
 LOCAL_SHARED_LIBRARIES  := liblog libdl libcutils
 LOCAL_CFLAGS            := $(OMXCORE_CFLAGS)
 
-#ifneq (,$(filter msm8996 msm8998 sdm660,$(TARGET_BOARD_PLATFORM)))
+#ifneq (,$(filter msm8996 msm8998 apq8098_latv sdm660,$(TARGET_BOARD_PLATFORM)))
 #LOCAL_SHARED_LIBRARIES  += libgpustats
 #endif
 
 LOCAL_SRC_FILES         := src/common/omx_core_cmp.cpp
 LOCAL_SRC_FILES         += src/common/qc_omx_core.c
-ifneq (,$(filter msm8916 msm8994 msm8909 msm8937 msm8996 msm8992 msm8952 msm8953 msm8998 sdm660,$(TARGET_BOARD_PLATFORM)))
+ifneq (,$(filter msm8916 msm8994 msm8909 msm8937 msm8996 msm8992 msm8952 msm8953 msm8998 apq8098_latv sdm660,$(TARGET_BOARD_PLATFORM)))
 LOCAL_SRC_FILES         += src/$(MM_CORE_TARGET)/registry_table.c
 else
 LOCAL_SRC_FILES         += src/$(MM_CORE_TARGET)/qc_registry_table.c

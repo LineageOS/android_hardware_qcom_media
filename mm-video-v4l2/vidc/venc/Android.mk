@@ -24,10 +24,13 @@ libmm-venc-def += -D_MSM8974_
 TARGETS_THAT_USE_FLAG_MSM8226 := msm8226 msm8916 msm8909
 TARGETS_THAT_NEED_SW_VENC_MPEG4 := msm8909 msm8937
 TARGETS_THAT_NEED_SW_VENC_HEVC := msm8992
-TARGETS_THAT_SUPPORT_UBWC := msm8996 msm8998
-TARGETS_THAT_SUPPORT_VQZIP := msm8996 msm8998
-TARGETS_THAT_SUPPORT_PQ := msm8996 msm8998 msm8953
+TARGETS_THAT_SUPPORT_UBWC := msm8996 msm8998 apq8098_latv
+TARGETS_THAT_SUPPORT_VQZIP := msm8996 msm8998 apq8098_latv
+TARGETS_THAT_SUPPORT_PQ := msm8996 msm8998 apq8098_latv msm8953
 TARGETS_THAT_USE_NV21 := sdm660 msm8953
+TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_4 := msm8937
+TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_51 := msm8953 sdm660
+TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_52 := msm8996 msm8998
 
 ifeq ($(TARGET_BOARD_PLATFORM),msm8610)
 libmm-venc-def += -DMAX_RES_720P
@@ -98,6 +101,14 @@ endif
 # Common Dependencies
 libmm-venc-add-dep  := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
+ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_4)),true)
+libmm-venc-def += -DMAX_H264_LEVEL_4
+else ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_51)),true)
+libmm-venc-def += -DMAX_H264_LEVEL_51
+else ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_52)),true)
+libmm-venc-def += -DMAX_H264_LEVEL_52
+endif
+
 # ---------------------------------------------------------------------------------
 # 			Make the Shared library (libOmxVenc)
 # ---------------------------------------------------------------------------------
@@ -106,8 +117,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE                    := libOmxVenc
 LOCAL_MODULE_TAGS               := optional
-LOCAL_MODULE_PATH_32            := $(TARGET_OUT_VENDOR)/lib
-LOCAL_MODULE_PATH_64            := $(TARGET_OUT_VENDOR)/lib64
+LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libmm-venc-def)
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
@@ -139,8 +149,7 @@ libmm-venc-inc      += $(TARGET_OUT_HEADERS)/mm-video/swvenc
 LOCAL_MODULE                    := libOmxSwVencMpeg4
 
 LOCAL_MODULE_TAGS               := optional
-LOCAL_MODULE_PATH_32            := $(TARGET_OUT_VENDOR)/lib
-LOCAL_MODULE_PATH_64            := $(TARGET_OUT_VENDOR)/lib64
+LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libmm-venc-def)
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
