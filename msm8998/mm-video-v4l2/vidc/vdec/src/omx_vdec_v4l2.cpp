@@ -6756,7 +6756,7 @@ OMX_ERRORTYPE  omx_vdec::allocate_input_buffer(
                 drv_ctx.ip_buf.buffer_size,drv_ctx.op_buf.alignment,
                 &drv_ctx.ip_buf_ion_info[i].ion_alloc_data,
                 &drv_ctx.ip_buf_ion_info[i].fd_ion_data, secure_mode ?
-                SECURE_FLAGS_INPUT_BUFFER : ION_FLAG_CACHED);
+                SECURE_FLAGS_INPUT_BUFFER : 0);
         if (drv_ctx.ip_buf_ion_info[i].ion_device_fd < 0) {
             return OMX_ErrorInsufficientResources;
         }
