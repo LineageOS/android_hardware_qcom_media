@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2012-2017, 2021 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -481,6 +481,9 @@ class venc_dev
         void free_extradata_all();
         void free_extradata(struct extradata_buffer_info *extradata_info);
         int append_mbi_extradata(void *, struct msm_vidc_extradata_header*);
+        void append_extradata_mbidata(OMX_OTHER_EXTRADATATYPE *, struct msm_vidc_extradata_header *);
+        void append_extradata_ltrinfo(OMX_OTHER_EXTRADATATYPE *, struct msm_vidc_extradata_header *);
+        void append_extradata_none(OMX_OTHER_EXTRADATATYPE *);
         bool handle_output_extradata(void *, int);
         bool handle_input_extradata(struct v4l2_buffer);
         int venc_set_format(int);

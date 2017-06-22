@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010 - 2018, The Linux Foundation. All rights reserved.
+Copyright (c) 2010 - 2018, 2021 The Linux Foundation. All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -1731,40 +1731,7 @@ class omx_vdec: public qc_omx_component
         void prefetchNewBuffers(bool in_reconfig);
         void drainPrefetchedBuffers();
 
-        class client_extradata_info {
-            private:
-                OMX_U32 size; // size of extradata of each frame
-                OMX_U32 buffer_count;
-                OMX_BOOL enable;
 
-            public:
-                client_extradata_info() {
-                    size = VENUS_EXTRADATA_SIZE(4096, 2160);;
-                    buffer_count = 0;
-                    enable = OMX_FALSE;
-                }
-
-                ~client_extradata_info() {
-                }
-
-                bool set_extradata_info(OMX_U32 size, OMX_U32 buffer_count) {
-                    this->size = size;
-                    this->buffer_count = buffer_count;
-                    return true;
-                }
-                void enable_client_extradata(OMX_BOOL enable) {
-                    this->enable = enable;
-                }
-                bool is_client_extradata_enabled() {
-                    return enable;
-                }
-                OMX_U32 getSize() const {
-                    return size;
-                }
-                OMX_U32 getBufferCount() const {
-                    return buffer_count;
-                }
-        };
         client_extradata_info m_client_out_extradata_info;
         bool m_buffer_error;
 

@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2013, 2021 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -35,6 +35,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 #include "OMX_QCOMExtns.h"
 #include <media/msm_vidc.h>
+#include <media/msm_media_info.h>
 
 #ifdef _ANDROID_
 extern "C" {
@@ -94,6 +95,41 @@ class extra_data_handler
         OMX_S32 parse_sliceinfo(OMX_BUFFERHEADERTYPE *pBufHdr,
                 OMX_OTHER_EXTRADATATYPE *pExtra);
         OMX_S32 parse_ltrinfo(OMX_OTHER_EXTRADATATYPE *pExtra);
+};
+
+class client_extradata_info {
+    private:
+        OMX_U32 size; // size of extradata of each frame
+        OMX_U32 buffer_count;
+        OMX_BOOL enable;
+
+    public:
+        client_extradata_info() {
+            size = VENUS_EXTRADATA_SIZE(4096, 2160);
+            buffer_count = 0;
+            enable = OMX_FALSE;
+        }
+
+        ~client_extradata_info() {
+        }
+
+        bool set_extradata_info(OMX_U32 size, OMX_U32 buffer_count) {
+            this->size = size;
+            this->buffer_count = buffer_count;
+            return true;
+        }
+        void enable_client_extradata(OMX_BOOL enable) {
+            this->enable = enable;
+        }
+        bool is_client_extradata_enabled() {
+            return enable;
+        }
+        OMX_U32 getSize() const {
+            return size;
+        }
+        OMX_U32 getBufferCount() const {
+            return buffer_count;
+        }
 };
 
 #endif

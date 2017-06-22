@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2018, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2018, 2021 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -765,6 +765,19 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                             &m_sOutPortDef.nBufferSize,
                             m_sOutPortDef.nPortIndex);
                     m_sInPortDef.nBufferCountActual = portDefn->nBufferCountActual;
+                } else if (PORT_INDEX_EXTRADATA_OUT == portDefn->nPortIndex) {
+                    DEBUG_PRINT_LOW("extradata actual cnt =%u , min cnt =%u ,buffersize requested = %u",
+                        (unsigned int)portDefn->nBufferCountActual,(unsigned int)portDefn->nBufferCountMin,
+                        (unsigned int)portDefn->nBufferSize);
+                    if (portDefn->nBufferCountActual != m_client_out_extradata_info.getBufferCount() ||
+                        portDefn->nBufferSize != m_client_out_extradata_info.getSize()) {
+                            DEBUG_PRINT_ERROR("ERROR: Bad parameeters request for extradata limit %d size - %d",
+                            portDefn->nBufferCountActual, portDefn->nBufferSize);
+                            eRet = OMX_ErrorBadParameter;
+                            break;
+                    }
+                    m_client_out_extradata_info.set_extradata_info(portDefn->nBufferSize,
+                                        portDefn->nBufferCountActual);
                 } else if (PORT_INDEX_OUT == portDefn->nPortIndex) {
                     DEBUG_PRINT_LOW("o/p actual cnt requested = %u", (unsigned int)portDefn->nBufferCountActual);
                     DEBUG_PRINT_LOW("o/p min cnt requested = %u", (unsigned int)portDefn->nBufferCountMin);
@@ -1481,6 +1494,25 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                             (unsigned int)m_sOutPortDef.nBufferCountActual,
                             (unsigned int)m_sOutPortDef.nBufferCountMin,
                             (unsigned int)m_sOutPortDef.nBufferSize);
+                }
+                break;
+            }
+        case OMX_QTIIndexParamVideoClientExtradata:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_EXTRADATA_ENABLE);
+                DEBUG_PRINT_LOW("set_parameter: OMX_QTIIndexParamVideoClientExtradata");
+                QOMX_EXTRADATA_ENABLE *pParam = (QOMX_EXTRADATA_ENABLE *)paramData;
+
+                if (m_state != OMX_StateLoaded) {
+                    DEBUG_PRINT_ERROR("Set Parameter called in Invalid state");
+                    return OMX_ErrorIncorrectStateOperation;
+                }
+
+                if (pParam->nPortIndex == PORT_INDEX_EXTRADATA_OUT) {
+                    m_client_out_extradata_info.enable_client_extradata(pParam->bEnable);
+                } else {
+                    DEBUG_PRINT_ERROR("Incorrect portIndex - %d", pParam->nPortIndex);
+                    eRet = OMX_ErrorUnsupportedIndex;
                 }
                 break;
             }

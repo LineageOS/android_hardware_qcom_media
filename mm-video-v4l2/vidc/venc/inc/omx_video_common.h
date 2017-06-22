@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2016, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2016, 2021 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -76,6 +76,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 enum PortIndexType {
     PORT_INDEX_IN = 0,
     PORT_INDEX_OUT = 1,
+    PORT_INDEX_EXTRADATA_IN = 2,
+    PORT_INDEX_EXTRADATA_OUT = 3,
     PORT_INDEX_BOTH = -1,
     PORT_INDEX_NONE = -2
 };
