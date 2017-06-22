@@ -578,6 +578,9 @@ enum OMX_QCOM_EXTN_INDEXTYPE
 
     /* Suggest how big Iframe sizes should be */
     OMX_QTIIndexParamIframeSizeType = 0x7F000070,
+
+    /* Dither control for 10bit */
+    OMX_QTIIndexParamDitherControl = 0x7F000069,
 };
 
 /**
@@ -1874,6 +1877,13 @@ typedef struct QOMX_VPP_ENABLE {
     OMX_BOOL enable_vpp;
 } QOMX_VPP_ENABLE;
 
+typedef struct QOMX_EXTRADATA_ENABLE {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    OMX_BOOL bEnable;
+} QOMX_EXTRADATA_ENABLE;
+
 typedef enum OMX_QOMX_VIDEO_MBISTATISTICSTYPE {
     QOMX_MBI_STATISTICS_MODE_DEFAULT = 0,
     QOMX_MBI_STATISTICS_MODE_1 = 0x01,
@@ -1902,6 +1912,84 @@ typedef struct QOMX_VIDEO_CLIENT_EXTRADATA {
     OMX_U32 nExtradataAllocSize;
     OMX_U32 nExtradataSize;
 } QOMX_VIDEO_CLIENT_EXTRADATATYPE;
+
+#if defined(__cplusplus) && defined(USE_CAMERA_METABUFFER_UTILS)
+
+#define CAM_META_BUFFER_EVENT_PERF 0x01
+
+/**
+ * Camera1 meta-buffer payload create/access/modify utility
+ */
+struct MetaBufferUtil {
+
+    enum {
+        INT_OFFSET      = 1,
+        INT_SIZE        = 2,
+        INT_USAGE       = 3,
+        INT_TIMESTAMP   = 4,
+        INT_COLORFORMAT = 5,
+        INT_BUFINDEX    = 6,
+        INT_BUFEVENT    = 7,
+        INT_TOTAL       = INT_BUFEVENT,
+    };
+
+    static int getNumFdsForBatch(int batchSize) {
+        return batchSize;
+    }
+    static int getNumIntsForBatch(int batchSize) {
+        return batchSize * INT_TOTAL;
+    }
+    static int getBatchSize(const native_handle_t *hnd) {
+        return MetaBufferUtil::isHandleSane(hnd) ? hnd->numFds : -1;
+    }
+
+    /* getters */
+    /* return a fd at index or -1 if index is invalid */
+    static int getFdAt(const native_handle_t *hnd, int index) {
+        return (MetaBufferUtil::isHandleSane(hnd) && (index < hnd->numFds)) ? hnd->data[index] : -1;
+    }
+    /* return a int of type at index or -1 if index or type is invalid */
+    static int getIntAt(const native_handle_t *hnd, int index, int type) {
+        int idx = MetaBufferUtil::getIntIndex(hnd, index, type);
+        return idx < 0 ? -1 : hnd->data[idx];
+    }
+
+    /* setters */
+    /* replace the fd at index and return 0. Return -1 if index is invalid */
+    static int setFdAt(native_handle_t *hnd, int index, int fd) {
+        return (MetaBufferUtil::isHandleSane(hnd) && (index < hnd->numFds)) ? hnd->data[index] = fd, 0 : -1;
+    }
+    /* replace an int of type at index and return 0. Return -1 if index or type is invalid */
+    static int setIntAt(native_handle_t *hnd, int index, int type, int value) {
+        int idx = MetaBufferUtil::getIntIndex(hnd, index, type);
+        return idx < 0 ? -1 : hnd->data[idx] = value, 0;
+    }
+
+private:
+    static bool isHandleSane(const native_handle_t *hnd) {
+        return hnd && hnd->version == sizeof(native_handle_t);
+    }
+
+    static int getIntIndex(const native_handle_t *hnd, int index, int type) {
+        int idx = index + type * MetaBufferUtil::getBatchSize(hnd);
+        return (MetaBufferUtil::isHandleSane(hnd) && (idx < (hnd->numInts + hnd->numFds))) ? idx : -1;
+    }
+};
+
+#endif // __cplusplus
+
+typedef enum QOMX_VIDEO_DITHERTYPE {
+    QOMX_DITHER_DISABLE = 0,
+    QOMX_DITHER_COLORSPACE_EXCEPT_BT2020 = 0x01,
+    QOMX_DITHER_ALL_COLORSPACE = 0x02,
+} QOMX_VIDEO_DITHERTYPE;
+
+typedef struct QOMX_VIDEO_DITHER_CONTROL {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    QOMX_VIDEO_DITHERTYPE eDitherType;
+} QOMX_VIDEO_DITHER_CONTROL;
 
 #ifdef __cplusplus
 }
