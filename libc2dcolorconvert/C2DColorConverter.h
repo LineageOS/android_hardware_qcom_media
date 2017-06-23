@@ -187,8 +187,8 @@ class C2DColorConverter{
   bool isYUVSurface(ColorConvertFormat format);
   int32_t getDummySurfaceDef(ColorConvertFormat format, size_t width,
                              size_t height, bool isSource);
-  C2D_STATUS updateYUVSurfaceDef(int fd, void *base, void * data, bool isSource);
-  C2D_STATUS updateRGBSurfaceDef(int fd, void * data, bool isSource);
+  C2D_STATUS updateYUVSurfaceDef(uint8_t *addr, void *base, void * data, bool isSource);
+  C2D_STATUS updateRGBSurfaceDef(uint8_t *addr, void * data, bool isSource);
   uint32_t getC2DFormat(ColorConvertFormat format);
   size_t calcStride(ColorConvertFormat format, size_t width);
   size_t calcYSize(ColorConvertFormat format, size_t width, size_t height);
