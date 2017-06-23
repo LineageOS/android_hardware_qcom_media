@@ -2107,7 +2107,7 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
            }
        case OMX_QcomIndexConfigQp:
            {
-                VALIDATE_OMX_PARAM_DATA(configData, OMX_SKYPE_VIDEO_CONFIG_QP);
+               VALIDATE_OMX_PARAM_DATA(configData, OMX_SKYPE_VIDEO_CONFIG_QP);
                OMX_SKYPE_VIDEO_CONFIG_QP* pParam =
                    reinterpret_cast<OMX_SKYPE_VIDEO_CONFIG_QP*>(configData);
                DEBUG_PRINT_LOW("get_config: OMX_QcomIndexConfigQp");

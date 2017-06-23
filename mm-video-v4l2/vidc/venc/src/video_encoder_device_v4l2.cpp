@@ -2711,6 +2711,7 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
             {
                 OMX_QCOM_VIDEO_CONFIG_QP* pParam =
                     (OMX_QCOM_VIDEO_CONFIG_QP*) configData;
+                DEBUG_PRINT_LOW("Set_config: nQP %d", pParam->nQP);
                 if (venc_set_qp(pParam->nQP,
                                 pParam->nQP,
                                 pParam->nQP,
