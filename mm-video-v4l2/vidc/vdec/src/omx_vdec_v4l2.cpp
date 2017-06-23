@@ -112,7 +112,8 @@ extern "C" {
 #define ALIGN(x, to_align) ((((unsigned) x) + (to_align - 1)) & ~(to_align - 1))
 
 #define DEFAULT_EXTRADATA (OMX_INTERLACE_EXTRADATA | OMX_FRAMEPACK_EXTRADATA | OMX_OUTPUTCROP_EXTRADATA \
-                           | OMX_DISPLAY_INFO_EXTRADATA | OMX_HDR_COLOR_INFO_EXTRADATA)
+                           | OMX_DISPLAY_INFO_EXTRADATA | OMX_HDR_COLOR_INFO_EXTRADATA \
+                           | OMX_UBWC_CR_STATS_INFO_EXTRADATA)
 #define DEFAULT_CONCEAL_COLOR "32784" //0x8010, black by default
 
 #ifndef ION_FLAG_CP_BITSTREAM
@@ -9851,6 +9852,47 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                         }
                     }
                     break;
+                case MSM_VIDC_EXTRADATA_UBWC_CR_STAT_INFO:
+                          struct msm_vidc_ubwc_cr_stats_info *cr_stats_info;
+                          struct UBWCStats stats[2];
+
+                          cr_stats_info = (struct msm_vidc_ubwc_cr_stats_info *)(void *)data->data;
+                          stats[0].version = UBWC_2_0;
+                          stats[0].bDataValid = (uint8_t)true;
+                          stats[0].ubwc_stats.nCRStatsTile32 = cr_stats_info->stats_tile_32;
+                          stats[0].ubwc_stats.nCRStatsTile64 = cr_stats_info->stats_tile_64;
+                          stats[0].ubwc_stats.nCRStatsTile96 = cr_stats_info->stats_tile_96;
+                          stats[0].ubwc_stats.nCRStatsTile128 = cr_stats_info->stats_tile_128;
+                          stats[0].ubwc_stats.nCRStatsTile160 = cr_stats_info->stats_tile_160;
+                          stats[0].ubwc_stats.nCRStatsTile192 = cr_stats_info->stats_tile_192;
+                          stats[0].ubwc_stats.nCRStatsTile256 = cr_stats_info->stats_tile_256;
+                          DEBUG_PRINT_HIGH("Field 0 : 32 Tile = %d 64 Tile = %d 96 Tile = %d 128 Tile = %d 160 Tile = %d 192 Tile = %d 256 Tile = %d\n",
+                              cr_stats_info->stats_tile_32, cr_stats_info->stats_tile_64,
+                              cr_stats_info->stats_tile_96, cr_stats_info->stats_tile_128,
+                              cr_stats_info->stats_tile_160, cr_stats_info->stats_tile_192,
+                              cr_stats_info->stats_tile_256);
+                          stats[1].bDataValid = (uint8_t)false;
+                          if (drv_ctx.interlace != VDEC_InterlaceFrameProgressive) {
+
+                              cr_stats_info += sizeof(struct msm_vidc_ubwc_cr_stats_info);
+                              stats[1].version = UBWC_2_0;
+                              stats[1].bDataValid = (uint8_t)true;
+                              stats[1].ubwc_stats.nCRStatsTile32 = cr_stats_info->stats_tile_32;
+                              stats[1].ubwc_stats.nCRStatsTile64 = cr_stats_info->stats_tile_64;
+                              stats[1].ubwc_stats.nCRStatsTile96 = cr_stats_info->stats_tile_96;
+                              stats[1].ubwc_stats.nCRStatsTile128 = cr_stats_info->stats_tile_128;
+                              stats[1].ubwc_stats.nCRStatsTile160 = cr_stats_info->stats_tile_160;
+                              stats[1].ubwc_stats.nCRStatsTile192 = cr_stats_info->stats_tile_192;
+                              stats[1].ubwc_stats.nCRStatsTile256 = cr_stats_info->stats_tile_256;
+                              DEBUG_PRINT_HIGH("Field 1 : 32 Tile = %d 64 Tile = %d 96 Tile = %d 128 Tile = %d 160 Tile = %d 192 Tile = %d 256 Tile = %d\n",
+                                      cr_stats_info->stats_tile_32, cr_stats_info->stats_tile_64,
+                                      cr_stats_info->stats_tile_96, cr_stats_info->stats_tile_128,
+                                      cr_stats_info->stats_tile_160, cr_stats_info->stats_tile_192,
+                                      cr_stats_info->stats_tile_256);
+                          }
+                          setMetaData((private_handle_t *)native_buffer[buf_index].privatehandle,
+                              SET_UBWC_CR_STATS_INFO, (void*)stats);
+                    break;
                 case MSM_VIDC_EXTRADATA_STREAM_USERDATA:
                     if (client_extradata & OMX_EXTNUSER_EXTRADATA) {
                         append_user_extradata(p_extra, data);
@@ -10078,6 +10120,14 @@ OMX_ERRORTYPE omx_vdec::enable_extradata(OMX_U64 requested_extradata,
             control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
             control.value = V4L2_MPEG_VIDC_EXTRADATA_OUTPUT_CROP;
             DEBUG_PRINT_LOW("Enable output crop extra data");
+            if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
+                DEBUG_PRINT_HIGH("Failed to set output crop extradata");
+            }
+        }
+        if (requested_extradata & OMX_UBWC_CR_STATS_INFO_EXTRADATA) {
+            control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
+            control.value = V4L2_MPEG_VIDC_EXTRADATA_UBWC_CR_STATS_INFO;
+            DEBUG_PRINT_LOW("Enable UBWC stats extra data");
             if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
                 DEBUG_PRINT_HIGH("Failed to set output crop extradata");
             }
