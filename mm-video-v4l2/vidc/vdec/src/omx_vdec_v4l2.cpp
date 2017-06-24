@@ -87,11 +87,11 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define EGL_BUFFER_OFFSET 0x4F01
 #endif
 
-#define BUFFER_LOG_LOC "/data/misc/media"
+#define BUFFER_LOG_LOC "/data/vendor/media"
 
 #ifdef OUTPUT_EXTRADATA_LOG
 FILE *outputExtradataFile;
-char output_extradata_filename [] = "/data/misc/media/extradata";
+char output_extradata_filename [] = "/data/vendor/media/extradata";
 #endif
 
 #define DEFAULT_FPS 30
