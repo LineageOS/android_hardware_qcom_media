@@ -61,7 +61,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifdef _ANDROID_
 #include <cutils/properties.h>
-#undef USE_EGL_IMAGE_GPU
 
 #ifdef _QUERY_DISP_RES_
 #include "display_config.h"
@@ -78,13 +77,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifdef ANDROID_JELLYBEAN_MR2
 #include "QComOMXMetadata.h"
-#endif
-
-#ifdef USE_EGL_IMAGE_GPU
-#include <EGL/egl.h>
-#include <EGL/eglQCOM.h>
-#define EGL_BUFFER_HANDLE 0x4F00
-#define EGL_BUFFER_OFFSET 0x4F01
 #endif
 
 #define BUFFER_LOG_LOC "/data/misc/media"
@@ -609,8 +601,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     output_use_buffer (false),
     ouput_egl_buffers(false),
     m_use_output_pmem(OMX_FALSE),
-    m_out_mem_region_smi(OMX_FALSE),
-    m_out_pvt_entry_pmem(OMX_FALSE),
     pending_input_buffers(0),
     pending_output_buffers(0),
     m_out_bm_count(0),
@@ -625,7 +615,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_platform_list(NULL),
     m_platform_entry(NULL),
     m_pmem_info(NULL),
-    arbitrary_bytes (true),
     psource_frame (NULL),
     pdest_frame (NULL),
     m_inp_heap_ptr (NULL),
@@ -635,13 +624,10 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     frame_count (0),
     nal_count (0),
     nal_length(0),
-    look_ahead_nal (false),
     first_frame(0),
     first_buffer(NULL),
     first_frame_size (0),
     m_device_file_ptr(NULL),
-    h264_last_au_ts(LLONG_MAX),
-    h264_last_au_flags(0),
     m_disp_hor_size(0),
     m_disp_vert_size(0),
     prev_ts(LLONG_MAX),
@@ -764,7 +750,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     memset(&m_cmp,0,sizeof(m_cmp));
     memset(&m_cb,0,sizeof(m_cb));
     memset (&drv_ctx,0,sizeof(drv_ctx));
-    memset (&h264_scratch,0,sizeof (OMX_BUFFERHEADERTYPE));
     memset (m_hwdevice_name,0,sizeof(m_hwdevice_name));
     memset(m_demux_offsets, 0, ( sizeof(OMX_U32) * 8192) );
     memset(&m_custom_buffersize, 0, sizeof(m_custom_buffersize));
@@ -2221,44 +2206,26 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         }
     }
 
-#ifdef _ANDROID_
-    /*
-     * turn off frame parsing for Android by default.
-     * Clients may configure OMX_QCOM_FramePacking_Arbitrary to enable this mode
-     */
-    arbitrary_bytes = false;
-    property_get("vidc.dec.debug.arbitrarybytes.mode", property_value, "0");
-    if (atoi(property_value)) {
-        DEBUG_PRINT_HIGH("arbitrary_bytes mode enabled via property command");
-        arbitrary_bytes = true;
-    }
-#endif
-
     if (!strncmp(role, "OMX.qcom.video.decoder.avc.secure",
                 OMX_MAX_STRINGNAME_SIZE)) {
         secure_mode = true;
-        arbitrary_bytes = false;
         role = (OMX_STRING)"OMX.qcom.video.decoder.avc";
     } else if (!strncmp(role, "OMX.qcom.video.decoder.mpeg2.secure",
                 OMX_MAX_STRINGNAME_SIZE)) {
         secure_mode = true;
-        arbitrary_bytes = false;
         role = (OMX_STRING)"OMX.qcom.video.decoder.mpeg2";
     } else if (!strncmp(role, "OMX.qcom.video.decoder.hevc.secure",
                 OMX_MAX_STRINGNAME_SIZE)) {
         secure_mode = true;
-        arbitrary_bytes = false;
         role = (OMX_STRING)"OMX.qcom.video.decoder.hevc";
     } else if (!strncmp(role, "OMX.qcom.video.decoder.vp9.secure",
                 OMX_MAX_STRINGNAME_SIZE)) {
         secure_mode = true;
-        arbitrary_bytes = false;
         role = (OMX_STRING)"OMX.qcom.video.decoder.vp9";
     }
     else if (!strncmp(role, "OMX.qcom.video.decoder.vp8.secure",
                 OMX_MAX_STRINGNAME_SIZE)) {
         secure_mode = true;
-        arbitrary_bytes = false;
         role = (OMX_STRING)"OMX.qcom.video.decoder.vp8";
     }
 
@@ -2312,10 +2279,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         output_capability=V4L2_PIX_FMT_H264;
         eCompressionFormat = OMX_VIDEO_CodingAVC;
         nBufCount = 8;
-        if (is_thulium_v1) {
-            arbitrary_bytes = true;
-            DEBUG_PRINT_HIGH("Enable arbitrary_bytes for h264");
-        }
     } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.mvc",\
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_decoder.mvc", OMX_MAX_STRINGNAME_SIZE);
@@ -2336,7 +2299,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         drv_ctx.decoder_format = VDEC_CODECTYPE_VP8;
         output_capability = V4L2_PIX_FMT_VP8;
         eCompressionFormat = OMX_VIDEO_CodingVP8;
-        arbitrary_bytes = false;
         nBufCount = 6;
     } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.vp9",    \
                 OMX_MAX_STRINGNAME_SIZE)) {
@@ -2344,7 +2306,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         drv_ctx.decoder_format = VDEC_CODECTYPE_VP9;
         output_capability = V4L2_PIX_FMT_VP9;
         eCompressionFormat = OMX_VIDEO_CodingVP9;
-        arbitrary_bytes = false;
         nBufCount = 11;
     } else {
         DEBUG_PRINT_ERROR("ERROR:Unknown Component");
@@ -2559,19 +2520,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         eRet = get_buffer_req(&drv_ctx.ip_buf);
         DEBUG_PRINT_HIGH("Input Buffer Size =%u",(unsigned int)drv_ctx.ip_buf.buffer_size);
         get_buffer_req(&drv_ctx.op_buf);
-        if (drv_ctx.decoder_format == VDEC_CODECTYPE_H264 ||
-                drv_ctx.decoder_format == VDEC_CODECTYPE_HEVC ||
-                drv_ctx.decoder_format == VDEC_CODECTYPE_MVC) {
-                    h264_scratch.nAllocLen = drv_ctx.ip_buf.buffer_size;
-                    h264_scratch.pBuffer = (OMX_U8 *)malloc (drv_ctx.ip_buf.buffer_size);
-                    h264_scratch.nFilledLen = 0;
-                    h264_scratch.nOffset = 0;
-
-                    if (h264_scratch.pBuffer == NULL) {
-                        DEBUG_PRINT_ERROR("h264_scratch.pBuffer Allocation failed ");
-                        return OMX_ErrorInsufficientResources;
-                    }
-        }
 
         msg_thread_created = true;
         r = pthread_create(&msg_thread_id,0,message_thread_dec,this);
@@ -3225,10 +3173,6 @@ bool omx_vdec::execute_output_flush()
     pthread_mutex_unlock(&m_lock);
     output_flush_progress = false;
 
-    if (arbitrary_bytes) {
-        prev_ts = LLONG_MAX;
-        rst_prev_ts = true;
-    }
     DEBUG_PRINT_HIGH("OMX flush o/p Port complete PenBuf(%d)", pending_output_buffers);
     return bRet;
 }
@@ -3279,10 +3223,8 @@ bool omx_vdec::execute_input_flush()
     /*Check if Heap Buffers are to be flushed*/
     pthread_mutex_unlock(&m_lock);
     input_flush_progress = false;
-    if (!arbitrary_bytes) {
-        prev_ts = LLONG_MAX;
-        rst_prev_ts = true;
-    }
+    prev_ts = LLONG_MAX;
+    rst_prev_ts = true;
 #ifdef _ANDROID_
     if (m_debug_timestamp) {
         m_timestamp_list.reset_ts_list();
@@ -4239,67 +4181,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                 }
                             }
                             break;
-
-        case OMX_QcomIndexPortDefn: {
-                            VALIDATE_OMX_PARAM_DATA(paramData, OMX_QCOM_PARAM_PORTDEFINITIONTYPE);
-                            OMX_QCOM_PARAM_PORTDEFINITIONTYPE *portFmt =
-                                (OMX_QCOM_PARAM_PORTDEFINITIONTYPE *) paramData;
-                            DEBUG_PRINT_LOW("set_parameter: OMX_IndexQcomParamPortDefinitionType %u",
-                                    (unsigned int)portFmt->nFramePackingFormat);
-
-                            /* Input port */
-                            if (portFmt->nPortIndex == 0) {
-                                // arbitrary_bytes mode cannot be changed arbitrarily since this controls how:
-                                //   - headers are allocated and
-                                //   - headers-indices are derived
-                                // Avoid changing arbitrary_bytes when the port is already allocated
-                                if (m_inp_mem_ptr) {
-                                    DEBUG_PRINT_ERROR("Cannot change arbitrary-bytes-mode since input port is not free!");
-                                    return OMX_ErrorUnsupportedSetting;
-                                }
-                                if (portFmt->nFramePackingFormat == OMX_QCOM_FramePacking_Arbitrary) {
-                                    if (secure_mode || m_input_pass_buffer_fd) {
-                                        arbitrary_bytes = false;
-                                        DEBUG_PRINT_ERROR("setparameter: cannot set to arbitary bytes mode");
-                                        eRet = OMX_ErrorUnsupportedSetting;
-                                    } else {
-                                        arbitrary_bytes = true;
-                                    }
-                                } else if (portFmt->nFramePackingFormat ==
-                                        OMX_QCOM_FramePacking_OnlyOneCompleteFrame) {
-                                    arbitrary_bytes = false;
-#ifdef _ANDROID_
-                                    property_get("vidc.dec.debug.arbitrarybytes.mode", property_value, "0");
-                                    if (atoi(property_value)) {
-                                        DEBUG_PRINT_HIGH("arbitrary_bytes enabled via property command");
-                                        arbitrary_bytes = true;
-                                    }
-#endif
-                                } else {
-                                    DEBUG_PRINT_ERROR("Setparameter: unknown FramePacking format %u",
-                                            (unsigned int)portFmt->nFramePackingFormat);
-                                    eRet = OMX_ErrorUnsupportedSetting;
-                                }
-                            } else if (portFmt->nPortIndex == OMX_CORE_OUTPUT_PORT_INDEX) {
-                                DEBUG_PRINT_HIGH("set_parameter: OMX_IndexQcomParamPortDefinitionType OP Port");
-                                if ( (portFmt->nMemRegion > OMX_QCOM_MemRegionInvalid &&
-                                            portFmt->nMemRegion < OMX_QCOM_MemRegionMax) &&
-                                        portFmt->nCacheAttr == OMX_QCOM_CacheAttrNone) {
-                                    m_out_mem_region_smi = OMX_TRUE;
-                                    if ((m_out_mem_region_smi && m_out_pvt_entry_pmem)) {
-                                        DEBUG_PRINT_HIGH("set_parameter: OMX_IndexQcomParamPortDefinitionType OP Port: out pmem set");
-                                        m_use_output_pmem = OMX_TRUE;
-                                    }
-                                }
-                            }
-                        }
-                        if (is_thulium_v1 && !strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.avc",
-                                    OMX_MAX_STRINGNAME_SIZE)) {
-                            arbitrary_bytes = true;
-                            DEBUG_PRINT_HIGH("Force arbitrary_bytes to true for h264");
-                        }
-                        break;
-
         case OMX_QTIIndexParamVideoClientExtradata: {
                                   VALIDATE_OMX_PARAM_DATA(paramData, QOMX_EXTRADATA_ENABLE);
                                   DEBUG_PRINT_LOW("set_parameter: OMX_QTIIndexParamVideoClientExtradata");
@@ -4535,27 +4416,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                 eRet = enable_extradata(OMX_VQZIPSEI_EXTRADATA, false,
                                     ((QOMX_ENABLETYPE *)paramData)->bEnable);
                                 break;
-        case OMX_QcomIndexParamVideoDivx: {
-                              QOMX_VIDEO_PARAM_DIVXTYPE* divXType = (QOMX_VIDEO_PARAM_DIVXTYPE *) paramData;
-                          }
-                          break;
-        case OMX_QcomIndexPlatformPvt: {
-                               VALIDATE_OMX_PARAM_DATA(paramData, OMX_QCOM_PLATFORMPRIVATE_EXTN);
-                               DEBUG_PRINT_HIGH("set_parameter: OMX_QcomIndexPlatformPvt OP Port");
-                               OMX_QCOM_PLATFORMPRIVATE_EXTN* entryType = (OMX_QCOM_PLATFORMPRIVATE_EXTN *) paramData;
-                               if (entryType->type != OMX_QCOM_PLATFORM_PRIVATE_PMEM) {
-                                   DEBUG_PRINT_HIGH("set_parameter: Platform Private entry type (%d) not supported.", entryType->type);
-                                   eRet = OMX_ErrorUnsupportedSetting;
-                               } else {
-                                   m_out_pvt_entry_pmem = OMX_TRUE;
-                                   if ((m_out_mem_region_smi && m_out_pvt_entry_pmem)) {
-                                       DEBUG_PRINT_HIGH("set_parameter: OMX_QcomIndexPlatformPvt OP Port: out pmem set");
-                                       m_use_output_pmem = OMX_TRUE;
-                                   }
-                               }
-
-                           }
-                           break;
         case OMX_QcomIndexParamVideoSyncFrameDecodingMode: {
                                        DEBUG_PRINT_HIGH("set_parameter: OMX_QcomIndexParamVideoSyncFrameDecodingMode");
                                        DEBUG_PRINT_HIGH("set idr only decoding for thumbnail mode");
@@ -4863,12 +4723,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
         case OMX_QTIIndexParamPassInputBufferFd:
         {
             VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
-            if (arbitrary_bytes) {
-                DEBUG_PRINT_ERROR("OMX_QTIIndexParamPassInputBufferFd not supported in arbitrary buffer mode");
-                eRet = OMX_ErrorUnsupportedSetting;
-                break;
-            }
-
             m_input_pass_buffer_fd = ((QOMX_ENABLETYPE *)paramData)->bEnable;
             if (m_input_pass_buffer_fd)
                 DEBUG_PRINT_LOW("Enable passing input buffer FD");
@@ -5138,13 +4992,9 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                 return OMX_ErrorUnsupportedSetting;
         }
 
-        if (!arbitrary_bytes) {
-            /* In arbitrary bytes mode, the assembler strips out nal size and replaces
-             * with start code, so only need to notify driver in frame by frame mode */
-            if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &temp)) {
-                DEBUG_PRINT_ERROR("Failed to set V4L2_CID_MPEG_VIDC_VIDEO_STREAM_FORMAT");
-                return OMX_ErrorHardware;
-            }
+        if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &temp)) {
+            DEBUG_PRINT_ERROR("Failed to set V4L2_CID_MPEG_VIDC_VIDEO_STREAM_FORMAT");
+            return OMX_ErrorHardware;
         }
 
         nal_length = pNal->nNaluBytes;
@@ -5700,7 +5550,7 @@ OMX_ERRORTYPE  omx_vdec::use_output_buffer(
                 DEBUG_PRINT_LOW("Use_op_buf: out_pmem=%d",m_use_output_pmem);
                 if (!appData || !bytes ) {
                     if (!secure_mode && !buffer) {
-                        DEBUG_PRINT_ERROR("Bad parameters for use buffer in EGL image case");
+                        DEBUG_PRINT_ERROR("Bad parameters for use buffer");
                         return OMX_ErrorBadParameter;
                     }
                 }
@@ -5986,11 +5836,8 @@ OMX_ERRORTYPE  omx_vdec::use_buffer(
 OMX_ERRORTYPE omx_vdec::free_input_buffer(unsigned int bufferindex,
         OMX_BUFFERHEADERTYPE *pmem_bufferHdr)
 {
-    if (m_inp_heap_ptr && !input_use_buffer && arbitrary_bytes) {
-        if (m_inp_heap_ptr[bufferindex].pBuffer)
-            free(m_inp_heap_ptr[bufferindex].pBuffer);
-        m_inp_heap_ptr[bufferindex].pBuffer = NULL;
-    }
+    (void) bufferindex;
+
     if (pmem_bufferHdr)
         free_input_buffer(pmem_bufferHdr);
     return OMX_ErrorNone;
@@ -6111,79 +5958,6 @@ OMX_ERRORTYPE omx_vdec::free_output_buffer(OMX_BUFFERHEADERTYPE *bufferHdr)
     return OMX_ErrorNone;
 
 }
-
-OMX_ERRORTYPE omx_vdec::allocate_input_heap_buffer(OMX_HANDLETYPE       hComp,
-        OMX_BUFFERHEADERTYPE **bufferHdr,
-        OMX_U32              port,
-        OMX_PTR              appData,
-        OMX_U32              bytes)
-{
-    OMX_BUFFERHEADERTYPE *input = NULL;
-    unsigned char *buf_addr = NULL;
-    OMX_ERRORTYPE eRet = OMX_ErrorNone;
-    unsigned   i = 0;
-
-    /* Sanity Check*/
-    if (bufferHdr == NULL) {
-        return OMX_ErrorBadParameter;
-    }
-
-    if (m_inp_heap_ptr == NULL) {
-        m_inp_heap_ptr = (OMX_BUFFERHEADERTYPE*) \
-                 calloc( (sizeof(OMX_BUFFERHEADERTYPE)),
-                         drv_ctx.ip_buf.actualcount);
-        m_phdr_pmem_ptr = (OMX_BUFFERHEADERTYPE**) \
-                  calloc( (sizeof(OMX_BUFFERHEADERTYPE*)),
-                          drv_ctx.ip_buf.actualcount);
-
-        if (m_inp_heap_ptr == NULL || m_phdr_pmem_ptr == NULL) {
-            DEBUG_PRINT_ERROR("m_inp_heap_ptr or m_phdr_pmem_ptr Allocation failed ");
-            return OMX_ErrorInsufficientResources;
-        }
-    }
-
-    /*Find a Free index*/
-    for (i=0; i< drv_ctx.ip_buf.actualcount; i++) {
-        if (BITMASK_ABSENT(&m_heap_inp_bm_count,i)) {
-            DEBUG_PRINT_LOW("Free Input Buffer Index %d",i);
-            break;
-        }
-    }
-
-    if (i < drv_ctx.ip_buf.actualcount) {
-        buf_addr = (unsigned char *)malloc (drv_ctx.ip_buf.buffer_size);
-
-        if (buf_addr == NULL) {
-            return OMX_ErrorInsufficientResources;
-        }
-
-        *bufferHdr = (m_inp_heap_ptr + i);
-        input = *bufferHdr;
-        BITMASK_SET(&m_heap_inp_bm_count,i);
-
-        input->pBuffer           = (OMX_U8 *)buf_addr;
-        input->nSize             = sizeof(OMX_BUFFERHEADERTYPE);
-        input->nVersion.nVersion = OMX_SPEC_VERSION;
-        input->nAllocLen         = drv_ctx.ip_buf.buffer_size;
-        input->pAppPrivate       = appData;
-        input->nInputPortIndex   = OMX_CORE_INPUT_PORT_INDEX;
-        DEBUG_PRINT_LOW("Address of Heap Buffer %p",*bufferHdr );
-        eRet = allocate_input_buffer(hComp,&m_phdr_pmem_ptr [i],port,appData,bytes);
-        DEBUG_PRINT_LOW("Address of Pmem Buffer %p",m_phdr_pmem_ptr[i]);
-        /*Add the Buffers to freeq*/
-        if (!m_input_free_q.insert_entry((unsigned long)m_phdr_pmem_ptr[i],
-                    (unsigned)NULL, (unsigned)NULL)) {
-            DEBUG_PRINT_ERROR("ERROR:Free_q is full");
-            return OMX_ErrorInsufficientResources;
-        }
-    } else {
-        return OMX_ErrorBadParameter;
-    }
-
-    return eRet;
-
-}
-
 
 /* ======================================================================
    FUNCTION
@@ -6691,11 +6465,7 @@ OMX_ERRORTYPE  omx_vdec::allocate_buffer(OMX_IN OMX_HANDLETYPE                hC
             DEBUG_PRINT_ERROR("'Allocate' Input buffer called after 'Use' Input buffer !");
             return OMX_ErrorUndefined;
         }
-        if (arbitrary_bytes) {
-            eRet = allocate_input_heap_buffer (hComp,bufferHdr,port,appData,bytes);
-        } else {
-            eRet = allocate_input_buffer(hComp,bufferHdr,port,appData,bytes);
-        }
+        eRet = allocate_input_buffer(hComp,bufferHdr,port,appData,bytes);
     } else if (port == OMX_CORE_OUTPUT_PORT_INDEX) {
         eRet = client_buffers.allocate_buffers_color_convert(hComp,bufferHdr,port,
                 appData,bytes);
@@ -6783,8 +6553,7 @@ OMX_ERRORTYPE  omx_vdec::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
     }
 
     if (port == OMX_CORE_INPUT_PORT_INDEX) {
-        /*Check if arbitrary bytes*/
-        if (!arbitrary_bytes && !input_use_buffer)
+        if (!input_use_buffer)
             nPortIndex = buffer - m_inp_mem_ptr;
         else
             nPortIndex = buffer - m_inp_heap_ptr;
@@ -6801,13 +6570,7 @@ OMX_ERRORTYPE  omx_vdec::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
                 if (m_phdr_pmem_ptr)
                     free_input_buffer(m_phdr_pmem_ptr[nPortIndex]);
             } else {
-                if (arbitrary_bytes) {
-                    if (m_phdr_pmem_ptr)
-                        free_input_buffer(nPortIndex,m_phdr_pmem_ptr[nPortIndex]);
-                    else
-                        free_input_buffer(nPortIndex,NULL);
-                } else
-                    free_input_buffer(buffer);
+                free_input_buffer(buffer);
             }
             m_inp_bPopulated = OMX_FALSE;
             if(release_input_done())
@@ -6951,24 +6714,20 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
         }
     }
 
-    if (arbitrary_bytes) {
+    if (input_use_buffer == true) {
         nBufferIndex = buffer - m_inp_heap_ptr;
-    } else {
-        if (input_use_buffer == true) {
-            nBufferIndex = buffer - m_inp_heap_ptr;
-            if (nBufferIndex >= drv_ctx.ip_buf.actualcount ) {
-                DEBUG_PRINT_ERROR("ERROR: ETB nBufferIndex is invalid in use-buffer mode");
-                return OMX_ErrorBadParameter;
-            }
-            m_inp_mem_ptr[nBufferIndex].nFilledLen = m_inp_heap_ptr[nBufferIndex].nFilledLen;
-            m_inp_mem_ptr[nBufferIndex].nTimeStamp = m_inp_heap_ptr[nBufferIndex].nTimeStamp;
-            m_inp_mem_ptr[nBufferIndex].nFlags = m_inp_heap_ptr[nBufferIndex].nFlags;
-            buffer = &m_inp_mem_ptr[nBufferIndex];
-            DEBUG_PRINT_LOW("Non-Arbitrary mode - buffer address is: malloc %p, pmem%p in Index %d, buffer %p of size %u",
-                    &m_inp_heap_ptr[nBufferIndex], &m_inp_mem_ptr[nBufferIndex],nBufferIndex, buffer, (unsigned int)buffer->nFilledLen);
-        } else {
-            nBufferIndex = buffer - m_inp_mem_ptr;
+        if (nBufferIndex >= drv_ctx.ip_buf.actualcount ) {
+            DEBUG_PRINT_ERROR("ERROR: ETB nBufferIndex is invalid in use-buffer mode");
+            return OMX_ErrorBadParameter;
         }
+        m_inp_mem_ptr[nBufferIndex].nFilledLen = m_inp_heap_ptr[nBufferIndex].nFilledLen;
+        m_inp_mem_ptr[nBufferIndex].nTimeStamp = m_inp_heap_ptr[nBufferIndex].nTimeStamp;
+        m_inp_mem_ptr[nBufferIndex].nFlags = m_inp_heap_ptr[nBufferIndex].nFlags;
+        buffer = &m_inp_mem_ptr[nBufferIndex];
+        DEBUG_PRINT_LOW("Non-Arbitrary mode - buffer address is: malloc %p, pmem%p in Index %d, buffer %p of size %u",
+                &m_inp_heap_ptr[nBufferIndex], &m_inp_mem_ptr[nBufferIndex],nBufferIndex, buffer, (unsigned int)buffer->nFilledLen);
+    } else {
+        nBufferIndex = buffer - m_inp_mem_ptr;
     }
 
     if (nBufferIndex >= drv_ctx.ip_buf.actualcount ) {
@@ -6981,19 +6740,13 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
         DEBUG_PRINT_LOW("%s: codec_config buffer", __FUNCTION__);
     }
 
-    /* The client should not set this when codec is in arbitrary bytes mode */
     if (m_input_pass_buffer_fd) {
         buffer->pBuffer = (OMX_U8*)drv_ctx.ptr_inputbuffer[nBufferIndex].bufferaddr;
     }
 
     DEBUG_PRINT_LOW("[ETB] BHdr(%p) pBuf(%p) nTS(%lld) nFL(%u)",
             buffer, buffer->pBuffer, buffer->nTimeStamp, (unsigned int)buffer->nFilledLen);
-    if (arbitrary_bytes) {
-        post_event ((unsigned long)hComp,(unsigned long)buffer,
-                OMX_COMPONENT_GENERATE_ETB_ARBITRARY);
-    } else {
-        post_event ((unsigned long)hComp,(unsigned long)buffer,OMX_COMPONENT_GENERATE_ETB);
-    }
+    post_event ((unsigned long)hComp,(unsigned long)buffer,OMX_COMPONENT_GENERATE_ETB);
     time_stamp_dts.insert_timestamp(buffer);
     return OMX_ErrorNone;
 }
@@ -7042,8 +6795,7 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
     VIDC_TRACE_INT_LOW("ETB-pending", pending_input_buffers);
 
     /* return zero length and not an EOS buffer */
-    if (!arbitrary_bytes && (buffer->nFilledLen == 0) &&
-            ((buffer->nFlags & OMX_BUFFERFLAG_EOS) == 0)) {
+    if ((buffer->nFilledLen == 0) && ((buffer->nFlags & OMX_BUFFERFLAG_EOS) == 0)) {
         DEBUG_PRINT_HIGH("return zero legth buffer");
         post_event ((unsigned long)buffer,VDEC_S_SUCCESS,
                 OMX_COMPONENT_GENERATE_EBD);
@@ -7072,12 +6824,8 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
 
     if (input_use_buffer && temp_buffer->bufferaddr && !secure_mode) {
         if (buffer->nFilledLen <= temp_buffer->buffer_len) {
-            if (arbitrary_bytes) {
-                memcpy (temp_buffer->bufferaddr, (buffer->pBuffer + buffer->nOffset),buffer->nFilledLen);
-            } else {
-                memcpy (temp_buffer->bufferaddr, (m_inp_heap_ptr[nPortIndex].pBuffer + m_inp_heap_ptr[nPortIndex].nOffset),
-                        buffer->nFilledLen);
-            }
+            memcpy (temp_buffer->bufferaddr, (m_inp_heap_ptr[nPortIndex].pBuffer + m_inp_heap_ptr[nPortIndex].nOffset),
+                    buffer->nFilledLen);
         } else {
             return OMX_ErrorBadParameter;
         }
@@ -7096,10 +6844,7 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
 
 #ifdef _ANDROID_
     if (m_debug_timestamp) {
-        if (arbitrary_bytes) {
-            DEBUG_PRINT_LOW("Inserting TIMESTAMP (%lld) into queue", buffer->nTimeStamp);
-            m_timestamp_list.insert_ts(buffer->nTimeStamp);
-        } else if (!arbitrary_bytes && !(buffer->nFlags & OMX_BUFFERFLAG_CODECCONFIG)) {
+        if (!(buffer->nFlags & OMX_BUFFERFLAG_CODECCONFIG)) {
             DEBUG_PRINT_LOW("Inserting TIMESTAMP (%lld) into queue", buffer->nTimeStamp);
             m_timestamp_list.insert_ts(buffer->nTimeStamp);
         }
@@ -7108,18 +6853,14 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
 
     log_input_buffers((const char *)temp_buffer->bufferaddr, temp_buffer->buffer_len);
 
-if (buffer->nFlags & QOMX_VIDEO_BUFFERFLAG_EOSEQ) {
+    if (buffer->nFlags & QOMX_VIDEO_BUFFERFLAG_EOSEQ) {
         buffer->nFlags &= ~QOMX_VIDEO_BUFFERFLAG_EOSEQ;
     }
 
     if (temp_buffer->buffer_len == 0 || (buffer->nFlags & OMX_BUFFERFLAG_EOS)) {
         DEBUG_PRINT_HIGH("Rxd i/p EOS, Notify Driver that EOS has been reached");
-        h264_scratch.nFilledLen = 0;
         nal_count = 0;
-        look_ahead_nal = false;
         frame_count = 0;
-        h264_last_au_ts = LLONG_MAX;
-        h264_last_au_flags = 0;
         memset(m_demux_offsets, 0, ( sizeof(OMX_U32) * 8192) );
         m_demux_entries = 0;
     }
@@ -7510,10 +7251,6 @@ OMX_ERRORTYPE  omx_vdec::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
     }
     free_input_buffer_header();
     free_output_buffer_header();
-    if (h264_scratch.pBuffer) {
-        free(h264_scratch.pBuffer);
-        h264_scratch.pBuffer = NULL;
-    }
 
     if (m_platform_list) {
         free(m_platform_list);
@@ -8092,10 +7829,7 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
 
     if (m_cb.FillBufferDone) {
         if (buffer->nFilledLen > 0) {
-            if (arbitrary_bytes)
-                adjust_timestamp(buffer->nTimeStamp);
-            else
-                set_frame_rate(buffer->nTimeStamp);
+            set_frame_rate(buffer->nTimeStamp);
 
             proc_frms++;
             if (perf_flag) {
@@ -8799,19 +8533,6 @@ void omx_vdec::free_output_buffer_header()
 void omx_vdec::free_input_buffer_header()
 {
     input_use_buffer = false;
-    if (arbitrary_bytes) {
-        if (m_inp_heap_ptr) {
-            DEBUG_PRINT_LOW("Free input Heap Pointer");
-            free (m_inp_heap_ptr);
-            m_inp_heap_ptr = NULL;
-        }
-
-        if (m_phdr_pmem_ptr) {
-            DEBUG_PRINT_LOW("Free input pmem header Pointer");
-            free (m_phdr_pmem_ptr);
-            m_phdr_pmem_ptr = NULL;
-        }
-    }
     if (m_inp_mem_ptr) {
         DEBUG_PRINT_LOW("Free input pmem Pointer area");
         free (m_inp_mem_ptr);
@@ -9437,36 +9158,6 @@ void omx_vdec::set_frame_rate(OMX_S64 act_timestamp)
         }
     }
     prev_ts = act_timestamp;
-}
-
-void omx_vdec::adjust_timestamp(OMX_S64 &act_timestamp)
-{
-    if (rst_prev_ts && VALID_TS(act_timestamp)) {
-        prev_ts = act_timestamp;
-        prev_ts_actual = act_timestamp;
-        rst_prev_ts = false;
-    } else if (VALID_TS(prev_ts)) {
-        bool codec_cond = (drv_ctx.timestamp_adjust)?
-            (!VALID_TS(act_timestamp) || act_timestamp < prev_ts_actual || llabs(act_timestamp - prev_ts_actual) <= 2000) :
-            (!VALID_TS(act_timestamp) || act_timestamp <= prev_ts_actual);
-             prev_ts_actual = act_timestamp; //unadjusted previous timestamp
-        if (frm_int > 0 && codec_cond) {
-            DEBUG_PRINT_LOW("adjust_timestamp: original ts[%lld]", act_timestamp);
-            act_timestamp = prev_ts + frm_int;
-            DEBUG_PRINT_LOW("adjust_timestamp: predicted ts[%lld]", act_timestamp);
-            prev_ts = act_timestamp;
-        } else {
-            if (drv_ctx.picture_order == VDEC_ORDER_DISPLAY && act_timestamp < prev_ts) {
-                // ensure that timestamps can never step backwards when in display order
-                act_timestamp = prev_ts;
-            }
-            set_frame_rate(act_timestamp);
-        }
-    } else if (frm_int > 0)          // In this case the frame rate was set along
-    {                               // with the port definition, start ts with 0
-        act_timestamp = prev_ts = 0;  // and correct if a valid ts is received.
-        rst_prev_ts = true;
-    }
 }
 
 OMX_BUFFERHEADERTYPE* omx_vdec::get_omx_output_buffer_header(int index)
