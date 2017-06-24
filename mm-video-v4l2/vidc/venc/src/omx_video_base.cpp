@@ -5271,10 +5271,21 @@ OMX_ERRORTYPE omx_video::convert_queue_buffer(OMX_HANDLETYPE hComp,
                     pdest_frame, (unsigned int)pdest_frame->nFilledLen);
         }
     } else {
+        unsigned int input_buf_size = 0;
+        if (!c2d_conv.get_buffer_size(C2D_INPUT, input_buf_size)) {
+            DEBUG_PRINT_ERROR("convert_queue_buffer: failed to get C2D i/p buf-size!");
+            return OMX_ErrorBadParameter;
+        } else if (Input_pmem_info.size < input_buf_size) {
+            DEBUG_PRINT_ERROR("convert_queue_buffer: insufficient handle size(%u) v/s min(%u)",
+                    Input_pmem_info.size, input_buf_size);
+            return OMX_ErrorBadParameter;
+        }
         uva = (unsigned char *)mmap(NULL, Input_pmem_info.size,
                 PROT_READ|PROT_WRITE,
                 MAP_SHARED,Input_pmem_info.fd,0);
         if (uva == MAP_FAILED) {
+            DEBUG_PRINT_ERROR("convert_queue_buffer: failed to map handle fd(%d) size(%u)",
+                    Input_pmem_info.fd, Input_pmem_info.size);
             ret = OMX_ErrorBadParameter;
         } else {
             if (!c2d_conv.convert(Input_pmem_info.fd, uva, uva,
