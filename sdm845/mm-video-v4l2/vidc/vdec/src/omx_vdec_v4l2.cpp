@@ -54,6 +54,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <media/hardware/HardwareAPI.h>
 #include <media/msm_media_info.h>
 #include <sys/eventfd.h>
+#include <cutils/native_handle.h>
 
 #if !defined(_ANDROID_) || defined(SYS_IOCTL)
 #include <sys/ioctl.h>
