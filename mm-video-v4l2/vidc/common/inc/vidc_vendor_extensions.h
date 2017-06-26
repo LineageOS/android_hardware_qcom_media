@@ -138,7 +138,7 @@ struct VendorExtension {
     bool setParamInt32(OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext, const char *paramKey,
             OMX_S32 setInt32) const;
     bool setParamInt64(OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext, const char *paramKey,
-            OMX_S32 setInt64) const;
+            OMX_S64 setInt64) const;
     bool setParamString(OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext, const char *paramKey,
             const char *setStr) const;
 
@@ -147,8 +147,8 @@ struct VendorExtension {
     bool readParamInt32(OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext, const char *paramKey,
             OMX_S32 *readInt32) const;
     bool readParamInt64(OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext, const char *paramKey,
-            OMX_S32 *readInt64) const;
-    bool readParamInt64(OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext, const char *paramKey,
+            OMX_S64 *readInt64) const;
+    bool readParamString(OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext, const char *paramKey,
             char *readStr) const;
 
     // Sanity checkers
