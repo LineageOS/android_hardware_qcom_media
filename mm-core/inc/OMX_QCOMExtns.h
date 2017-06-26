@@ -631,6 +631,9 @@ enum OMX_QCOM_EXTN_INDEXTYPE
 
     /* Output Crop extradata (includes MISR) */
     OMX_QcomIndexParamOutputCropExtraData = 0x7F000072,
+
+    /* Controlled Input queue mode for frame accurate configuration */
+    OMX_QcomIndexParamVencControlInputQueue = 0x7F000073,
 };
 
 /**

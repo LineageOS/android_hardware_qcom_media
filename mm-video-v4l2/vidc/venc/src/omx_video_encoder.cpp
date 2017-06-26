@@ -424,6 +424,11 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     m_sConfigQP.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
     m_sConfigQP.nQP = 30;
 
+    OMX_INIT_STRUCT(&m_sParamControlInputQueue , QOMX_ENABLETYPE);
+    m_sParamControlInputQueue.bEnable = OMX_FALSE;
+
+    OMX_INIT_STRUCT(&m_sConfigInputTrigTS, OMX_TIME_CONFIG_TIMESTAMPTYPE);
+
     m_state                   = OMX_StateLoaded;
     m_sExtraData = 0;
 
@@ -1455,6 +1460,12 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 memcpy(&m_sParamDownScalar, paramData, sizeof(QOMX_INDEXDOWNSCALAR));
                 break;
             }
+        case OMX_QcomIndexParamVencControlInputQueue:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
+                memcpy(&m_sParamControlInputQueue, paramData, sizeof(QOMX_ENABLETYPE));
+                break;
+            }
         case OMX_IndexParamVideoSliceFMO:
         default:
             {
@@ -1841,16 +1852,21 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
             {
                 OMX_TIME_CONFIG_TIMESTAMPTYPE* pParam =
                     (OMX_TIME_CONFIG_TIMESTAMPTYPE*) configData;
-                pthread_mutex_lock(&timestamp.m_lock);
-                timestamp.m_TimeStamp = (OMX_U64)pParam->nTimestamp;
-                DEBUG_PRINT_LOW("Buffer = %p, Timestamp = %llu", timestamp.pending_buffer, (OMX_U64)pParam->nTimestamp);
-                if (timestamp.is_buffer_pending && (OMX_U64)timestamp.pending_buffer->nTimeStamp == timestamp.m_TimeStamp) {
-                    DEBUG_PRINT_INFO("Queueing back pending buffer %p", timestamp.pending_buffer);
-                    this->post_event((unsigned long)hComp,(unsigned long)timestamp.pending_buffer,m_input_msg_id);
-                    timestamp.pending_buffer = NULL;
-                    timestamp.is_buffer_pending = false;
+                unsigned long buf;
+                unsigned long p2;
+                unsigned long bufTime;
+
+                pthread_mutex_lock(&m_TimeStampInfo.m_lock);
+                m_TimeStampInfo.ts = (OMX_S64)pParam->nTimestamp;
+                while (m_TimeStampInfo.deferred_inbufq.m_size &&
+                       !(m_TimeStampInfo.deferred_inbufq.get_q_msg_type() > m_TimeStampInfo.ts)) {
+                    m_TimeStampInfo.deferred_inbufq.pop_entry(&buf,&p2,&bufTime);
+                    DEBUG_PRINT_INFO("Queueing back pending buffer %lu timestamp %lu", buf, bufTime);
+                    this->post_event((unsigned long)hComp, (unsigned long)buf, m_input_msg_id);
                 }
-                pthread_mutex_unlock(&timestamp.m_lock);
+                pthread_mutex_unlock(&m_TimeStampInfo.m_lock);
+
+                memcpy(&m_sConfigInputTrigTS, pParam, sizeof(m_sConfigInputTrigTS));
                 break;
             }
        case OMX_IndexConfigAndroidIntraRefresh:
@@ -2074,20 +2090,22 @@ bool omx_venc::dev_buffer_ready_to_queue(OMX_BUFFERHEADERTYPE *buffer)
     bool bRet = true;
 
     /* do not defer the buffer if m_TimeStamp is not initialized */
-    if (!timestamp.m_TimeStamp)
+    if (!m_sParamControlInputQueue.bEnable)
         return true;
 
-    pthread_mutex_lock(&timestamp.m_lock);
+    pthread_mutex_lock(&m_TimeStampInfo.m_lock);
 
-    if ((OMX_U64)buffer->nTimeStamp == (OMX_U64)timestamp.m_TimeStamp) {
+    if ((!m_sParamControlInputQueue.bEnable) ||
+        (OMX_S64)buffer->nTimeStamp <= (OMX_S64)m_TimeStampInfo.ts) {
         DEBUG_PRINT_LOW("ETB is ready to be queued");
     } else {
-        DEBUG_PRINT_INFO("ETB is defeffed due to timeStamp mismatch");
-        timestamp.is_buffer_pending = true;
-        timestamp.pending_buffer = buffer;
+        DEBUG_PRINT_INFO(
+            "ETB is deferred due to timeStamp mismatch buf_ts %lld m_TimeStampInfo.ts %lld",
+             (OMX_S64)buffer->nTimeStamp, (OMX_S64)m_TimeStampInfo.ts);
+        m_TimeStampInfo.deferred_inbufq.insert_entry((unsigned long)buffer, 0, buffer->nTimeStamp);
         bRet = false;
     }
-    pthread_mutex_unlock(&timestamp.m_lock);
+    pthread_mutex_unlock(&m_TimeStampInfo.m_lock);
     return bRet;
 }
 

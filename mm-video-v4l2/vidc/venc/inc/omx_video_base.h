@@ -678,11 +678,10 @@ class omx_video: public qc_omx_component
         QOMX_INDEXDOWNSCALAR m_sParamDownScalar;
         PrependSPSPPSToIDRFramesParams m_sPrependSPSPPS;
         struct timestamp_info {
-            OMX_U64 m_TimeStamp;
-            bool is_buffer_pending;
-            OMX_BUFFERHEADERTYPE *pending_buffer;
+            OMX_S64 ts;
+            omx_cmd_queue deferred_inbufq;
             pthread_mutex_t m_lock;
-        } timestamp;
+        } m_TimeStampInfo;
         OMX_U32 m_sExtraData;
         OMX_U32 m_input_msg_id;
         OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE m_sConfigIntraRefresh;
@@ -691,6 +690,8 @@ class omx_video: public qc_omx_component
         OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE m_sParamTemporalLayers;
         OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE m_sConfigTemporalLayers;
         QOMX_ENABLETYPE m_sParamAVTimerTimestampMode;   // use VT-timestamps in gralloc-handle
+        QOMX_ENABLETYPE m_sParamControlInputQueue;
+        OMX_TIME_CONFIG_TIMESTAMPTYPE m_sConfigInputTrigTS;
 
         // fill this buffer queue
         omx_cmd_queue m_ftb_q;
