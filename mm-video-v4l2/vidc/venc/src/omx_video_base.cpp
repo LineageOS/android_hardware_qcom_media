@@ -309,8 +309,9 @@ omx_video::omx_video():
 
     mUsesColorConversion = false;
     pthread_mutex_init(&m_lock, NULL);
-    pthread_mutex_init(&timestamp.m_lock, NULL);
-    timestamp.is_buffer_pending = false;
+    pthread_mutex_init(&m_TimeStampInfo.m_lock, NULL);
+    m_TimeStampInfo.deferred_inbufq.m_size=0;
+    m_TimeStampInfo.deferred_inbufq.m_read = m_TimeStampInfo.deferred_inbufq.m_write = 0;
     sem_init(&m_cmd_lock,0,0);
     DEBUG_PRINT_LOW("meta_buffer_hdr = %p", meta_buffer_hdr);
 
@@ -359,7 +360,7 @@ omx_video::~omx_video()
         pthread_join(async_thread_id,NULL);
 #endif
     pthread_mutex_destroy(&m_lock);
-    pthread_mutex_destroy(&timestamp.m_lock);
+    pthread_mutex_destroy(&m_TimeStampInfo.m_lock);
     sem_destroy(&m_cmd_lock);
     DEBUG_PRINT_HIGH("m_etb_count = %" PRIu64 ", m_fbd_count = %" PRIu64, m_etb_count,
             m_fbd_count);
@@ -1348,6 +1349,10 @@ bool omx_video::execute_input_flush(void)
             m_pCallbacks.EmptyBufferDone(&m_cmp,m_app_data,(OMX_BUFFERHEADERTYPE *)p2);
         }
     }
+    while (m_TimeStampInfo.deferred_inbufq.m_size) {
+        m_TimeStampInfo.deferred_inbufq.pop_entry(&p1,&p2,&ident);
+        m_pCallbacks.EmptyBufferDone(&m_cmp,m_app_data,(OMX_BUFFERHEADERTYPE *)p1);
+    }
     if (mUseProxyColorFormat) {
         if (psource_frame) {
             m_pCallbacks.EmptyBufferDone(&m_cmp,m_app_data,psource_frame);
@@ -1411,6 +1416,12 @@ bool omx_video::execute_flush_all(void)
             m_pCallbacks.EmptyBufferDone(&m_cmp,m_app_data,(OMX_BUFFERHEADERTYPE *)p2);
         }
     }
+
+    while (m_TimeStampInfo.deferred_inbufq.m_size) {
+        m_TimeStampInfo.deferred_inbufq.pop_entry(&p1,&p2,&ident);
+        m_pCallbacks.EmptyBufferDone(&m_cmp,m_app_data,(OMX_BUFFERHEADERTYPE *)p1);
+    }
+
     if(mUseProxyColorFormat) {
         if(psource_frame) {
             m_pCallbacks.EmptyBufferDone(&m_cmp,m_app_data,psource_frame);

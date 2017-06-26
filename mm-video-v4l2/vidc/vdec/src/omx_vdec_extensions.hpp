@@ -88,7 +88,7 @@ OMX_ERRORTYPE omx_vdec::get_vendor_extension_config(
 OMX_ERRORTYPE omx_vdec::set_vendor_extension_config(
                 OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext) {
 
-    ALOGI("set_vendor_extension_config");
+    DEBUG_PRINT_LOW("set_vendor_extension_config");
     if (ext->nIndex >= mVendorExtensionStore.size()) {
         DEBUG_PRINT_ERROR("unrecognized vendor extension index (%u) max(%u)",
                 ext->nIndex, mVendorExtensionStore.size());

@@ -80,6 +80,11 @@ void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
     ADD_PARAM    ("max-p-count", OMX_AndroidVendorValueInt32)
     ADD_PARAM_END("max-b-count", OMX_AndroidVendorValueInt32)
 
+    ADD_EXTENSION("qti-ext-enc-app-input-control", OMX_QcomIndexParamVencControlInputQueue, OMX_DirInput)
+    ADD_PARAM_END("enable", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-enc-input-trigger", OMX_IndexConfigTimePosition, OMX_DirInput)
+    ADD_PARAM_END("timestamp", OMX_AndroidVendorValueInt64)
 }
 
 OMX_ERRORTYPE omx_video::get_vendor_extension_config(
@@ -208,6 +213,16 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
             setStatus &= vExt.setParamInt32(ext, "max-b-count",nBLayerCountMax);
             break;
         }
+        case OMX_QcomIndexParamVencControlInputQueue:
+        {
+            setStatus &= vExt.setParamInt32(ext, "enable", m_sParamControlInputQueue.bEnable);
+            break;
+        }
+        case OMX_IndexConfigTimePosition:
+        {
+            setStatus &= vExt.setParamInt64(ext, "timestamp", m_sConfigInputTrigTS.nTimestamp);
+            break;
+        }
         default:
         {
             return OMX_ErrorNotImplemented;
@@ -218,6 +233,8 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
 
 OMX_ERRORTYPE omx_video::set_vendor_extension_config(
                 OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext) {
+
+    DEBUG_PRINT_LOW("set_vendor_extension_config");
     if (ext->nIndex >= mVendorExtensionStore.size()) {
         DEBUG_PRINT_ERROR("unrecognized vendor extension index (%u) max(%u)",
                 ext->nIndex, mVendorExtensionStore.size());
@@ -445,13 +462,51 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
             } while ((token = strtok_r(NULL, "|", &rest)));
             break;
         }
+        case OMX_QcomIndexParamVencControlInputQueue:
+        {
+            QOMX_ENABLETYPE controlInputQueueParam;
+            memcpy(&controlInputQueueParam, &m_sParamControlInputQueue, sizeof(QOMX_ENABLETYPE));
+            valueSet |= vExt.readParamInt32(ext, "enable", (OMX_S32 *)&(controlInputQueueParam.bEnable));
+            if (!valueSet) {
+                break;
+            }
+
+            DEBUG_PRINT_HIGH("VENDOR-EXT: set_param: control input queue enable=%u", controlInputQueueParam.bEnable);
+
+            err = set_parameter(
+                    NULL, (OMX_INDEXTYPE)OMX_QcomIndexParamVencControlInputQueue, &controlInputQueueParam);
+            if (err != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("set_param: OMX_QcomIndexParamVencControlInputQueue failed !");
+            }
+
+            break;
+        }
+        case OMX_IndexConfigTimePosition:
+        {
+            OMX_TIME_CONFIG_TIMESTAMPTYPE triggerTimeStamp;
+            memcpy(&triggerTimeStamp, &m_sConfigInputTrigTS, sizeof(OMX_TIME_CONFIG_TIMESTAMPTYPE));
+            valueSet |= vExt.readParamInt64(ext, "timestamp", (OMX_S64 *)&(triggerTimeStamp.nTimestamp));
+            if (!valueSet) {
+                break;
+            }
+
+            DEBUG_PRINT_HIGH("VENDOR-EXT: set_config: trigger timestamp =%lld", triggerTimeStamp.nTimestamp);
+
+            err = set_config(
+                    NULL, (OMX_INDEXTYPE)OMX_IndexConfigTimePosition, &triggerTimeStamp);
+            if (err != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("set_config: OMX_IndexConfigTimePosition failed !");
+            }
+
+            break;
+        }
         case OMX_QTIIndexParamCapabilitiesVTDriverVersion:
         case OMX_QTIIndexParamCapabilitiesMaxLTR:
         case OMX_QTIIndexParamCapabilitiesMaxDownScaleRatio:
         case OMX_QTIIndexParamCapabilitiesRotationSupport:
         case OMX_QTIIndexParamCapabilitiesMaxTemporalLayers:
         {
-            break;
+             break;
         }
         default:
         {

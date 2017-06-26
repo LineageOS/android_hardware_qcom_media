@@ -648,6 +648,9 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     /* OMX.QTI.index.config.video.getdsmode */
     OMX_QTIIndexConfigGetDSMode = 0x7F000073,
 
+    /* Controlled Input queue mode for frame accurate configuration */
+    OMX_QcomIndexParamVencControlInputQueue = 0x7F000074,
+
     /* Capabilities */
     OMX_QTIIndexParamCapabilitiesVTDriverVersion = 0x7F100000,
 
