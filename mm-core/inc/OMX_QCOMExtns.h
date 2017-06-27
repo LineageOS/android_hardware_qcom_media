@@ -634,6 +634,15 @@ enum OMX_QCOM_EXTN_INDEXTYPE
 
     /* Controlled Input queue mode for frame accurate configuration */
     OMX_QcomIndexParamVencControlInputQueue = 0x7F000073,
+
+    /**
+    *  Configure Slice Header Spacing
+    *  This index will be used to configure both byte based
+    *  and MB based slice header spacing. This is the preferred
+    *  alternative to OMX_IndexParamVideoAvc (for MB based)
+    *  and OMX_IndexParamVideoErrorCorrection (for byte based)
+    */
+    OMX_QcomIndexParamVideoSliceSpacing = 0x7F000074,
 };
 
 /**
@@ -2151,6 +2160,20 @@ typedef struct QOMX_VIDEO_DITHER_CONTROL {
     OMX_U32 nPortIndex;
     QOMX_VIDEO_DITHERTYPE eDitherType;
 } QOMX_VIDEO_DITHER_CONTROL;
+
+typedef enum QOMX_VIDEO_SLICEMODETYPE {
+    QOMX_SLICEMODE_DISABLE = 0,
+    QOMX_SLICEMODE_MB_COUNT = 0x01,
+    QOMX_SLICEMODE_BYTE_COUNT = 0x02,
+} QOMX_VIDEO_SLICEMODETYPE;
+
+typedef struct QOMX_VIDEO_PARAM_SLICE_SPACING_TYPE {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    QOMX_VIDEO_SLICEMODETYPE eSliceMode;
+    OMX_U32 nSliceSize;
+} QOMX_VIDEO_PARAM_SLICE_SPACING_TYPE;
 
 #ifdef __cplusplus
 }

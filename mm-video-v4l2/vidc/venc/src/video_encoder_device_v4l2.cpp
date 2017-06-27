@@ -2067,11 +2067,28 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
 
                 if (error_resilience->nPortIndex == (OMX_U32) PORT_INDEX_OUT) {
                     if (venc_set_error_resilience(error_resilience) == false) {
-                        DEBUG_PRINT_ERROR("ERROR: Setting Intra refresh failed");
+                        DEBUG_PRINT_ERROR("ERROR: Setting Error Correction failed");
                         return false;
                     }
                 } else {
                     DEBUG_PRINT_ERROR("ERROR: Invalid Port Index for OMX_IndexParamVideoErrorCorrection");
+                }
+
+                break;
+            }
+         case OMX_QcomIndexParamVideoSliceSpacing:
+            {
+                DEBUG_PRINT_LOW("venc_set_param:OMX_QcomIndexParamVideoSliceSpacing");
+                QOMX_VIDEO_PARAM_SLICE_SPACING_TYPE *slice_spacing =
+                    (QOMX_VIDEO_PARAM_SLICE_SPACING_TYPE*)paramData;
+
+                if (slice_spacing->nPortIndex == (OMX_U32) PORT_INDEX_OUT) {
+                    if (!venc_set_multislice_cfg(slice_spacing->eSliceMode, slice_spacing->nSliceSize)) {
+                        DEBUG_PRINT_ERROR("ERROR: Setting Slice Spacing failed");
+                        return false;
+                    }
+                } else {
+                    DEBUG_PRINT_ERROR("ERROR: Invalid Port Index for OMX_QcomIndexParamVideoSliceSpacing");
                 }
 
                 break;

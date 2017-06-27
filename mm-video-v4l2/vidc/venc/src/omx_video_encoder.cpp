@@ -232,6 +232,10 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     m_sErrorCorrection.bEnableRVLC = OMX_FALSE;
     m_sErrorCorrection.nResynchMarkerSpacing = 0;
 
+    OMX_INIT_STRUCT(&m_sSliceSpacing, QOMX_VIDEO_PARAM_SLICE_SPACING_TYPE);
+    m_sSliceSpacing.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
+    m_sSliceSpacing.eSliceMode = QOMX_SLICEMODE_MB_COUNT;
+
     OMX_INIT_STRUCT(&m_sIntraRefresh, OMX_VIDEO_PARAM_INTRAREFRESHTYPE);
     m_sIntraRefresh.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
     m_sIntraRefresh.eRefreshMode = OMX_VIDEO_IntraRefreshMax;
@@ -1021,6 +1025,19 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     return OMX_ErrorUnsupportedSetting;
                 }
                 memcpy(&m_sErrorCorrection,pParam, sizeof(m_sErrorCorrection));
+                break;
+            }
+        case OMX_QcomIndexParamVideoSliceSpacing:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_VIDEO_PARAM_SLICE_SPACING_TYPE);
+                DEBUG_PRINT_LOW("OMX_QcomIndexParamVideoSliceSpacing");
+                QOMX_VIDEO_PARAM_SLICE_SPACING_TYPE* pParam =
+                    (QOMX_VIDEO_PARAM_SLICE_SPACING_TYPE*)paramData;
+                if (!handle->venc_set_param(paramData, (OMX_INDEXTYPE)OMX_QcomIndexParamVideoSliceSpacing)) {
+                    DEBUG_PRINT_ERROR("ERROR: Request for setting slice spacing failed");
+                    return OMX_ErrorUnsupportedSetting;
+                }
+                memcpy(&m_sSliceSpacing, pParam, sizeof(m_sSliceSpacing));
                 break;
             }
         case OMX_IndexParamVideoIntraRefresh:

@@ -38,8 +38,11 @@ void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
     ADD_PARAM    ("n-pframes",    OMX_AndroidVendorValueInt32)
     ADD_PARAM_END("n-idr-period", OMX_AndroidVendorValueInt32)
 
-    ADD_EXTENSION("qti-ext-enc-error-correction", OMX_IndexParamVideoErrorCorrection, OMX_DirOutput)
+    ADD_EXTENSION("qti-ext-enc-error-correction", OMX_QcomIndexParamVideoSliceSpacing, OMX_DirOutput)
     ADD_PARAM_END("resync-marker-spacing-bits", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-enc-slice", OMX_QcomIndexParamVideoSliceSpacing, OMX_DirOutput)
+    ADD_PARAM_END("spacing", OMX_AndroidVendorValueInt32)
 
     ADD_EXTENSION("qti-ext-enc-custom-profile-level", OMX_IndexParamVideoProfileLevelCurrent, OMX_DirOutput)
     ADD_PARAM    ("profile", OMX_AndroidVendorValueInt32)
@@ -97,11 +100,14 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
             setStatus &= vExt.setParamInt32(ext, "n-idr-period", m_sConfigAVCIDRPeriod.nIDRPeriod);
             break;
         }
-        case OMX_IndexParamVideoErrorCorrection:
+        case OMX_QcomIndexParamVideoSliceSpacing:
         {
-            // "bits" @0
-            setStatus &= vExt.setParamInt32(ext,
-                    "resync-marker-spacing-bits", m_sErrorCorrection.nResynchMarkerSpacing);
+            if (vExt.isConfigKey(ext, "qti-ext-enc-error-correction")) {
+                setStatus &= vExt.setParamInt32(ext,
+                        "resync-marker-spacing-bits", m_sSliceSpacing.nSliceSize);
+            } else if (vExt.isConfigKey(ext, "qti-ext-enc-slice")) {
+                setStatus &= vExt.setParamInt32(ext, "spacing", m_sSliceSpacing.nSliceSize);
+            }
             break;
         }
         case OMX_IndexParamVideoProfileLevelCurrent:
@@ -214,23 +220,36 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
             }
             break;
         }
-        case OMX_IndexParamVideoErrorCorrection:
+        case OMX_QcomIndexParamVideoSliceSpacing:
         {
-            OMX_VIDEO_PARAM_ERRORCORRECTIONTYPE ecParam;
-            memcpy(&ecParam, &m_sErrorCorrection, sizeof(OMX_VIDEO_PARAM_ERRORCORRECTIONTYPE));
-            valueSet |= vExt.readParamInt32(ext,
-                    "resync-marker-spacing-bits", (OMX_S32 *)&(ecParam.nResynchMarkerSpacing));
+            QOMX_VIDEO_PARAM_SLICE_SPACING_TYPE sliceSpacing;
+            memcpy(&sliceSpacing, &m_sSliceSpacing, sizeof(QOMX_VIDEO_PARAM_SLICE_SPACING_TYPE));
+
+            if (vExt.isConfigKey(ext, "qti-ext-enc-error-correction")) {
+                sliceSpacing.eSliceMode = QOMX_SLICEMODE_BYTE_COUNT;
+                valueSet |= vExt.readParamInt32(ext,
+                    "resync-marker-spacing-bits", (OMX_S32 *)&(sliceSpacing.nSliceSize));
+                sliceSpacing.nSliceSize = ALIGN(sliceSpacing.nSliceSize, 8) >> 3;
+            } else if (vExt.isConfigKey(ext, "qti-ext-enc-slice")) {
+                sliceSpacing.eSliceMode = QOMX_SLICEMODE_MB_COUNT;
+                valueSet |= vExt.readParamInt32(ext,
+                    "spacing", (OMX_S32 *)&(sliceSpacing.nSliceSize));
+            } else {
+              DEBUG_PRINT_ERROR("VENDOR-EXT: set_config: Slice Spacing : Incorrect Mode !");
+              break;
+            }
+
             if (!valueSet) {
                 break;
             }
 
-            DEBUG_PRINT_HIGH("VENDOR-EXT: set_config: resync-marker-spacing : %d bits",
-                    ecParam.nResynchMarkerSpacing);
+            DEBUG_PRINT_HIGH("VENDOR-EXT: set_config: slice spacing : mode %d size %d",
+                    sliceSpacing.eSliceMode, sliceSpacing.nSliceSize);
 
             err = set_parameter(
-                    NULL, OMX_IndexParamVideoErrorCorrection, &ecParam);
+                    NULL, (OMX_INDEXTYPE)OMX_QcomIndexParamVideoSliceSpacing, &sliceSpacing);
             if (err != OMX_ErrorNone) {
-                DEBUG_PRINT_ERROR("set_config: OMX_IndexParamVideoErrorCorrection failed !");
+                DEBUG_PRINT_ERROR("set_config: OMX_QcomIndexParamVideoSliceSpacing failed !");
             }
             break;
         }

@@ -157,6 +157,9 @@ struct VendorExtension {
     // Must be called to check whether config data provided with setConfig is valid
     OMX_ERRORTYPE isConfigValid(OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext) const;
 
+    // Compare the keys for correct configuration
+    bool isConfigKey(OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext, const char *paramKey) const;
+
     // utils
     static const char* typeString(OMX_ANDROID_VENDOR_VALUETYPE type);
     std::string debugString() const;

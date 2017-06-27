@@ -178,6 +178,18 @@ OMX_ERRORTYPE VendorExtension::isConfigValid(
     return OMX_ErrorNone;
 }
 
+bool VendorExtension::isConfigKey(
+         OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext,
+         const char *paramKey) const {
+
+    bool retStatus = false;
+    if (!strncmp((char *)ext->cName, paramKey, OMX_MAX_STRINGNAME_SIZE)) {
+        retStatus = true;
+    }
+
+    return retStatus;
+}
+
 //static
 const char* VendorExtension::typeString(OMX_ANDROID_VENDOR_VALUETYPE type) {
     switch (type) {
