@@ -60,6 +60,9 @@ void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
 
     ADD_EXTENSION("qti-ext-enc-input-trigger", OMX_IndexConfigTimePosition, OMX_DirInput)
     ADD_PARAM_END("timestamp", OMX_AndroidVendorValueInt64)
+
+    ADD_EXTENSION("qti-ext-enc-low-latency", OMX_QTIIndexParamLowLatencyMode, OMX_DirInput)
+    ADD_PARAM_END("enable", OMX_AndroidVendorValueInt32)
 }
 
 OMX_ERRORTYPE omx_video::get_vendor_extension_config(
@@ -132,6 +135,11 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
         case OMX_IndexConfigTimePosition:
         {
             setStatus &= vExt.setParamInt64(ext, "timestamp", m_sConfigInputTrigTS.nTimestamp);
+            break;
+        }
+        case OMX_QTIIndexParamLowLatencyMode:
+        {
+            setStatus &= vExt.setParamInt32(ext, "enable", m_sParamLowLatency.bEnableLowLatencyMode);
             break;
         }
         default:
@@ -343,6 +351,26 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
 
             break;
         }
+        case OMX_QTIIndexParamLowLatencyMode:
+        {
+            QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE lowLatency;
+            memcpy(&lowLatency, &m_sParamLowLatency, sizeof(QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE));
+            valueSet |= vExt.readParamInt32(ext, "enable", (OMX_S32 *)&(lowLatency.bEnableLowLatencyMode));
+            if (!valueSet) {
+                break;
+            }
+
+            DEBUG_PRINT_HIGH("VENDOR-EXT: set_param: low latency mode =%u", lowLatency.bEnableLowLatencyMode);
+
+            err = set_parameter(
+                    NULL, (OMX_INDEXTYPE)OMX_QTIIndexParamLowLatencyMode, &lowLatency);
+            if (err != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("set_param: OMX_QTIIndexParamLowLatencyMode failed !");
+            }
+
+            break;
+        }
+
         default:
         {
             return OMX_ErrorNotImplemented;

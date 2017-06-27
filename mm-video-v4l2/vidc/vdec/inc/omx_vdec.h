@@ -1168,6 +1168,7 @@ class omx_vdec: public qc_omx_component
 
         OMX_VIDEO_PARAM_PROFILELEVELTYPE m_profile_lvl;
         OMX_U32 m_profile;
+        QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE m_sParamLowLatency;
 
         //variables to handle dynamic buffer mode
         bool dynamic_buf_mode;

@@ -537,7 +537,6 @@ class venc_dev
         bool venc_set_operatingrate(OMX_U32 rate);
         bool venc_set_layer_bitrates(OMX_U32 *pLayerBitrates, OMX_U32 numLayers);
         bool venc_set_lowlatency_mode(OMX_BOOL enable);
-        bool venc_set_low_latency(OMX_BOOL enable);
         bool venc_set_roi_qp_info(OMX_QTI_VIDEO_CONFIG_ROIINFO *roiInfo);
         bool venc_set_blur_resolution(OMX_QTI_VIDEO_CONFIG_BLURINFO *blurInfo);
         bool venc_set_colorspace(OMX_U32 primaries, OMX_U32 range, OMX_U32 transfer_chars, OMX_U32 matrix_coeffs);

@@ -2556,6 +2556,10 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
                 drv_ctx.video_driver_fd);
     }
     //memset(&h264_mv_buff,0,sizeof(struct h264_mv_buffer));
+
+    OMX_INIT_STRUCT(&m_sParamLowLatency, QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE);
+    m_sParamLowLatency.nNumFrames = 0;
+
     return eRet;
 }
 

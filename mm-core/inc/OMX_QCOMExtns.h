@@ -659,24 +659,6 @@ typedef struct QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE
 } QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE;
 
 /**
-* This is custom extension to configure Low Latency Mode.
-* Note: This struct will get deprecated.
-*
-* STRUCT MEMBERS
-*
-* nSize         : Size of Structure in bytes
-* nVersion      : OpenMAX IL specification version information
-* bLowLatencyMode   : Enable/Disable Low Latency mode
-*/
-
-typedef struct QOMX_EXTNINDEX_VIDEO_VENC_LOW_LATENCY_MODE
-{
-   OMX_U32 nSize;
-   OMX_VERSIONTYPE nVersion;
-   OMX_BOOL bLowLatencyMode;
-} QOMX_EXTNINDEX_VIDEO_VENC_LOW_LATENCY_MODE;
-
-/**
 * This is custom extension to configure Encoder Aspect Ratio.
 *
 * STRUCT MEMBERS

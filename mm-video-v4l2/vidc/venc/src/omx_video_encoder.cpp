@@ -43,7 +43,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 static int bframes;
 static int entropy;
-static int lowlatency;
 // factory function executed by the core to create instances
 void *get_omx_component_factory_fn(void)
 {
@@ -74,9 +73,6 @@ omx_venc::omx_venc()
     entropy = !!atoi(property_value);
     property_value[0] = '\0';
     handle = NULL;
-    property_get("vidc.debug.lowlatency", property_value, "0");
-    lowlatency = atoi(property_value);
-    property_value[0] = '\0';
 }
 
 omx_venc::~omx_venc()
@@ -429,6 +425,9 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
 
     OMX_INIT_STRUCT(&m_sConfigInputTrigTS, OMX_TIME_CONFIG_TIMESTAMPTYPE);
 
+    OMX_INIT_STRUCT(&m_sParamLowLatency, QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE);
+    m_sParamLowLatency.nNumFrames = 0;
+
     m_state                   = OMX_StateLoaded;
     m_sExtraData = 0;
 
@@ -456,16 +455,6 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
         }
     }
 
-    if (lowlatency)
-    {
-        QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE low_latency;
-        low_latency.bEnableLowLatencyMode = OMX_TRUE;
-        DEBUG_PRINT_LOW("Enable lowlatency mode");
-        if (!handle->venc_set_param(&low_latency,
-               (OMX_INDEXTYPE)OMX_QTIIndexParamLowLatencyMode)) {
-            DEBUG_PRINT_ERROR("Failed enabling low latency mode");
-        }
-    }
     DEBUG_PRINT_INFO("Component_init : %s : return = 0x%x", m_nkind, eRet);
 
     {
@@ -1464,6 +1453,17 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
                 memcpy(&m_sParamControlInputQueue, paramData, sizeof(QOMX_ENABLETYPE));
+                break;
+            }
+        case OMX_QTIIndexParamLowLatencyMode:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE);
+                if (!handle->venc_set_param(paramData,
+                            (OMX_INDEXTYPE)OMX_QTIIndexParamLowLatencyMode)) {
+                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamLowLatencyMode failed");
+                    return OMX_ErrorUnsupportedSetting;
+                }
+                memcpy(&m_sParamLowLatency, paramData, sizeof(QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE));
                 break;
             }
         case OMX_IndexParamVideoSliceFMO:

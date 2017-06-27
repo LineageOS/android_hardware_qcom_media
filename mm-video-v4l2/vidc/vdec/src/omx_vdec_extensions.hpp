@@ -33,6 +33,9 @@ void omx_vdec::init_vendor_extensions (VendorExtensionStore &store) {
 
     ADD_EXTENSION("qti-ext-dec-picture-order", OMX_QcomIndexParamVideoDecoderPictureOrder, OMX_DirOutput)
     ADD_PARAM_END("enable", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-dec-low-latency", OMX_QTIIndexParamLowLatencyMode, OMX_DirOutput)
+    ADD_PARAM_END("enable", OMX_AndroidVendorValueInt32)
 }
 
 
@@ -60,6 +63,11 @@ OMX_ERRORTYPE omx_vdec::get_vendor_extension_config(
         case OMX_QcomIndexParamVideoDecoderPictureOrder:
         {
             setStatus &= vExt.setParamInt32(ext, "enable", m_decode_order_mode);
+            break;
+        }
+        case OMX_QTIIndexParamLowLatencyMode:
+        {
+            setStatus &= vExt.setParamInt32(ext, "enable", m_sParamLowLatency.bEnableLowLatencyMode);
             break;
         }
         default:
@@ -117,6 +125,24 @@ OMX_ERRORTYPE omx_vdec::set_vendor_extension_config(
             if (err != OMX_ErrorNone) {
                 DEBUG_PRINT_ERROR("set_config: OMX_QcomIndexParamVideoDecoderPictureOrder failed !");
             }
+            break;
+        }
+        case OMX_QTIIndexParamLowLatencyMode:
+        {
+            QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE lowLatency;
+            memcpy(&lowLatency, &m_sParamLowLatency, sizeof(QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE));
+            valueSet |= vExt.readParamInt32(ext, "enable", (OMX_S32 *)&(lowLatency.bEnableLowLatencyMode));
+            if (!valueSet) {
+                break;
+            }
+
+            DEBUG_PRINT_HIGH("VENDOR-EXT: set_param: low latency mode =%u", lowLatency.bEnableLowLatencyMode);
+            err = set_parameter(
+                    NULL, (OMX_INDEXTYPE)OMX_QTIIndexParamLowLatencyMode, &lowLatency);
+            if (err != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("set_param: OMX_QTIIndexParamLowLatencyMode failed !");
+            }
+
             break;
         }
         default:
