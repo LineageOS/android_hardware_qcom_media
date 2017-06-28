@@ -1140,8 +1140,10 @@ int venc_dev::venc_output_log_buffers(const char *buffer_addr, int buffer_len, u
         }
     }
     if (m_debug.outfile && buffer_len) {
-        IvfFrameHeader ivfFrameHeader(buffer_len, timestamp);
-        fwrite(&ivfFrameHeader, sizeof(ivfFrameHeader), 1, m_debug.outfile);
+        if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8) {
+            IvfFrameHeader ivfFrameHeader(buffer_len, timestamp);
+            fwrite(&ivfFrameHeader, sizeof(ivfFrameHeader), 1, m_debug.outfile);
+        }
         DEBUG_PRINT_LOW("%s buffer_len:%d", __func__, buffer_len);
         fwrite(buffer_addr, buffer_len, 1, m_debug.outfile);
     }
