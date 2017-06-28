@@ -11959,13 +11959,13 @@ omx_vdec::allocate_color_convert_buf::allocate_color_convert_buf()
 {
     enabled = false;
     omx = NULL;
+    m_c2d_init_success = false;
     init_members();
     ColorFormat = OMX_COLOR_FormatMax;
     dest_format = YCbCr420P;
     m_c2d_width = 0;
     m_c2d_height = 0;
     m_c2d_output_format = 0;
-    m_c2d_init_success = false;
 }
 
 void omx_vdec::allocate_color_convert_buf::set_vdec_client(void *client)
