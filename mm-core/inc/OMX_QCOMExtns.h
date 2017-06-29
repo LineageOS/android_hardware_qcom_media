@@ -635,6 +635,9 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     *  and OMX_IndexParamVideoErrorCorrection (for byte based)
     */
     OMX_QcomIndexParamVideoSliceSpacing = 0x7F000074,
+
+    /* OMX.QTI.index.config.video.getdsmode */
+    OMX_QTIIndexConfigGetDSMode = 0x7F000075,
 };
 
 /**
@@ -1734,6 +1737,7 @@ typedef struct QOMX_VIDEO_CUSTOM_BUFFERSIZE {
 #define OMX_QTI_INDEX_CONFIG_VIDEO_BLURINFO "OMX.QTI.index.config.BlurInfo"
 #define OMX_QTI_INDEX_PARAM_VIDEO_CLIENT_EXTRADATA "OMX.QTI.index.param.client.extradata"
 #define OMX_QTI_INDEX_CONFIG_COLOR_ASPECTS "OMX.google.android.index.describeColorAspects"
+#define OMX_QTI_INDEX_CONFIG_VIDEO_GETDSMODE "OMX.QTI.index.config.video.getdsmode"
 
 typedef enum {
     QOMX_VIDEO_FRAME_PACKING_CHECKERBOARD = 0,
