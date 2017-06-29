@@ -484,6 +484,7 @@ class venc_dev
         OMX_U32                             operating_rate;
         struct msm_venc_color_space         color_space;
         msm_venc_temporal_layers            temporal_layers_config;
+        OMX_BOOL                            downscalar_enabled;
 
         bool venc_query_cap(struct v4l2_queryctrl &cap);
         bool venc_validate_range(OMX_S32 id, OMX_S32 val);

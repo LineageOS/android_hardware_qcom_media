@@ -1842,16 +1842,11 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
 
                     unsigned long codectype = venc_get_codectype(portDefn->format.video.eCompressionFormat);
 
-                    if (m_sVenc_cfg.dvs_height != portDefn->format.video.nFrameHeight ||
-                            m_sVenc_cfg.dvs_width != portDefn->format.video.nFrameWidth ||
+                    //Don't worry about width/height if downscalar is enabled.
+                    if (((m_sVenc_cfg.dvs_height != portDefn->format.video.nFrameHeight ||
+                            m_sVenc_cfg.dvs_width != portDefn->format.video.nFrameWidth) && !downscalar_enabled) ||
                             m_sOutput_buff_property.actualcount != portDefn->nBufferCountActual ||
                             m_sVenc_cfg.codectype != codectype) {
-
-                        DEBUG_PRINT_LOW("venc_set_param: OMX_IndexParamPortDefinition: port: %u, WxH %lux%lu --> %ux%u, count %lu --> %u, format %#lx --> %#lx",
-                            portDefn->nPortIndex, m_sVenc_cfg.dvs_width, m_sVenc_cfg.dvs_height,
-                            portDefn->format.video.nFrameWidth, portDefn->format.video.nFrameHeight,
-                            m_sInput_buff_property.actualcount, portDefn->nBufferCountActual,
-                            m_sVenc_cfg.codectype, codectype);
 
                         if (portDefn->nBufferCountActual < m_sOutput_buff_property.mincount) {
                             DEBUG_PRINT_LOW("Actual count %u is less than driver mincount %lu on port %u",
@@ -1859,8 +1854,17 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                             return false;
                         }
 
-                        m_sVenc_cfg.dvs_height = portDefn->format.video.nFrameHeight;
-                        m_sVenc_cfg.dvs_width = portDefn->format.video.nFrameWidth;
+                        //If downscalar is enabled. Correct width/height is populated no need to replace with port def width/height
+                        if (!downscalar_enabled) {
+                            DEBUG_PRINT_LOW("venc_set_param: OMX_IndexParamPortDefinition: port: %u, WxH %lux%lu --> %ux%u, count %lu --> %u, format %#lx --> %#lx",
+                                            portDefn->nPortIndex, m_sVenc_cfg.dvs_width, m_sVenc_cfg.dvs_height,
+                                            portDefn->format.video.nFrameWidth, portDefn->format.video.nFrameHeight,
+                                            m_sOutput_buff_property.actualcount, portDefn->nBufferCountActual,
+                                            m_sVenc_cfg.codectype, codectype);
+                            m_sVenc_cfg.dvs_height = portDefn->format.video.nFrameHeight;
+                            m_sVenc_cfg.dvs_width = portDefn->format.video.nFrameWidth;
+                        }
+
                         m_sVenc_cfg.codectype = codectype;
                         m_sOutput_buff_property.actualcount = portDefn->nBufferCountActual;
 
@@ -2491,6 +2495,30 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 QOMX_ENABLETYPE *pParam = (QOMX_ENABLETYPE *)paramData;
                 mUseAVTimerTimestamps = pParam->bEnable == OMX_TRUE;
                 DEBUG_PRINT_INFO("AVTimer timestamps enabled");
+                break;
+            }
+        case OMX_QcomIndexParamVideoDownScalar:
+            {
+                QOMX_INDEXDOWNSCALAR *pParam = (QOMX_INDEXDOWNSCALAR *)paramData;
+                downscalar_enabled = pParam->bEnable;
+
+                DEBUG_PRINT_INFO("Downscalar settings: Enabled : %d Width : %u Height %u",
+                    pParam->bEnable, pParam->nOutputWidth, pParam->nOutputHeight);
+                if (downscalar_enabled) {
+                    m_sVenc_cfg.dvs_width = pParam->nOutputWidth;
+                    m_sVenc_cfg.dvs_height = pParam->nOutputHeight;
+
+                    memset(&fmt, 0, sizeof(fmt));
+                    fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+                    fmt.fmt.pix_mp.width = pParam->nOutputWidth;
+                    fmt.fmt.pix_mp.height = pParam->nOutputHeight;
+                    fmt.fmt.pix_mp.pixelformat = m_sVenc_cfg.codectype;
+                    if (ioctl(m_nDriver_fd, VIDIOC_S_FMT, &fmt)) {
+                        DEBUG_PRINT_ERROR("Failed to set format on capture port");
+                        return false;
+                    }
+                    m_sOutput_buff_property.datasize = fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
+                }
                 break;
             }
         default:
@@ -3847,6 +3875,24 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
         buf_type=V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
         int ret;
 
+        if (!downscalar_enabled) {
+            OMX_U32 inp_width = 0, inp_height = 0, out_width = 0, out_height = 0;
+
+            if (!venc_get_dimensions(PORT_INDEX_IN, &inp_width, &inp_height)) {
+                return false;
+            }
+
+            if (!venc_get_dimensions(PORT_INDEX_OUT, &out_width, &out_height)) {
+                return false;
+            }
+
+            if (inp_height != out_height || inp_width != out_width) {
+                DEBUG_PRINT_ERROR("Downscalar is disabled and input/output dimenstions don't match");
+                DEBUG_PRINT_ERROR("Input WxH : %dx%d Output WxH : %dx%d",inp_width, inp_height, out_width, out_height);
+                return false;
+            }
+        }
+
         ret = ioctl(m_nDriver_fd, VIDIOC_STREAMON, &buf_type);
 
         if (ret) {
@@ -4010,6 +4056,25 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
         enum v4l2_buf_type buf_type;
         buf_type=V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
         int ret;
+
+        if (!downscalar_enabled) {
+            OMX_U32 inp_width = 0, inp_height = 0, out_width = 0, out_height = 0;
+
+            if (!venc_get_dimensions(PORT_INDEX_IN, &inp_width, &inp_height)) {
+                return false;
+            }
+
+            if (!venc_get_dimensions(PORT_INDEX_OUT, &out_width, &out_height)) {
+                return false;
+            }
+
+            if (inp_height != out_height || inp_width != out_width) {
+                DEBUG_PRINT_ERROR("Downscalar is disabled and input/output dimenstions don't match");
+                DEBUG_PRINT_ERROR("Input WxH : %dx%d Output WxH : %dx%d",inp_width, inp_height, out_width, out_height);
+                return false;
+            }
+        }
+
         ret = ioctl(m_nDriver_fd, VIDIOC_STREAMON, &buf_type);
         if (ret) {
             DEBUG_PRINT_ERROR("Failed to call streamon");

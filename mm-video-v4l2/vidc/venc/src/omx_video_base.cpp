@@ -1988,6 +1988,14 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 memcpy(pLayerInfo, &m_sParamTemporalLayers, sizeof(m_sParamTemporalLayers));
                 break;
             }
+        case OMX_QcomIndexParamVideoDownScalar:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_INDEXDOWNSCALAR);
+                QOMX_INDEXDOWNSCALAR *pDownScalarParam =
+                    reinterpret_cast<QOMX_INDEXDOWNSCALAR *>(paramData);
+                memcpy(pDownScalarParam, &m_sParamDownScalar, sizeof(m_sParamDownScalar));
+                break;
+            }
         case OMX_IndexParamVideoSliceFMO:
         default:
             {

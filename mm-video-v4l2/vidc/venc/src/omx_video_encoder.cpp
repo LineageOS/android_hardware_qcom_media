@@ -251,6 +251,11 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     m_sConfigColorAspects.sAspects.mMatrixCoeffs = ColorAspects::MatrixUnspecified;
     m_sConfigColorAspects.sAspects.mTransfer = ColorAspects::TransferUnspecified;
 
+    OMX_INIT_STRUCT(&m_sParamDownScalar, QOMX_INDEXDOWNSCALAR);
+    m_sParamDownScalar.bEnable = OMX_FALSE;
+    m_sParamDownScalar.nOutputWidth = 0;
+    m_sParamDownScalar.nOutputHeight = 0;
+
     if (codec_type == OMX_VIDEO_CodingAVC) {
         m_sParamProfileLevel.eProfile = (OMX_U32) OMX_VIDEO_AVCProfileBaseline;
         m_sParamProfileLevel.eLevel = (OMX_U32) OMX_VIDEO_AVCLevel1;
@@ -523,7 +528,7 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 portDefn = (OMX_PARAM_PORTDEFINITIONTYPE *) paramData;
 
                 DEBUG_PRINT_HIGH("set_parameter: OMX_IndexParamPortDefinition: port %d, wxh %dx%d, min %d, actual %d, size %d, colorformat %#x, compression format %#x",
-                    portDefn->nPortIndex, portDefn->format.video.nFrameHeight, portDefn->format.video.nFrameWidth,
+                    portDefn->nPortIndex, portDefn->format.video.nFrameWidth, portDefn->format.video.nFrameHeight,
                     portDefn->nBufferCountMin, portDefn->nBufferCountActual, portDefn->nBufferSize,
                     portDefn->format.video.eColorFormat, portDefn->format.video.eCompressionFormat);
 
@@ -1437,6 +1442,17 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     return OMX_ErrorUnsupportedSetting;
                 }
                 memcpy(&m_sParamAVTimerTimestampMode, paramData, sizeof(QOMX_ENABLETYPE));
+                break;
+            }
+        case OMX_QcomIndexParamVideoDownScalar:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_INDEXDOWNSCALAR);
+                if(!handle->venc_set_param(paramData,
+                           (OMX_INDEXTYPE)OMX_QcomIndexParamVideoDownScalar)) {
+                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_QcomIndexParamVideodownscalar failed");
+                    return OMX_ErrorUnsupportedSetting;
+                }
+                memcpy(&m_sParamDownScalar, paramData, sizeof(QOMX_INDEXDOWNSCALAR));
                 break;
             }
         case OMX_IndexParamVideoSliceFMO:
