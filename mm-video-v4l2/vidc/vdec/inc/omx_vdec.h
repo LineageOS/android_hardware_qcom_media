@@ -813,13 +813,6 @@ class omx_vdec: public qc_omx_component
         void free_input_buffer_header();
         void free_output_extradata_buffer_header();
 
-        OMX_ERRORTYPE allocate_input_heap_buffer(OMX_HANDLETYPE       hComp,
-                OMX_BUFFERHEADERTYPE **bufferHdr,
-                OMX_U32              port,
-                OMX_PTR              appData,
-                OMX_U32              bytes);
-
-
         OMX_ERRORTYPE allocate_input_buffer(OMX_HANDLETYPE       hComp,
                 OMX_BUFFERHEADERTYPE **bufferHdr,
                 OMX_U32              port,
@@ -870,7 +863,6 @@ class omx_vdec: public qc_omx_component
         OMX_ERRORTYPE start_port_reconfig();
         OMX_ERRORTYPE update_picture_resolution();
         int stream_off(OMX_U32 port);
-        void adjust_timestamp(OMX_S64 &act_timestamp);
         void set_frame_rate(OMX_S64 act_timestamp);
         void handle_extradata_secure(OMX_BUFFERHEADERTYPE *p_buf_hdr);
         void handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr);
@@ -1049,8 +1041,6 @@ class omx_vdec: public qc_omx_component
         bool output_use_buffer;
         bool ouput_egl_buffers;
         OMX_BOOL m_use_output_pmem;
-        OMX_BOOL m_out_mem_region_smi;
-        OMX_BOOL m_out_pvt_entry_pmem;
 
         int pending_input_buffers;
         int pending_output_buffers;
@@ -1080,12 +1070,8 @@ class omx_vdec: public qc_omx_component
         // SPS+PPS sent as part of set_config
         OMX_VENDOR_EXTRADATATYPE            m_vendor_config;
 
-        /*Variables for arbitrary Byte parsing support*/
-
         omx_cmd_queue m_input_pending_q;
         omx_cmd_queue m_input_free_q;
-        bool arbitrary_bytes;
-        OMX_BUFFERHEADERTYPE  h264_scratch;
         OMX_BUFFERHEADERTYPE  *psource_frame;
         OMX_BUFFERHEADERTYPE  *pdest_frame;
         OMX_BUFFERHEADERTYPE  *m_inp_heap_ptr;
@@ -1095,15 +1081,12 @@ class omx_vdec: public qc_omx_component
         unsigned frame_count;
         unsigned nal_count;
         unsigned nal_length;
-        bool look_ahead_nal;
         int first_frame;
         unsigned char *first_buffer;
         int first_frame_size;
         unsigned char m_hwdevice_name[80];
         FILE *m_device_file_ptr;
         enum vc1_profile_type m_vc1_profile;
-        OMX_S64 h264_last_au_ts;
-        OMX_U32 h264_last_au_flags;
         OMX_U32 m_demux_offsets[8192];
         OMX_U32 m_demux_entries;
         OMX_U32 m_disp_hor_size;
