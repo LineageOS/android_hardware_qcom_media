@@ -638,6 +638,17 @@ enum OMX_QCOM_EXTN_INDEXTYPE
 
     /* OMX.QTI.index.config.video.getdsmode */
     OMX_QTIIndexConfigGetDSMode = 0x7F000075,
+
+    /* Capabilities */
+    OMX_QTIIndexParamCapabilitiesVTDriverVersion = 0x7F100000,
+
+    OMX_QTIIndexParamCapabilitiesMaxTemporalLayers = 0x7F100001,
+
+    OMX_QTIIndexParamCapabilitiesMaxLTR = 0x7F100002,
+
+    OMX_QTIIndexParamCapabilitiesMaxDownScaleRatio = 0x7F100003,
+
+    OMX_QTIIndexParamCapabilitiesRotationSupport = 0x7F100004,
 };
 
 /**

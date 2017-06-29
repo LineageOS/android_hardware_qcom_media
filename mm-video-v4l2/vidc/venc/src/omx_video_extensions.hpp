@@ -85,6 +85,22 @@ void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
     ADD_EXTENSION("qti-ext-extradata-enable", OMX_QcomIndexParamIndexExtraDataType, OMX_DirOutput)
     ADD_PARAM_END("types", OMX_AndroidVendorValueString)
 
+    ADD_EXTENSION("qti-ext-enc-caps-vt-driver-version", OMX_QTIIndexParamCapabilitiesVTDriverVersion, OMX_DirOutput)
+    ADD_PARAM_END("number", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-enc-caps-preprocess", OMX_QTIIndexParamCapabilitiesMaxDownScaleRatio, OMX_DirOutput)
+    ADD_PARAM_END("max-downscale-factor", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-enc-caps-preprocess", OMX_QTIIndexParamCapabilitiesRotationSupport, OMX_DirOutput)
+    ADD_PARAM_END("rotation", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-enc-caps-ltr", OMX_QTIIndexParamCapabilitiesMaxLTR, OMX_DirOutput)
+    ADD_PARAM_END("max-count", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-enc-caps-temporal-layers", OMX_QTIIndexParamCapabilitiesMaxTemporalLayers, OMX_DirInput)
+    ADD_PARAM    ("max-p-count", OMX_AndroidVendorValueInt32)
+    ADD_PARAM_END("max-b-count", OMX_AndroidVendorValueInt32)
+
 }
 
 OMX_ERRORTYPE omx_video::get_vendor_extension_config(
@@ -213,6 +229,39 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
             }
             setStatus &= vExt.setParamString(ext, "types", exType);
             DEBUG_PRINT_LOW("VendorExt: getparam: Extradata %s",exType);
+            break;
+        }
+        case OMX_QTIIndexParamCapabilitiesVTDriverVersion:
+        {
+            setStatus &= vExt.setParamInt32(ext, "number", 65536);
+            break;
+        }
+        case OMX_QTIIndexParamCapabilitiesMaxLTR:
+        {
+            setStatus &= vExt.setParamInt32(ext, "max-count", 3);
+            break;
+        }
+        case OMX_QTIIndexParamCapabilitiesMaxDownScaleRatio:
+        {
+            setStatus &= vExt.setParamInt32(ext, "max-downscale-factor", 8);
+            break;
+        }
+        case OMX_QTIIndexParamCapabilitiesRotationSupport:
+        {
+            setStatus &= vExt.setParamInt32(ext, "rotation",1);
+            break;
+        }
+        case OMX_QTIIndexParamCapabilitiesMaxTemporalLayers:
+        {
+            OMX_U32 nPLayerCountMax , nBLayerCountMax;
+            OMX_VIDEO_ANDROID_TEMPORALLAYERINGPATTERNTYPE SupportedPattern;
+            if (!dev_get_temporal_layer_caps(&nPLayerCountMax,
+                        &nBLayerCountMax, &SupportedPattern)) {
+                DEBUG_PRINT_ERROR("Failed to get temporal layer capabilities");
+                break;
+            }
+            setStatus &= vExt.setParamInt32(ext, "max-p-count",nPLayerCountMax);
+            setStatus &= vExt.setParamInt32(ext, "max-b-count",nBLayerCountMax);
             break;
         }
         default:
@@ -580,6 +629,14 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
                     DEBUG_PRINT_ERROR("set_config: OMX_QcomIndexParamIndexExtraDataType failed !");
                 }
             } while ((token = strtok_r(NULL, "|", &rest)));
+            break;
+        }
+        case OMX_QTIIndexParamCapabilitiesVTDriverVersion:
+        case OMX_QTIIndexParamCapabilitiesMaxLTR:
+        case OMX_QTIIndexParamCapabilitiesMaxDownScaleRatio:
+        case OMX_QTIIndexParamCapabilitiesRotationSupport:
+        case OMX_QTIIndexParamCapabilitiesMaxTemporalLayers:
+        {
             break;
         }
         default:

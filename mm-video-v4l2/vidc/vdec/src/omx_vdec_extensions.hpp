@@ -39,6 +39,9 @@ void omx_vdec::init_vendor_extensions (VendorExtensionStore &store) {
 
     ADD_EXTENSION("qti-ext-extradata-enable", OMX_QcomIndexParamIndexExtraDataType, OMX_DirOutput)
     ADD_PARAM_END("types", OMX_AndroidVendorValueString)
+
+    ADD_EXTENSION("qti-ext-dec-caps-vt-driver-version", OMX_QTIIndexParamCapabilitiesVTDriverVersion, OMX_DirOutput)
+    ADD_PARAM_END("number", OMX_AndroidVendorValueInt32)
 }
 
 
@@ -86,6 +89,11 @@ OMX_ERRORTYPE omx_vdec::get_vendor_extension_config(
 
             setStatus &= vExt.setParamString(ext, "types", exType);
             DEBUG_PRINT_LOW("VendorExt: getparam: Extradata %s", exType);
+            break;
+        }
+        case OMX_QTIIndexParamCapabilitiesVTDriverVersion:
+        {
+            setStatus &= vExt.setParamInt32(ext, "number", 65536);
             break;
         }
         default:
@@ -192,6 +200,10 @@ OMX_ERRORTYPE omx_vdec::set_vendor_extension_config(
                     DEBUG_PRINT_ERROR("set_config: OMX_QcomIndexParamIndexExtraDataType failed !");
                 }
             } while ((token = strtok_r(NULL, "|", &rest)));
+            break;
+        }
+        case OMX_QTIIndexParamCapabilitiesVTDriverVersion:
+        {
             break;
         }
         default:
