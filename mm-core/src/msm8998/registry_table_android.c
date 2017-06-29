@@ -807,22 +807,6 @@ omx_core_cb_type core[] =
     }
   },
   {
-    "AIV.play.generic",
-    NULL, // Create instance function
-    // Unique instance handle
-    {
-      NULL,
-      NULL,
-      NULL,
-      NULL
-    },
-    NULL,  // Shared object library handle
-    "libAivPlay.so",
-    {
-      "AIV.play.role.generic"
-    }
-  },
-  {
     "OMX.qcom.file.muxer",
     NULL, // Create instance function
     // Unique instance handle

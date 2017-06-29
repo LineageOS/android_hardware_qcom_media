@@ -51,7 +51,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define RETURN(x)    EXIT_FUNC(); return x;
 #define ALIGN(value,alignment) (((value) + (alignment-1)) & (~(alignment-1)))
 
-#define BUFFER_LOG_LOC "/data/misc/media"
+#define BUFFER_LOG_LOC "/data/vendor/media"
 
 /* factory function executed by the core to create instances */
 void *get_omx_component_factory_fn(void)
