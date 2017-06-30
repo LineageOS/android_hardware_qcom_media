@@ -2742,15 +2742,16 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
             }
         case OMX_IndexConfigAndroidIntraRefresh:
             {
-                OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE *intra_refresh = (OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE *)configData;
-                DEBUG_PRINT_LOW("OMX_IndexConfigAndroidIntraRefresh : num frames = %d", intra_refresh->nRefreshPeriod);
+                OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE *intra_refresh_period = (OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE *)configData;
+                DEBUG_PRINT_LOW("OMX_IndexConfigAndroidIntraRefresh : num frames = %d", intra_refresh_period->nRefreshPeriod);
 
-                if (intra_refresh->nPortIndex == (OMX_U32) PORT_INDEX_OUT) {
+                if (intra_refresh_period->nPortIndex == (OMX_U32) PORT_INDEX_OUT) {
+                    intra_refresh.framecount = intra_refresh_period->nRefreshPeriod;
                     OMX_U32 mb_size = 16;
                     OMX_U32 num_mbs_per_frame = (ALIGN(m_sVenc_cfg.dvs_height, mb_size)/mb_size) * (ALIGN(m_sVenc_cfg.dvs_width, mb_size)/mb_size);
                     OMX_U32 num_intra_refresh_mbs = 0;
-                    if (intra_refresh->nRefreshPeriod) {
-                        num_intra_refresh_mbs = ceil(num_mbs_per_frame / intra_refresh->nRefreshPeriod);
+                    if (intra_refresh_period->nRefreshPeriod) {
+                        num_intra_refresh_mbs = ceil(num_mbs_per_frame / intra_refresh_period->nRefreshPeriod);
                     }
 
                     if (venc_set_intra_refresh(OMX_VIDEO_IntraRefreshRandom, num_intra_refresh_mbs) == false) {
@@ -3089,6 +3090,14 @@ unsigned venc_dev::venc_start(void)
 
     if (vqzip_sei_info.enabled && !venc_set_vqzip_defaults())
         return 1;
+
+    // Client can set intra refresh period in terms of frames.
+    // This requires reconfiguration on port redefinition as
+    // mbcount for IR depends on encode resolution.
+    if (!venc_reconfigure_intra_refresh_period()) {
+        DEBUG_PRINT_ERROR("Reconfiguring intra refresh period failed");
+        return 0;
+    }
 
     if (!venc_reconfigure_intra_period()) {
         DEBUG_PRINT_ERROR("Reconfiguring intra period failed");
@@ -4700,6 +4709,24 @@ bool venc_dev::venc_set_voptiming_cfg( OMX_U32 TimeIncRes)
     vop_timing_cfg.voptime_resolution = TimeIncRes;
 
     voptimecfg.voptime_resolution = vop_timing_cfg.voptime_resolution;
+    return true;
+}
+
+bool venc_dev::venc_reconfigure_intra_refresh_period() {
+
+    DEBUG_PRINT_LOW("venc_reconfigure_intra_refresh_period");
+    if (intra_refresh.framecount) {
+        OMX_U32 mb_size = 16;
+        // Firmware will re-calculate mbcount if codec is HEVC.
+        OMX_U32 num_mbs_per_frame = (ALIGN(m_sVenc_cfg.dvs_height, mb_size)/mb_size) * (ALIGN(m_sVenc_cfg.dvs_width, mb_size)/mb_size);
+        OMX_U32 num_intra_refresh_mbs = 0;
+        num_intra_refresh_mbs = ceil(num_mbs_per_frame / intra_refresh.framecount);
+
+        if (venc_set_intra_refresh(OMX_VIDEO_IntraRefreshRandom, num_intra_refresh_mbs) == false) {
+            DEBUG_PRINT_ERROR("ERROR: Setting Intra refresh failed");
+            return false;
+        }
+    }
     return true;
 }
 

@@ -148,6 +148,7 @@ struct msm_venc_dbcfg {
 struct msm_venc_intrarefresh {
     unsigned long    irmode;
     unsigned long    mbcount;
+    unsigned long    framecount;
 };
 
 struct msm_venc_multiclicecfg {
@@ -508,6 +509,7 @@ class venc_dev
         bool venc_set_extradata(OMX_U32 extra_data, OMX_BOOL enable);
         bool venc_set_idr_period(OMX_U32 nPFrames, OMX_U32 nIDRPeriod);
         bool venc_reconfigure_intra_period();
+        bool venc_reconfigure_intra_refresh_period();
         bool venc_reconfig_reqbufs();
         bool venc_set_vpe_rotation(OMX_S32 rotation_angle);
         bool venc_set_ltrmode(OMX_U32 enable, OMX_U32 count);
