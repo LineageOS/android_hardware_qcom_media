@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -68,20 +68,20 @@ omx_venc::omx_venc()
     memset(&m_debug,0,sizeof(m_debug));
 
     property_value[0] = '\0';
-    property_get("vidc.debug.level", property_value, "1");
+    property_get("vendor.vidc.debug.level", property_value, "1");
     debug_level = atoi(property_value);
 
     property_value[0] = '\0';
-    property_get("vidc.enc.log.in", property_value, "0");
+    property_get("vendor.vidc.enc.log.in", property_value, "0");
     m_debug.in_buffer_log = atoi(property_value);
 
     property_value[0] = '\0';
-    property_get("vidc.enc.log.out", property_value, "0");
+    property_get("vendor.vidc.enc.log.out", property_value, "0");
     m_debug.out_buffer_log = atoi(property_value);
 
     snprintf(m_debug.log_loc, PROPERTY_VALUE_MAX, "%s", BUFFER_LOG_LOC);
     property_value[0] = '\0';
-    property_get("vidc.log.loc", property_value, "");
+    property_get("vendor.vidc.log.loc", property_value, "");
     if (*property_value)
     {
        strlcpy(m_debug.log_loc, property_value, PROPERTY_VALUE_MAX);
