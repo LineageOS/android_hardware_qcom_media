@@ -53,6 +53,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <media/hardware/HardwareAPI.h>
 #include <sys/eventfd.h>
+#include "PlatformConfig.h"
 
 #if !defined(_ANDROID_) || defined(SYS_IOCTL)
 #include <sys/ioctl.h>
@@ -664,6 +665,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     DEBUG_PRINT_HIGH("In %u bit OMX vdec Constructor", (unsigned int)sizeof(long) * 8);
     memset(&m_debug,0,sizeof(m_debug));
 #ifdef _ANDROID_
+
     char property_value[PROPERTY_VALUE_MAX] = {0};
     property_get("vidc.debug.level", property_value, "1");
     debug_level = strtoul(property_value, NULL, 16);
@@ -698,13 +700,11 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_reject_avc_1080p_mp = atoi(property_value);
     DEBUG_PRINT_HIGH("vidc.dec.profile.check value is %d",m_reject_avc_1080p_mp);
 
-    property_value[0] = '\0';
-    property_get("vidc.dec.log.in", property_value, "0");
-    m_debug.in_buffer_log = atoi(property_value);
+    Platform::Config::getInt32(Platform::vidc_dec_log_in,
+            (int32_t *)&m_debug.in_buffer_log, 0);
+    Platform::Config::getInt32(Platform::vidc_dec_log_out,
+            (int32_t *)&m_debug.out_buffer_log, 0);
 
-    property_value[0] = '\0';
-    property_get("vidc.dec.log.out", property_value, "0");
-    m_debug.out_buffer_log = atoi(property_value);
     snprintf(m_debug.log_loc, PROPERTY_VALUE_MAX, "%s", BUFFER_LOG_LOC);
 
     property_value[0] = '\0';

@@ -36,6 +36,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /* def: private_handle_t*/
 #include <gralloc_priv.h>
 
+#include "PlatformConfig.h"
+
 
 /*----------------------------------------------------------------------------
  * Preprocessor Definitions and Constants
@@ -72,13 +74,10 @@ omx_venc::omx_venc()
     property_get("vidc.debug.level", property_value, "1");
     debug_level = atoi(property_value);
 
-    property_value[0] = '\0';
-    property_get("vidc.enc.log.in", property_value, "0");
-    m_debug.in_buffer_log = atoi(property_value);
-
-    property_value[0] = '\0';
-    property_get("vidc.enc.log.out", property_value, "0");
-    m_debug.out_buffer_log = atoi(property_value);
+    Platform::Config::getInt32(Platform::vidc_enc_log_in,
+            (int32_t *)&m_debug.in_buffer_log, 0);
+    Platform::Config::getInt32(Platform::vidc_enc_log_out,
+            (int32_t *)&m_debug.out_buffer_log, 0);
 
     snprintf(m_debug.log_loc, PROPERTY_VALUE_MAX, "%s", BUFFER_LOG_LOC);
     property_value[0] = '\0';

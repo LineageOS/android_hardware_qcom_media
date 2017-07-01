@@ -49,6 +49,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #include <qdMetaData.h>
+#include "PlatformConfig.h"
 
 #define ATRACE_TAG ATRACE_TAG_VIDEO
 #include <utils/Trace.h>
@@ -143,12 +144,12 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     memset(&color_space, 0x0, sizeof(color_space));
     memset(&temporal_layers_config, 0x0, sizeof(temporal_layers_config));
 
-    char property_value[PROPERTY_VALUE_MAX] = {0};
-    property_get("vidc.enc.log.in", property_value, "0");
-    m_debug.in_buffer_log = atoi(property_value);
+    Platform::Config::getInt32(Platform::vidc_enc_log_in,
+            (int32_t *)&m_debug.in_buffer_log, 0);
+    Platform::Config::getInt32(Platform::vidc_enc_log_out,
+            (int32_t *)&m_debug.out_buffer_log, 0);
 
-    property_get("vidc.enc.log.out", property_value, "0");
-    m_debug.out_buffer_log = atoi(property_value);
+    char property_value[PROPERTY_VALUE_MAX] = {0};
 
     property_get("vidc.enc.log.extradata", property_value, "0");
     m_debug.extradata_log = atoi(property_value);
