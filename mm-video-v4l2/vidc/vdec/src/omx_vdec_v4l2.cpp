@@ -9796,8 +9796,6 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                                     append_outputcrop_extradata(p_client_extra, output_crop_payload);
                                     p_client_extra = (OMX_OTHER_EXTRADATATYPE *)(((OMX_U8 *)p_client_extra) + ALIGN(p_client_extra->nSize, 4));
                                 }
-                            } else {
-                                DEBUG_PRINT_ERROR("p_extra %p p_client_extra %p client_extradata %x %x ", p_extra, p_client_extra, client_extradata, OMX_OUTPUTCROP_EXTRADATA);
                             }
                         }
                     }
