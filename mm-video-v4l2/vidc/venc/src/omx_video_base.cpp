@@ -1575,6 +1575,22 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
 
                 break;
             }
+        case OMX_IndexParamVideoMpeg4:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_MPEG4TYPE);
+                OMX_VIDEO_PARAM_MPEG4TYPE* pParam = (OMX_VIDEO_PARAM_MPEG4TYPE*)paramData;
+                DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoMpeg4");
+                memcpy(pParam, &m_sParamMPEG4, sizeof(m_sParamMPEG4));
+                break;
+            }
+        case OMX_IndexParamVideoH263:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_H263TYPE);
+                OMX_VIDEO_PARAM_H263TYPE* pParam = (OMX_VIDEO_PARAM_H263TYPE*)paramData;
+                DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoH263");
+                memcpy(pParam, &m_sParamH263, sizeof(m_sParamH263));
+                break;
+            }
         case OMX_IndexParamVideoAvc:
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_AVCTYPE);
