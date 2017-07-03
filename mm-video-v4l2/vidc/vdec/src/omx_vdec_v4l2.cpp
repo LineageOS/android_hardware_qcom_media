@@ -2226,24 +2226,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
     }
 #endif
 
-    is_thulium_v1 = false;
-    soc_file = fopen("/sys/devices/soc0/soc_id", "r");
-    if (soc_file) {
-        fread(buffer, 1, 4, soc_file);
-        fclose(soc_file);
-        if (atoi(buffer) == 246) {
-            soc_file = fopen("/sys/devices/soc0/revision", "r");
-            if (soc_file) {
-                fread(buffer, 1, 4, soc_file);
-                fclose(soc_file);
-                if (atoi(buffer) == 1) {
-                    is_thulium_v1 = true;
-                    DEBUG_PRINT_HIGH("is_thulium_v1 = TRUE");
-                }
-            }
-        }
-    }
-
     if (!strncmp(role, "OMX.qcom.video.decoder.avc.secure",
                 OMX_MAX_STRINGNAME_SIZE)) {
         secure_mode = true;
@@ -2481,14 +2463,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
             if (ret) {
                 DEBUG_PRINT_ERROR("Omx_vdec:: Unable to open secure device %d", ret);
                 return OMX_ErrorInsufficientResources;
-            }
-        }
-
-        if (is_thulium_v1) {
-            eRet = enable_smoothstreaming();
-            if (eRet != OMX_ErrorNone) {
-               DEBUG_PRINT_ERROR("Failed to enable smooth streaming on driver");
-               return eRet;
             }
         }
 
@@ -3493,13 +3467,9 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
 #if defined(_ANDROID_) && !defined(FLEXYUV_SUPPORTED)
                                     useNonSurfaceMode = (m_enable_android_native_buffers == OMX_FALSE);
 #endif
-                                    if (is_thulium_v1) {
-                                        portFmt->eColorFormat = getPreferredColorFormatDefaultMode(portFmt->nIndex);
-                                    } else {
-                                        portFmt->eColorFormat = useNonSurfaceMode ?
-                                            getPreferredColorFormatNonSurfaceMode(portFmt->nIndex) :
-                                            getPreferredColorFormatDefaultMode(portFmt->nIndex);
-                                    }
+                                    portFmt->eColorFormat = useNonSurfaceMode ?
+                                        getPreferredColorFormatNonSurfaceMode(portFmt->nIndex) :
+                                        getPreferredColorFormatDefaultMode(portFmt->nIndex);
 
                                     if (portFmt->eColorFormat == OMX_COLOR_FormatMax ) {
                                         eRet = OMX_ErrorNoMore;
