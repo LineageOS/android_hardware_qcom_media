@@ -82,8 +82,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define VENC_BFRAME_MAX_COUNT       1
 #define VENC_BFRAME_MAX_FPS         60
-#define VENC_BFRAME_MAX_HEIGHT      1920
-#define VENC_BFRAME_MAX_WIDTH       1088
+#define VENC_BFRAME_MAX_WIDTH       1920
+#define VENC_BFRAME_MAX_HEIGHT      1088
 
 //constructor
 venc_dev::venc_dev(class omx_venc *venc_class)
@@ -4793,8 +4793,8 @@ bool venc_dev::venc_reconfigure_intra_period()
 
     DEBUG_PRINT_LOW("venc_reconfigure_intra_period");
 
-    if ((m_sVenc_cfg.input_width <= VENC_BFRAME_MAX_WIDTH && m_sVenc_cfg.input_width <= VENC_BFRAME_MAX_HEIGHT) ||
-        (m_sVenc_cfg.input_width <= VENC_BFRAME_MAX_HEIGHT && m_sVenc_cfg.input_width <= VENC_BFRAME_MAX_WIDTH)) {
+    if ((m_sVenc_cfg.input_width <= VENC_BFRAME_MAX_WIDTH && m_sVenc_cfg.input_height <= VENC_BFRAME_MAX_HEIGHT) ||
+        (m_sVenc_cfg.input_width <= VENC_BFRAME_MAX_HEIGHT && m_sVenc_cfg.input_height <= VENC_BFRAME_MAX_WIDTH)) {
         isValidResolution = true;
     }
 
