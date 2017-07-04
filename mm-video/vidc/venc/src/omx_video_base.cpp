@@ -281,6 +281,8 @@ omx_video::omx_video(): m_state(OMX_StateInvalid),
   m_venc_num_instances++;
   DEBUG_PRINT_HIGH("Venc instance = %d, ion device fd = %d",
      m_venc_num_instances, m_venc_ion_devicefd);
+
+  pthread_mutex_init(&m_buf_lock, NULL);
 }
 
 
@@ -322,6 +324,7 @@ omx_video::~omx_video()
   }
   DEBUG_PRINT_HIGH("m_etb_count = %u, m_fbd_count = %u", m_etb_count,
       m_fbd_count);
+  pthread_mutex_destroy(&m_buf_lock);
   DEBUG_PRINT_HIGH("Exiting OMX Video Encoder ...\n");
 }
 
@@ -2354,6 +2357,7 @@ OMX_ERRORTYPE  omx_video::use_output_buffer(
     return OMX_ErrorBadParameter;
   }
 
+  auto_lock l(m_buf_lock);
   if(!m_out_mem_ptr)
   {
     output_use_buffer = true;
@@ -3323,6 +3327,7 @@ OMX_ERRORTYPE  omx_video::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
     if(nPortIndex < m_sOutPortDef.nBufferCountActual &&
        BITMASK_PRESENT_U32(m_out_bm_count,nPortIndex))
     {
+      auto_lock l(m_buf_lock);
       // Clear the bit associated with it.
       m_out_bm_count = BITMASK_CLEAR_U32(m_out_bm_count,nPortIndex);
       m_sOutPortDef.bPopulated = OMX_FALSE;
