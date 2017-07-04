@@ -562,6 +562,7 @@ public:
   OMX_BUFFERHEADERTYPE meta_buffer_hdr[MAX_NUM_INPUT_BUFFERS];
   // Output memory pointer
   OMX_BUFFERHEADERTYPE  *m_out_mem_ptr;
+  pthread_mutex_t m_buf_lock;
 
   bool input_flush_progress;
   bool output_flush_progress;
