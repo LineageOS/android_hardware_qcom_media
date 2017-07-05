@@ -97,6 +97,10 @@ LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 LOCAL_PRELINK_MODULE      := false
 LOCAL_SHARED_LIBRARIES    := liblog libutils libcutils \
                              libc2dcolorconvert libdl libgui
+LOCAL_HEADER_LIBRARIES    := \
+    media_plugin_headers \
+    libhardware_headers \
+
 LOCAL_SHARED_LIBRARIES += libqdMetaData
 LOCAL_STATIC_LIBRARIES    := libOmxVidcCommon
 
