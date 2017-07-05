@@ -95,8 +95,20 @@ LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 
 LOCAL_PRELINK_MODULE      := false
+<<<<<<< HEAD
 LOCAL_SHARED_LIBRARIES    := liblog libutils libcutils \
                              libc2dcolorconvert libdl libgui
+=======
+LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl
+LOCAL_HEADER_LIBRARIES    := \
+    media_plugin_headers \
+    libhardware_headers \
+
+ifeq ($(BOARD_USES_ADRENO), true)
+LOCAL_SHARED_LIBRARIES    += libc2dcolorconvert
+endif # ($(BOARD_USES_ADRENO), true)
+LOCAL_SHARED_LIBRARIES += libhypv_intercept
+>>>>>>> 153c0393... Build libOmxVdec and libOmxVenc with BOARD_VNDK_VERSION
 LOCAL_SHARED_LIBRARIES += libqdMetaData
 LOCAL_STATIC_LIBRARIES    := libOmxVidcCommon
 
