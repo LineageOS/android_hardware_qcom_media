@@ -73,7 +73,6 @@ extern "C" {
 //#include <binder/MemoryHeapIon.h>
 //#else
 #endif
-#include <ui/ANativeObjectBase.h>
 #include <linux/videodev2.h>
 #define VALID_TS(ts)      ((ts < LLONG_MAX)? true : false)
 #include <poll.h>

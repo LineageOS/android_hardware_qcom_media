@@ -97,6 +97,10 @@ LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 LOCAL_PRELINK_MODULE      := false
 LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl libplatformconfig
 
+LOCAL_HEADER_LIBRARIES    := \
+    media_plugin_headers \
+    libhardware_headers \
+
 # ifeq ($(BOARD_USES_ADRENO), true)
 LOCAL_SHARED_LIBRARIES    += libc2dcolorconvert
 # endif # ($(BOARD_USES_ADRENO), true)
@@ -136,6 +140,10 @@ ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_SW_VENC_ROTATION)
 LOCAL_SHARED_LIBRARIES += libui
 LOCAL_SHARED_LIBRARIES += libutils
 endif
+
+LOCAL_HEADER_LIBRARIES    := \
+    media_plugin_headers \
+    libhardware_headers \
 
 # ifeq ($(BOARD_USES_ADRENO), true)
 LOCAL_SHARED_LIBRARIES    += libc2dcolorconvert
