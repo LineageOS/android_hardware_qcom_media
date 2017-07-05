@@ -45,6 +45,7 @@ extern "C" {
 ///////////////////////////////////////////////////////////////////////////////
 #include "OMX_Core.h"
 #include "OMX_Video.h"
+#include "string.h"
 
 #define OMX_VIDEO_MAX_HP_LAYERS 6
 
@@ -1320,6 +1321,34 @@ typedef enum OMX_QCOM_EXTRADATATYPE
     OMX_ExtraDataVideoEncoderMBInfo =      0x7F00000f,
     OMX_ExtraDataVQZipSEI  =               0x7F000010,
 } OMX_QCOM_EXTRADATATYPE;
+
+struct ExtraDataMap {
+        const char *type;
+        OMX_QCOM_EXTRADATATYPE index;
+};
+static const struct ExtraDataMap kExtradataMap[] = {
+        { "ltrinfo", OMX_ExtraDataVideoLTRInfo },
+        { "mbinfo", OMX_ExtraDataVideoEncoderMBInfo },
+};
+
+static inline OMX_S32 getIndexForExtradataType(char * type) {
+    if(type == NULL) return -1;
+    for(int i = 0; i< (int)(sizeof(kExtradataMap)/ sizeof(struct ExtraDataMap)); i++){
+        if(!strcmp(kExtradataMap[i].type,type)){
+            return kExtradataMap[i].index;
+        }
+    }
+    return -1;
+}
+
+static inline const char * getStringForExtradataType(int64_t index) {
+    for(int i = 0; i< (int)(sizeof(kExtradataMap)/sizeof(struct ExtraDataMap)); i++){
+        if(kExtradataMap[i].index == index){
+            return kExtradataMap[i].type;
+        }
+    }
+    return NULL;
+}
 
 typedef struct  OMX_STREAMINTERLACEFORMATTYPE {
     OMX_U32 nSize;
