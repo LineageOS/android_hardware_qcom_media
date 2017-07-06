@@ -66,6 +66,9 @@ void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
 
     ADD_EXTENSION("qti-ext-enc-low-latency", OMX_QTIIndexParamLowLatencyMode, OMX_DirInput)
     ADD_PARAM_END("enable", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-enc-base-layer-pid", OMX_QcomIndexConfigBaseLayerId, OMX_DirInput)
+    ADD_PARAM_END("value", OMX_AndroidVendorValueInt32)
 }
 
 OMX_ERRORTYPE omx_video::get_vendor_extension_config(
@@ -146,6 +149,11 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
         case OMX_QTIIndexParamLowLatencyMode:
         {
             setStatus &= vExt.setParamInt32(ext, "enable", m_sParamLowLatency.bEnableLowLatencyMode);
+            break;
+        }
+        case OMX_QcomIndexConfigBaseLayerId:
+        {
+            setStatus &= vExt.setParamInt32(ext, "value", m_sBaseLayerID.nPID);
             break;
         }
         default:
@@ -389,7 +397,25 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
 
             break;
         }
+        case OMX_QcomIndexConfigBaseLayerId:
+        {
+            OMX_SKYPE_VIDEO_CONFIG_BASELAYERPID baselayerPID;
+            memcpy(&baselayerPID, &m_sBaseLayerID, sizeof(OMX_SKYPE_VIDEO_CONFIG_BASELAYERPID));
+            valueSet |= vExt.readParamInt32(ext, "value", (OMX_S32 *)&(baselayerPID.nPID));
+            if (!valueSet) {
+                break;
+            }
 
+            DEBUG_PRINT_HIGH("VENDOR-EXT: set_config: base layer pid =%u", baselayerPID.nPID);
+
+            err = set_config(
+                    NULL, (OMX_INDEXTYPE)OMX_QcomIndexConfigBaseLayerId, &baselayerPID);
+            if (err != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("set_config: OMX_QcomIndexConfigBaseLayerId failed !");
+            }
+
+            break;
+        }
         default:
         {
             return OMX_ErrorNotImplemented;
