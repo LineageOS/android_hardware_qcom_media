@@ -89,7 +89,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE                    := libOmxVenc
 LOCAL_MODULE_TAGS               := optional
-LOCAL_PROPRIETARY_MODULE        := true
+LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libmm-venc-def)
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
@@ -119,7 +119,7 @@ libmm-venc-inc      += $(TARGET_OUT_HEADERS)/mm-video/swvenc
 LOCAL_MODULE                    := libOmxSwVencMpeg4
 
 LOCAL_MODULE_TAGS               := optional
-LOCAL_PROPRIETARY_MODULE        := true
+LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libmm-venc-def)
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
@@ -147,7 +147,7 @@ libmm-venc-inc      += $(TARGET_OUT_HEADERS)/mm-video/swVenc
 
 LOCAL_MODULE                    := libOmxSwVencHevc
 LOCAL_MODULE_TAGS               := optional
-LOCAL_PROPRIETARY_MODULE        := true
+LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libmm-venc-def)
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
