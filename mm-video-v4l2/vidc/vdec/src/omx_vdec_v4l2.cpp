@@ -113,7 +113,9 @@ extern "C" {
 
 #define DEFAULT_EXTRADATA (OMX_INTERLACE_EXTRADATA | OMX_FRAMEPACK_EXTRADATA | OMX_OUTPUTCROP_EXTRADATA \
                            | OMX_DISPLAY_INFO_EXTRADATA | OMX_HDR_COLOR_INFO_EXTRADATA)
-#define DEFAULT_CONCEAL_COLOR "32784" //0x8010, black by default
+
+// Y=16(0-9bits), Cb(10-19bits)=Cr(20-29bits)=128, black by default
+#define DEFAULT_VIDEO_CONCEAL_COLOR_BLACK 0x8020010
 
 #ifndef ION_FLAG_CP_BITSTREAM
 #define ION_FLAG_CP_BITSTREAM 0
@@ -2212,8 +2214,9 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
     char property_value[PROPERTY_VALUE_MAX] = {0};
     FILE *soc_file = NULL;
     char buffer[10];
-    struct v4l2_ext_control ctrl[1];
+    struct v4l2_ext_control ctrl[2];
     struct v4l2_ext_controls controls;
+    int conceal_color_8bit = 0, conceal_color_10bit = 0;
 
 #ifdef _ANDROID_
     char platform_name[PROPERTY_VALUE_MAX];
@@ -2406,16 +2409,21 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         /*
          * refer macro DEFAULT_CONCEAL_COLOR to set conceal color values
          */
-        property_get("persist.vidc.dec.conceal_color", property_value, "0");
-        m_conceal_color= atoi(property_value);
-        if (m_conceal_color) {
-            DEBUG_PRINT_HIGH("trying to set 0x%u as conceal color\n", (unsigned int)m_conceal_color);
-            control.id = V4L2_CID_MPEG_VIDC_VIDEO_CONCEAL_COLOR;
-            control.value = m_conceal_color;
-            ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control);
-            if (ret) {
-                DEBUG_PRINT_ERROR("Failed to set conceal color %d\n", ret);
-            }
+        Platform::Config::getInt32(Platform::vidc_dec_conceal_color_8bit, &conceal_color_8bit, DEFAULT_VIDEO_CONCEAL_COLOR_BLACK);
+        Platform::Config::getInt32(Platform::vidc_dec_conceal_color_10bit, &conceal_color_10bit, DEFAULT_VIDEO_CONCEAL_COLOR_BLACK);
+        memset(&controls, 0, sizeof(controls));
+        memset(ctrl, 0, sizeof(ctrl));
+        ctrl[0].id = V4L2_CID_MPEG_VIDC_VIDEO_CONCEAL_COLOR_8BIT;
+        ctrl[0].value = conceal_color_8bit;
+        ctrl[1].id = V4L2_CID_MPEG_VIDC_VIDEO_CONCEAL_COLOR_10BIT;
+        ctrl[1].value = conceal_color_10bit;
+
+        controls.count = 2;
+        controls.ctrl_class = V4L2_CTRL_CLASS_MPEG;
+        controls.controls = ctrl;
+        ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_EXT_CTRLS, &controls);
+        if (ret) {
+            DEBUG_PRINT_ERROR("Failed to set conceal color %d\n", ret);
         }
 
         //Get the hardware capabilities

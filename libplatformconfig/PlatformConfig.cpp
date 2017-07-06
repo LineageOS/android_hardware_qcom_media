@@ -38,7 +38,7 @@
 
 namespace Platform {
 
-#define PLAT_CONFIG_FILE "vendor/etc/system_properties.xml"
+#define PLAT_CONFIG_FILE "/vendor/etc/system_properties.xml"
 
 Config* Config::mInstance;
 
