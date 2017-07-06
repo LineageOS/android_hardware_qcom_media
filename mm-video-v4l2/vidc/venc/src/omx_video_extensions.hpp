@@ -69,6 +69,15 @@ void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
 
     ADD_EXTENSION("qti-ext-enc-base-layer-pid", OMX_QcomIndexConfigBaseLayerId, OMX_DirInput)
     ADD_PARAM_END("value", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-enc-ltr-count", OMX_QcomIndexParamVideoLTRCount, OMX_DirOutput)
+    ADD_PARAM_END("num-ltr-frames", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-enc-ltr", OMX_QcomIndexConfigVideoLTRUse, OMX_DirInput)
+    ADD_PARAM_END("use-frame", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-enc-ltr", OMX_QcomIndexConfigVideoLTRMark, OMX_DirInput)
+    ADD_PARAM_END("mark-frame", OMX_AndroidVendorValueInt32)
 }
 
 OMX_ERRORTYPE omx_video::get_vendor_extension_config(
@@ -154,6 +163,21 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
         case OMX_QcomIndexConfigBaseLayerId:
         {
             setStatus &= vExt.setParamInt32(ext, "value", m_sBaseLayerID.nPID);
+            break;
+        }
+        case OMX_QcomIndexParamVideoLTRCount:
+        {
+            setStatus &= vExt.setParamInt32(ext, "num-ltr-frames", m_sParamLTRCount.nCount);
+            break;
+        }
+        case OMX_QcomIndexConfigVideoLTRUse:
+        {
+            setStatus &= vExt.setParamInt32(ext, "use-frame", m_sConfigLTRUse.nID);
+            break;
+        }
+        case OMX_QcomIndexConfigVideoLTRMark:
+        {
+            setStatus &= vExt.setParamInt32(ext, "mark-frame", m_sConfigLTRMark.nID);
             break;
         }
         default:
@@ -412,6 +436,63 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
                     NULL, (OMX_INDEXTYPE)OMX_QcomIndexConfigBaseLayerId, &baselayerPID);
             if (err != OMX_ErrorNone) {
                 DEBUG_PRINT_ERROR("set_config: OMX_QcomIndexConfigBaseLayerId failed !");
+            }
+
+            break;
+        }
+        case OMX_QcomIndexParamVideoLTRCount:
+        {
+           QOMX_VIDEO_PARAM_LTRCOUNT_TYPE ltrCount;
+           memcpy(&ltrCount, &m_sParamLTRCount, sizeof(QOMX_VIDEO_PARAM_LTRCOUNT_TYPE));
+           valueSet |= vExt.readParamInt32(ext, "num-ltr-frames", (OMX_S32 *)&(ltrCount.nCount));
+           if (!valueSet) {
+                break;
+            }
+
+            DEBUG_PRINT_HIGH("VENDOR-EXT: set_parameter: ltr count  =%u", ltrCount.nCount);
+
+            err = set_parameter(
+                    NULL, (OMX_INDEXTYPE)QOMX_IndexParamVideoLTRCount, &ltrCount);
+            if (err != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("set_parameter: OMX_QcomIndexParamVideoLTRCount failed !");
+            }
+
+            break;
+        }
+        case OMX_QcomIndexConfigVideoLTRUse:
+        {
+           QOMX_VIDEO_CONFIG_LTRUSE_TYPE ltrUse;
+           memcpy(&ltrUse, &m_sConfigLTRUse, sizeof(QOMX_VIDEO_CONFIG_LTRUSE_TYPE));
+           valueSet |= vExt.readParamInt32(ext, "use-frame", (OMX_S32 *)&(ltrUse.nID));
+           if (!valueSet) {
+                break;
+            }
+
+            DEBUG_PRINT_HIGH("VENDOR-EXT: set_config: ltr use  =%u", ltrUse.nID);
+
+            err = set_config(
+                    NULL, (OMX_INDEXTYPE)QOMX_IndexConfigVideoLTRUse, &ltrUse);
+            if (err != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("set_config: OMX_QcomIndexConfigVideoLTRUse failed !");
+            }
+
+            break;
+        }
+        case OMX_QcomIndexConfigVideoLTRMark:
+        {
+           QOMX_VIDEO_CONFIG_LTRMARK_TYPE ltrMark;
+           memcpy(&ltrMark, &m_sConfigLTRMark, sizeof(QOMX_VIDEO_CONFIG_LTRMARK_TYPE));
+           valueSet |= vExt.readParamInt32(ext, "mark-frame", (OMX_S32 *)&(ltrMark.nID));
+           if (!valueSet) {
+                break;
+            }
+
+            DEBUG_PRINT_HIGH("VENDOR-EXT: set_config: ltr mark  =%u", ltrMark.nID);
+
+            err = set_config(
+                    NULL, (OMX_INDEXTYPE)QOMX_IndexConfigVideoLTRMark, &ltrMark);
+            if (err != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("set_config: OMX_QcomIndexConfigVideoLTRMark failed !");
             }
 
             break;
