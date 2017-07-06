@@ -1799,7 +1799,7 @@ bool omx_venc::dev_empty_buf
                 if (ipbuffer.p_buffer == MAP_FAILED)
                 {
                     DEBUG_PRINT_ERROR("mmap() failed for fd %d of size %d",fd,size);
-                    RETURN(OMX_ErrorBadParameter);
+                    RETURN(false);
                 }
                 ipbuffer.size = size;
                 ipbuffer.filled_length = size;
@@ -1823,7 +1823,7 @@ bool omx_venc::dev_empty_buf
                         {
                             DEBUG_PRINT_ERROR("%s: OMX_IndexParamVideoPortFormat 0x%x invalid",
                                               __FUNCTION__,handle->format);
-                            RETURN(OMX_ErrorBadParameter);
+                            RETURN(false);
                         }
                     }
                 }
@@ -1831,7 +1831,7 @@ bool omx_venc::dev_empty_buf
                 if (ipbuffer.p_buffer == MAP_FAILED)
                 {
                     DEBUG_PRINT_ERROR("mmap() failed for fd %d of size %d",fd,size);
-                    RETURN(OMX_ErrorBadParameter);
+                    RETURN(false);
                 }
                 ipbuffer.size = size;
                 ipbuffer.filled_length = size;
@@ -1852,7 +1852,7 @@ bool omx_venc::dev_empty_buf
                 {
                     DEBUG_PRINT_ERROR("%s, swvenc_setproperty failed (%d)",
                         __FUNCTION__, Ret);
-                    RETURN(OMX_ErrorUnsupportedSetting);
+                    RETURN(false);
                 }
             }
         }
@@ -1981,12 +1981,12 @@ bool omx_venc::dev_get_seq_hdr
    {
       DEBUG_PRINT_ERROR("%s, swvenc_flush failed (%d)",
         __FUNCTION__, Ret);
-      RETURN(-1);
+      RETURN(false);
    }
 
    *hdrlen = Buffer.filled_length;
 
-   RETURN(0);
+   RETURN(true);
 }
 
 bool omx_venc::dev_get_capability_ltrcount
@@ -2225,7 +2225,7 @@ bool omx_venc::dev_color_align(OMX_BUFFERHEADERTYPE *buffer,
 
     if(secure_session) {
         DEBUG_PRINT_ERROR("Cannot align colors in secure session.");
-        RETURN(OMX_FALSE);
+        RETURN(false);
     }
     return swvenc_color_align(buffer, width,height);
 }
