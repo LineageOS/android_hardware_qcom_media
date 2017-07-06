@@ -147,7 +147,7 @@ endif
 
 LOCAL_MODULE                    := libOmxVdec
 LOCAL_MODULE_TAGS               := optional
-LOCAL_PROPRIETARY_MODULE        := true
+LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libOmxVdec-def)
 LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 
@@ -189,7 +189,7 @@ ifneq (,$(filter msm8974 msm8610 msm8226 msm_bronze msm8916,$(TARGET_BOARD_PLATF
 
 LOCAL_MODULE                    := libOmxVdecHevc
 LOCAL_MODULE_TAGS               := optional
-LOCAL_PROPRIETARY_MODULE        := true
+LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libOmxVdec-def)
 LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 
@@ -232,7 +232,7 @@ mm-vdec-test-inc    += $(vdec-inc)
 
 LOCAL_MODULE                    := mm-vdec-omx-test
 LOCAL_MODULE_TAGS               := optional
-LOCAL_PROPRIETARY_MODULE        := true
+LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libOmxVdec-def)
 LOCAL_C_INCLUDES                := $(mm-vdec-test-inc)
 
@@ -256,7 +256,7 @@ mm-vdec-drv-test-inc    += $(vdec-inc)
 
 LOCAL_MODULE                    := mm-video-driver-test
 LOCAL_MODULE_TAGS               := optional
-LOCAL_PROPRIETARY_MODULE        := true
+LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libOmxVdec-def)
 LOCAL_C_INCLUDES                := $(mm-vdec-drv-test-inc)
 LOCAL_PRELINK_MODULE            := false

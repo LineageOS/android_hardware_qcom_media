@@ -57,7 +57,7 @@ libmm-vidpp-inc          += frameworks/av/include/media/stagefright
 
 LOCAL_MODULE                    := libOmxVdpp
 LOCAL_MODULE_TAGS               := optional
-LOCAL_PROPRIETARY_MODULE        := true
+LOCAL_VENDOR_MODULE        := true
 LOCAL_CFLAGS                    := $(libOmxVdpp-def)
 LOCAL_C_INCLUDES                += $(libmm-vidpp-inc)
 
