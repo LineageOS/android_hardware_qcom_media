@@ -20,6 +20,12 @@ AM_CPPFLAGS += -UOUTPUT_BUFFER_LOG
 AM_CPPFLAGS += -Werror
 AM_CPPFLAGS += -D_ANDROID_ICS_
 AM_CPPFLAGS += -D_MSM8974_
+
+#Hypervisor
+if TARGET_HYPERVISOR
+AM_CPPFLAGS += -D_HYPERVISOR_
+endif
+
 AM_CPPFLAGS += -DUSE_ION
 #AM_CPPFLAGS += "-include stdint.h"
 AM_CPPFLAGS += "-Dstrlcpy=g_strlcpy"
@@ -78,6 +84,7 @@ AM_CPPFLAGS += -I$(top_srcdir)/libc2dcolorconvert/
 AM_CPPFLAGS += -I$(top_srcdir)/mm-core/inc/
 AM_CPPFLAGS += -I$(top_srcdir)/mm-core/src/common/
 AM_CPPFLAGS += -I$(top_srcdir)/libstagefrighthw/
+AM_CPPFLAGS += -I$(top_srcdir)/hypv-intercept
 
 sources = src/omx_video_base.cpp
 sources += src/omx_video_encoder.cpp
@@ -93,4 +100,5 @@ libOmxVenc_la_CFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) -fPIC
 libOmxVenc_la_LDFLAGS = -lstdc++ -lpthread -llog -lutils -lbinder -lcutils -lglib-2.0 -lbase -ldl -lpthread -shared -lqdMetaData
 #  -lc2d2 -lgui -lOmxCore -lgpustats -ldl -lpthread
 libOmxVenc_la_LDFLAGS += -version-info 0
-
+libOmxVenc_la_LDFLAGS += -L$(top_builddir)/hypv-intercept
+libOmxVenc_la_LDFLAGS += -lhypv_intercept
