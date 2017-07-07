@@ -4536,8 +4536,7 @@ bool venc_dev::venc_set_profile(OMX_U32 eProfile)
         } else if (eProfile == OMX_VIDEO_AVCProfileHigh) {
             control.value = V4L2_MPEG_VIDEO_H264_PROFILE_HIGH;
         } else {
-            DEBUG_PRINT_LOW("ERROR: Unsupported H.264 profile = %d",
-                    control.value);
+            DEBUG_PRINT_LOW("ERROR: Unsupported H.264 profile = %d", eProfile);
             return false;
         }
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8) {
@@ -4551,7 +4550,7 @@ bool venc_dev::venc_set_profile(OMX_U32 eProfile)
             control.value = V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10;
         } else {
             DEBUG_PRINT_ERROR("ERROR: Unsupported HEVC profile = %d",
-                    control.value);
+                              eProfile);
             return false;
         }
     } else {
