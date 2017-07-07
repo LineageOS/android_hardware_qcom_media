@@ -65,17 +65,13 @@ ifeq ($(TARGET_USES_ION),true)
 libmm-venc-def += -DUSE_ION
 endif
 
-ifeq ($(TARGET_USES_MEDIA_EXTENSIONS),true)
 libmm-venc-def += -DUSE_NATIVE_HANDLE_SOURCE
-endif
 
 ifeq ($(call is-board-platform-in-list, $(MASTER_SIDE_CP_TARGET_LIST)),true)
 libmm-venc-def += -DMASTER_SIDE_CP
 endif
 
-ifeq ($(TARGET_USES_MEDIA_EXTENSIONS),true)
 libmm-venc-def += -DSUPPORT_CONFIG_INTRA_REFRESH
-endif
 
 libmm-venc-def += -DUSE_CAMERA_METABUFFER_UTILS
 
