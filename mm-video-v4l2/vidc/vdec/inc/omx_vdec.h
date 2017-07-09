@@ -1091,6 +1091,8 @@ class omx_vdec: public qc_omx_component
                 unsigned int buffer_alignment_req;
                 OMX_U32 m_c2d_width;
                 OMX_U32 m_c2d_height;
+                OMX_U32 m_c2d_output_format;
+                bool m_c2d_init_success;
                 OMX_QCOM_PLATFORM_PRIVATE_LIST      m_platform_list_client[MAX_COUNT];
                 OMX_QCOM_PLATFORM_PRIVATE_ENTRY     m_platform_entry_client[MAX_COUNT];
                 OMX_QCOM_PLATFORM_PRIVATE_PMEM_INFO m_pmem_info_client[MAX_COUNT];
