@@ -4788,6 +4788,7 @@ bool venc_dev::venc_reconfigure_intra_refresh_period() {
 bool venc_dev::venc_reconfigure_intra_period()
 {
     int  rc;
+    bool isValidCodec        = false;
     bool isValidResolution   = false;
     bool isValidFps          = false;
     bool isValidProfileLevel = false;
@@ -4798,6 +4799,11 @@ bool venc_dev::venc_reconfigure_intra_period()
     struct v4l2_control control;
 
     DEBUG_PRINT_LOW("venc_reconfigure_intra_period");
+
+    if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264 ||
+        m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
+        isValidCodec = true;
+    }
 
     if ((m_sVenc_cfg.input_width <= VENC_BFRAME_MAX_WIDTH && m_sVenc_cfg.input_height <= VENC_BFRAME_MAX_HEIGHT) ||
         (m_sVenc_cfg.input_width <= VENC_BFRAME_MAX_HEIGHT && m_sVenc_cfg.input_height <= VENC_BFRAME_MAX_WIDTH)) {
@@ -4833,12 +4839,13 @@ bool venc_dev::venc_reconfigure_intra_period()
                     isValidProfileLevel &&
                     isValidLayerCount   &&
                     isValidLtrSetting   &&
-                    isValidRcMode;
+                    isValidRcMode       &&
+                    isValidCodec;
 
     DEBUG_PRINT_LOW("B-frame enablement = %u; Conditions for Resolution = %u, FPS = %u, Profile/Level = %u"
-                     " Layer condition = %u, LTR = %u, RC = %u\n",
-        enableBframes, isValidResolution, isValidFps, isValidProfileLevel,
-        isValidLayerCount, isValidLtrSetting, isValidRcMode);
+                     " Layer condition = %u, LTR = %u, RC = %u Codec = %u\n",
+                     enableBframes, isValidResolution, isValidFps, isValidProfileLevel,
+                     isValidLayerCount, isValidLtrSetting, isValidRcMode, isValidCodec);
 
     if (enableBframes && intra_period.num_bframes == 0) {
         intra_period.num_bframes = VENC_BFRAME_MAX_COUNT;
@@ -4890,12 +4897,16 @@ bool venc_dev::venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames)
     DEBUG_PRINT_LOW("venc_set_intra_period: nPFrames = %u, nBFrames: %u", (unsigned int)nPFrames, (unsigned int)nBFrames);
     int rc;
     struct v4l2_control control;
-    int pframe = 0, bframe = 0;
     char property_value[PROPERTY_VALUE_MAX] = {0};
 
     if ((streaming[OUTPUT_PORT] || streaming[CAPTURE_PORT]) && (intra_period.num_bframes != nBFrames)) {
         DEBUG_PRINT_ERROR("Invalid settings, Cannot change B frame count dynamically");
         return false;
+    }
+
+    if (m_sVenc_cfg.codectype != V4L2_PIX_FMT_H264 &&
+        m_sVenc_cfg.codectype != V4L2_PIX_FMT_HEVC) {
+        nBFrames = 0;
     }
 
     if ((codec_profile.profile != V4L2_MPEG_VIDEO_MPEG4_PROFILE_ADVANCED_SIMPLE) &&
