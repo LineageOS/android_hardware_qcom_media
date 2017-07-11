@@ -1652,7 +1652,7 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
             extra_data_size =  fmt.fmt.pix_mp.plane_fmt[extra_idx].sizeimage;
         } else if (extra_idx >= VIDEO_MAX_PLANES) {
             DEBUG_PRINT_ERROR("Extradata index is more than allowed: %d\n", extra_idx);
-            return OMX_ErrorBadParameter;
+            return false;
         }
         input_extradata_info.buffer_size =  ALIGN(extra_data_size, SZ_4K);
         input_extradata_info.count = MAX_V4L2_BUFS;
@@ -1721,7 +1721,7 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
             extra_data_size =  fmt.fmt.pix_mp.plane_fmt[extra_idx].sizeimage;
         } else if (extra_idx >= VIDEO_MAX_PLANES) {
             DEBUG_PRINT_ERROR("Extradata index is more than allowed: %d", extra_idx);
-            return OMX_ErrorBadParameter;
+            return false;
         }
 
         output_extradata_info.buffer_size = extra_data_size;
@@ -2709,7 +2709,7 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                     (OMX_SKYPE_VIDEO_CONFIG_BASELAYERPID*) configData;
                 if (venc_set_baselayerid(pParam->nPID) == false) {
                     DEBUG_PRINT_ERROR("Failed to set OMX_QcomIndexConfigBaseLayerId failed");
-                    return OMX_ErrorUnsupportedSetting;
+                    return false;
                 }
                 break;
             }
@@ -2728,7 +2728,7 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                                 pParam->nQP,
                                 ENABLE_I_QP | ENABLE_P_QP | ENABLE_B_QP ) == false) {
                     DEBUG_PRINT_ERROR("Failed to set OMX_QcomIndexConfigQp failed");
-                    return OMX_ErrorUnsupportedSetting;
+                    return false;
                 }
                 break;
             }
@@ -3994,7 +3994,7 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
                 int extradata_index = venc_get_index_from_fd(input_extradata_info.m_ion_dev, fd);
                 if (extradata_index < 0) {
                     DEBUG_PRINT_ERROR("Extradata index calculation went wrong for fd = %d", fd);
-                    return OMX_ErrorBadParameter;
+                    return false;
                 }
 
                 plane[extra_idx].bytesused = 0;
@@ -5630,7 +5630,7 @@ bool venc_dev::venc_set_ltrmode(OMX_U32 enable, OMX_U32 count)
         pTemporalParams.ePattern = OMX_VIDEO_AndroidTemporalLayeringPatternNone;
         if(venc_set_temporal_layers(&pTemporalParams)) {
             DEBUG_PRINT_ERROR("Failed to disable layer encoding for VP8 when LTR is enabled\n");
-            return OMX_ErrorUndefined;
+            return false;
         }
     }
 
