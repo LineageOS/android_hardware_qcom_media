@@ -7909,6 +7909,11 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer(OMX_IN OMX_HANDLETYPE  hComp,
         return OMX_ErrorInvalidState;
     }
 
+    if (!buffer || !buffer->pBuffer) {
+        DEBUG_PRINT_ERROR("%s: invalid params", __FUNCTION__);
+        return OMX_ErrorBadParameter;
+    }
+
     if (buffer->nOutputPortIndex != OMX_CORE_OUTPUT_PORT_INDEX) {
         DEBUG_PRINT_ERROR("ERROR:FTB invalid port in header %u", (unsigned int)buffer->nOutputPortIndex);
         return OMX_ErrorBadPortIndex;
@@ -7924,11 +7929,6 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer(OMX_IN OMX_HANDLETYPE  hComp,
         private_handle_t *handle = NULL;
         struct VideoDecoderOutputMetaData *meta;
         unsigned int nPortIndex = 0;
-
-        if (!buffer || !buffer->pBuffer) {
-            DEBUG_PRINT_ERROR("%s: invalid params: %p", __FUNCTION__, buffer);
-            return OMX_ErrorBadParameter;
-        }
 
         //get the buffer type and fd info
         meta = (struct VideoDecoderOutputMetaData *)buffer->pBuffer;
