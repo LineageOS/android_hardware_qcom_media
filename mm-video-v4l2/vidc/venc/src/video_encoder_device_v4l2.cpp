@@ -35,6 +35,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "video_encoder_device_v4l2.h"
 #include "omx_video_encoder.h"
 #include <media/msm_vidc.h>
+#include "hypv_intercept.h"
 #ifdef USE_ION
 #include <linux/msm_ion.h>
 #endif
@@ -54,6 +55,13 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <utils/Trace.h>
 
 #define YUV_STATS_LIBRARY_NAME "libgpustats.so" // UBWC case: use GPU library
+
+#ifdef _HYPERVISOR_
+#define ioctl(x, y, z) hypv_ioctl(x, y, z)
+#define HYPERVISOR 1
+#else
+#define HYPERVISOR 0
+#endif
 
 #define ALIGN(x, to_align) ((((unsigned long) x) + (to_align - 1)) & ~(to_align - 1))
 #define EXTRADATA_IDX(__num_planes) ((__num_planes) ? (__num_planes) - 1 : 0)
@@ -232,6 +240,8 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     memset(&color_space, 0x0, sizeof(color_space));
     memset(&temporal_layers_config, 0x0, sizeof(temporal_layers_config));
 
+    m_hypervisor = !!HYPERVISOR;
+
     char property_value[PROPERTY_VALUE_MAX] = {0};
     property_get("vendor.vidc.enc.log.in", property_value, "0");
     m_debug.in_buffer_log = atoi(property_value);
@@ -243,7 +253,10 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     m_debug.extradata_log = atoi(property_value);
 
 #ifdef _UBWC_
-    property_get("debug.gralloc.gfx_ubwc_disable", property_value, "0");
+    if (m_hypervisor)
+        property_get("debug.gralloc.gfx_ubwc_disable", property_value, "1");
+    else
+        property_get("debug.gralloc.gfx_ubwc_disable", property_value, "0");
     if(!(strncmp(property_value, "1", PROPERTY_VALUE_MAX)) ||
         !(strncmp(property_value, "true", PROPERTY_VALUE_MAX))) {
         is_gralloc_source_ubwc = 0;
@@ -302,6 +315,10 @@ void* venc_dev::async_venc_message_thread (void *input)
     omx_venc_base = reinterpret_cast<omx_video*>(input);
     OMX_BUFFERHEADERTYPE* omxhdr = NULL;
 
+    if (omx->handle->m_hypervisor) {
+        DEBUG_PRINT_HIGH("omx_venc: Async Thread exit.m_hypervisor=%d",omx->handle->m_hypervisor);
+        return NULL;
+    }
     prctl(PR_SET_NAME, (unsigned long)"VideoEncCallBackThread", 0, 0, 0);
     struct v4l2_plane plane[VIDEO_MAX_PLANES];
     struct pollfd pfds[2];
@@ -1270,6 +1287,58 @@ int venc_dev::venc_input_log_buffers(OMX_BUFFERHEADERTYPE *pbuffer, int fd, int 
     return 0;
 }
 
+static int async_message_process_v4l2 (void *context, void* message)
+{
+    int rc = 0;
+    struct v4l2_buffer *v4l2_buf=NULL;
+    OMX_BUFFERHEADERTYPE* omxhdr = NULL;
+    struct venc_msg *vencmsg = (venc_msg *)message;
+    venc_dev *vencdev = reinterpret_cast<venc_dev*>(context);
+    omx_venc *omx = vencdev->venc_handle;
+    omx_video *omx_venc_base = (omx_video *)vencdev->venc_handle;
+
+    if (VEN_MSG_OUTPUT_BUFFER_DONE == vencmsg->msgcode) {
+        v4l2_buf = (struct v4l2_buffer *)vencmsg->buf.clientdata;
+        omxhdr=omx_venc_base->m_out_mem_ptr+v4l2_buf->index;
+        vencmsg->buf.len= v4l2_buf->m.planes->bytesused;
+        vencmsg->buf.offset = v4l2_buf->m.planes->data_offset;
+        vencmsg->buf.flags = 0;
+        vencmsg->buf.ptrbuffer = (OMX_U8 *)omx_venc_base->m_pOutput_pmem[v4l2_buf->index].buffer;
+        vencmsg->buf.clientdata=(void*)omxhdr;
+        vencmsg->buf.timestamp = (uint64_t) v4l2_buf->timestamp.tv_sec * (uint64_t) 1000000 + (uint64_t) v4l2_buf->timestamp.tv_usec;
+        if (v4l2_buf->flags & V4L2_QCOM_BUF_FLAG_IDRFRAME)
+            vencmsg->buf.flags |= QOMX_VIDEO_PictureTypeIDR;
+
+        if (v4l2_buf->flags & V4L2_BUF_FLAG_KEYFRAME)
+            vencmsg->buf.flags |= OMX_BUFFERFLAG_SYNCFRAME;
+
+        if (v4l2_buf->flags & V4L2_QCOM_BUF_FLAG_CODECCONFIG)
+            vencmsg->buf.flags |= OMX_BUFFERFLAG_CODECCONFIG;
+
+        if (v4l2_buf->flags & V4L2_QCOM_BUF_FLAG_EOS)
+            vencmsg->buf.flags |= OMX_BUFFERFLAG_EOS;
+
+        if (vencdev->num_output_planes > 1 && v4l2_buf->m.planes->bytesused)
+            vencmsg->buf.flags |= OMX_BUFFERFLAG_EXTRADATA;
+
+        if (omxhdr->nFilledLen)
+            vencmsg->buf.flags |= OMX_BUFFERFLAG_ENDOFFRAME;
+        vencdev->fbd++;
+    } else if (VEN_MSG_INPUT_BUFFER_DONE == vencmsg->msgcode) {
+        v4l2_buf = (struct v4l2_buffer *)vencmsg->buf.clientdata;
+        vencdev->ebd++;
+        if (omx_venc_base->mUseProxyColorFormat && !omx_venc_base->mUsesColorConversion)
+            omxhdr = &omx_venc_base->meta_buffer_hdr[v4l2_buf->index];
+        else
+            omxhdr = &omx_venc_base->m_inp_mem_ptr[v4l2_buf->index];
+        vencmsg->buf.clientdata=(void*)omxhdr;
+        DEBUG_PRINT_LOW("sending EBD %p [id=%d]", omxhdr, v4l2_buf->index);
+    }
+    rc = omx->async_message_process((void *)omx, message);
+
+    return rc;
+}
+
 bool venc_dev::venc_open(OMX_U32 codec)
 {
     int r;
@@ -1289,7 +1358,14 @@ bool venc_dev::venc_open(OMX_U32 codec)
         device_name = (OMX_STRING)"/dev/video/q6_enc";
         supported_rc_modes = (RC_ALL & ~RC_CBR_CFR);
     }
-    m_nDriver_fd = open (device_name, O_RDWR);
+    if (m_hypervisor) {
+        hvfe_callback_t hvfe_cb;
+        hvfe_cb.handler = async_message_process_v4l2;
+        hvfe_cb.context = (void *) this;
+        m_nDriver_fd = hypv_open(device_name, O_RDWR, &hvfe_cb);
+    } else {
+        m_nDriver_fd = open(device_name, O_RDWR);
+    }
     if ((int)m_nDriver_fd < 0) {
         DEBUG_PRINT_ERROR("ERROR: Omx_venc::Comp Init Returning failure");
         return false;
@@ -1571,13 +1647,19 @@ void venc_dev::venc_close()
             async_thread_force_stop = true;
         }
 
-        if (async_thread_created)
-            pthread_join(m_tid,NULL);
+        if (!m_hypervisor) {
+            if (async_thread_created)
+                pthread_join(m_tid,NULL);
+        }
 
         DEBUG_PRINT_HIGH("venc_close X");
         unsubscribe_to_events(m_nDriver_fd);
         close(m_poll_efd);
-        close(m_nDriver_fd);
+        if (m_hypervisor) {
+            hypv_close(m_nDriver_fd);
+        } else {
+            close(m_nDriver_fd);
+        }
         m_nDriver_fd = -1;
     }
 
@@ -4160,6 +4242,24 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
     }
 #endif // _PQ_
 
+    if (!streaming[OUTPUT_PORT]) {
+        enum v4l2_buf_type buf_type;
+        buf_type=V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
+        int ret;
+
+        ret = ioctl(m_nDriver_fd, VIDIOC_STREAMON, &buf_type);
+
+        if (ret) {
+            DEBUG_PRINT_ERROR("Failed to call streamon");
+            if (errno == EBUSY) {
+                hw_overload = true;
+            }
+            return false;
+        } else {
+            streaming[OUTPUT_PORT] = true;
+        }
+    }
+
     buf.index = index;
     buf.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
     buf.memory = V4L2_MEMORY_USERPTR;
@@ -4194,24 +4294,6 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
     }
 
     etb++;
-
-    if (!streaming[OUTPUT_PORT]) {
-        enum v4l2_buf_type buf_type;
-        buf_type=V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
-        int ret;
-
-        ret = ioctl(m_nDriver_fd, VIDIOC_STREAMON, &buf_type);
-
-        if (ret) {
-            DEBUG_PRINT_ERROR("Failed to call streamon");
-            if (errno == EBUSY) {
-                hw_overload = true;
-            }
-            return false;
-        } else {
-            streaming[OUTPUT_PORT] = true;
-        }
-    }
 
     return true;
 }
@@ -4402,6 +4484,8 @@ bool venc_dev::venc_fill_buf(void *buffer, void *pmem_data_buf,unsigned index,un
 
     bufhdr = (OMX_BUFFERHEADERTYPE *)buffer;
 
+    memset(&buf, 0, sizeof(buf));
+    memset(&plane, 0, sizeof(plane));
     if (pmem_data_buf) {
         DEBUG_PRINT_LOW("Internal PMEM addr for o/p Heap UseBuf: %p", pmem_data_buf);
         plane[0].m.userptr = (unsigned long)pmem_data_buf;
@@ -4410,8 +4494,7 @@ bool venc_dev::venc_fill_buf(void *buffer, void *pmem_data_buf,unsigned index,un
         plane[0].m.userptr = (unsigned long)bufhdr->pBuffer;
     }
 
-    memset(&buf, 0, sizeof(buf));
-    memset(&plane, 0, sizeof(plane));
+
 
     buf.index = index;
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;

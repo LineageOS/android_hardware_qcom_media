@@ -2,7 +2,7 @@
 #
 ACLOCAL_AMFLAGS = -I m4
 
-BUILD_COMPONENTS := mm-core
+BUILD_COMPONENTS := mm-core hypv-intercept
 
 if BUILD_MM_VIDEO
 BUILD_COMPONENTS += mm-video-v4l2
