@@ -151,7 +151,14 @@ venc_dev::venc_dev(class omx_venc *venc_class)
 
     char property_value[PROPERTY_VALUE_MAX] = {0};
 
-    property_get("vidc.enc.log.extradata", property_value, "0");
+    property_get("vendor.vidc.enc.log.in", property_value, "0");
+    m_debug.in_buffer_log |= atoi(property_value);
+
+    property_value[0] = '\0';
+    property_get("vendor.vidc.enc.log.out", property_value, "0");
+    m_debug.out_buffer_log |= atoi(property_value);
+
+    property_get("vendor.vidc.enc.log.extradata", property_value, "0");
     m_debug.extradata_log = atoi(property_value);
 
 #ifdef _UBWC_
@@ -184,8 +191,10 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     }
 #endif // _PQ_
 
-    snprintf(m_debug.log_loc, PROPERTY_VALUE_MAX,
-             "%s", BUFFER_LOG_LOC);
+     property_value[0] = '\0';
+     property_get("vendor.vidc.log.loc", property_value, BUFFER_LOG_LOC);
+     if (*property_value)
+         strlcpy(m_debug.log_loc, property_value, PROPERTY_VALUE_MAX);
 
     mUseAVTimerTimestamps = false;
 }
