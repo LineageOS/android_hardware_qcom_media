@@ -4533,7 +4533,7 @@ OMX_ERRORTYPE omx_video::fill_buffer_done(OMX_HANDLETYPE hComp,
             m_fbd_count++;
 
             if (dev_get_output_log_flag()) {
-                dev_output_log_buffers((const char*)buffer->pBuffer,
+                dev_output_log_buffers((const char*)(buffer->pBuffer + buffer->nOffset),
                                        buffer->nFilledLen, buffer->nTimeStamp);
             }
         }
