@@ -3792,12 +3792,62 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         }
                     }
 
+                    struct UBWCStats cam_ubwc_stats[2];
+                    unsigned long long int cr = 1 << 16;
+
+                    if (getMetaData(handle, GET_UBWC_CR_STATS_INFO, (void *)cam_ubwc_stats) == 0) {
+                        if (cam_ubwc_stats[0].bDataValid) {
+                            switch (cam_ubwc_stats[0].version) {
+                            case UBWC_2_0:
+                                {
+                                    unsigned long long int sum = 0, weighted_sum = 0;
+
+                                    DEBUG_PRINT_HIGH("Field 0 : 32 Tile = %d 64 Tile = %d 96 Tile = %d "
+                                       "128 Tile = %d 160 Tile = %d 192 Tile = %d 256 Tile = %d\n",
+                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile32,
+                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile64,
+                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile96,
+                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile128,
+                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile160,
+                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile192,
+                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile256);
+
+                                    weighted_sum =
+                                        32  * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile32 +
+                                        64  * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile64 +
+                                        96  * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile96 +
+                                        128 * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile128 +
+                                        160 * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile160 +
+                                        192 * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile192 +
+                                        256 * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile256;
+
+                                    sum =
+                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile32 +
+                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile64 +
+                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile96 +
+                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile128 +
+                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile160 +
+                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile192 +
+                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile256;
+
+                                    cr = (weighted_sum && sum) ?
+                                        ((256 * sum) << 16) / weighted_sum : cr;
+                                }
+                                break;
+                            default:
+                                break;
+                            }
+                        }
+                    }
+
                     fd = handle->fd;
                     plane[0].data_offset = 0;
                     plane[0].length = handle->size;
                     plane[0].bytesused = handle->size;
+                    plane[0].reserved[2] = (unsigned long int)cr;
                     DEBUG_PRINT_LOW("venc_empty_buf: Opaque camera buf: fd = %d "
-                                ": filled %d of %d format 0x%lx", fd, plane[0].bytesused, plane[0].length, m_sVenc_cfg.inputformat);
+                                ": filled %d of %d format 0x%lx CR = %d", fd, plane[0].bytesused,
+                                plane[0].length, m_sVenc_cfg.inputformat, plane[0].reserved[2]);
                 }
             } else {
                 // color_format == 1 ==> RGBA to YUV Color-converted buffer
