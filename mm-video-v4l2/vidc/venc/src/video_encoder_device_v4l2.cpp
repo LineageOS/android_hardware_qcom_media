@@ -1237,6 +1237,7 @@ bool venc_dev::venc_open(OMX_U32 codec)
     m_sVenc_cfg.inputformat= V4L2_DEFAULT_OUTPUT_COLOR_FMT;
     m_rotation.rotation = 0;
     m_codec = codec;
+    downscalar_enabled = OMX_FALSE;
 
     if (codec == OMX_VIDEO_CodingAVC) {
         m_sVenc_cfg.codectype = V4L2_PIX_FMT_H264;
