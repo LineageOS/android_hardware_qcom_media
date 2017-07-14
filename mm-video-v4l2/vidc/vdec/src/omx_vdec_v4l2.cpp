@@ -667,7 +667,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
 #ifdef _ANDROID_
 
     char property_value[PROPERTY_VALUE_MAX] = {0};
-    property_get("vidc.debug.level", property_value, "1");
+    property_get("vendor.vidc.debug.level", property_value, "1");
     debug_level = strtoul(property_value, NULL, 16);
     property_value[0] = '\0';
 
@@ -705,15 +705,25 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     Platform::Config::getInt32(Platform::vidc_dec_log_out,
             (int32_t *)&m_debug.out_buffer_log, 0);
 
-    snprintf(m_debug.log_loc, PROPERTY_VALUE_MAX, "%s", BUFFER_LOG_LOC);
+    property_value[0] = '\0';
+    property_get("vendor.vidc.dec.log.in", property_value, "0");
+    m_debug.in_buffer_log |= atoi(property_value);
+
+    DEBUG_PRINT_HIGH("vendor.vidc.dec.log.in value is %d", m_debug.in_buffer_log);
 
     property_value[0] = '\0';
-    property_get("vidc.dec.meta.log.out", property_value, "0");
+    property_get("vendor.vidc.dec.log.out", property_value, "0");
+    m_debug.out_buffer_log |= atoi(property_value);
+
+    DEBUG_PRINT_HIGH("vendor.vidc.dec.log.out value is %d", m_debug.out_buffer_log);
+
+
+    property_value[0] = '\0';
+    property_get("vendor.vidc.dec.meta.log.out", property_value, "0");
     m_debug.out_meta_buffer_log = atoi(property_value);
-    snprintf(m_debug.log_loc, PROPERTY_VALUE_MAX, "%s", BUFFER_LOG_LOC);
 
     property_value[0] = '\0';
-    property_get("vidc.log.loc", property_value, "");
+    property_get("vendor.vidc.log.loc", property_value, BUFFER_LOG_LOC);
     if (*property_value)
         strlcpy(m_debug.log_loc, property_value, PROPERTY_VALUE_MAX);
 
@@ -1970,7 +1980,8 @@ int omx_vdec::log_input_buffers(const char *buffer_addr, int buffer_len)
         }
         m_debug.infile = fopen (m_debug.infile_name, "ab");
         if (!m_debug.infile) {
-            DEBUG_PRINT_HIGH("Failed to open input file: %s for logging", m_debug.infile_name);
+            DEBUG_PRINT_HIGH("Failed to open input file: %s for logging (%d:%s)",
+                             m_debug.infile_name, errno, strerror(errno));
             m_debug.infile_name[0] = '\0';
             return -1;
         }
