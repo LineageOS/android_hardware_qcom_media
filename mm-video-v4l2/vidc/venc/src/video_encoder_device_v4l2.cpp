@@ -3878,7 +3878,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                 return false;
             }
 
-            if (inp_height != out_height || inp_width != out_width) {
+            if (inp_width * inp_height != out_width * out_height) {
                 DEBUG_PRINT_ERROR("Downscalar is disabled and input/output dimenstions don't match");
                 DEBUG_PRINT_ERROR("Input WxH : %dx%d Output WxH : %dx%d",inp_width, inp_height, out_width, out_height);
                 return false;
@@ -4060,7 +4060,7 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
                 return false;
             }
 
-            if (inp_height != out_height || inp_width != out_width) {
+            if (inp_width * inp_height != out_width * out_height) {
                 DEBUG_PRINT_ERROR("Downscalar is disabled and input/output dimenstions don't match");
                 DEBUG_PRINT_ERROR("Input WxH : %dx%d Output WxH : %dx%d",inp_width, inp_height, out_width, out_height);
                 return false;
