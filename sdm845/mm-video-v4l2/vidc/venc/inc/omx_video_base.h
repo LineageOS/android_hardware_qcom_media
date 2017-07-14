@@ -42,7 +42,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //                             Include Files
 //////////////////////////////////////////////////////////////////////////////
 
-#define LOG_TAG "OMX-VENC"
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/mman.h>
@@ -67,6 +66,9 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "vidc_debug.h"
 #include <vector>
 #include "vidc_vendor_extensions.h"
+
+#undef LOG_TAG
+#define LOG_TAG "OMX-VENC"
 
 #ifdef _ANDROID_
 using namespace android;
@@ -137,12 +139,6 @@ static const char* MEM_DEVICE = "/dev/ion";
 #define VEN_MSG_LTRUSE_FAILED	    10
 #define VEN_MSG_HW_OVERLOAD	11
 #define VEN_MSG_MAX_CLIENTS	12
-
-/*Different methods of Multi slice selection.*/
-#define VEN_MSLICE_OFF	1
-#define VEN_MSLICE_CNT_MB	2 /*number of MBscount per slice*/
-#define VEN_MSLICE_CNT_BYTE	3 /*number of bytes count per slice.*/
-#define VEN_MSLICE_GOB	4 /*Multi slice by GOB for H.263 only.*/
 
 #define MAX_NUM_INPUT_BUFFERS 64
 #define MAX_NUM_OUTPUT_BUFFERS 64
@@ -233,29 +229,7 @@ class omx_video: public qc_omx_component
         //intermediate conversion buffer queued to encoder in case of invalid EOS input
         OMX_BUFFERHEADERTYPE  *mEmptyEosBuffer;
 
-        class omx_c2d_conv
-        {
-            public:
-                omx_c2d_conv();
-                ~omx_c2d_conv();
-                bool init();
-                bool open(unsigned int height,unsigned int width,
-                        ColorConvertFormat src, ColorConvertFormat dest,
-                        unsigned int src_stride, unsigned int flags);
-                bool convert(int src_fd, void *src_base, void *src_viraddr,
-                        int dest_fd, void *dest_base, void *dest_viraddr);
-                bool get_buffer_size(int port,unsigned int &buf_size);
-                int get_src_format();
-                void close();
-            private:
-                C2DColorConverterBase *c2dcc;
-                pthread_mutex_t c_lock;
-                void *mLibHandle;
-                ColorConvertFormat src_format;
-                createC2DColorConverter_t *mConvertOpen;
-                destroyC2DColorConverter_t *mConvertClose;
-        };
-        omx_c2d_conv c2d_conv;
+        C2DColorConverter c2dcc;
 #endif
     public:
 

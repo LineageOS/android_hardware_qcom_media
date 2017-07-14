@@ -50,79 +50,6 @@ void *get_omx_component_factory_fn(void)
     return(new omx_venc);
 }
 
-omx_venc::perf_control::perf_control()
-{
-    m_perf_lib = NULL;
-    m_perf_lock_acquire = NULL;
-    m_perf_lock_release = NULL;
-    m_perf_handle = 0;
-}
-
-omx_venc::perf_control::~perf_control()
-{
-    if (m_perf_handle != 0 && m_perf_lock_release) {
-        m_perf_lock_release(m_perf_handle);
-    }
-    if (m_perf_lib) {
-        dlclose(m_perf_lib);
-    }
-}
-
-void omx_venc::perf_control::send_hint_to_mpctl(bool state)
-{
-    if (load_lib() == false) {
-        return;
-    }
-    /* 0x4601 maps to video encode callback in
-     * perflock, 46 is the enum number, 01 is
-     * the state being sent when perflock
-     * acquire succeeds
-     */
-    int arg = 0x4601;
-
-    if (m_perf_lock_acquire && state == true) {
-        m_perf_handle = m_perf_lock_acquire(0, 0, &arg, sizeof(arg) / sizeof(int));
-        DEBUG_PRINT_INFO("Video encode perflock acquired,handle=%d",m_perf_handle);
-    } else if (m_perf_lock_release && state == false) {
-        m_perf_lock_release(m_perf_handle);
-        DEBUG_PRINT_INFO("Video encode perflock released");
-    }
-}
-
-bool omx_venc::perf_control::load_lib()
-{
-    char perf_lib_path[PROPERTY_VALUE_MAX] = {0};
-    if (m_perf_lib)
-        return true;
-
-    if ((property_get("ro.vendor.extension_library", perf_lib_path, NULL) <= 0)) {
-        DEBUG_PRINT_ERROR("vendor library not set in ro.vendor.extension_library");
-        goto handle_err;
-    }
-    if ((m_perf_lib = dlopen(perf_lib_path, RTLD_NOW)) == NULL) {
-        DEBUG_PRINT_ERROR("Failed to open %s : %s",perf_lib_path, dlerror());
-        goto handle_err;
-    } else {
-        m_perf_lock_acquire = (perf_lock_acquire_t)dlsym(m_perf_lib, "perf_lock_acq");
-        if (m_perf_lock_acquire == NULL) {
-            DEBUG_PRINT_ERROR("Failed to load symbol: perf_lock_acq");
-            goto handle_err;
-        }
-        m_perf_lock_release = (perf_lock_release_t)dlsym(m_perf_lib, "perf_lock_rel");
-        if (m_perf_lock_release == NULL) {
-            DEBUG_PRINT_ERROR("Failed to load symbol: perf_lock_rel");
-            goto handle_err;
-        }
-    }
-    return true;
-
-handle_err:
-    if(m_perf_lib != NULL) {
-        dlclose(m_perf_lib);
-    }
-    return false;
-}
-
 //constructor
 
 omx_venc::omx_venc()
@@ -150,13 +77,11 @@ omx_venc::omx_venc()
     property_get("vidc.debug.lowlatency", property_value, "0");
     lowlatency = atoi(property_value);
     property_value[0] = '\0';
-    m_perf_control.send_hint_to_mpctl(true);
 }
 
 omx_venc::~omx_venc()
 {
     get_syntaxhdr_enable = false;
-    m_perf_control.send_hint_to_mpctl(false);
     //nothing to do
 }
 
@@ -592,9 +517,11 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 VALIDATE_OMX_PARAM_DATA(paramData, OMX_PARAM_PORTDEFINITIONTYPE);
                 OMX_PARAM_PORTDEFINITIONTYPE *portDefn;
                 portDefn = (OMX_PARAM_PORTDEFINITIONTYPE *) paramData;
-                DEBUG_PRINT_LOW("set_parameter: OMX_IndexParamPortDefinition H= %d, W = %d",
-                        (int)portDefn->format.video.nFrameHeight,
-                        (int)portDefn->format.video.nFrameWidth);
+
+                DEBUG_PRINT_HIGH("set_parameter: OMX_IndexParamPortDefinition: port %d, wxh %dx%d, min %d, actual %d, size %d, colorformat %#x, compression format %#x",
+                    portDefn->nPortIndex, portDefn->format.video.nFrameHeight, portDefn->format.video.nFrameWidth,
+                    portDefn->nBufferCountMin, portDefn->nBufferCountActual, portDefn->nBufferSize,
+                    portDefn->format.video.eColorFormat, portDefn->format.video.eCompressionFormat);
 
                 if (PORT_INDEX_IN == portDefn->nPortIndex) {
                     if (!dev_is_video_session_supported(portDefn->format.video.nFrameWidth,
@@ -603,9 +530,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                         omx_report_unsupported_setting();
                         return OMX_ErrorUnsupportedSetting;
                     }
-                    DEBUG_PRINT_LOW("i/p actual cnt requested = %u", (unsigned int)portDefn->nBufferCountActual);
-                    DEBUG_PRINT_LOW("i/p min cnt requested = %u", (unsigned int)portDefn->nBufferCountMin);
-                    DEBUG_PRINT_LOW("i/p buffersize requested = %u", (unsigned int)portDefn->nBufferSize);
                     if (portDefn->nBufferCountActual > MAX_NUM_INPUT_BUFFERS) {
                         DEBUG_PRINT_ERROR("ERROR: (In_PORT) actual count (%u) exceeds max(%u)",
                                 (unsigned int)portDefn->nBufferCountActual, (unsigned int)MAX_NUM_INPUT_BUFFERS);
@@ -628,8 +552,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                 OMX_ErrorUnsupportedSetting;
                     }
 
-                    DEBUG_PRINT_LOW("i/p previous actual cnt = %u", (unsigned int)m_sInPortDef.nBufferCountActual);
-                    DEBUG_PRINT_LOW("i/p previous min cnt = %u", (unsigned int)m_sInPortDef.nBufferCountMin);
                     memcpy(&m_sInPortDef, portDefn,sizeof(OMX_PARAM_PORTDEFINITIONTYPE));
 
 #ifdef _ANDROID_ICS_
@@ -637,13 +559,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                             (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FormatAndroidOpaque) {
                         m_sInPortDef.format.video.eColorFormat = (OMX_COLOR_FORMATTYPE)
                             QOMX_DEFAULT_COLOR_FMT;
-                        if (!mUseProxyColorFormat) {
-                            if (!c2d_conv.init()) {
-                                DEBUG_PRINT_ERROR("C2D init failed");
-                                return OMX_ErrorUnsupportedSetting;
-                            }
-                            DEBUG_PRINT_HIGH("C2D init is successful");
-                        }
                         mUseProxyColorFormat = true;
                         m_input_msg_id = OMX_COMPONENT_GENERATE_ETB_OPQ;
                     } else
@@ -662,9 +577,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                             m_sOutPortDef.nPortIndex);
                     m_sInPortDef.nBufferCountActual = portDefn->nBufferCountActual;
                 } else if (PORT_INDEX_OUT == portDefn->nPortIndex) {
-                    DEBUG_PRINT_LOW("o/p actual cnt requested = %u", (unsigned int)portDefn->nBufferCountActual);
-                    DEBUG_PRINT_LOW("o/p min cnt requested = %u", (unsigned int)portDefn->nBufferCountMin);
-                    DEBUG_PRINT_LOW("o/p buffersize requested = %u", (unsigned int)portDefn->nBufferSize);
 
                     if (portDefn->nBufferCountActual > MAX_NUM_OUTPUT_BUFFERS) {
                         DEBUG_PRINT_ERROR("ERROR: (Out_PORT) actual count (%u) exceeds max(%u)",
@@ -695,8 +607,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                             m_sOutPortDef.nPortIndex);
                     update_profile_level(); //framerate , bitrate
 
-                    DEBUG_PRINT_LOW("o/p previous actual cnt = %u", (unsigned int)m_sOutPortDef.nBufferCountActual);
-                    DEBUG_PRINT_LOW("o/p previous min cnt = %u", (unsigned int)m_sOutPortDef.nBufferCountMin);
                     m_sOutPortDef.nBufferCountActual = portDefn->nBufferCountActual;
                 } else {
                     DEBUG_PRINT_ERROR("ERROR: Set_parameter: Bad Port idx %d",
@@ -731,13 +641,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                             (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FormatAndroidOpaque) {
                         m_sInPortFormat.eColorFormat = (OMX_COLOR_FORMATTYPE)
                             QOMX_DEFAULT_COLOR_FMT;
-                        if (!mUseProxyColorFormat) {
-                            if (!c2d_conv.init()) {
-                                DEBUG_PRINT_ERROR("C2D init failed");
-                                return OMX_ErrorUnsupportedSetting;
-                            }
-                            DEBUG_PRINT_HIGH("C2D init is successful");
-                        }
                         mUseProxyColorFormat = true;
                         m_input_msg_id = OMX_COMPONENT_GENERATE_ETB_OPQ;
                     } else
@@ -1733,7 +1636,6 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                 VALIDATE_OMX_PARAM_DATA(configData, OMX_CONFIG_ROTATIONTYPE);
                 OMX_CONFIG_ROTATIONTYPE *pParam =
                     reinterpret_cast<OMX_CONFIG_ROTATIONTYPE*>(configData);
-                OMX_S32 nRotation;
 
                 if (pParam->nPortIndex != PORT_INDEX_OUT) {
                     DEBUG_PRINT_ERROR("ERROR: Unsupported port index: %u", (unsigned int)pParam->nPortIndex);
@@ -1748,11 +1650,10 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                     DEBUG_PRINT_ERROR("ERROR: un supported Rotation %u", (unsigned int)pParam->nRotation);
                     return OMX_ErrorUnsupportedSetting;
                 }
-                nRotation = pParam->nRotation - m_sConfigFrameRotation.nRotation;
-                if (nRotation < 0)
-                    nRotation = -nRotation;
-
-                DEBUG_PRINT_HIGH("set_config: updating device Dims");
+                if (m_sConfigFrameRotation.nRotation == pParam->nRotation) {
+                    DEBUG_PRINT_HIGH("set_config: rotation (%d) not changed", pParam->nRotation);
+                    break;
+                }
 
                 if (handle->venc_set_config(configData,
                     OMX_IndexConfigCommonRotate) != true) {
@@ -2140,6 +2041,10 @@ bool omx_venc::dev_use_buf(unsigned port)
 bool omx_venc::dev_buffer_ready_to_queue(OMX_BUFFERHEADERTYPE *buffer)
 {
     bool bRet = true;
+
+    /* do not defer the buffer if m_TimeStamp is not initialized */
+    if (!timestamp.m_TimeStamp)
+        return true;
 
     pthread_mutex_lock(&timestamp.m_lock);
 
