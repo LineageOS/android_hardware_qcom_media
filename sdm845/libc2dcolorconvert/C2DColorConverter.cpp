@@ -28,108 +28,29 @@
  */
 
 #include <C2DColorConverter.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <linux/msm_kgsl.h>
-#include <sys/ioctl.h>
-#include <utils/Log.h>
-#include <dlfcn.h>
-#include <string.h>
-#include <errno.h>
-#include <media/msm_media_info.h>
-#include <gralloc_priv.h>
 
-#undef LOG_TAG
-#define LOG_TAG "C2DColorConvert"
-#define ALIGN( num, to ) (((num) + (to-1)) & (~(to-1)))
-#define ALIGN8K 8192
-#define ALIGN4K 4096
-#define ALIGN2K 2048
-#define ALIGN128 128
-#define ALIGN32 32
-#define ALIGN16 16
-
-//-----------------------------------------------------
-namespace android {
-
-class C2DColorConverter : public C2DColorConverterBase {
-
-public:
-    C2DColorConverter(size_t srcWidth, size_t srcHeight, size_t dstWidth, size_t dstHeight, ColorConvertFormat srcFormat, ColorConvertFormat dstFormat, int32_t flags,size_t srcStride);
-    int32_t getBuffReq(int32_t port, C2DBuffReq *req);
-    int32_t dumpOutput(char * filename, char mode);
-protected:
-    virtual ~C2DColorConverter();
-    virtual int convertC2D(int srcFd, void *srcBase, void * srcData, int dstFd, void *dstBase, void * dstData);
-
-private:
-    bool isYUVSurface(ColorConvertFormat format);
-    void *getDummySurfaceDef(ColorConvertFormat format, size_t width, size_t height, bool isSource);
-    C2D_STATUS updateYUVSurfaceDef(int fd, void *base, void * data, bool isSource);
-    C2D_STATUS updateRGBSurfaceDef(int fd, void * data, bool isSource);
-    uint32_t getC2DFormat(ColorConvertFormat format);
-    size_t calcStride(ColorConvertFormat format, size_t width);
-    size_t calcYSize(ColorConvertFormat format, size_t width, size_t height);
-    size_t calcSize(ColorConvertFormat format, size_t width, size_t height);
-    void *getMappedGPUAddr(int bufFD, void *bufPtr, size_t bufLen);
-    bool unmapGPUAddr(unsigned long gAddr);
-    size_t calcLumaAlign(ColorConvertFormat format);
-    size_t calcSizeAlign(ColorConvertFormat format);
-    C2DBytesPerPixel calcBytesPerPixel(ColorConvertFormat format);
-
-    void *mC2DLibHandle;
-    LINK_c2dCreateSurface mC2DCreateSurface;
-    LINK_c2dUpdateSurface mC2DUpdateSurface;
-    LINK_c2dReadSurface mC2DReadSurface;
-    LINK_c2dDraw mC2DDraw;
-    LINK_c2dFlush mC2DFlush;
-    LINK_c2dFinish mC2DFinish;
-    LINK_c2dWaitTimestamp mC2DWaitTimestamp;
-    LINK_c2dDestroySurface mC2DDestroySurface;
-    LINK_c2dMapAddr mC2DMapAddr;
-    LINK_c2dUnMapAddr mC2DUnMapAddr;
-
-    void *mAdrenoUtilsHandle;
-    LINK_AdrenoComputeAlignedWidthAndHeight mAdrenoComputeAlignedWidthAndHeight;
-
-    uint32_t mSrcSurface, mDstSurface;
-    void * mSrcSurfaceDef;
-    void * mDstSurfaceDef;
-
-    C2D_OBJECT mBlit;
-    size_t mSrcWidth;
-    size_t mSrcHeight;
-    size_t mSrcStride;
-    size_t mDstWidth;
-    size_t mDstHeight;
-    size_t mSrcSize;
-    size_t mDstSize;
-    size_t mSrcYSize;
-    size_t mDstYSize;
-    enum ColorConvertFormat mSrcFormat;
-    enum ColorConvertFormat mDstFormat;
-    int32_t mFlags;
-
-    int mError;
-};
-
-C2DColorConverter::C2DColorConverter(size_t srcWidth, size_t srcHeight, size_t dstWidth, size_t dstHeight, ColorConvertFormat srcFormat, ColorConvertFormat dstFormat, int32_t flags, size_t srcStride)
+C2DColorConverter::C2DColorConverter()
     : mC2DLibHandle(NULL),
       mAdrenoUtilsHandle(NULL)
 {
-     mError = 0;
-     if (NV12_UBWC == dstFormat) {
-         ALOGE("%s: FATAL ERROR: could not support UBWC output formats ", __FUNCTION__);
-         mError = -1;
-         return;
-     }
-     mC2DLibHandle = dlopen("libC2D2.so", RTLD_NOW);
-     if (!mC2DLibHandle) {
-         ALOGE("FATAL ERROR: could not dlopen libc2d2.so: %s", dlerror());
-         mError = -1;
-         return;
-     }
-     mC2DCreateSurface = (LINK_c2dCreateSurface)dlsym(mC2DLibHandle, "c2dCreateSurface");
+
+    enabled = true;
+    pthread_mutex_init(&mLock, NULL);
+
+    mC2DLibHandle = dlopen("libC2D2.so", RTLD_NOW);
+    if (!mC2DLibHandle) {
+        ALOGE("FATAL ERROR: could not dlopen libc2d2.so: %s", dlerror());
+        enabled = false;
+        return;
+    }
+    mAdrenoUtilsHandle = dlopen("libadreno_utils.so", RTLD_NOW);
+    if (!mAdrenoUtilsHandle) {
+        ALOGE("FATAL ERROR: could not dlopen libadreno_utils.so: %s", dlerror());
+        enabled = false;
+        return;
+    }
+
+    mC2DCreateSurface = (LINK_c2dCreateSurface)dlsym(mC2DLibHandle, "c2dCreateSurface");
      mC2DUpdateSurface = (LINK_c2dUpdateSurface)dlsym(mC2DLibHandle, "c2dUpdateSurface");
      mC2DReadSurface = (LINK_c2dReadSurface)dlsym(mC2DLibHandle, "c2dReadSurface");
      mC2DDraw = (LINK_c2dDraw)dlsym(mC2DLibHandle, "c2dDraw");
@@ -144,57 +65,21 @@ C2DColorConverter::C2DColorConverter(size_t srcWidth, size_t srcHeight, size_t d
         || !mC2DDraw || !mC2DFlush || !mC2DFinish || !mC2DWaitTimestamp
         || !mC2DDestroySurface || !mC2DMapAddr || !mC2DUnMapAddr) {
          ALOGE("%s: dlsym ERROR", __FUNCTION__);
-         mError = -1;
-         return;
-     }
-
-     mAdrenoUtilsHandle = dlopen("libadreno_utils.so", RTLD_NOW);
-     if (!mAdrenoUtilsHandle) {
-         ALOGE("FATAL ERROR: could not dlopen libadreno_utils.so: %s", dlerror());
-         mError = -1;
+         enabled = false;
          return;
      }
 
      mAdrenoComputeAlignedWidthAndHeight = (LINK_AdrenoComputeAlignedWidthAndHeight)dlsym(mAdrenoUtilsHandle, "compute_aligned_width_and_height");
      if (!mAdrenoComputeAlignedWidthAndHeight) {
          ALOGE("%s: dlsym ERROR", __FUNCTION__);
-         mError = -1;
+         enabled = false;
          return;
      }
-
-    mSrcWidth = srcWidth;
-    mSrcHeight = srcHeight;
-    mSrcStride = srcStride;;
-    mDstWidth = dstWidth;
-    mDstHeight = dstHeight;
-    mSrcFormat = srcFormat;
-    mDstFormat = dstFormat;
-    mSrcSize = calcSize(srcFormat, srcWidth, srcHeight);
-    mDstSize = calcSize(dstFormat, dstWidth, dstHeight);
-    mSrcYSize = calcYSize(srcFormat, srcWidth, srcHeight);
-    mDstYSize = calcYSize(dstFormat, dstWidth, dstHeight);
-
-    mFlags = flags; // can be used for rotation
-
-    mSrcSurfaceDef = getDummySurfaceDef(srcFormat, srcWidth, srcHeight, true);
-    mDstSurfaceDef = getDummySurfaceDef(dstFormat, dstWidth, dstHeight, false);
-
-    memset((void*)&mBlit,0,sizeof(C2D_OBJECT));
-    mBlit.source_rect.x = 0 << 16;
-    mBlit.source_rect.y = 0 << 16;
-    mBlit.source_rect.width = srcWidth << 16;
-    mBlit.source_rect.height = srcHeight << 16;
-    mBlit.target_rect.x = 0 << 16;
-    mBlit.target_rect.y = 0 << 16;
-    mBlit.target_rect.width = dstWidth << 16;
-    mBlit.target_rect.height = dstHeight << 16;
-    mBlit.config_mask = C2D_ALPHA_BLEND_NONE | C2D_NO_BILINEAR_BIT | C2D_NO_ANTIALIASING_BIT | C2D_TARGET_RECT_BIT;
-    mBlit.surface_id = mSrcSurface;
 }
 
 C2DColorConverter::~C2DColorConverter()
 {
-    if (!mError && mC2DLibHandle) {
+    if (enabled) {
 
         mC2DDestroySurface(mDstSurface);
         mC2DDestroySurface(mSrcSurface);
@@ -219,70 +104,135 @@ C2DColorConverter::~C2DColorConverter()
     }
 }
 
-int C2DColorConverter::convertC2D(int srcFd, void *srcBase, void * srcData, int dstFd, void *dstBase, void * dstData)
+bool C2DColorConverter::setResolution(size_t srcWidth, size_t srcHeight,
+                                      size_t dstWidth, size_t dstHeight,
+                                      ColorConvertFormat srcFormat,
+                                      ColorConvertFormat dstFormat,
+                                      int32_t flags, size_t srcStride)
 {
-    C2D_STATUS ret;
+    int32_t retval = -1;
+    if (enabled) {
+        pthread_mutex_lock(&mLock);
+        mSrcWidth = srcWidth;
+        mSrcHeight = srcHeight;
+        mSrcStride = srcStride;;
+        mDstWidth = dstWidth;
+        mDstHeight = dstHeight;
+        mSrcFormat = srcFormat;
+        mDstFormat = dstFormat;
+        mSrcSize = calcSize(srcFormat, srcWidth, srcHeight);
+        mDstSize = calcSize(dstFormat, dstWidth, dstHeight);
+        mSrcYSize = calcYSize(srcFormat, srcWidth, srcHeight);
+        mDstYSize = calcYSize(dstFormat, dstWidth, dstHeight);
 
-    if (mError) {
-        ALOGE("C2D library initialization failed\n");
-        return mError;
-    }
+        mFlags = flags; // can be used for rotation
 
-    if ((srcFd < 0) || (dstFd < 0) || (srcData == NULL) || (dstData == NULL)) {
-        ALOGE("Incorrect input parameters\n");
-        return -1;
-    }
+        retval = getDummySurfaceDef(srcFormat, srcWidth, srcHeight, true);
+        retval |= getDummySurfaceDef(dstFormat, dstWidth, dstHeight, false);
 
-    if (isYUVSurface(mSrcFormat)) {
-        ret = updateYUVSurfaceDef(srcFd, srcBase, srcData, true);
-    } else {
-        ret = updateRGBSurfaceDef(srcFd, srcData, true);
-    }
-
-    if (ret != C2D_STATUS_OK) {
-        ALOGE("Update src surface def failed\n");
-        return -ret;
-    }
-
-    if (isYUVSurface(mDstFormat)) {
-        ret = updateYUVSurfaceDef(dstFd, dstBase, dstData, false);
-    } else {
-        ret = updateRGBSurfaceDef(dstFd, dstData, false);
-    }
-
-    if (ret != C2D_STATUS_OK) {
-        ALOGE("Update dst surface def failed\n");
-        return -ret;
-    }
-
-    mBlit.surface_id = mSrcSurface;
-    ret = mC2DDraw(mDstSurface, C2D_TARGET_ROTATE_0, 0, 0, 0, &mBlit, 1);
-    mC2DFinish(mDstSurface);
-
-    bool unmappedSrcSuccess;
-    if (isYUVSurface(mSrcFormat)) {
-        unmappedSrcSuccess = unmapGPUAddr((unsigned long)((C2D_YUV_SURFACE_DEF *)mSrcSurfaceDef)->phys0);
-    } else {
-        unmappedSrcSuccess = unmapGPUAddr((unsigned long)((C2D_RGB_SURFACE_DEF *)mSrcSurfaceDef)->phys);
-    }
-
-    bool unmappedDstSuccess;
-    if (isYUVSurface(mDstFormat)) {
-        unmappedDstSuccess = unmapGPUAddr((unsigned long)((C2D_YUV_SURFACE_DEF *)mDstSurfaceDef)->phys0);
-    } else {
-        unmappedDstSuccess = unmapGPUAddr((unsigned long)((C2D_RGB_SURFACE_DEF *)mDstSurfaceDef)->phys);
-    }
-
-    if (ret != C2D_STATUS_OK) {
-        ALOGE("C2D Draw failed\n");
-        return -ret; //c2d err values are positive
-    } else {
-        if (!unmappedSrcSuccess || !unmappedDstSuccess) {
-            ALOGE("unmapping GPU address failed\n");
-            return -1;
+        if (retval == 0) {
+            memset((void*)&mBlit,0,sizeof(C2D_OBJECT));
+            mBlit.source_rect.x = 0 << 16;
+            mBlit.source_rect.y = 0 << 16;
+            mBlit.source_rect.width = srcWidth << 16;
+            mBlit.source_rect.height = srcHeight << 16;
+            mBlit.target_rect.x = 0 << 16;
+            mBlit.target_rect.y = 0 << 16;
+            mBlit.target_rect.width = dstWidth << 16;
+            mBlit.target_rect.height = dstHeight << 16;
+            mBlit.config_mask = C2D_ALPHA_BLEND_NONE    |
+                C2D_NO_BILINEAR_BIT     |
+                C2D_NO_ANTIALIASING_BIT |
+                C2D_TARGET_RECT_BIT;
+            mBlit.surface_id = mSrcSurface;
         }
-        return ret;
+
+        pthread_mutex_unlock(&mLock);
     }
+
+    return retval == 0? true:false;
+}
+
+
+bool C2DColorConverter::convertC2D(int srcFd, void *srcBase, void * srcData,
+                                   int dstFd, void *dstBase, void * dstData)
+{
+  C2D_STATUS ret;
+  bool status = false;
+
+  if (enabled) {
+    pthread_mutex_lock(&mLock);
+    if (srcFd < 0 || dstFd < 0
+                || srcData == NULL || dstData == NULL
+                || srcBase == NULL || dstBase == NULL) {
+      ALOGE("Incorrect input parameters\n");
+      status = false;
+    } else {
+
+      if (isYUVSurface(mSrcFormat)) {
+        ret = updateYUVSurfaceDef(srcFd, srcBase, srcData, true);
+      } else {
+        ret = updateRGBSurfaceDef(srcFd, srcData, true);
+      }
+
+      if (ret == C2D_STATUS_OK) {
+
+        if (isYUVSurface(mDstFormat)) {
+          ret = updateYUVSurfaceDef(dstFd, dstBase, dstData, false);
+        } else {
+          ret = updateRGBSurfaceDef(dstFd, dstData, false);
+        }
+
+        if (ret == C2D_STATUS_OK) {
+
+          mBlit.surface_id = mSrcSurface;
+          ret = mC2DDraw(mDstSurface, C2D_TARGET_ROTATE_0, 0, 0, 0, &mBlit, 1);
+          mC2DFinish(mDstSurface);
+
+          if (ret == C2D_STATUS_OK) {
+            bool unmappedSrcSuccess;
+            if (isYUVSurface(mSrcFormat)) {
+              unmappedSrcSuccess = unmapGPUAddr((unsigned long)           \
+                                                ((C2D_YUV_SURFACE_DEF *)mSrcSurfaceDef)->phys0);
+            } else {
+              unmappedSrcSuccess = unmapGPUAddr((unsigned long)           \
+                                                ((C2D_RGB_SURFACE_DEF *)mSrcSurfaceDef)->phys);
+            }
+
+            bool unmappedDstSuccess;
+            if (isYUVSurface(mDstFormat)) {
+              unmappedDstSuccess = unmapGPUAddr((unsigned long)           \
+                                                ((C2D_YUV_SURFACE_DEF *)mDstSurfaceDef)->phys0);
+            } else {
+              unmappedDstSuccess = unmapGPUAddr((unsigned long)           \
+                                                ((C2D_RGB_SURFACE_DEF *)mDstSurfaceDef)->phys);
+            }
+
+            if (!unmappedSrcSuccess || !unmappedDstSuccess) {
+              ALOGE("unmapping GPU address failed (%d:%d)\n", unmappedSrcSuccess,
+                    unmappedDstSuccess);
+              status = false;
+            } else {
+              status = true;
+            }
+          } else {
+            ALOGE("C2D Draw failed (%d)\n", ret);
+            status = false;
+          }
+        } else {
+          ALOGE("Update dst surface def failed (%d)\n", ret);
+          status = false;
+        }
+      } else {
+        ALOGE("Update src surface def failed )%d)\n", ret);
+        status = false;
+      }
+    }
+
+    pthread_mutex_unlock(&mLock);
+  }
+
+  return status;
 }
 
 bool C2DColorConverter::isYUVSurface(ColorConvertFormat format)
@@ -296,59 +246,93 @@ bool C2DColorConverter::isYUVSurface(ColorConvertFormat format)
         case NV12_128m:
         case NV12_UBWC:
             return true;
-        case RGB565:
-        case RGBA8888:
         default:
             return false;
     }
 }
 
-void* C2DColorConverter::getDummySurfaceDef(ColorConvertFormat format, size_t width, size_t height, bool isSource)
+int32_t C2DColorConverter::getDummySurfaceDef(ColorConvertFormat format,
+                                            size_t width, size_t height,
+                                            bool isSource)
 {
+    void *surfaceDef = NULL;
+    C2D_SURFACE_TYPE hostSurfaceType;
+
     if (isYUVSurface(format)) {
-        C2D_YUV_SURFACE_DEF * surfaceDef = new C2D_YUV_SURFACE_DEF;
-        surfaceDef->format = getC2DFormat(format);
-        surfaceDef->width = width;
-        surfaceDef->height = height;
-        surfaceDef->plane0 = (void *)0xaaaaaaaa;
-        surfaceDef->phys0 = (void *)0xaaaaaaaa;
-        surfaceDef->stride0 = calcStride(format, width);
-        surfaceDef->plane1 = (void *)0xaaaaaaaa;
-        surfaceDef->phys1 = (void *)0xaaaaaaaa;
-        surfaceDef->stride1 = calcStride(format, width);
-        surfaceDef->stride2 = calcStride(format, width);
-        surfaceDef->phys2 = NULL;
-        surfaceDef->plane2 = NULL;
+        C2D_YUV_SURFACE_DEF **surfaceYUVDef = (C2D_YUV_SURFACE_DEF **)
+                                  (isSource ? &mSrcSurfaceDef : &mDstSurfaceDef);
+        if (*surfaceYUVDef == NULL) {
+            *surfaceYUVDef = (C2D_YUV_SURFACE_DEF *)
+                                  calloc(1, sizeof(C2D_YUV_SURFACE_DEF));
+            if (*surfaceYUVDef == NULL) {
+                ALOGE("C2D Draw failed\n");
+                return -1;
+            }
+        } else {
+            memset(*surfaceYUVDef, 0, sizeof(C2D_YUV_SURFACE_DEF));
+        }
+        (*surfaceYUVDef)->format = getC2DFormat(format);
+        (*surfaceYUVDef)->width = width;
+        (*surfaceYUVDef)->height = height;
+        (*surfaceYUVDef)->plane0 = (void *)0xaaaaaaaa;
+        (*surfaceYUVDef)->phys0 = (void *)0xaaaaaaaa;
+        (*surfaceYUVDef)->stride0 = calcStride(format, width);
+        (*surfaceYUVDef)->plane1 = (void *)0xaaaaaaaa;
+        (*surfaceYUVDef)->phys1 = (void *)0xaaaaaaaa;
+        (*surfaceYUVDef)->stride1 = calcStride(format, width);
+        (*surfaceYUVDef)->stride2 = calcStride(format, width);
+        (*surfaceYUVDef)->phys2 = NULL;
+        (*surfaceYUVDef)->plane2 = NULL;
 
         if (format == YCbCr420P ||
             format == YCrCb420P) {
           printf("half stride for Cb Cr planes \n");
-          surfaceDef->stride1 = calcStride(format, width) / 2;
-          surfaceDef->phys2 = (void *)0xaaaaaaaa;
-          surfaceDef->stride2 = calcStride(format, width) / 2;
+          (*surfaceYUVDef)->stride1 = calcStride(format, width) / 2;
+          (*surfaceYUVDef)->phys2 = (void *)0xaaaaaaaa;
+          (*surfaceYUVDef)->stride2 = calcStride(format, width) / 2;
         }
-        mC2DCreateSurface(isSource ? &mSrcSurface : &mDstSurface, isSource ? C2D_SOURCE : C2D_TARGET,
-                        (C2D_SURFACE_TYPE)(C2D_SURFACE_YUV_HOST | C2D_SURFACE_WITH_PHYS | C2D_SURFACE_WITH_PHYS_DUMMY),
-                        &(*surfaceDef));
-        return ((void *)surfaceDef);
+
+        surfaceDef = *surfaceYUVDef;
+        hostSurfaceType = C2D_SURFACE_YUV_HOST;
     } else {
-        C2D_RGB_SURFACE_DEF * surfaceDef = new C2D_RGB_SURFACE_DEF;
-        surfaceDef->format = getC2DFormat(format);
+        C2D_RGB_SURFACE_DEF **surfaceRGBDef = (C2D_RGB_SURFACE_DEF **)
+                                  (isSource ? &mSrcSurfaceDef : &mDstSurfaceDef);
+        if (*surfaceRGBDef == NULL) {
+            *surfaceRGBDef = (C2D_RGB_SURFACE_DEF *)
+                                  calloc(1, sizeof(C2D_RGB_SURFACE_DEF));
+            if (*surfaceRGBDef == NULL) {
+                ALOGE("C2D Draw failed\n");
+                return -1;
+            }
+        } else {
+            memset(*surfaceRGBDef, 0, sizeof(C2D_RGB_SURFACE_DEF));
+        }
+        (*surfaceRGBDef)->format = getC2DFormat(format);
+
         if (mFlags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED)
-            surfaceDef->format |= C2D_FORMAT_UBWC_COMPRESSED;
-        surfaceDef->width = width;
-        surfaceDef->height = height;
-        surfaceDef->buffer = (void *)0xaaaaaaaa;
-        surfaceDef->phys = (void *)0xaaaaaaaa;
-        surfaceDef->stride = calcStride(format, width);
-        mC2DCreateSurface(isSource ? &mSrcSurface : &mDstSurface, isSource ? C2D_SOURCE : C2D_TARGET,
-                        (C2D_SURFACE_TYPE)(C2D_SURFACE_RGB_HOST | C2D_SURFACE_WITH_PHYS | C2D_SURFACE_WITH_PHYS_DUMMY),
-                        &(*surfaceDef));
-        return ((void *)surfaceDef);
+            (*surfaceRGBDef)->format |= C2D_FORMAT_UBWC_COMPRESSED;
+        (*surfaceRGBDef)->width = width;
+        (*surfaceRGBDef)->height = height;
+        (*surfaceRGBDef)->buffer = (void *)0xaaaaaaaa;
+        (*surfaceRGBDef)->phys = (void *)0xaaaaaaaa;
+        (*surfaceRGBDef)->stride = calcStride(format, width);
+
+        surfaceDef = *surfaceRGBDef;
+        hostSurfaceType = C2D_SURFACE_RGB_HOST;
     }
+
+    mC2DCreateSurface(isSource ? &mSrcSurface :
+                      &mDstSurface,
+                      isSource ? C2D_SOURCE : C2D_TARGET,
+                      (C2D_SURFACE_TYPE)(hostSurfaceType
+                                         | C2D_SURFACE_WITH_PHYS
+                                         | C2D_SURFACE_WITH_PHYS_DUMMY),
+                      surfaceDef);
+    return 0;
 }
 
-C2D_STATUS C2DColorConverter::updateYUVSurfaceDef(int fd, void *base, void *data, bool isSource)
+C2D_STATUS C2DColorConverter::updateYUVSurfaceDef(int fd, void *base,
+                                                  void *data, bool isSource)
 {
     if (isSource) {
         C2D_YUV_SURFACE_DEF * srcSurfaceDef = (C2D_YUV_SURFACE_DEF *)mSrcSurfaceDef;
@@ -409,6 +393,11 @@ uint32_t C2DColorConverter::getC2DFormat(ColorConvertFormat format)
             return C2D_COLOR_FORMAT_565_RGB;
         case RGBA8888:
             return C2D_COLOR_FORMAT_8888_RGBA | C2D_FORMAT_SWAP_ENDIANNESS | C2D_FORMAT_PREMULTIPLIED;
+        case RGBA8888_UBWC:
+            return C2D_COLOR_FORMAT_8888_RGBA |
+                   C2D_FORMAT_SWAP_ENDIANNESS |
+                   C2D_FORMAT_PREMULTIPLIED   |
+                   C2D_FORMAT_UBWC_COMPRESSED;
         case YCbCr420Tile:
             return (C2D_COLOR_FORMAT_420_NV12 | C2D_FORMAT_MACROTILED);
         case YCbCr420SP:
@@ -433,10 +422,10 @@ size_t C2DColorConverter::calcStride(ColorConvertFormat format, size_t width)
         case RGB565:
             return ALIGN(width, ALIGN32) * 2; // RGB565 has width as twice
         case RGBA8888:
-	if (mSrcStride)
-		return mSrcStride * 4;
-	else
-		return ALIGN(width, ALIGN32) * 4;
+            if (mSrcStride)
+                return mSrcStride * 4;
+            else
+                return ALIGN(width, ALIGN32) * 4;
         case YCbCr420Tile:
             return ALIGN(width, ALIGN128);
         case YCbCr420SP:
@@ -544,6 +533,7 @@ size_t C2DColorConverter::calcSize(ColorConvertFormat format, size_t width, size
             break;
         case NV12_UBWC:
             size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12_UBWC, width, height);
+            break;
         default:
             break;
     }
@@ -558,7 +548,7 @@ void * C2DColorConverter::getMappedGPUAddr(int bufFD, void *bufPtr, size_t bufLe
     void *gpuaddr = NULL;
 
     status = mC2DMapAddr(bufFD, bufPtr, bufLen, 0, KGSL_USER_MEM_TYPE_ION,
-            &gpuaddr);
+                         &gpuaddr);
     if (status != C2D_STATUS_OK) {
         ALOGE("c2dMapAddr failed: status %d fd %d ptr %p len %zu flags %d\n",
                 status, bufFD, bufPtr, bufLen, KGSL_USER_MEM_TYPE_ION);
@@ -581,10 +571,37 @@ bool C2DColorConverter::unmapGPUAddr(unsigned long gAddr)
     return (status == C2D_STATUS_OK);
 }
 
-int32_t C2DColorConverter::getBuffReq(int32_t port, C2DBuffReq *req) {
-    if (!req) return -1;
+int32_t C2DColorConverter::getBuffSize(int32_t port)
+{
+  if (enabled) {
+    if (port == C2D_INPUT) {
+      return calcSize(mSrcFormat, mSrcWidth, mSrcHeight);
+    } else if (port == C2D_OUTPUT) {
+      return calcSize(mDstFormat, mDstWidth, mDstHeight);
+    }
+  }
+  return 0;
+}
 
-    if (port != C2D_INPUT && port != C2D_OUTPUT) return -1;
+bool C2DColorConverter::getBuffFilledLen(int32_t port, unsigned int &filled_length)
+{
+  bool ret = false;
+  C2DBuffReq req;
+  if (enabled) {
+    ret = getBuffReq(port, &req);
+    if (ret && req.bpp.denominator > 0) {
+      filled_length = (req.stride * req.sliceHeight * req.bpp.numerator);
+      filled_length /= req.bpp.denominator;
+    }
+  }
+
+  return ret;
+}
+
+bool C2DColorConverter::getBuffReq(int32_t port, C2DBuffReq *req) {
+    if (!req
+        || (port != C2D_INPUT
+            && port != C2D_OUTPUT)) return false;
 
     memset(req, 0, sizeof(C2DBuffReq));
     if (port == C2D_INPUT) {
@@ -608,7 +625,7 @@ int32_t C2DColorConverter::getBuffReq(int32_t port, C2DBuffReq *req) {
         req->bpp = calcBytesPerPixel(mDstFormat);
         ALOGV("output req->size = %d\n", req->size);
     }
-    return 0;
+    return true;
 }
 
 size_t C2DColorConverter::calcLumaAlign(ColorConvertFormat format) {
@@ -653,6 +670,7 @@ C2DBytesPerPixel C2DColorConverter::calcBytesPerPixel(ColorConvertFormat format)
             bpp.numerator = 2;
             break;
         case RGBA8888:
+        case RGBA8888_UBWC:
             bpp.numerator = 4;
             break;
         case YCbCr420SP:
@@ -744,7 +762,7 @@ int32_t C2DColorConverter::dumpOutput(char * filename, char mode) {
       int bpp = 1; //bytes per pixel
       if (mDstFormat == RGB565) {
         bpp = 2;
-      } else if (mDstFormat == RGBA8888) {
+      } else if (mDstFormat == RGBA8888  || mDstFormat == RGBA8888_UBWC) {
         bpp = 4;
       }
 
@@ -765,16 +783,4 @@ int32_t C2DColorConverter::dumpOutput(char * filename, char mode) {
     }
     close(fd);
     return ret < 0 ? ret : 0;
-}
-
-extern "C" C2DColorConverterBase* createC2DColorConverter(size_t srcWidth, size_t srcHeight, size_t dstWidth, size_t dstHeight, ColorConvertFormat srcFormat, ColorConvertFormat dstFormat, int32_t flags, size_t srcStride)
-{
-    return new C2DColorConverter(srcWidth, srcHeight, dstWidth, dstHeight, srcFormat, dstFormat, flags, srcStride);
-}
-
-extern "C" void destroyC2DColorConverter(C2DColorConverterBase* C2DCC)
-{
-    delete C2DCC;
-}
-
 }

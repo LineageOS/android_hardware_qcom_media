@@ -25,8 +25,8 @@ TARGETS_THAT_USE_FLAG_MSM8226 := msm8226 msm8916 msm8909
 TARGETS_THAT_NEED_SW_VENC_MPEG4 := msm8909 msm8937
 TARGETS_THAT_NEED_SW_VENC_HEVC := msm8992
 TARGETS_THAT_SUPPORT_UBWC := msm8996 msm8998
-TARGETS_THAT_SUPPORT_VQZIP := msm8996 msm8998
-TARGETS_THAT_SUPPORT_PQ := msm8996 msm8998 msm8953
+TARGETS_THAT_SUPPORT_VQZIP :=
+TARGETS_THAT_SUPPORT_PQ := msm8998
 TARGETS_THAT_USE_NV21 := sdm660 msm8953
 
 ifeq ($(TARGET_BOARD_PLATFORM),msm8610)
@@ -54,7 +54,11 @@ libmm-venc-def += -D_VQZIP_
 endif
 
 ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_PQ)),true)
+ifneq ($(wildcard vendor/qcom/$(TARGET_BOARD_PLATFORM)/prebuilts/grease/),)
 libmm-venc-def += -D_PQ_
+else
+$(warning "venc: PQ compiled out")
+endif
 endif
 
 ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_USE_FLAG_MSM8226)),true)

@@ -87,8 +87,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE                    := libOmxVenc
 LOCAL_MODULE_TAGS               := optional
-LOCAL_MODULE_PATH_32            := $(TARGET_OUT_VENDOR)/lib
-LOCAL_MODULE_PATH_64            := $(TARGET_OUT_VENDOR)/lib64
+LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libmm-venc-def)
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
@@ -96,9 +95,9 @@ LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 LOCAL_PRELINK_MODULE      := false
 LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl
 
-ifeq ($(BOARD_USES_ADRENO), true)
+# ifeq ($(BOARD_USES_ADRENO), true)
 LOCAL_SHARED_LIBRARIES    += libc2dcolorconvert
-endif # ($(BOARD_USES_ADRENO), true)
+# endif # ($(BOARD_USES_ADRENO), true)
 LOCAL_SHARED_LIBRARIES += libqdMetaData
 LOCAL_STATIC_LIBRARIES    := libOmxVidcCommon
 
@@ -120,8 +119,7 @@ libmm-venc-inc      += $(TARGET_OUT_HEADERS)/mm-video/swvenc
 LOCAL_MODULE                    := libOmxSwVencMpeg4
 
 LOCAL_MODULE_TAGS               := optional
-LOCAL_MODULE_PATH_32            := $(TARGET_OUT_VENDOR)/lib
-LOCAL_MODULE_PATH_64            := $(TARGET_OUT_VENDOR)/lib64
+LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libmm-venc-def)
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
@@ -129,9 +127,9 @@ LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 LOCAL_PRELINK_MODULE      := false
 LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl
 LOCAL_SHARED_LIBRARIES    += libMpeg4SwEncoder
-ifeq ($(BOARD_USES_ADRENO), true)
+# ifeq ($(BOARD_USES_ADRENO), true)
 LOCAL_SHARED_LIBRARIES    += libc2dcolorconvert
-endif # ($(BOARD_USES_ADRENO), true)
+# endif # ($(BOARD_USES_ADRENO), true)
 LOCAL_STATIC_LIBRARIES    := libOmxVidcCommon
 
 LOCAL_SRC_FILES   := src/omx_video_base.cpp

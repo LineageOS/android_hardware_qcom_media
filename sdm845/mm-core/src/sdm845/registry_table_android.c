@@ -104,6 +104,38 @@ omx_core_cb_type core[] =
     }
   },
   {
+    "OMX.qti.video.decoder.vc1sw",
+    NULL, // Create instance function
+    // Unique instance handle
+    {
+      NULL,
+      NULL,
+      NULL,
+      NULL
+    },
+    NULL,   // Shared object library handle
+    "libOmxSwVdec.so",
+    {
+      "video_decoder.vc1"
+    }
+  },
+  {
+    "OMX.qti.video.decoder.wmvsw",
+    NULL, // Create instance function
+    // Unique instance handle
+    {
+      NULL,
+      NULL,
+      NULL,
+      NULL
+    },
+    NULL,   // Shared object library handle
+    "libOmxSwVdec.so",
+    {
+      "video_decoder.vc1"
+    }
+  },
+  {
     "OMX.qcom.video.decoder.hevc",
     NULL,   // Create instance function
     // Unique instance handle
