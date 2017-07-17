@@ -5411,6 +5411,8 @@ OMX_ERRORTYPE  omx_vdec::use_output_buffer(
         if (i == (drv_ctx.op_buf.actualcount - 1) && !streaming[CAPTURE_PORT]) {
             enum v4l2_buf_type buf_type;
             int rr = 0;
+
+            set_buffer_req(&drv_ctx.op_buf);
             buf_type=V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
             if (rr = ioctl(drv_ctx.video_driver_fd, VIDIOC_STREAMON, &buf_type)) {
                 DEBUG_PRINT_ERROR("STREAMON FAILED : %d", rr);
@@ -6399,6 +6401,8 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
 
             if (i == (drv_ctx.op_buf.actualcount -1 ) && !streaming[CAPTURE_PORT]) {
                 enum v4l2_buf_type buf_type;
+
+                set_buffer_req(&drv_ctx.op_buf);
                 buf_type=V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
                 rc=ioctl(drv_ctx.video_driver_fd, VIDIOC_STREAMON,&buf_type);
                 if (rc) {
