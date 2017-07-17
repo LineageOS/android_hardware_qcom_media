@@ -1579,12 +1579,13 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 break;
             }
         case OMX_QcomIndexParamH264AUDelimiter:
+        case OMX_QcomIndexParamAUDelimiter:
             {
-                VALIDATE_OMX_PARAM_DATA(paramData, OMX_QCOM_VIDEO_CONFIG_H264_AUD);
+                VALIDATE_OMX_PARAM_DATA(paramData, OMX_QCOM_VIDEO_CONFIG_AUD);
                 if(!handle->venc_set_param(paramData,
-                            (OMX_INDEXTYPE)OMX_QcomIndexParamH264AUDelimiter)) {
+                            (OMX_INDEXTYPE)OMX_QcomIndexParamAUDelimiter)) {
                     DEBUG_PRINT_ERROR("%s: %s",
-                            "OMX_QComIndexParamh264AUDelimiter:",
+                            "OMX_QComIndexParamAUDelimiter:",
                             "request for AU Delimiters failed.");
                     return OMX_ErrorUnsupportedSetting;
                 }

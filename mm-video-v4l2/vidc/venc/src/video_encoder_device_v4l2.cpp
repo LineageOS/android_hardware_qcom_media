@@ -1838,7 +1838,7 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
             extra_data_size =  fmt.fmt.pix_mp.plane_fmt[extra_idx].sizeimage;
         } else if (extra_idx >= VIDEO_MAX_PLANES) {
             DEBUG_PRINT_ERROR("Extradata index is more than allowed: %d\n", extra_idx);
-            return OMX_ErrorBadParameter;
+            return false;
         }
         input_extradata_info.buffer_size =  ALIGN(extra_data_size, SZ_4K);
         input_extradata_info.count = MAX_V4L2_BUFS;
@@ -1893,7 +1893,7 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
             extra_data_size =  fmt.fmt.pix_mp.plane_fmt[extra_idx].sizeimage;
         } else if (extra_idx >= VIDEO_MAX_PLANES) {
             DEBUG_PRINT_ERROR("Extradata index is more than allowed: %d", extra_idx);
-            return OMX_ErrorBadParameter;
+            return false;
         }
 
         output_extradata_info.buffer_size = extra_data_size;
@@ -2495,14 +2495,14 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
 
                 break;
             }
-        case OMX_QcomIndexParamH264AUDelimiter:
+        case OMX_QcomIndexParamAUDelimiter:
             {
-                OMX_QCOM_VIDEO_CONFIG_H264_AUD * pParam =
-                    (OMX_QCOM_VIDEO_CONFIG_H264_AUD *)paramData;
+                OMX_QCOM_VIDEO_CONFIG_AUD * pParam =
+                    (OMX_QCOM_VIDEO_CONFIG_AUD *)paramData;
 
                 DEBUG_PRINT_LOW("set AU delimiters: %d", pParam->bEnable);
                 if(venc_set_au_delimiter(pParam->bEnable) == false) {
-                    DEBUG_PRINT_ERROR("ERROR: set H264 AU delimiter failed");
+                    DEBUG_PRINT_ERROR("ERROR: set AU delimiter failed");
                     return false;
                 }
 
@@ -3716,7 +3716,7 @@ if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
             extradata_index = venc_get_index_from_fd(input_extradata_info.m_ion_dev, pmem_tmp->fd);
             if (extradata_index < 0 ) {
                 DEBUG_PRINT_ERROR("Extradata index calculation went wrong for fd = %d", pmem_tmp->fd);
-                return OMX_ErrorBadParameter;
+                return false;
             }
             plane[extra_idx].length = input_extradata_info.buffer_size;
             plane[extra_idx].m.userptr = (unsigned long) (input_extradata_info.uaddr + extradata_index * input_extradata_info.buffer_size);
@@ -3727,7 +3727,7 @@ if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
             plane[extra_idx].data_offset = 0;
         } else if  (extra_idx >= VIDEO_MAX_PLANES) {
             DEBUG_PRINT_ERROR("Extradata index is more than allowed: %d\n", extra_idx);
-            return OMX_ErrorBadParameter;
+            return false;
         }
 
 
@@ -3768,7 +3768,7 @@ if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
             plane[extra_idx].data_offset = 0;
         } else if  (extra_idx >= VIDEO_MAX_PLANES) {
             DEBUG_PRINT_ERROR("Extradata index is more than allowed: %d", extra_idx);
-            return OMX_ErrorBadParameter;
+            return false;
         }
 
         rc = ioctl(m_nDriver_fd, VIDIOC_PREPARE_BUF, &buf);
@@ -4211,7 +4211,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
         int extradata_index = venc_get_index_from_fd(input_extradata_info.m_ion_dev,fd);
         if (extradata_index < 0 ) {
                 DEBUG_PRINT_ERROR("Extradata index calculation went wrong for fd = %d", fd);
-                return OMX_ErrorBadParameter;
+                return false;
             }
 
         plane[extra_idx].bytesused = 0;
@@ -4389,7 +4389,7 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
                 int extradata_index = venc_get_index_from_fd(input_extradata_info.m_ion_dev, fd);
                 if (extradata_index < 0) {
                     DEBUG_PRINT_ERROR("Extradata index calculation went wrong for fd = %d", fd);
-                    return OMX_ErrorBadParameter;
+                    return false;
                 }
 
                 plane[extra_idx].bytesused = 0;
@@ -4580,11 +4580,11 @@ bool venc_dev::venc_set_au_delimiter(OMX_BOOL enable)
 {
     struct v4l2_control control;
 
-    control.id = V4L2_CID_MPEG_VIDC_VIDEO_H264_AU_DELIMITER;
+    control.id = V4L2_CID_MPEG_VIDC_VIDEO_AU_DELIMITER;
     if(enable) {
-        control.value = V4L2_MPEG_VIDC_VIDEO_H264_AU_DELIMITER_ENABLED;
+        control.value = V4L2_MPEG_VIDC_VIDEO_AU_DELIMITER_ENABLED;
     } else {
-        control.value = V4L2_MPEG_VIDC_VIDEO_H264_AU_DELIMITER_DISABLED;
+        control.value = V4L2_MPEG_VIDC_VIDEO_AU_DELIMITER_DISABLED;
     }
 
     DEBUG_PRINT_HIGH("Set au delimiter: %d", enable);
