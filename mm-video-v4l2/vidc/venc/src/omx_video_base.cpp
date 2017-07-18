@@ -240,6 +240,7 @@ omx_video::omx_video():
     m_use_input_pmem(OMX_FALSE),
     m_use_output_pmem(OMX_FALSE),
     m_sExtraData(0),
+    m_sParamConsumerUsage(0),
     m_input_msg_id(OMX_COMPONENT_GENERATE_ETB),
     m_inp_mem_ptr(NULL),
     m_out_mem_ptr(NULL),
@@ -2021,6 +2022,14 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 QOMX_INDEXDOWNSCALAR *pDownScalarParam =
                     reinterpret_cast<QOMX_INDEXDOWNSCALAR *>(paramData);
                 memcpy(pDownScalarParam, &m_sParamDownScalar, sizeof(m_sParamDownScalar));
+                break;
+            }
+        case OMX_IndexParamConsumerUsageBits:
+            {
+                if (paramData == NULL) { return OMX_ErrorBadParameter; }
+                OMX_U32 *consumerUsage = (OMX_U32 *)paramData;
+                DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamConsumerUsageBits");
+                memcpy(consumerUsage, &m_sParamConsumerUsage, sizeof(m_sParamConsumerUsage));
                 break;
             }
         case OMX_IndexParamVideoSliceFMO:
@@ -4451,6 +4460,25 @@ OMX_ERRORTYPE omx_video::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVE
             } else {
                 DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoProfileLevelQuerySupported nProfileIndex ret NoMore %u",
                         (unsigned int)profileLevelType->nProfileIndex);
+                eRet = OMX_ErrorNoMore;
+            }
+        } else if (m_sOutPortDef.format.video.eCompressionFormat == OMX_VIDEO_CodingH263) {
+            if (profileLevelType->nProfileIndex == 0) {
+                profileLevelType->eProfile = OMX_VIDEO_H263ProfileBaseline;
+                profileLevelType->eLevel   = OMX_VIDEO_H263Level70;
+            } else {
+                DEBUG_PRINT_ERROR("get_parameter: OMX_IndexParamVideoProfileLevelQuerySupported nProfileIndex ret NoMore %u", (unsigned int)profileLevelType->nProfileIndex);
+                eRet = OMX_ErrorNoMore;
+            }
+        } else if (m_sOutPortDef.format.video.eCompressionFormat == OMX_VIDEO_CodingMPEG4) {
+            if (profileLevelType->nProfileIndex == 0) {
+                profileLevelType->eProfile = OMX_VIDEO_MPEG4ProfileSimple;
+                profileLevelType->eLevel   = OMX_VIDEO_MPEG4Level5;
+            } else if (profileLevelType->nProfileIndex == 1) {
+                profileLevelType->eProfile = OMX_VIDEO_MPEG4ProfileAdvancedSimple;
+                profileLevelType->eLevel   = OMX_VIDEO_MPEG4Level5;
+            } else {
+                DEBUG_PRINT_ERROR("get_parameter: OMX_IndexParamVideoProfileLevelQuerySupported nProfileIndex ret NoMore %u", (unsigned int)profileLevelType->nProfileIndex);
                 eRet = OMX_ErrorNoMore;
             }
         } else if (m_sOutPortDef.format.video.eCompressionFormat == OMX_VIDEO_CodingVP8) {
