@@ -1839,27 +1839,6 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 }
                 break;
             }
-        case QOMX_IndexParamVideoLTRCountRangeSupported:
-            {
-                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_EXTNINDEX_RANGETYPE);
-                DEBUG_PRINT_HIGH("get_parameter: QOMX_IndexParamVideoLTRCountRangeSupported");
-                QOMX_EXTNINDEX_RANGETYPE *pParam = (QOMX_EXTNINDEX_RANGETYPE *)paramData;
-                if (pParam->nPortIndex == PORT_INDEX_OUT) {
-                    OMX_U32 min = 0, max = 0, step_size = 0;
-                    if (dev_get_capability_ltrcount(&min, &max, &step_size)) {
-                        pParam->nMin = min;
-                        pParam->nMax = max;
-                        pParam->nStepSize = step_size;
-                    } else {
-                        DEBUG_PRINT_ERROR("get_parameter: get_capability_ltrcount failed");
-                        eRet = OMX_ErrorUndefined;
-                    }
-                } else {
-                    DEBUG_PRINT_ERROR("LTR count range is valid for output port only");
-                    eRet = OMX_ErrorUnsupportedIndex;
-                }
-            }
-            break;
         case OMX_QcomIndexParamVideoLTRCount:
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, OMX_QCOM_VIDEO_PARAM_LTRCOUNT_TYPE);

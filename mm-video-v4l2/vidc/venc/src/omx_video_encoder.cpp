@@ -395,10 +395,6 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     m_sParamHEVC.eProfile =  OMX_VIDEO_HEVCProfileMain;
     m_sParamHEVC.eLevel =  OMX_VIDEO_HEVCMainTierLevel1;
 
-    OMX_INIT_STRUCT(&m_sParamLTRMode, QOMX_VIDEO_PARAM_LTRMODE_TYPE);
-    m_sParamLTRMode.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
-    m_sParamLTRMode.eLTRMode = QOMX_VIDEO_LTRMode_Disable;
-
     OMX_INIT_STRUCT(&m_sParamLTRCount, QOMX_VIDEO_PARAM_LTRCOUNT_TYPE);
     m_sParamLTRCount.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
     m_sParamLTRCount.nCount = 0;
@@ -1208,18 +1204,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 }
                 break;
             }
-        case QOMX_IndexParamVideoLTRMode:
-            {
-                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_VIDEO_PARAM_LTRMODE_TYPE);
-                QOMX_VIDEO_PARAM_LTRMODE_TYPE* pParam =
-                    (QOMX_VIDEO_PARAM_LTRMODE_TYPE*)paramData;
-                if (!handle->venc_set_param(paramData, (OMX_INDEXTYPE)QOMX_IndexParamVideoLTRMode)) {
-                    DEBUG_PRINT_ERROR("ERROR: Setting LTR mode failed");
-                    return OMX_ErrorUnsupportedSetting;
-                }
-                memcpy(&m_sParamLTRMode, pParam, sizeof(m_sParamLTRMode));
-                break;
-            }
         case QOMX_IndexParamVideoLTRCount:
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, QOMX_VIDEO_PARAM_LTRCOUNT_TYPE);
@@ -1732,18 +1716,6 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                 }
                 break;
             }
-        case QOMX_IndexConfigVideoLTRPeriod:
-            {
-                VALIDATE_OMX_PARAM_DATA(configData, QOMX_VIDEO_CONFIG_LTRPERIOD_TYPE);
-                QOMX_VIDEO_CONFIG_LTRPERIOD_TYPE* pParam = (QOMX_VIDEO_CONFIG_LTRPERIOD_TYPE*)configData;
-                if (!handle->venc_set_config(configData, (OMX_INDEXTYPE)QOMX_IndexConfigVideoLTRPeriod)) {
-                    DEBUG_PRINT_ERROR("ERROR: Setting LTR period failed");
-                    return OMX_ErrorUnsupportedSetting;
-                }
-                memcpy(&m_sConfigLTRPeriod, pParam, sizeof(m_sConfigLTRPeriod));
-                break;
-            }
-
        case OMX_IndexConfigVideoVp8ReferenceFrame:
            {
                 VALIDATE_OMX_PARAM_DATA(configData, OMX_VIDEO_VP8REFERENCEFRAMETYPE);
