@@ -1520,18 +1520,20 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     //we support following formats
                     //index 0 - Compressed (UBWC) Venus flavour of YUV420SP
                     //index 1 - Venus flavour of YUV420SP
-                    //index 2 - Compressed (UBWC) Venus flavour of RGBA8888
-                    //index 3 - Venus flavour of RGBA8888
-                    //index 4 - opaque which internally maps to YUV420SP.
-                    //index 5 - vannilla YUV420SP
+                    //index 2 - Compressed (UBWC) TP10 (10bit packed)
+                    //index 3 - Compressed (UBWC) Venus flavour of RGBA8888
+                    //index 4 - Venus flavour of RGBA8888
+                    //index 5 - opaque which internally maps to YUV420SP.
+                    //index 6 - vannilla YUV420SP
                     //this can be extended in the future
                     int supportedFormats[] = {
                         [0] = QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed,
                         [1] = QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m,
-                        [2] = QOMX_COLOR_Format32bitRGBA8888Compressed,
-                        [3] = QOMX_COLOR_Format32bitRGBA8888,
-                        [4] = QOMX_COLOR_FormatAndroidOpaque,
-                        [5] = OMX_COLOR_FormatYUV420SemiPlanar,
+                        [2] = QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed,
+                        [3] = QOMX_COLOR_Format32bitRGBA8888Compressed,
+                        [4] = QOMX_COLOR_Format32bitRGBA8888,
+                        [5] = QOMX_COLOR_FormatAndroidOpaque,
+                        [6] = OMX_COLOR_FormatYUV420SemiPlanar,
                     };
 #else
                     //we support two formats
@@ -3700,11 +3702,14 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
         } else if (media_buffer) {
             if (media_buffer->buffer_type != LEGACY_CAM_SOURCE &&
                     media_buffer->buffer_type != kMetadataBufferTypeGrallocSource) {
+                DEBUG_PRINT_ERROR("Buffer type is neither LEGACY_CAM_SOURCE nor gralloc source");
                 met_error = true;
             } else {
                 if (media_buffer->buffer_type == LEGACY_CAM_SOURCE) {
-                    if (media_buffer->meta_handle == NULL)
+                    if (media_buffer->meta_handle == NULL) {
+                        DEBUG_PRINT_ERROR("Buffer type is LEGACY_CAM_SOURCE but handle is null");
                         met_error = true;
+                    }
                     else {
                         // TBD: revisit this check !
                         int nFds = media_buffer->meta_handle->numFds,
@@ -3718,8 +3723,10 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
                     }
                 }
             }
-        } else
+        } else {
             met_error = true;
+            DEBUG_PRINT_ERROR("Unrecognized camera source type");
+        }
         if (met_error) {
             DEBUG_PRINT_ERROR("ERROR: Unkown source/metahandle in ETB call");
             post_event ((unsigned long)buffer,0,OMX_COMPONENT_GENERATE_EBD);

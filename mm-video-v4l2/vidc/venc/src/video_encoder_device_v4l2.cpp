@@ -4803,7 +4803,6 @@ bool venc_dev::venc_reconfigure_intra_period()
 
     if ((codec_profile.profile == V4L2_MPEG_VIDEO_H264_PROFILE_MAIN)             ||
         (codec_profile.profile == V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN)        ||
-        (codec_profile.profile == V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10)      ||
         (codec_profile.profile == V4L2_MPEG_VIDEO_H264_PROFILE_HIGH))   {
         isValidProfileLevel = true;
     }
@@ -5396,6 +5395,9 @@ unsigned long venc_dev::venc_get_color_format(OMX_COLOR_FORMATTYPE eColorFormat)
     case QOMX_COLOR_Format32bitRGBA8888Compressed:
         format = V4L2_PIX_FMT_RGBA8888_UBWC;
         break;
+    case QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed:
+        format = V4L2_PIX_FMT_NV12_TP10_UBWC;
+        break;
     default:
         DEBUG_PRINT_ERROR("Unsupported eColorFormat %#x", eColorFormat);
         format = V4L2_DEFAULT_OUTPUT_COLOR_FMT;
@@ -5430,6 +5432,9 @@ bool venc_dev::venc_set_color_format(OMX_COLOR_FORMATTYPE color_format)
             break;
         case QOMX_COLOR_Format32bitRGBA8888Compressed:
             m_sVenc_cfg.inputformat = V4L2_PIX_FMT_RGBA8888_UBWC;
+            break;
+        case QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed:
+            m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV12_TP10_UBWC;
             break;
         default:
             DEBUG_PRINT_HIGH("WARNING: Unsupported Color format [%d]", color_format);
