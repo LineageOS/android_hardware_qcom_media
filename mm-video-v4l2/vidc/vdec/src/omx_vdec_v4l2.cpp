@@ -6902,8 +6902,19 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
     int rc;
     unsigned long  print_count;
     if (temp_buffer->buffer_len == 0 || (buffer->nFlags & OMX_BUFFERFLAG_EOS)) {
-        buf.flags = V4L2_QCOM_BUF_FLAG_EOS;
+        struct v4l2_decoder_cmd dec;
+
         DEBUG_PRINT_HIGH("INPUT EOS reached") ;
+        memset(&dec, 0, sizeof(dec));
+        dec.cmd = V4L2_DEC_CMD_STOP;
+        rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_DECODER_CMD, &dec);
+        post_event ((unsigned long)buffer, VDEC_S_SUCCESS,
+            OMX_COMPONENT_GENERATE_EBD);
+        if (rc < 0) {
+            DEBUG_PRINT_ERROR("Decoder CMD failed");
+            return OMX_ErrorHardware;
+        }
+        return OMX_ErrorNone;
     }
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
     buf.index = nPortIndex;
