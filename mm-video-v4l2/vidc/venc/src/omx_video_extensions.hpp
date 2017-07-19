@@ -54,7 +54,7 @@ void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
     ADD_EXTENSION("qti-ext-enc-frame-qp", OMX_QcomIndexConfigQp, OMX_DirOutput)
     ADD_PARAM_END("value", OMX_AndroidVendorValueInt32)
 
-    ADD_EXTENSION("qti-ext-enc-down-scalar", OMX_QcomIndexParamVideoDownScalar, OMX_DirOutput)
+    ADD_EXTENSION("qti-ext-down-scalar", OMX_QcomIndexParamVideoDownScalar, OMX_DirOutput)
     ADD_PARAM    ("output-width", OMX_AndroidVendorValueInt32)
     ADD_PARAM_END("output-height", OMX_AndroidVendorValueInt32)
 
