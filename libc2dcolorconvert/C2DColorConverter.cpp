@@ -35,6 +35,8 @@ C2DColorConverter::C2DColorConverter()
 {
 
     enabled = true;
+    mSrcSurface = 0;
+    mDstSurface = 0;
     pthread_mutex_init(&mLock, NULL);
 
     mC2DLibHandle = dlopen("libC2D2.so", RTLD_NOW);
@@ -81,8 +83,15 @@ C2DColorConverter::~C2DColorConverter()
 {
     if (enabled) {
 
-        mC2DDestroySurface(mDstSurface);
-        mC2DDestroySurface(mSrcSurface);
+        if (mDstSurface) {
+            mC2DDestroySurface(mDstSurface);
+            mDstSurface = 0;
+        }
+        if (mSrcSurface) {
+            mC2DDestroySurface(mSrcSurface);
+            mSrcSurface = 0;
+        }
+
         if (isYUVSurface(mSrcFormat)) {
             delete ((C2D_YUV_SURFACE_DEF *)mSrcSurfaceDef);
         } else {
