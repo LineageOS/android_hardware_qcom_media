@@ -1137,7 +1137,7 @@ class omx_vdec: public qc_omx_component
 #endif
         struct video_decoder_capability m_decoder_capability;
         struct debug_cap m_debug;
-        int log_input_buffers(const char *, int);
+        int log_input_buffers(const char *, int, uint64_t);
         int log_output_buffers(OMX_BUFFERHEADERTYPE *);
 #ifdef _MSM8974_
         void send_codec_config();

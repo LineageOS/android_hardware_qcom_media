@@ -8,6 +8,7 @@ LOCAL_PATH:= $(ROOT_DIR)
 # ---------------------------------------------------------------------------------
 
 libmm-vidc-def := -g -O3 -Dlrintf=_ffix_r
+libmm-vidc-def := -std=c++11
 libmm-vidc-def += -D__align=__alignx
 libmm-vidc-def += -D__alignx\(x\)=__attribute__\(\(__aligned__\(x\)\)\)
 libmm-vidc-def += -DT_ARM

@@ -2783,9 +2783,10 @@ bool omx_venc::dev_get_output_log_flag()
     return handle->venc_get_output_log_flag();
 }
 
-int omx_venc::dev_output_log_buffers(const char *buffer, int bufferlen)
+int omx_venc::dev_output_log_buffers(const char *buffer,
+                  int bufferlen, uint64_t timestamp)
 {
-    return handle->venc_output_log_buffers(buffer, bufferlen);
+    return handle->venc_output_log_buffers(buffer, bufferlen, timestamp);
 }
 
 int omx_venc::dev_extradata_log_buffers(char *buffer)
