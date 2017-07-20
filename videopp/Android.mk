@@ -49,6 +49,9 @@ libmm-vidpp-inc          += $(TARGET_OUT_HEADERS)/qcom/display/
 libmm-vidpp-inc          += $(TARGET_OUT_HEADERS)/mm-core/omxcore
 libmm-vidpp-inc          += frameworks/native/include/media/openmax
 libmm-vidpp-inc          += frameworks/native/include/media/hardware
+libmm-vidpp-inc          += frameworks/native/libs/nativewindow/include/
+libmm-vidpp-inc          += frameworks/native/libs/arect/include/
+libmm-vidpp-inc          += frameworks/native/libs/nativebase/include
 libmm-vidpp-inc          += $(vidpp-inc)
 libmm-vidpp-inc          += frameworks/av/include/media/stagefright
 
