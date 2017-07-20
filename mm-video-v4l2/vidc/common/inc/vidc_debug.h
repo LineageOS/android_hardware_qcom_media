@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2013 - 2016, The Linux Foundation. All rights reserved.
+Copyright (c) 2013 - 2017, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -33,6 +33,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdio>
 #include <pthread.h>
 #include <sys/mman.h>
+#include <media/msm_media_info.h>
 
 enum {
    PRIO_ERROR=0x1,
@@ -153,6 +154,47 @@ public:
         }
     }
 };
+
+struct __attribute__((packed)) IvfFileHeader {
+    uint8_t signature[4];
+    uint16_t version;
+    uint16_t size;
+    uint8_t fourCC[4];
+    uint16_t width;
+    uint16_t height;
+    uint32_t rate;
+    uint32_t scale;
+    uint32_t frameCount;
+    uint32_t unused;
+
+    IvfFileHeader();
+    IvfFileHeader(bool isVp9, int width, int height,
+                int rate, int scale, int nFrameCount);
+};
+
+struct __attribute__((packed)) IvfFrameHeader {
+    uint32_t filledLen;
+    uint64_t timeStamp;
+
+    IvfFrameHeader();
+    IvfFrameHeader(uint32_t size, uint64_t timeStamp);
+};
+
+inline int getYuvSize(int colorFormat, int width, int height) {
+    int yStride = VENUS_Y_STRIDE(colorFormat, width);
+    int uvStride = VENUS_UV_STRIDE(colorFormat, width);
+    int yScanlines = VENUS_Y_SCANLINES(colorFormat, height);
+    int uvScanlines = VENUS_UV_SCANLINES(colorFormat, height);
+    int yMetaStride = VENUS_Y_META_STRIDE(colorFormat, width);
+    int yMetaScanlines = VENUS_Y_META_SCANLINES(colorFormat, height);
+    int uvMetaStride = VENUS_UV_META_STRIDE(colorFormat, width);
+    int uvMetaScanlines = VENUS_UV_META_SCANLINES(colorFormat, height);
+    int yPlane = (yStride * yScanlines + 4095) & ~4095;
+    int uvPlane = (uvStride * uvScanlines + 4095) & ~4095;
+    int yMetaPlane = (yMetaStride * yMetaScanlines + 4095) & ~4095;
+    int uvMetaPlane = (uvMetaStride * uvMetaScanlines + 4095) & ~4095;
+    return yPlane + uvPlane + yMetaPlane + uvMetaPlane;
+}
 
 #define VIDC_TRACE_NAME_LOW(_name) AutoTracer _tracer(PRIO_TRACE_LOW, _name);
 #define VIDC_TRACE_NAME_HIGH(_name) AutoTracer _tracer(PRIO_TRACE_HIGH, _name);
