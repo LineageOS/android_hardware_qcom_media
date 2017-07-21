@@ -41,42 +41,42 @@ C2DColorConverter::C2DColorConverter()
 
     mC2DLibHandle = dlopen("libC2D2.so", RTLD_NOW);
     if (!mC2DLibHandle) {
-        ALOGE("FATAL ERROR: could not dlopen libc2d2.so: %s", dlerror());
+        ALOGE("ERROR: could not dlopen libc2d2.so: %s. C2D is disabled.", dlerror());
         enabled = false;
         return;
     }
     mAdrenoUtilsHandle = dlopen("libadreno_utils.so", RTLD_NOW);
     if (!mAdrenoUtilsHandle) {
-        ALOGE("FATAL ERROR: could not dlopen libadreno_utils.so: %s", dlerror());
+        ALOGE("ERROR: could not dlopen libadreno_utils.so: %s.. C2D is disabled.", dlerror());
         enabled = false;
         return;
     }
 
     mC2DCreateSurface = (LINK_c2dCreateSurface)dlsym(mC2DLibHandle, "c2dCreateSurface");
-     mC2DUpdateSurface = (LINK_c2dUpdateSurface)dlsym(mC2DLibHandle, "c2dUpdateSurface");
-     mC2DReadSurface = (LINK_c2dReadSurface)dlsym(mC2DLibHandle, "c2dReadSurface");
-     mC2DDraw = (LINK_c2dDraw)dlsym(mC2DLibHandle, "c2dDraw");
-     mC2DFlush = (LINK_c2dFlush)dlsym(mC2DLibHandle, "c2dFlush");
-     mC2DFinish = (LINK_c2dFinish)dlsym(mC2DLibHandle, "c2dFinish");
-     mC2DWaitTimestamp = (LINK_c2dWaitTimestamp)dlsym(mC2DLibHandle, "c2dWaitTimestamp");
-     mC2DDestroySurface = (LINK_c2dDestroySurface)dlsym(mC2DLibHandle, "c2dDestroySurface");
-     mC2DMapAddr = (LINK_c2dMapAddr)dlsym(mC2DLibHandle, "c2dMapAddr");
-     mC2DUnMapAddr = (LINK_c2dUnMapAddr)dlsym(mC2DLibHandle, "c2dUnMapAddr");
+    mC2DUpdateSurface = (LINK_c2dUpdateSurface)dlsym(mC2DLibHandle, "c2dUpdateSurface");
+    mC2DReadSurface = (LINK_c2dReadSurface)dlsym(mC2DLibHandle, "c2dReadSurface");
+    mC2DDraw = (LINK_c2dDraw)dlsym(mC2DLibHandle, "c2dDraw");
+    mC2DFlush = (LINK_c2dFlush)dlsym(mC2DLibHandle, "c2dFlush");
+    mC2DFinish = (LINK_c2dFinish)dlsym(mC2DLibHandle, "c2dFinish");
+    mC2DWaitTimestamp = (LINK_c2dWaitTimestamp)dlsym(mC2DLibHandle, "c2dWaitTimestamp");
+    mC2DDestroySurface = (LINK_c2dDestroySurface)dlsym(mC2DLibHandle, "c2dDestroySurfaceq");
+    mC2DMapAddr = (LINK_c2dMapAddr)dlsym(mC2DLibHandle, "c2dMapAddr");
+    mC2DUnMapAddr = (LINK_c2dUnMapAddr)dlsym(mC2DLibHandle, "c2dUnMapAddr");
 
-     if (!mC2DCreateSurface || !mC2DUpdateSurface || !mC2DReadSurface
+    if (!mC2DCreateSurface || !mC2DUpdateSurface || !mC2DReadSurface
         || !mC2DDraw || !mC2DFlush || !mC2DFinish || !mC2DWaitTimestamp
         || !mC2DDestroySurface || !mC2DMapAddr || !mC2DUnMapAddr) {
-         ALOGE("%s: dlsym ERROR", __FUNCTION__);
-         enabled = false;
-         return;
-     }
+        ALOGE("%s: dlsym ERROR. C2D is disabled.", __FUNCTION__);
+        enabled = false;
+        return;
+    }
 
-     mAdrenoComputeAlignedWidthAndHeight = (LINK_AdrenoComputeAlignedWidthAndHeight)dlsym(mAdrenoUtilsHandle, "compute_aligned_width_and_height");
-     if (!mAdrenoComputeAlignedWidthAndHeight) {
-         ALOGE("%s: dlsym ERROR", __FUNCTION__);
-         enabled = false;
-         return;
-     }
+    mAdrenoComputeAlignedWidthAndHeight = (LINK_AdrenoComputeAlignedWidthAndHeight)dlsym(mAdrenoUtilsHandle, "compute_aligned_width_and_height");
+    if (!mAdrenoComputeAlignedWidthAndHeight) {
+        ALOGE("%s: dlsym compute_aligned_width_and_height ERROR. C2D is disabled.", __FUNCTION__);
+        enabled = false;
+        return;
+    }
 }
 
 C2DColorConverter::~C2DColorConverter()
@@ -176,7 +176,7 @@ bool C2DColorConverter::convertC2D(int srcFd, void *srcBase, void * srcData,
     if (srcFd < 0 || dstFd < 0
                 || srcData == NULL || dstData == NULL
                 || srcBase == NULL || dstBase == NULL) {
-      ALOGE("Incorrect input parameters\n");
+      ALOGE("%s: Color conversion failed. Incorrect input parameters", __FUNCTION__);
       status = false;
     } else {
 
@@ -218,24 +218,24 @@ bool C2DColorConverter::convertC2D(int srcFd, void *srcBase, void * srcData,
             unmappedDstSuccess = unmapGPUAddr((unsigned long)dstMappedGpuAddr);
 
             if (!unmappedSrcSuccess || !unmappedDstSuccess) {
-              ALOGE("unmapping GPU address failed (%d:%d)\n", unmappedSrcSuccess,
-                    unmappedDstSuccess);
+              ALOGE("%s: unmapping GPU address failed (%d:%d)", __FUNCTION__,
+                    unmappedSrcSuccess, unmappedDstSuccess);
               status = false;
             } else {
               status = true;
             }
           } else {
-            ALOGE("C2D Draw failed (%d)\n", ret);
+            ALOGE("%s: C2D Draw failed (%d)", __FUNCTION__, ret);
             status = false;
           }
         } else {
-          ALOGE("Update dst surface def failed (%d)\n", ret);
+          ALOGE("%s; Update dst surface def failed (%d)", __FUNCTION__, ret);
           unmapGPUAddr((unsigned long)srcMappedGpuAddr);
           unmapGPUAddr((unsigned long)dstMappedGpuAddr);
           status = false;
         }
       } else {
-        ALOGE("Update src surface def failed )%d)\n", ret);
+        ALOGE("%s: Update src surface def failed (%d)", __FUNCTION__, ret);
         unmapGPUAddr((unsigned long)srcMappedGpuAddr);
         status = false;
       }
@@ -277,7 +277,7 @@ int32_t C2DColorConverter::getDummySurfaceDef(ColorConvertFormat format,
             *surfaceYUVDef = (C2D_YUV_SURFACE_DEF *)
                                   calloc(1, sizeof(C2D_YUV_SURFACE_DEF));
             if (*surfaceYUVDef == NULL) {
-                ALOGE("C2D Draw failed\n");
+                ALOGE("%s: surfaceYUVDef allocation failed", __FUNCTION__);
                 return -1;
             }
         } else {
@@ -313,7 +313,7 @@ int32_t C2DColorConverter::getDummySurfaceDef(ColorConvertFormat format,
             *surfaceRGBDef = (C2D_RGB_SURFACE_DEF *)
                                   calloc(1, sizeof(C2D_RGB_SURFACE_DEF));
             if (*surfaceRGBDef == NULL) {
-                ALOGE("C2D Draw failed\n");
+                ALOGE("%s: surfaceRGBDef allocation failed", __FUNCTION__);
                 return -1;
             }
         } else {
@@ -390,7 +390,7 @@ C2D_STATUS C2DColorConverter::updateRGBSurfaceDef(uint8_t *gpuAddr, void * data,
     } else {
         C2D_RGB_SURFACE_DEF * dstSurfaceDef = (C2D_RGB_SURFACE_DEF *)mDstSurfaceDef;
         dstSurfaceDef->buffer = data;
-        ALOGV("dstSurfaceDef->buffer = %p\n", data);
+        ALOGV("%s: dstSurfaceDef->buffer = %p", __FUNCTION__, data);
         dstSurfaceDef->phys = gpuAddr;
         return mC2DUpdateSurface(mDstSurface, C2D_TARGET,
                         (C2D_SURFACE_TYPE)(C2D_SURFACE_RGB_HOST | C2D_SURFACE_WITH_PHYS),
@@ -423,7 +423,7 @@ uint32_t C2DColorConverter::getC2DFormat(ColorConvertFormat format)
         case NV12_UBWC:
             return C2D_COLOR_FORMAT_420_NV12 | C2D_FORMAT_UBWC_COMPRESSED;
         default:
-            ALOGE("Format not supported , %d\n", format);
+            ALOGW("%s: Format not supported , %d", __FUNCTION__, format);
             return -1;
     }
 }
@@ -453,6 +453,7 @@ size_t C2DColorConverter::calcStride(ColorConvertFormat format, size_t width)
         case NV12_UBWC:
             return VENUS_Y_STRIDE(COLOR_FMT_NV12_UBWC, width);
         default:
+            ALOGW("%s: Format not supported , %d", __FUNCTION__, format);
             return 0;
     }
 }
@@ -481,6 +482,7 @@ size_t C2DColorConverter::calcYSize(ColorConvertFormat format, size_t width, siz
                  ALIGN( VENUS_Y_META_STRIDE(COLOR_FMT_NV12_UBWC, width) *
                    VENUS_Y_META_SCANLINES(COLOR_FMT_NV12_UBWC, height), ALIGN4K);
         default:
+            ALOGW("%s: Format not supported , %d", __FUNCTION__, format);
             return 0;
     }
 }
@@ -535,7 +537,8 @@ size_t C2DColorConverter::calcSize(ColorConvertFormat format, size_t width, size
             size_t lumaSize = ALIGN(alignedw * height, ALIGN2K);
             size_t chromaSize = ALIGN((alignedw * height)/2, ALIGN2K);
             size = ALIGN(lumaSize + chromaSize, ALIGN4K);
-            ALOGV("NV12_2k, width = %zu, height = %zu, size = %d", width, height, size);
+            ALOGV("%s: NV12_2k, width = %zu, height = %zu, size = %d",
+                                                   __FUNCTION__, width, height, size);
             }
             break;
         case NV12_128m:
@@ -547,6 +550,7 @@ size_t C2DColorConverter::calcSize(ColorConvertFormat format, size_t width, size
             size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12_UBWC, width, height);
             break;
         default:
+            ALOGW("%s: Format not supported , %d", __FUNCTION__, format);
             break;
     }
     return size;
@@ -562,11 +566,11 @@ void * C2DColorConverter::getMappedGPUAddr(int bufFD, void *bufPtr, size_t bufLe
     status = mC2DMapAddr(bufFD, bufPtr, bufLen, 0, KGSL_USER_MEM_TYPE_ION,
                          &gpuaddr);
     if (status != C2D_STATUS_OK) {
-        ALOGE("c2dMapAddr failed: status %d fd %d ptr %p len %zu flags %d\n",
+        ALOGE("c2dMapAddr failed: status %d fd %d ptr %p len %zu flags %d",
                 status, bufFD, bufPtr, bufLen, KGSL_USER_MEM_TYPE_ION);
         return NULL;
     }
-    ALOGV("c2d mapping created: gpuaddr %p fd %d ptr %p len %zu\n",
+    ALOGV("c2d mapping created: gpuaddr %p fd %d ptr %p len %zu",
             gpuaddr, bufFD, bufPtr, bufLen);
 
     return gpuaddr;
@@ -578,7 +582,7 @@ bool C2DColorConverter::unmapGPUAddr(unsigned long gAddr)
     C2D_STATUS status = mC2DUnMapAddr((void*)gAddr);
 
     if (status != C2D_STATUS_OK)
-        ALOGE("c2dUnMapAddr failed: status %d gpuaddr %08lx\n", status, gAddr);
+        ALOGE("c2dUnMapAddr failed: status %d gpuaddr %08lx", status, gAddr);
 
     return (status == C2D_STATUS_OK);
 }
@@ -625,7 +629,7 @@ bool C2DColorConverter::getBuffReq(int32_t port, C2DBuffReq *req) {
         req->sizeAlign = calcSizeAlign(mSrcFormat);
         req->size = calcSize(mSrcFormat, mSrcWidth, mSrcHeight);
         req->bpp = calcBytesPerPixel(mSrcFormat);
-        ALOGV("input req->size = %d\n", req->size);
+        ALOGV("%s: input req->size = %d", __FUNCTION__, req->size);
     } else if (port == C2D_OUTPUT) {
         req->width = mDstWidth;
         req->height = mDstHeight;
@@ -635,7 +639,7 @@ bool C2DColorConverter::getBuffReq(int32_t port, C2DBuffReq *req) {
         req->sizeAlign = calcSizeAlign(mDstFormat);
         req->size = calcSize(mDstFormat, mDstWidth, mDstHeight);
         req->bpp = calcBytesPerPixel(mDstFormat);
-        ALOGV("output req->size = %d\n", req->size);
+        ALOGV("%s: output req->size = %d", __FUNCTION__, req->size);
     }
     return true;
 }
@@ -651,7 +655,8 @@ size_t C2DColorConverter::calcLumaAlign(ColorConvertFormat format) {
         case NV12_UBWC:
           return ALIGN4K;
         default:
-          ALOGE("unknown format passed for luma alignment number");
+          ALOGW("%s: unknown format (%d) passed for luma alignment number.",
+                                                       __FUNCTION__, format);
           return 1;
     }
 }
@@ -667,7 +672,8 @@ size_t C2DColorConverter::calcSizeAlign(ColorConvertFormat format) {
         case NV12_UBWC:
           return ALIGN4K;
         default:
-          ALOGE("unknown format passed for size alignment number");
+          ALOGW("%s: unknown format (%d) passed for size alignment number",
+                                                      __FUNCTION__, format);
           return 1;
     }
 }
@@ -696,6 +702,7 @@ C2DBytesPerPixel C2DColorConverter::calcBytesPerPixel(ColorConvertFormat format)
             bpp.denominator = 2;
             break;
         default:
+            ALOGW("%s: unknown format (%d) passed.", __FUNCTION__, format);
             break;
     }
     return bpp;
@@ -712,7 +719,7 @@ int32_t C2DColorConverter::dumpOutput(char * filename, char mode) {
     }
 
     if ((fd = open(filename, flags)) < 0) {
-        ALOGE("open dump file failed w/ errno %s", strerror(errno));
+        ALOGE("%s: open dump file failed w/ errno %s", __FUNCTION__, strerror(errno));
         return -1;
     }
 
@@ -791,7 +798,7 @@ int32_t C2DColorConverter::dumpOutput(char * filename, char mode) {
     }
  cleanup:
     if (ret < 0) {
-      ALOGE("file write failed w/ errno %s", strerror(errno));
+      ALOGE("%s: file write failed w/ errno %s", __FUNCTION__, strerror(errno));
     }
     close(fd);
     return ret < 0 ? ret : 0;
