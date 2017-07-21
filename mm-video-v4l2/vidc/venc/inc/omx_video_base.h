@@ -662,9 +662,7 @@ class omx_video: public qc_omx_component
         OMX_VIDEO_PARAM_ERRORCORRECTIONTYPE m_sErrorCorrection;
         QOMX_VIDEO_PARAM_SLICE_SPACING_TYPE m_sSliceSpacing;
         OMX_VIDEO_PARAM_INTRAREFRESHTYPE m_sIntraRefresh;
-        QOMX_VIDEO_PARAM_LTRMODE_TYPE m_sParamLTRMode;
         QOMX_VIDEO_PARAM_LTRCOUNT_TYPE m_sParamLTRCount;
-        QOMX_VIDEO_CONFIG_LTRPERIOD_TYPE m_sConfigLTRPeriod;
         QOMX_VIDEO_CONFIG_LTRUSE_TYPE m_sConfigLTRUse;
         QOMX_VIDEO_CONFIG_LTRMARK_TYPE m_sConfigLTRMark;
         OMX_VIDEO_CONFIG_AVCINTRAPERIOD m_sConfigAVCIDRPeriod;

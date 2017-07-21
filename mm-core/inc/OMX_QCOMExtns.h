@@ -438,17 +438,8 @@ enum OMX_QCOM_EXTN_INDEXTYPE
 
     OMX_QcomIndexEnableH263PlusPType = 0x7F000023,
 
-    /*"OMX.QCOM.index.param.video.LTRCountRangeSupported"*/
-    QOMX_IndexParamVideoLTRCountRangeSupported = 0x7F000024,
-
-    /*"OMX.QCOM.index.param.video.LTRMode"*/
-    QOMX_IndexParamVideoLTRMode = 0x7F000025,
-
     /*"OMX.QCOM.index.param.video.LTRCount"*/
     QOMX_IndexParamVideoLTRCount = 0x7F000026,
-
-    /*"OMX.QCOM.index.config.video.LTRPeriod"*/
-    QOMX_IndexConfigVideoLTRPeriod = 0x7F000027,
 
     /*"OMX.QCOM.index.config.video.LTRUse"*/
     QOMX_IndexConfigVideoLTRUse = 0x7F000028,
@@ -816,45 +807,6 @@ typedef struct QOMX_EXTNINDEX_RANGETYPE {
 } QOMX_EXTNINDEX_RANGETYPE;
 
 /**
- *   Specifies LTR mode types.
- */
-typedef enum QOMX_VIDEO_LTRMODETYPE
-{
-    QOMX_VIDEO_LTRMode_Disable    = 0x0, /**< LTR encoding is disabled */
-    QOMX_VIDEO_LTRMode_Manual     = 0x1, /**< In this mode, IL client configures
-                                           **  the encoder the LTR count and manually
-                                           **  controls the marking and use of LTR
-                                           **  frames during video encoding.
-                                           */
-    QOMX_VIDEO_LTRMode_Auto       = 0x2, /**< In this mode, IL client configures
-                                           **  the encoder the LTR count and LTR
-                                           **  period. The encoder marks LTR frames
-                                           **  automatically based on the LTR period
-                                           **  during video encoding. IL client controls
-                                           **  the use of LTR frames.
-                                           */
-    QOMX_VIDEO_LTRMode_MAX    = 0x7FFFFFFF /** Maximum LTR Mode type */
-} QOMX_VIDEO_LTRMODETYPE;
-
-/**
- * LTR mode index parameter.  This structure is used
- * to enable vendor specific extension on output port
- * to pass the LTR mode information.
- *
- * STRUCT MEMBERS:
- *  nSize              : Size of Structure in bytes
- *  nVersion           : OpenMAX IL specification version information
- *  nPortIndex         : Index of the port to which this structure applies
- *  eLTRMode           : Specifies the LTR mode used in encoder
- */
-typedef struct QOMX_VIDEO_PARAM_LTRMODE_TYPE {
-    OMX_U32 nSize;
-    OMX_VERSIONTYPE nVersion;
-    OMX_U32 nPortIndex;
-    QOMX_VIDEO_LTRMODETYPE eLTRMode;
-} QOMX_VIDEO_PARAM_LTRMODE_TYPE;
-
-/**
  * LTR count index parameter.  This structure is used
  * to enable vendor specific extension on output port
  * to pass the LTR count information.
@@ -878,25 +830,6 @@ typedef struct QOMX_VIDEO_PARAM_LTRCOUNT_TYPE {
  * This should be used with OMX_QcomIndexParamVideoLTRCount extension.
  */
 typedef QOMX_VIDEO_PARAM_LTRCOUNT_TYPE OMX_QCOM_VIDEO_PARAM_LTRCOUNT_TYPE;
-
-/**
- * LTR period index parameter.  This structure is used
- * to enable vendor specific extension on output port
- * to pass the LTR period information.
- *
- * STRUCT MEMBERS:
- *  nSize              : Size of Structure in bytes
- *  nVersion           : OpenMAX IL specification version information
- *  nPortIndex         : Index of the port to which this structure applies
- *  nFrames            : Specifies the number of frames between two consecutive
- *                       LTR frames.
- */
-typedef struct QOMX_VIDEO_CONFIG_LTRPERIOD_TYPE {
-    OMX_U32 nSize;
-    OMX_VERSIONTYPE nVersion;
-    OMX_U32 nPortIndex;
-    OMX_U32 nFrames;
-} QOMX_VIDEO_CONFIG_LTRPERIOD_TYPE;
 
 /**
  * Marks the next encoded frame as an LTR frame.
