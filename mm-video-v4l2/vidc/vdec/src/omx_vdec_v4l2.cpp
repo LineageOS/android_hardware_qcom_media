@@ -10641,13 +10641,19 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
                 (int)portDefn->nPortIndex);
         eRet = OMX_ErrorBadPortIndex;
     }
+    if (in_reconfig) {
+        m_extradata_info.output_crop_rect.nLeft = 0;
+        m_extradata_info.output_crop_rect.nTop = 0;
+        m_extradata_info.output_crop_rect.nWidth = fmt.fmt.pix_mp.width;
+        m_extradata_info.output_crop_rect.nHeight = fmt.fmt.pix_mp.height;
+    }
     update_resolution(fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height,
         fmt.fmt.pix_mp.plane_fmt[0].bytesperline, fmt.fmt.pix_mp.plane_fmt[0].reserved[0]);
 
-        portDefn->format.video.nFrameHeight =  drv_ctx.video_resolution.frame_height;
-        portDefn->format.video.nFrameWidth  =  drv_ctx.video_resolution.frame_width;
-        portDefn->format.video.nStride = drv_ctx.video_resolution.stride;
-        portDefn->format.video.nSliceHeight = drv_ctx.video_resolution.scan_lines;
+    portDefn->format.video.nFrameHeight =  drv_ctx.video_resolution.frame_height;
+    portDefn->format.video.nFrameWidth  =  drv_ctx.video_resolution.frame_width;
+    portDefn->format.video.nStride = drv_ctx.video_resolution.stride;
+    portDefn->format.video.nSliceHeight = drv_ctx.video_resolution.scan_lines;
 
     if ((portDefn->format.video.eColorFormat == OMX_COLOR_FormatYUV420Planar) ||
        (portDefn->format.video.eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar)) {
