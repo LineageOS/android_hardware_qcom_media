@@ -403,6 +403,14 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     m_sParamLTRCount.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
     m_sParamLTRCount.nCount = 0;
 
+    OMX_INIT_STRUCT(&m_sConfigLTRUse, QOMX_VIDEO_CONFIG_LTRUSE_TYPE);
+    m_sConfigLTRUse.nPortIndex = (OMX_U32) PORT_INDEX_IN;
+    m_sConfigLTRUse.nID = 0;
+
+    OMX_INIT_STRUCT(&m_sConfigLTRMark, QOMX_VIDEO_CONFIG_LTRMARK_TYPE);
+    m_sConfigLTRMark.nPortIndex = (OMX_U32) PORT_INDEX_IN;
+    m_sConfigLTRMark.nID = 0;
+
     OMX_INIT_STRUCT(&m_sConfigDeinterlace, OMX_VIDEO_CONFIG_DEINTERLACE);
     m_sConfigDeinterlace.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
     m_sConfigDeinterlace.nEnable = OMX_FALSE;
