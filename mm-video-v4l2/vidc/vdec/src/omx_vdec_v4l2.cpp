@@ -112,7 +112,8 @@ extern "C" {
 #define ALIGN(x, to_align) ((((unsigned) x) + (to_align - 1)) & ~(to_align - 1))
 
 #define DEFAULT_EXTRADATA (OMX_INTERLACE_EXTRADATA | OMX_FRAMEPACK_EXTRADATA | OMX_OUTPUTCROP_EXTRADATA \
-                           | OMX_DISPLAY_INFO_EXTRADATA | OMX_HDR_COLOR_INFO_EXTRADATA)
+                           | OMX_DISPLAY_INFO_EXTRADATA | OMX_HDR_COLOR_INFO_EXTRADATA \
+                           | OMX_UBWC_CR_STATS_INFO_EXTRADATA)
 
 // Y=16(0-9bits), Cb(10-19bits)=Cr(20-29bits)=128, black by default
 #define DEFAULT_VIDEO_CONCEAL_COLOR_BLACK 0x8020010
