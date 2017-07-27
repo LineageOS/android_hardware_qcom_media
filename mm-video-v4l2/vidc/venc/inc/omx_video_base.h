@@ -683,6 +683,7 @@ class omx_video: public qc_omx_component
             pthread_mutex_t m_lock;
         } m_TimeStampInfo;
         OMX_U32 m_sExtraData;
+        OMX_U32 m_sParamConsumerUsage;
         OMX_U32 m_input_msg_id;
         OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE m_sConfigIntraRefresh;
         OMX_QTI_VIDEO_CONFIG_BLURINFO       m_blurInfo;

@@ -412,6 +412,7 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
 
     m_state                   = OMX_StateLoaded;
     m_sExtraData = 0;
+    m_sParamConsumerUsage     |= (OMX_U32)GRALLOC_USAGE_SW_READ_OFTEN;
 
     if (codec_type == OMX_VIDEO_CodingMPEG4)
     {
@@ -1930,7 +1931,7 @@ bool omx_venc::dev_fill_buf
 
     if ( false == m_bSeqHdrRequested)
     {
-      if (dev_get_seq_hdr(opbuffer.p_buffer, opbuffer.size, &opbuffer.filled_length) == 0)
+      if (dev_get_seq_hdr(opbuffer.p_buffer, opbuffer.size, &opbuffer.filled_length))
       {
          bufhdr->nFilledLen = opbuffer.filled_length;
          bufhdr->nOffset = 0;
@@ -1979,7 +1980,7 @@ bool omx_venc::dev_get_seq_hdr
    Ret = swvenc_getsequenceheader(m_hSwVenc, &Buffer);
    if (Ret != SWVENC_S_SUCCESS)
    {
-      DEBUG_PRINT_ERROR("%s, swvenc_flush failed (%d)",
+      DEBUG_PRINT_ERROR("%s, swvenc_getsequenceheader failed (%d)",
         __FUNCTION__, Ret);
       RETURN(false);
    }
