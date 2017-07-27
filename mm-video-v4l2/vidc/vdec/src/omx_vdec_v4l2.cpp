@@ -1086,10 +1086,8 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool split_opb_dpb_with_same_colo
              * and hence the DPB buffers get unmapped. For other codecs it does not matter
              * as with the new SPS/PPS, the DPB is flushed.
              */
-            bool is_not_vp9 = eCompressionFormat != OMX_VIDEO_CodingVP9;
             bool eligible_for_split_dpb_ubwc =
                m_progressive == MSM_VIDC_PIC_STRUCT_PROGRESSIVE &&     //@ Due to Venus limitation for Interlaced, Split mode enabled only for Progressive.
-               is_not_vp9                                       &&     //@ Split mode disabled for VP9.
                !drv_ctx.idr_only_decoding                       &&     //@ Split mode disabled for Thumbnail usecase.
                !m_disable_split_mode;                                  //@ Set prop to disable split mode
 
