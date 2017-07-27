@@ -3834,7 +3834,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
             }
 
         plane[extra_idx].bytesused = 0;
-        plane[extra_idx].length = input_extradata_info.buffer_size;
+        plane[extra_idx].length = input_extradata_info.size;
         plane[extra_idx].m.userptr = (unsigned long) (input_extradata_info.uaddr + extradata_index * input_extradata_info.buffer_size);
 #ifdef USE_ION
         plane[extra_idx].reserved[0] = input_extradata_info.ion.fd_ion_data.fd;
@@ -4025,7 +4025,7 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
                 }
 
                 plane[extra_idx].bytesused = 0;
-                plane[extra_idx].length = input_extradata_info.buffer_size;
+                plane[extra_idx].length = input_extradata_info.size;
                 plane[extra_idx].m.userptr = (unsigned long) (input_extradata_info.uaddr + extradata_index * input_extradata_info.buffer_size);
                 plane[extra_idx].reserved[0] = input_extradata_info.ion.fd_ion_data.fd;
                 plane[extra_idx].reserved[1] = input_extradata_info.buffer_size * extradata_index;
