@@ -45,6 +45,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "omx_video_common.h"
 #include "omx_video_base.h"
 #include "omx_video_encoder.h"
+#include "vidc_common.h"
 #include <linux/videodev2.h>
 #include <media/msm_vidc.h>
 #include <poll.h>
@@ -337,6 +338,7 @@ class venc_dev
         bool venc_get_batch_size(OMX_U32 *size);
         bool venc_get_temporal_layer_caps(OMX_U32 * /*nMaxLayers*/,
                 OMX_U32 * /*nMaxBLayers*/, OMX_VIDEO_ANDROID_TEMPORALLAYERINGPATTERNTYPE */*SupportedPattern*/);
+        OMX_ERRORTYPE venc_get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVELTYPE *profileLevelType);
         bool venc_check_for_hybrid_hp(OMX_VIDEO_ANDROID_TEMPORALLAYERINGPATTERNTYPE ePattern);
         bool venc_check_for_hierp(OMX_VIDEO_ANDROID_TEMPORALLAYERINGPATTERNTYPE ePattern);
         int venc_find_hier_type(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE &temporalSettings);
