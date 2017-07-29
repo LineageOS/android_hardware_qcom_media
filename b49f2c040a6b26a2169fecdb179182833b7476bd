@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "db3e80d4_400160ee",
+        "filename": "mm-video-v4l2/vidc/test/msm_vidc_test.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 805,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2017-07-29T00:01:29Z",
+      "side": 0,
+      "message": "Why is this necessary? This looks like it should be NULL.",
+      "revId": "b49f2c040a6b26a2169fecdb179182833b7476bd",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
