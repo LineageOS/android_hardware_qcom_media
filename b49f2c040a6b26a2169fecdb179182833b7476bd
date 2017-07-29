@@ -16,6 +16,24 @@
       "revId": "b49f2c040a6b26a2169fecdb179182833b7476bd",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "618f3ed0_5739dc3c",
+        "filename": "mm-video-v4l2/vidc/test/msm_vidc_test.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 805,
+      "author": {
+        "id": 15402
+      },
+      "writtenOn": "2017-07-29T09:29:24Z",
+      "side": 0,
+      "message": "handle is of type ion_user_handle_t which is a tyepdef\u0027ed int.  NULL gives the warning, but \u0027\\0\u0027 is certainly not correct either.  What about\n\n  alloc_data-\u003ehandle \u003d (ion_user_handle_t) 0;\n\ninstead?",
+      "parentUuid": "db3e80d4_400160ee",
+      "revId": "b49f2c040a6b26a2169fecdb179182833b7476bd",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
