@@ -802,7 +802,7 @@ int alloc_map_ion_memory(__u32 buffer_size,
 	rc = ioctl(fd,ION_IOC_ALLOC,alloc_data);
 	if (rc || !alloc_data->handle) {
 		E("ION ALLOC memory failed \n");
-		alloc_data->handle = '\0';
+		alloc_data->handle = (ion_user_handle_t) 0;
 		close(fd);
 		fd = -ENOMEM;
 		return fd;
@@ -836,7 +836,7 @@ void free_ion_memory(struct ion_info *buf_ion_info)
 	D("Closing ION device fd: %d\n", buf_ion_info->ion_device_fd);
 	close(buf_ion_info->ion_device_fd);
 	buf_ion_info->ion_device_fd = -1;
-	buf_ion_info->ion_alloc_data.handle = '\0';
+	buf_ion_info->ion_alloc_data.handle = (ion_user_handle_t) 0;
 	buf_ion_info->fd_ion_data.fd = -1;
 }
 
