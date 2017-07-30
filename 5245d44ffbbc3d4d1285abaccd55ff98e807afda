@@ -16,6 +16,29 @@
       "revId": "5245d44ffbbc3d4d1285abaccd55ff98e807afda",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d9a3a3b5_3f5dff78",
+        "filename": "videopp/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 54,
+      "author": {
+        "id": 15402
+      },
+      "writtenOn": "2017-07-30T18:01:10Z",
+      "side": 1,
+      "message": "This can be simplifed.  All four lines can be replaced with\njust these two lines:\n\nlibmm-vidpp-inc          +\u003d $(TARGET_OUT_HEADERS)/qcom/display/\nlibmm-vidpp-inc          +\u003d $(TARGET_OUT_HEADERS)/mm-core/omxcore",
+      "range": {
+        "startLine": 48,
+        "startChar": 0,
+        "endLine": 54,
+        "endChar": 89
+      },
+      "revId": "5245d44ffbbc3d4d1285abaccd55ff98e807afda",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
