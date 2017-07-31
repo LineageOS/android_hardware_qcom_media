@@ -41,13 +41,15 @@ C2DColorConverter::C2DColorConverter()
 
     mC2DLibHandle = dlopen("libC2D2.so", RTLD_NOW);
     if (!mC2DLibHandle) {
-        ALOGE("ERROR: could not dlopen libc2d2.so: %s. C2D is disabled.", dlerror());
+        ALOGE("%s: ERROR: could not dlopen libc2d2.so: %s. C2D is disabled.",
+                                                    __FUNCTION__, dlerror());
         enabled = false;
         return;
     }
     mAdrenoUtilsHandle = dlopen("libadreno_utils.so", RTLD_NOW);
     if (!mAdrenoUtilsHandle) {
-        ALOGE("ERROR: could not dlopen libadreno_utils.so: %s.. C2D is disabled.", dlerror());
+        ALOGE("%s: ERROR: could not dlopen libadreno_utils.so: %s.. C2D is disabled.",
+                                                    __FUNCTION__, dlerror());
         enabled = false;
         return;
     }
@@ -229,7 +231,7 @@ bool C2DColorConverter::convertC2D(int srcFd, void *srcBase, void * srcData,
             status = false;
           }
         } else {
-          ALOGE("%s; Update dst surface def failed (%d)", __FUNCTION__, ret);
+          ALOGE("%s: Update dst surface def failed (%d)", __FUNCTION__, ret);
           unmapGPUAddr((unsigned long)srcMappedGpuAddr);
           unmapGPUAddr((unsigned long)dstMappedGpuAddr);
           status = false;
@@ -298,7 +300,7 @@ int32_t C2DColorConverter::getDummySurfaceDef(ColorConvertFormat format,
 
         if (format == YCbCr420P ||
             format == YCrCb420P) {
-          printf("half stride for Cb Cr planes \n");
+          ALOGI("%s: half stride for Cb Cr planes \n", __FUNCTION__);
           (*surfaceYUVDef)->stride1 = calcStride(format, width) / 2;
           (*surfaceYUVDef)->phys2 = (void *)0xaaaaaaaa;
           (*surfaceYUVDef)->stride2 = calcStride(format, width) / 2;
@@ -566,12 +568,12 @@ void * C2DColorConverter::getMappedGPUAddr(int bufFD, void *bufPtr, size_t bufLe
     status = mC2DMapAddr(bufFD, bufPtr, bufLen, 0, KGSL_USER_MEM_TYPE_ION,
                          &gpuaddr);
     if (status != C2D_STATUS_OK) {
-        ALOGE("c2dMapAddr failed: status %d fd %d ptr %p len %zu flags %d",
-                status, bufFD, bufPtr, bufLen, KGSL_USER_MEM_TYPE_ION);
+        ALOGE("%s: c2dMapAddr failed: status %d fd %d ptr %p len %zu flags %d",
+              __FUNCTION__, status, bufFD, bufPtr, bufLen, KGSL_USER_MEM_TYPE_ION);
         return NULL;
     }
-    ALOGV("c2d mapping created: gpuaddr %p fd %d ptr %p len %zu",
-            gpuaddr, bufFD, bufPtr, bufLen);
+    ALOGV("%s: c2d mapping created: gpuaddr %p fd %d ptr %p len %zu",
+          __FUNCTION__, gpuaddr, bufFD, bufPtr, bufLen);
 
     return gpuaddr;
 }
@@ -582,7 +584,8 @@ bool C2DColorConverter::unmapGPUAddr(unsigned long gAddr)
     C2D_STATUS status = mC2DUnMapAddr((void*)gAddr);
 
     if (status != C2D_STATUS_OK)
-        ALOGE("c2dUnMapAddr failed: status %d gpuaddr %08lx", status, gAddr);
+        ALOGE("%s: c2dUnMapAddr failed: status %d gpuaddr %08lx",
+                                     __FUNCTION__, status, gAddr);
 
     return (status == C2D_STATUS_OK);
 }
@@ -738,7 +741,7 @@ int32_t C2DColorConverter::dumpOutput(char * filename, char mode) {
 
       if (mDstFormat == YCbCr420P ||
           mDstFormat == YCrCb420P) {
-          printf("Dump Cb and Cr separately for Planar\n");
+          ALOGI("%s: Dump Cb and Cr separately for Planar\n", __FUNCTION__);
           //dump Cb/Cr
           base = (uint8_t *)dstSurfaceDef->plane1;
           stride = dstSurfaceDef->stride1;
@@ -774,9 +777,11 @@ int32_t C2DColorConverter::dumpOutput(char * filename, char mode) {
       stride = dstSurfaceDef->stride;
       sliceHeight = dstSurfaceDef->height;
 
-      printf("rgb surface base is %p", base);
-      printf("rgb surface dumpsslice height is %lu\n", (unsigned long)sliceHeight);
-      printf("rgb surface dump stride is %lu\n", (unsigned long)stride);
+      ALOGI("%s: rgb surface base is %p", __FUNCTION__, base);
+      ALOGI("%s: rgb surface dumpsslice height is %lu\n",
+                                   __FUNCTION__, (unsigned long)sliceHeight);
+      ALOGI("%s: rgb surface dump stride is %lu\n",
+                                   __FUNCTION__, (unsigned long)stride);
 
       int bpp = 1; //bytes per pixel
       if (mDstFormat == RGB565) {
@@ -789,7 +794,7 @@ int32_t C2DColorConverter::dumpOutput(char * filename, char mode) {
       for (size_t i = 0; i < sliceHeight; i++) {
         ret = write(fd, base, mDstWidth*bpp);
         if (ret < 0) {
-          printf("write failed, count = %d\n", count);
+          ALOGI("%s: write failed, count = %d\n", __FUNCTION__, count);
           goto cleanup;
         }
         base += stride;
