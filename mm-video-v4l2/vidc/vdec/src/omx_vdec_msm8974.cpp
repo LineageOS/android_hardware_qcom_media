@@ -7052,8 +7052,10 @@ OMX_ERRORTYPE  omx_vdec::set_callbacks(OMX_IN OMX_HANDLETYPE        hComp,
 OMX_ERRORTYPE  omx_vdec::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
 {
    (void) hComp;
-
+    OMX_ERRORTYPE nRet = OMX_ErrorNone;
+    OMX_BUFFERHEADERTYPE *buffer;
     unsigned i = 0;
+
     if (OMX_StateLoaded != m_state) {
         DEBUG_PRINT_ERROR("WARNING:Rxd DeInit,OMX not in LOADED state %d",\
                 m_state);
@@ -7063,14 +7065,16 @@ OMX_ERRORTYPE  omx_vdec::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
     }
 
     /*Check if the output buffers have to be cleaned up*/
-    if (m_out_mem_ptr) {
+    buffer = client_buffers.get_il_buf_hdr();
+    if (buffer) {
         DEBUG_PRINT_LOW("Freeing the Output Memory");
         for (i = 0; i < drv_ctx.op_buf.actualcount; i++ ) {
             if (BITMASK_PRESENT(&m_out_bm_count, i)) {
                 BITMASK_CLEAR(&m_out_bm_count, i);
-                client_buffers.free_output_buffer (&m_out_mem_ptr[i]);
+                nRet = client_buffers.free_output_buffer (buffer+i);
+                if (OMX_ErrorNone != nRet)
+                    break;
             }
-
             if (release_output_done()) {
                 break;
             }
@@ -11142,6 +11146,8 @@ OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::free_output_buffer(
     if (enabled && omx->is_component_secure())
         return OMX_ErrorNone;
     if (!allocated_count || !bufhdr) {
+        for (unsigned i = 0; i < omx->drv_ctx.op_buf.actualcount; i++)
+            omx->free_output_buffer(&omx->m_out_mem_ptr[i]);
         DEBUG_PRINT_ERROR("Color convert no buffer to be freed %p",bufhdr);
         return OMX_ErrorBadParameter;
     }
