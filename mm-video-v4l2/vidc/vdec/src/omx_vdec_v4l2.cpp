@@ -1048,9 +1048,15 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool split_opb_dpb_with_same_colo
     }
 
     if (tp10_enable && !dither_enable) {
-        drv_ctx.output_format = VDEC_YUV_FORMAT_NV12_TP10_UBWC;
-        capture_capability = V4L2_PIX_FMT_NV12_TP10_UBWC;
+        /* When thumbnails enabled, always output in NV12 UBWC */
+        if(drv_ctx.idr_only_decoding) {
+            drv_ctx.output_format = VDEC_YUV_FORMAT_NV12_UBWC;
+            capture_capability = V4L2_PIX_FMT_NV12_UBWC;
+        } else {
+            drv_ctx.output_format = VDEC_YUV_FORMAT_NV12_TP10_UBWC;
+            capture_capability = V4L2_PIX_FMT_NV12_TP10_UBWC;
 
+        }
         memset(&fmt, 0x0, sizeof(struct v4l2_format));
         fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
         rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_FMT, &fmt);
@@ -1125,7 +1131,7 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool split_opb_dpb_with_same_colo
                 eRet = set_dpb(false, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_NONE);
             }
         } else if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10) {
-            if (dither_enable) {
+            if (dither_enable || drv_ctx.idr_only_decoding) {
                 //split DPB-OPB
                 //DPB -> TP10UBWC, OPB -> UBWC
                 eRet = set_dpb(true, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_TP10_UBWC);
@@ -7978,7 +7984,7 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
             log_output_buffers(il_buffer);
             if (dynamic_buf_mode) {
                 unsigned int nPortIndex = 0;
-                nPortIndex = buffer-((OMX_BUFFERHEADERTYPE *)client_buffers.get_il_buf_hdr());
+                nPortIndex = buffer-m_out_mem_ptr;
 
                 // Since we're passing around handles, adjust nFilledLen and nAllocLen
                 // to size of the handle. Do it _after_ log_output_buffers which
