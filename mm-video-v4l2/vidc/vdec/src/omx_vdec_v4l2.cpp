@@ -4517,7 +4517,11 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                             (extradataIndexType->nPortIndex == 1)) {
                                         DEBUG_PRINT_HIGH("set_parameter:  OMX_QcomIndexParamIndexExtraDataType SmoothStreaming");
                                         eRet = enable_extradata(OMX_PORTDEF_EXTRADATA, false, extradataIndexType->bEnabled);
-
+                                    } else if ((extradataIndexType->nIndex == (OMX_INDEXTYPE)OMX_ExtraDataOutputCropInfo) &&
+                                            (extradataIndexType->bEnabled == OMX_TRUE) &&
+                                            (extradataIndexType->nPortIndex == OMX_CORE_OUTPUT_PORT_INDEX)) {
+                                        eRet = enable_extradata(OMX_OUTPUTCROP_EXTRADATA, false,
+                                            ((QOMX_ENABLETYPE *)paramData)->bEnable);
                                     }
                                 }
                                 break;

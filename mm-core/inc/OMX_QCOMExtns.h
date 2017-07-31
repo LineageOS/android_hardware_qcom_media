@@ -1394,6 +1394,7 @@ struct ExtraDataMap {
 static const struct ExtraDataMap kExtradataMap[] = {
         { "ltrinfo", OMX_ExtraDataVideoLTRInfo },
         { "mbinfo", OMX_ExtraDataVideoEncoderMBInfo },
+        { "outputcropinfo", OMX_ExtraDataOutputCropInfo },
 };
 
 static inline OMX_S32 getIndexForExtradataType(char * type) {

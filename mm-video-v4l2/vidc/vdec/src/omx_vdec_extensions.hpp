@@ -36,6 +36,9 @@ void omx_vdec::init_vendor_extensions (VendorExtensionStore &store) {
 
     ADD_EXTENSION("qti-ext-dec-low-latency", OMX_QTIIndexParamLowLatencyMode, OMX_DirOutput)
     ADD_PARAM_END("enable", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-extradata-enable", OMX_QcomIndexParamIndexExtraDataType, OMX_DirOutput)
+    ADD_PARAM_END("types", OMX_AndroidVendorValueString)
 }
 
 
@@ -68,6 +71,21 @@ OMX_ERRORTYPE omx_vdec::get_vendor_extension_config(
         case OMX_QTIIndexParamLowLatencyMode:
         {
             setStatus &= vExt.setParamInt32(ext, "enable", m_sParamLowLatency.bEnableLowLatencyMode);
+            break;
+        }
+        case OMX_QcomIndexParamIndexExtraDataType:
+        {
+            char exType[OMX_MAX_STRINGVALUE_SIZE + 1];
+            memset (exType, 0, (sizeof(char)*OMX_MAX_STRINGVALUE_SIZE));
+            if ((OMX_BOOL)(client_extradata & OMX_OUTPUTCROP_EXTRADATA)){
+                if ((strlcat(exType, getStringForExtradataType(OMX_ExtraDataOutputCropInfo),
+                    OMX_MAX_STRINGVALUE_SIZE)) >= OMX_MAX_STRINGVALUE_SIZE) {
+                    DEBUG_PRINT_LOW("extradata string size exceeds size %d",OMX_MAX_STRINGVALUE_SIZE);
+                }
+            }
+
+            setStatus &= vExt.setParamString(ext, "types", exType);
+            DEBUG_PRINT_LOW("VendorExt: getparam: Extradata %s", exType);
             break;
         }
         default:
@@ -143,6 +161,37 @@ OMX_ERRORTYPE omx_vdec::set_vendor_extension_config(
                 DEBUG_PRINT_ERROR("set_param: OMX_QTIIndexParamLowLatencyMode failed !");
             }
 
+            break;
+        }
+        case  OMX_QcomIndexParamIndexExtraDataType:
+        {
+            QOMX_INDEXEXTRADATATYPE extraDataParam;
+            char exType[OMX_MAX_STRINGVALUE_SIZE];
+            OMX_INIT_STRUCT(&extraDataParam, QOMX_INDEXEXTRADATATYPE);
+            valueSet |= vExt.readParamString(ext, "types", exType);
+            if (!valueSet) {
+                break;
+            }
+            char *rest = exType;
+            char *token = strtok_r(exType, "|", &rest);
+            do {
+                extraDataParam.bEnabled = OMX_TRUE;
+                extraDataParam.nIndex = (OMX_INDEXTYPE)getIndexForExtradataType(token);
+                if (extraDataParam.nIndex < 0) {
+                    DEBUG_PRINT_HIGH(" extradata %s not supported ", token);
+                    continue;
+                }
+                if (extraDataParam.nIndex == (OMX_INDEXTYPE)OMX_ExtraDataOutputCropInfo) {
+                    extraDataParam.nPortIndex = OMX_CORE_OUTPUT_PORT_INDEX;
+                }
+                DEBUG_PRINT_HIGH("VENDOR-EXT: set_config: extradata: enable for index = %x",
+                        extraDataParam.nIndex);
+                err = set_parameter(
+                    NULL, (OMX_INDEXTYPE)OMX_QcomIndexParamIndexExtraDataType, &extraDataParam);
+                if (err != OMX_ErrorNone) {
+                    DEBUG_PRINT_ERROR("set_config: OMX_QcomIndexParamIndexExtraDataType failed !");
+                }
+            } while ((token = strtok_r(NULL, "|", &rest)));
             break;
         }
         default:
