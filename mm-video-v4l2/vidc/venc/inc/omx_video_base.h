@@ -230,12 +230,18 @@ class omx_video: public qc_omx_component
         OMX_BUFFERHEADERTYPE  *mEmptyEosBuffer;
 
         C2DColorConverter c2dcc;
+        ColorMapping mMapPixelFormat2Converter;
+
 #endif
     public:
 
         bool mUseProxyColorFormat;
         //RGB or non-native input, and we have pre-allocated conversion buffers
         bool mUsesColorConversion;
+        ColorConvertFormat mC2dSrcFmt;
+        ColorConvertFormat  mC2dDestFmt;
+        OMX_U32 mC2DFrameHeight;
+        OMX_U32 mC2DFrameWidth;
 
         omx_video();  // constructor
         virtual ~omx_video();  // destructor

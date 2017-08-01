@@ -103,6 +103,7 @@ enum ColorConvertFormat {
     NV12_128m,
     NV12_UBWC,
     NV12_TP10,
+    NO_COLOR_FORMAT
 };
 
 typedef struct {
@@ -170,9 +171,6 @@ class C2DColorConverter{
  public:
   C2DColorConverter();
   ~C2DColorConverter();
-
-  ColorMapping mMapCovertor2PixelFormat;
-  ColorMapping mMapPixelFormat2Covertor;
 
   bool setResolution(size_t srcWidth, size_t srcHeight, size_t dstWidth,
                      size_t dstHeight, ColorConvertFormat srcFormat,

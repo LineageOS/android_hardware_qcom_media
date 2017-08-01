@@ -228,6 +228,11 @@ omx_video::omx_video():
     pdest_frame(NULL),
     secure_session(false),
     mEmptyEosBuffer(NULL),
+    mUsesColorConversion(false),
+    mC2dSrcFmt(NO_COLOR_FORMAT),
+    mC2dDestFmt(NO_COLOR_FORMAT),
+    mC2DFrameHeight(0),
+    mC2DFrameWidth(0),
     m_pInput_pmem(NULL),
     m_pOutput_pmem(NULL),
 #ifdef USE_ION
@@ -269,7 +274,10 @@ omx_video::omx_video():
     OMX_INIT_STRUCT(&m_blurInfo, OMX_QTI_VIDEO_CONFIG_BLURINFO);
     m_blurInfo.nPortIndex == (OMX_U32)PORT_INDEX_IN;
 
-    mUsesColorConversion = false;
+    mMapPixelFormat2Converter.insert({
+            {HAL_PIXEL_FORMAT_RGBA_8888, RGBA8888},
+                });
+
     pthread_mutex_init(&m_lock, NULL);
     pthread_mutex_init(&m_TimeStampInfo.m_lock, NULL);
     m_TimeStampInfo.deferred_inbufq.m_size=0;
@@ -4663,7 +4671,8 @@ bool omx_video::is_conv_needed(int hal_fmt, int hal_flags)
 #ifdef _HW_RGBA
     bRet = false;
 #endif
-    DEBUG_PRINT_LOW("RGBA conversion %s", bRet ? "Needed":"Not-Needed");
+    DEBUG_PRINT_LOW("RGBA conversion %s. Format %d Flag %d",
+                                bRet ? "Needed":"Not-Needed", hal_fmt, hal_flags);
     return bRet;
 }
 
@@ -4730,33 +4739,51 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
 
     if (buffer->nFilledLen > 0 && handle) {
 
+        ColorConvertFormat c2dSrcFmt = RGBA8888;
+        ColorConvertFormat c2dDestFmt = NV12_128m;
+
+        ColorMapping::const_iterator found =
+             mMapPixelFormat2Converter.find(handle->format);
+
+        if (found != mMapPixelFormat2Converter.end()) {
+            c2dSrcFmt = (ColorConvertFormat)found->second;
+        } else {
+            DEBUG_PRINT_INFO("Couldn't find color mapping for (%x)."
+                             "Set src format to default RGBA8888", handle->format);
+        }
+
         mUsesColorConversion = is_conv_needed(handle->format, handle->flags);
+
         if (mUsesColorConversion) {
-            DEBUG_PRINT_INFO("open Color conv forW: %u, H: %u",
+            DEBUG_PRINT_HIGH("open Color conv for W: %u, H: %u",
                              (unsigned int)m_sInPortDef.format.video.nFrameWidth,
                              (unsigned int)m_sInPortDef.format.video.nFrameHeight);
 
-            ColorConvertFormat c2dSrcFmt = RGBA8888;
-            ColorConvertFormat c2dDestFmt = NV12_UBWC;
-            ColorMapping::const_iterator found =
-                c2dcc.mMapPixelFormat2Covertor.find(handle->format);
-
-            if (found != c2dcc.mMapPixelFormat2Covertor.end()) {
-                c2dSrcFmt = (ColorConvertFormat)found->second;
-            }
-
-            if (!c2dcc.setResolution(m_sInPortDef.format.video.nFrameHeight,
-                                     m_sInPortDef.format.video.nFrameWidth,
+            DEBUG_PRINT_HIGH("C2D setResolution (0x%X -> 0x%x) HxW (%dx%d) Stride (%d)",
+                             c2dSrcFmt, c2dDestFmt,
+                             m_sInPortDef.format.video.nFrameHeight,
+                             m_sInPortDef.format.video.nFrameWidth,
+                             handle->width);
+            if (!c2dcc.setResolution(m_sInPortDef.format.video.nFrameWidth,
                                      m_sInPortDef.format.video.nFrameHeight,
                                      m_sInPortDef.format.video.nFrameWidth,
+                                     m_sInPortDef.format.video.nFrameHeight,
                                      c2dSrcFmt, c2dDestFmt,
                                      handle->flags, handle->width)) {
                 m_pCallbacks.EmptyBufferDone(hComp,m_app_data,buffer);
                 DEBUG_PRINT_ERROR("SetResolution failed");
                 return OMX_ErrorBadParameter;
             }
-            if (!dev_set_format(c2dDestFmt))
+
+            mC2dSrcFmt = c2dSrcFmt;
+            mC2DFrameHeight = m_sInPortDef.format.video.nFrameHeight;
+            mC2DFrameWidth = m_sInPortDef.format.video.nFrameWidth;
+
+            if (mC2dDestFmt != c2dDestFmt && !dev_set_format(c2dDestFmt)) {
                 DEBUG_PRINT_ERROR("cannot set color format");
+                return OMX_ErrorBadParameter;
+            }
+            mC2dDestFmt = c2dDestFmt;
 
             dev_get_buf_req (&m_sInPortDef.nBufferCountMin,
                              &m_sInPortDef.nBufferCountActual,
