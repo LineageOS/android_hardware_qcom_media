@@ -674,6 +674,7 @@ class omx_vdec: public qc_omx_component
         bool execute_omx_flush(OMX_U32);
         bool execute_output_flush();
         bool execute_input_flush();
+        void notify_flush_done(void *ctxt);
         OMX_ERRORTYPE empty_buffer_done(OMX_HANDLETYPE hComp,
                 OMX_BUFFERHEADERTYPE * buffer);
 
@@ -1136,7 +1137,7 @@ class omx_vdec: public qc_omx_component
 #endif
         struct video_decoder_capability m_decoder_capability;
         struct debug_cap m_debug;
-        int log_input_buffers(const char *, int);
+        int log_input_buffers(const char *, int, uint64_t);
         int log_output_buffers(OMX_BUFFERHEADERTYPE *);
 #ifdef _MSM8974_
         void send_codec_config();

@@ -363,7 +363,8 @@ class venc_dev
                 OMX_U32 * /*nMaxBLayers*/);
         bool venc_get_output_log_flag();
         bool venc_check_valid_config();
-        int venc_output_log_buffers(const char *buffer_addr, int buffer_len);
+        int venc_output_log_buffers(const char *buffer_addr, int buffer_len,
+                        uint64_t timestamp);
         int venc_input_log_buffers(OMX_BUFFERHEADERTYPE *buffer, int fd, int plane_offset,
                         unsigned long inputformat);
         int venc_extradata_log_buffers(char *buffer_addr);

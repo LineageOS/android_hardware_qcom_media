@@ -45,6 +45,7 @@ extern "C" {
 ///////////////////////////////////////////////////////////////////////////////
 #include "OMX_Core.h"
 #include "OMX_Video.h"
+#include "string.h"
 
 #define OMX_VIDEO_MAX_HP_LAYERS 6
 
@@ -641,6 +642,8 @@ enum OMX_QCOM_EXTN_INDEXTYPE
 
     /* use av-timer ticks as timestamp (used by VT-client) */
     OMX_QTIIndexParamEnableAVTimerTimestamps = 0x7F000071,
+
+    OMX_QcomIndexParamAUDelimiter = 0x7F000072,
 };
 
 /**
@@ -1106,6 +1109,18 @@ typedef struct OMX_QCOM_VIDEO_CONFIG_H264_AUD
    OMX_BOOL bEnable;        /** Enable/disable the setting */
 } OMX_QCOM_VIDEO_CONFIG_H264_AUD;
 
+/**
+ * This structure describes the parameters for the
+ * OMX_QcomIndexParamAUDelimiter extension.  It enables/disables
+ * the AU delimiters in the stream.
+ */
+typedef struct OMX_QCOM_VIDEO_CONFIG_AUD
+{
+   OMX_U32 nSize;           /** Size of the structure in bytes */
+   OMX_VERSIONTYPE nVersion;/** OMX specification version information */
+   OMX_BOOL bEnable;        /** Enable/disable the setting */
+} OMX_QCOM_VIDEO_CONFIG_AUD;
+
 typedef enum QOMX_VIDEO_PERF_LEVEL
 {
     OMX_QCOM_PerfLevelNominal,
@@ -1449,6 +1464,34 @@ typedef enum OMX_QCOM_EXTRADATATYPE
     OMX_ExtraDataLightLevelSEI =           0x7F000012,
     OMX_ExtraDataEncoderOverrideQPInfo =   0x7F000013,
 } OMX_QCOM_EXTRADATATYPE;
+
+struct ExtraDataMap {
+        const char *type;
+        OMX_QCOM_EXTRADATATYPE index;
+};
+static const struct ExtraDataMap kExtradataMap[] = {
+        { "ltrinfo", OMX_ExtraDataVideoLTRInfo },
+        { "mbinfo", OMX_ExtraDataVideoEncoderMBInfo },
+};
+
+static inline OMX_S32 getIndexForExtradataType(char * type) {
+    if(type == NULL) return -1;
+    for(int i = 0; i< (int)(sizeof(kExtradataMap)/ sizeof(struct ExtraDataMap)); i++){
+        if(!strcmp(kExtradataMap[i].type,type)){
+            return kExtradataMap[i].index;
+        }
+    }
+    return -1;
+}
+
+static inline const char * getStringForExtradataType(int64_t index) {
+    for(int i = 0; i< (int)(sizeof(kExtradataMap)/sizeof(struct ExtraDataMap)); i++){
+        if(kExtradataMap[i].index == index){
+            return kExtradataMap[i].type;
+        }
+    }
+    return NULL;
+}
 
 typedef struct  OMX_STREAMINTERLACEFORMATTYPE {
     OMX_U32 nSize;

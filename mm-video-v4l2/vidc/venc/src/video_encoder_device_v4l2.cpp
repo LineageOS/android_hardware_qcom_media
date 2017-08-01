@@ -1096,7 +1096,7 @@ bool venc_dev::venc_get_output_log_flag()
     return (m_debug.out_buffer_log == 1);
 }
 
-int venc_dev::venc_output_log_buffers(const char *buffer_addr, int buffer_len)
+int venc_dev::venc_output_log_buffers(const char *buffer_addr, int buffer_len, uint64_t timestamp)
 {
     if (venc_handle->is_secure_session()) {
         DEBUG_PRINT_ERROR("logging secure output buffers is not allowed!");
@@ -1132,8 +1132,18 @@ int venc_dev::venc_output_log_buffers(const char *buffer_addr, int buffer_len)
             m_debug.outfile_name[0] = '\0';
             return -1;
         }
+        if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8) {
+            int fps = m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den;
+            IvfFileHeader ivfFileHeader(false, m_sVenc_cfg.input_width,
+                                        m_sVenc_cfg.input_height, fps, 1, 0);
+            fwrite(&ivfFileHeader, sizeof(ivfFileHeader), 1, m_debug.outfile);
+        }
     }
     if (m_debug.outfile && buffer_len) {
+        if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8) {
+            IvfFrameHeader ivfFrameHeader(buffer_len, timestamp);
+            fwrite(&ivfFrameHeader, sizeof(ivfFrameHeader), 1, m_debug.outfile);
+        }
         DEBUG_PRINT_LOW("%s buffer_len:%d", __func__, buffer_len);
         fwrite(buffer_addr, buffer_len, 1, m_debug.outfile);
     }
@@ -1273,10 +1283,8 @@ int venc_dev::venc_input_log_buffers(OMX_BUFFERHEADERTYPE *pbuffer, int fd, int 
                 ptemp += stride;
             }
         } else if (color_format == COLOR_FMT_NV12_UBWC || color_format == COLOR_FMT_RGBA8888_UBWC) {
-            if (color_format == COLOR_FMT_NV12_UBWC) {
-                msize -= 2 * extra_size;
-            }
-            fwrite(ptemp, msize, 1, m_debug.infile);
+            int size = getYuvSize(color_format, m_sVenc_cfg.input_width, m_sVenc_cfg.input_height);
+            fwrite(ptemp, size, 1, m_debug.infile);
         }
 
         if (metadatamode == 1 && pvirt) {
@@ -1838,7 +1846,7 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
             extra_data_size =  fmt.fmt.pix_mp.plane_fmt[extra_idx].sizeimage;
         } else if (extra_idx >= VIDEO_MAX_PLANES) {
             DEBUG_PRINT_ERROR("Extradata index is more than allowed: %d\n", extra_idx);
-            return OMX_ErrorBadParameter;
+            return false;
         }
         input_extradata_info.buffer_size =  ALIGN(extra_data_size, SZ_4K);
         input_extradata_info.count = MAX_V4L2_BUFS;
@@ -1893,7 +1901,7 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
             extra_data_size =  fmt.fmt.pix_mp.plane_fmt[extra_idx].sizeimage;
         } else if (extra_idx >= VIDEO_MAX_PLANES) {
             DEBUG_PRINT_ERROR("Extradata index is more than allowed: %d", extra_idx);
-            return OMX_ErrorBadParameter;
+            return false;
         }
 
         output_extradata_info.buffer_size = extra_data_size;
@@ -2253,7 +2261,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 if (!venc_set_inloop_filter(OMX_VIDEO_AVCLoopFilterEnable))
                     DEBUG_PRINT_HIGH("WARN: Request for setting Inloop filter failed for HEVC encoder");
 
-                OMX_U32 fps = m_sVenc_cfg.fps_num ? m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den : 30;
+                OMX_U32 fps = m_sVenc_cfg.fps_den ? m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den : 30;
                 OMX_U32 nPFrames = pParam->nKeyFrameInterval > 0 ? pParam->nKeyFrameInterval - 1 : fps - 1;
                 if (!venc_set_intra_period (nPFrames, 0 /* nBFrames */)) {
                     DEBUG_PRINT_ERROR("ERROR: Request for setting intra period failed");
@@ -2495,14 +2503,14 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
 
                 break;
             }
-        case OMX_QcomIndexParamH264AUDelimiter:
+        case OMX_QcomIndexParamAUDelimiter:
             {
-                OMX_QCOM_VIDEO_CONFIG_H264_AUD * pParam =
-                    (OMX_QCOM_VIDEO_CONFIG_H264_AUD *)paramData;
+                OMX_QCOM_VIDEO_CONFIG_AUD * pParam =
+                    (OMX_QCOM_VIDEO_CONFIG_AUD *)paramData;
 
                 DEBUG_PRINT_LOW("set AU delimiters: %d", pParam->bEnable);
                 if(venc_set_au_delimiter(pParam->bEnable) == false) {
-                    DEBUG_PRINT_ERROR("ERROR: set H264 AU delimiter failed");
+                    DEBUG_PRINT_ERROR("ERROR: set AU delimiter failed");
                     return false;
                 }
 
@@ -3716,7 +3724,7 @@ if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
             extradata_index = venc_get_index_from_fd(input_extradata_info.m_ion_dev, pmem_tmp->fd);
             if (extradata_index < 0 ) {
                 DEBUG_PRINT_ERROR("Extradata index calculation went wrong for fd = %d", pmem_tmp->fd);
-                return OMX_ErrorBadParameter;
+                return false;
             }
             plane[extra_idx].length = input_extradata_info.buffer_size;
             plane[extra_idx].m.userptr = (unsigned long) (input_extradata_info.uaddr + extradata_index * input_extradata_info.buffer_size);
@@ -3727,7 +3735,7 @@ if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
             plane[extra_idx].data_offset = 0;
         } else if  (extra_idx >= VIDEO_MAX_PLANES) {
             DEBUG_PRINT_ERROR("Extradata index is more than allowed: %d\n", extra_idx);
-            return OMX_ErrorBadParameter;
+            return false;
         }
 
 
@@ -3768,7 +3776,7 @@ if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
             plane[extra_idx].data_offset = 0;
         } else if  (extra_idx >= VIDEO_MAX_PLANES) {
             DEBUG_PRINT_ERROR("Extradata index is more than allowed: %d", extra_idx);
-            return OMX_ErrorBadParameter;
+            return false;
         }
 
         rc = ioctl(m_nDriver_fd, VIDIOC_PREPARE_BUF, &buf);
@@ -4211,7 +4219,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
         int extradata_index = venc_get_index_from_fd(input_extradata_info.m_ion_dev,fd);
         if (extradata_index < 0 ) {
                 DEBUG_PRINT_ERROR("Extradata index calculation went wrong for fd = %d", fd);
-                return OMX_ErrorBadParameter;
+                return false;
             }
 
         plane[extra_idx].bytesused = 0;
@@ -4280,7 +4288,9 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
         buf.flags |= V4L2_QCOM_BUF_FLAG_EOS;
 
     if (m_debug.in_buffer_log) {
-        venc_input_log_buffers(bufhdr, fd, plane[0].data_offset, m_sVenc_cfg.inputformat);
+        OMX_BUFFERHEADERTYPE buffer = *bufhdr;
+        buffer.nFilledLen = plane[0].bytesused;
+        venc_input_log_buffers(&buffer, fd, plane[0].data_offset, m_sVenc_cfg.inputformat);
     }
     if (m_debug.extradata_log && extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
         DEBUG_PRINT_ERROR("Extradata Addr 0x%llx, Buffer Addr = 0x%x", (OMX_U64)input_extradata_info.uaddr, (unsigned int)plane[extra_idx].m.userptr);
@@ -4389,7 +4399,7 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
                 int extradata_index = venc_get_index_from_fd(input_extradata_info.m_ion_dev, fd);
                 if (extradata_index < 0) {
                     DEBUG_PRINT_ERROR("Extradata index calculation went wrong for fd = %d", fd);
-                    return OMX_ErrorBadParameter;
+                    return false;
                 }
 
                 plane[extra_idx].bytesused = 0;
@@ -4580,11 +4590,11 @@ bool venc_dev::venc_set_au_delimiter(OMX_BOOL enable)
 {
     struct v4l2_control control;
 
-    control.id = V4L2_CID_MPEG_VIDC_VIDEO_H264_AU_DELIMITER;
+    control.id = V4L2_CID_MPEG_VIDC_VIDEO_AU_DELIMITER;
     if(enable) {
-        control.value = V4L2_MPEG_VIDC_VIDEO_H264_AU_DELIMITER_ENABLED;
+        control.value = V4L2_MPEG_VIDC_VIDEO_AU_DELIMITER_ENABLED;
     } else {
-        control.value = V4L2_MPEG_VIDC_VIDEO_H264_AU_DELIMITER_DISABLED;
+        control.value = V4L2_MPEG_VIDC_VIDEO_AU_DELIMITER_DISABLED;
     }
 
     DEBUG_PRINT_HIGH("Set au delimiter: %d", enable);
