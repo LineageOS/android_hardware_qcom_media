@@ -3091,6 +3091,22 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
     return true;
 }
 
+bool venc_dev::venc_handle_empty_eos_buffer( void)
+{
+    struct v4l2_encoder_cmd enc;
+    int rc = 0;
+
+    memset(&enc, 0, sizeof(enc));
+    enc.cmd = V4L2_ENC_CMD_STOP;
+    DEBUG_PRINT_LOW("Sending : Encoder STOP comamnd");
+    rc = ioctl(m_nDriver_fd, VIDIOC_ENCODER_CMD, &enc);
+    if (rc) {
+        DEBUG_PRINT_ERROR("Failed : Encoder STOP comamnd");
+        return false;
+    }
+    return true;
+}
+
 unsigned venc_dev::venc_stop( void)
 {
     struct venc_msg venc_msg;
@@ -3708,13 +3724,13 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
             meta_buf = (LEGACY_CAM_METADATA_TYPE *)bufhdr->pBuffer;
 
             if (!meta_buf) {
-                //empty EOS buffer
-                if (!bufhdr->nFilledLen && (bufhdr->nFlags & OMX_BUFFERFLAG_EOS)) {
-                    plane[0].data_offset = bufhdr->nOffset;
-                    plane[0].length = bufhdr->nAllocLen;
-                    plane[0].bytesused = bufhdr->nFilledLen;
-                    DEBUG_PRINT_LOW("venc_empty_buf: empty EOS buffer");
-                } else {
+                if (!bufhdr->nFilledLen) {
+                    if (bufhdr->nFlags & OMX_BUFFERFLAG_EOS) {
+                        DEBUG_PRINT_ERROR("venc_empty_buf: Zero length EOS buffers are not valid");
+                        DEBUG_PRINT_ERROR("Use this function instead : venc_handle_empty_eos_buffer");
+                        return false;
+                    }
+                    DEBUG_PRINT_ERROR("venc_empty_buf: Zero length buffers are not valid");
                     return false;
                 }
             } else if (!color_format) {
@@ -4053,6 +4069,16 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
 
     if (bufhdr->nFlags & OMX_BUFFERFLAG_EOS)
         buf.flags |= V4L2_QCOM_BUF_FLAG_EOS;
+
+    if (!plane[0].bytesused) {
+        if (buf.flags & V4L2_QCOM_BUF_FLAG_EOS) {
+            DEBUG_PRINT_ERROR("venc_empty_buf: Zero length EOS buffers are not valid");
+            DEBUG_PRINT_ERROR("Use this function instead : venc_handle_empty_eos_buffer");
+            return false;
+        }
+        DEBUG_PRINT_ERROR("venc_empty_buf: Zero length buffers are not valid");
+        return false;
+    }
 
     if (m_debug.in_buffer_log) {
         venc_input_log_buffers(bufhdr, fd, plane[0].data_offset, m_sVenc_cfg.inputformat);
