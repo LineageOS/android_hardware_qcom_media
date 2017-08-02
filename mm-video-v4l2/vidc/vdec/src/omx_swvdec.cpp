@@ -147,13 +147,13 @@ OMX_ERRORTYPE omx_swvdec::component_init(OMX_STRING cmp_name)
     {
         char property_value[PROPERTY_VALUE_MAX] = {0};
 
-        if (property_get("omx_swvdec.meta_buffer.disable",
+        if (property_get("vendor.vidc.dec.meta_buffer.disable",
                          property_value,
                          NULL))
         {
             m_meta_buffer_mode_disabled = (bool) atoi(property_value);
 
-            OMX_SWVDEC_LOG_LOW("omx_swvdec.meta_buffer.disable: %d",
+            OMX_SWVDEC_LOG_LOW("vendor.vidc.dec.meta_buffer.disable: %d",
                                m_meta_buffer_mode_disabled ? 1 : 0);
         }
     }
