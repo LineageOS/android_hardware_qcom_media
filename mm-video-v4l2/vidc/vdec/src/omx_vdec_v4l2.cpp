@@ -8155,6 +8155,7 @@ OMX_ERRORTYPE  omx_vdec::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
             }
 
             if (release_output_done()) {
+                free_extradata();
                 break;
             }
         }
