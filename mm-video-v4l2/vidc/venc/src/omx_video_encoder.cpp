@@ -41,8 +41,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define strlcpy g_strlcpy
 #endif
 
-static int bframes;
-static int entropy;
 // factory function executed by the core to create instances
 void *get_omx_component_factory_fn(void)
 {
@@ -61,16 +59,9 @@ omx_venc::omx_venc()
     mUseProxyColorFormat = false;
     get_syntaxhdr_enable = false;
 #endif
-    bframes = entropy = 0;
     char property_value[PROPERTY_VALUE_MAX] = {0};
     property_get("vendor.vidc.debug.level", property_value, "1");
     debug_level = strtoul(property_value, NULL, 16);
-    property_value[0] = '\0';
-    property_get("vidc.debug.bframes", property_value, "0");
-    bframes = atoi(property_value);
-    property_value[0] = '\0';
-    property_get("vidc.debug.entropy", property_value, "1");
-    entropy = !!atoi(property_value);
     property_value[0] = '\0';
     handle = NULL;
 }
@@ -732,15 +723,9 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                             avc_param.nBFrames);
                     }
 
-                    if (bframes ) {
-                        avc_param.nBFrames = bframes;
-                        DEBUG_PRINT_LOW("B frames set using setprop to %d",
-                            avc_param.nBFrames);
-                    }
-
                     DEBUG_PRINT_HIGH("AVC: BFrames: %u", (unsigned int)avc_param.nBFrames);
-                    avc_param.bEntropyCodingCABAC = (OMX_BOOL)(avc_param.bEntropyCodingCABAC && entropy);
-                    avc_param.nCabacInitIdc = entropy ? avc_param.nCabacInitIdc : 0;
+                    avc_param.bEntropyCodingCABAC = (OMX_BOOL)(0);
+                    avc_param.nCabacInitIdc = 0;
                 } else {
                     if (pParam->nBFrames) {
                         DEBUG_PRINT_ERROR("Warning: B frames not supported");
@@ -752,7 +737,7 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 }
                 memcpy(&m_sParamAVC,pParam, sizeof(struct OMX_VIDEO_PARAM_AVCTYPE));
                 m_sIntraperiod.nPFrames = m_sParamAVC.nPFrames;
-                if (pParam->nBFrames || bframes)
+                if (pParam->nBFrames)
                     m_sIntraperiod.nBFrames = m_sParamAVC.nBFrames = avc_param.nBFrames;
                 else
                     m_sIntraperiod.nBFrames = m_sParamAVC.nBFrames;

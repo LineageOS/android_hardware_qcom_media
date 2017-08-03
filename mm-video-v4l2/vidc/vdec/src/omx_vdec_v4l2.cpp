@@ -664,6 +664,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_enable_android_native_buffers(OMX_FALSE),
     m_use_android_native_buffers(OMX_FALSE),
 #endif
+    m_disable_dynamic_buf_mode(0),
     m_desc_buffer_ptr(NULL),
     secure_mode(false),
     allocate_native_handle(false),
@@ -692,32 +693,14 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
 
     DEBUG_PRINT_HIGH("In OMX vdec Constructor");
 
-    property_get("vidc.dec.debug.perf", property_value, "0");
-    perf_flag = atoi(property_value);
+    // TODO: Support in XML
+    perf_flag = 0;
     if (perf_flag) {
-        DEBUG_PRINT_HIGH("vidc.dec.debug.perf is %d", perf_flag);
+        DEBUG_PRINT_HIGH("perf flag is %d", perf_flag);
         dec_time.start();
     }
     proc_frms = latency = 0;
     prev_n_filled_len = 0;
-    property_value[0] = '\0';
-    property_get("vidc.dec.debug.ts", property_value, "0");
-    m_debug_timestamp = atoi(property_value);
-    DEBUG_PRINT_HIGH("vidc.dec.debug.ts value is %d",m_debug_timestamp);
-    if (m_debug_timestamp) {
-        time_stamp_dts.set_timestamp_reorder_mode(true);
-        time_stamp_dts.enable_debug_print(true);
-    }
-
-    property_value[0] = '\0';
-    property_get("vidc.dec.debug.concealedmb", property_value, "0");
-    m_debug_concealedmb = atoi(property_value);
-    DEBUG_PRINT_HIGH("vidc.dec.debug.concealedmb value is %d",m_debug_concealedmb);
-
-    property_value[0] = '\0';
-    property_get("vidc.dec.profile.check", property_value, "0");
-    m_reject_avc_1080p_mp = atoi(property_value);
-    DEBUG_PRINT_HIGH("vidc.dec.profile.check value is %d",m_reject_avc_1080p_mp);
 
     Platform::Config::getInt32(Platform::vidc_dec_log_in,
             (int32_t *)&m_debug.in_buffer_log, 0);
@@ -745,27 +728,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     property_get("vendor.vidc.log.loc", property_value, BUFFER_LOG_LOC);
     if (*property_value)
         strlcpy(m_debug.log_loc, property_value, PROPERTY_VALUE_MAX);
-
-    property_value[0] = '\0';
-    property_get("vidc.dec.120fps.enabled", property_value, "0");
-
-    //if this feature is not enabled then reset this value -ve
-    if(atoi(property_value)) {
-        DEBUG_PRINT_LOW("feature 120 FPS decode enabled");
-        m_last_rendered_TS = 0;
-    }
-
-    property_value[0] = '\0';
-    property_get("vidc.dec.debug.dyn.disabled", property_value, "0");
-    m_disable_dynamic_buf_mode = atoi(property_value);
-    DEBUG_PRINT_HIGH("vidc.dec.debug.dyn.disabled value is %d",m_disable_dynamic_buf_mode);
-
-    property_value[0] = '\0';
-    property_get("vidc.dec.drc.enable", property_value, "0");
-    if (atoi(property_value)) {
-        m_drc_enable = true;
-        DEBUG_PRINT_HIGH("DRC enabled");
-    }
 
 #ifdef _UBWC_
     property_value[0] = '\0';
@@ -812,17 +774,14 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     streaming[CAPTURE_PORT] =
         streaming[OUTPUT_PORT] = false;
 #ifdef _ANDROID_
-    char extradata_value[PROPERTY_VALUE_MAX] = {0};
-    property_get("vidc.dec.debug.extradata", extradata_value, "0");
-    m_debug_extradata = atoi(extradata_value);
-    DEBUG_PRINT_HIGH("vidc.dec.debug.extradata value is %d",m_debug_extradata);
+    // TODO: Support in XML
+    m_debug_extradata = 0;
 #endif
     m_fill_output_msg = OMX_COMPONENT_GENERATE_FTB;
     client_buffers.set_vdec_client(this);
     dynamic_buf_mode = false;
     out_dynamic_list = NULL;
     is_down_scalar_enabled = false;
-    m_enable_downscalar = 0;
     m_downscalar_width = 0;
     m_downscalar_height = 0;
     m_force_down_scalar = 0;
@@ -851,14 +810,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_client_hdr_info.nPortIndex = (OMX_U32)OMX_CORE_INPUT_PORT_INDEX;
     m_internal_hdr_info.nPortIndex = (OMX_U32)OMX_CORE_OUTPUT_PORT_INDEX;
 
-    char dither_value[PROPERTY_VALUE_MAX] = {0};
-    property_get("vidc.dec.dither", dither_value, "0");
-    if ((atoi(dither_value) > DITHER_ALL_COLORSPACE) ||
-        (atoi(dither_value) < DITHER_DISABLE)) {
-        m_dither_config = DITHER_ALL_COLORSPACE;
-    } else {
-        m_dither_config = is_platform_tp10capture_supported() ? (dither_type)atoi(dither_value) : DITHER_ALL_COLORSPACE;
-    }
+    m_dither_config = DITHER_DISABLE;
 
     DEBUG_PRINT_HIGH("Dither config is %d", m_dither_config);
     m_color_space = EXCEPT_BT2020;
@@ -1113,8 +1065,7 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool split_opb_dpb_with_same_colo
              */
             bool eligible_for_split_dpb_ubwc =
                m_progressive == MSM_VIDC_PIC_STRUCT_PROGRESSIVE &&     //@ Due to Venus limitation for Interlaced, Split mode enabled only for Progressive.
-               !drv_ctx.idr_only_decoding                       &&     //@ Split mode disabled for Thumbnail usecase.
-               !m_disable_split_mode;                                  //@ Set prop to disable split mode
+                !drv_ctx.idr_only_decoding;                            //@ Split mode disabled for Thumbnail usecase.
 
             //Since opb is linear, dpb should also be linear.
             if (split_opb_dpb_with_same_color_fmt) {
@@ -1224,11 +1175,6 @@ int omx_vdec::decide_downscalar()
             DEBUG_PRINT_ERROR("Disable downscalar failed!");
             return rc;
         }
-        return 0;
-    }
-
-    if  (!m_enable_downscalar) {
-        DEBUG_PRINT_LOW("%s: downscalar not supported", __func__);
         return 0;
     }
 
@@ -2515,31 +2461,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         drv_ctx.idr_only_decoding = 0;
 
 #ifdef _ANDROID_
-        property_get("vidc.dec.enable.downscalar",property_value,"0");
-        if (atoi(property_value)) {
-            m_enable_downscalar =  atoi(property_value);
-            property_get("vidc.dec.downscalar_width",property_value,"0");
-            if (atoi(property_value)) {
-                m_downscalar_width = atoi(property_value);
-            }
-            property_get("vidc.dec.downscalar_height",property_value,"0");
-            if (atoi(property_value)) {
-                m_downscalar_height = atoi(property_value);
-            }
-
-            if (m_downscalar_width < m_decoder_capability.min_width ||
-                m_downscalar_height < m_decoder_capability.min_height) {
-                m_downscalar_width = 0;
-                m_downscalar_height = 0;
-            }
-
-            DEBUG_PRINT_LOW("Downscaler configured WxH %dx%d\n",
-                m_downscalar_width, m_downscalar_height);
-        }
-        property_get("vidc.disable.split.mode",property_value,"0");
-        m_disable_split_mode = atoi(property_value);
-        DEBUG_PRINT_HIGH("split mode is %s", m_disable_split_mode ? "disabled" : "enabled");
-
         ctrl[0].id = V4L2_CID_MIN_BUFFERS_FOR_CAPTURE;
         ctrl[0].value = nBufCount;
 
@@ -3269,11 +3190,7 @@ bool omx_vdec::execute_input_flush()
     input_flush_progress = false;
     prev_ts = LLONG_MAX;
     rst_prev_ts = true;
-#ifdef _ANDROID_
-    if (m_debug_timestamp) {
-        m_timestamp_list.reset_ts_list();
-    }
-#endif
+
     DEBUG_PRINT_HIGH("OMX flush i/p Port complete PenBuf(%d)", pending_input_buffers);
     return bRet;
 }
@@ -6904,15 +6821,6 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
         handle_demux_data(buffer);
     }
 
-#ifdef _ANDROID_
-    if (m_debug_timestamp) {
-        if (!(buffer->nFlags & OMX_BUFFERFLAG_CODECCONFIG)) {
-            DEBUG_PRINT_LOW("Inserting TIMESTAMP (%lld) into queue", buffer->nTimeStamp);
-            m_timestamp_list.insert_ts(buffer->nTimeStamp);
-        }
-    }
-#endif
-
     log_input_buffers((const char *)temp_buffer->bufferaddr, temp_buffer->buffer_len);
 
     if (buffer->nFlags & QOMX_VIDEO_BUFFERFLAG_EOSEQ) {
@@ -7341,11 +7249,6 @@ OMX_ERRORTYPE  omx_vdec::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
     m_ftb_q.m_read = m_ftb_q.m_write =0;
     m_cmd_q.m_read = m_cmd_q.m_write =0;
     m_etb_q.m_read = m_etb_q.m_write =0;
-#ifdef _ANDROID_
-    if (m_debug_timestamp) {
-        m_timestamp_list.reset_ts_list();
-    }
-#endif
 
     DEBUG_PRINT_LOW("Calling VDEC_IOCTL_STOP_NEXT_MSG");
     //(void)ioctl(drv_ctx.video_driver_fd, VDEC_IOCTL_STOP_NEXT_MSG,
@@ -7822,7 +7725,6 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
         }
     }
 
-
     DEBUG_PRINT_LOW("fill_buffer_done: bufhdr = %p, bufhdr->pBuffer = %p, flags: 0x%x, timestamp: %lld",
             buffer, buffer->pBuffer, buffer->nFlags, buffer->nTimeStamp);
     pending_output_buffers --;
@@ -7881,21 +7783,6 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
         if (buffer->nFilledLen > 0) {
             time_stamp_dts.get_next_timestamp(buffer,
                     is_interlaced && is_duplicate_ts_valid);
-            if (m_debug_timestamp) {
-                {
-                    OMX_TICKS expected_ts = 0;
-                    m_timestamp_list.pop_min_ts(expected_ts);
-                    if (is_interlaced && is_duplicate_ts_valid) {
-                        m_timestamp_list.pop_min_ts(expected_ts);
-                    }
-                    DEBUG_PRINT_LOW("Current timestamp (%lld),Popped TIMESTAMP (%lld) from list",
-                            buffer->nTimeStamp, expected_ts);
-
-                    if (buffer->nTimeStamp != expected_ts) {
-                        DEBUG_PRINT_ERROR("ERROR in omx_vdec::async_message_process timestamp Check");
-                    }
-                }
-            }
         }
     }
     VIDC_TRACE_INT_LOW("FBD-TS", buffer->nTimeStamp / 1000);
@@ -7978,25 +7865,12 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
                     refresh_rate = m_fps_received / (float)(1<<16);
                 }
             } else {
-                // check if dynamic refresh rate change feature enabled or not
-                if (m_drc_enable) {
-                    // set coarse fps when 2 fbds received and
-                    // set fps again when 30 fbds received as it should be
-                    // more accurate than the one set when only 2 fbds received.
-                    if (2 == proc_frms || 30 == proc_frms) {
-                        if (drv_ctx.frame_rate.fps_denominator) {
-                            refresh_rate = drv_ctx.frame_rate.fps_numerator /
-                                    (float) drv_ctx.frame_rate.fps_denominator;
-                        }
-                    }
-                } else {
-                    // calculate and set refresh rate for every frame from second frame onwards
-                    // display will assume the default refresh rate for first frame (which is 60 fps)
-                    if (m_fps_prev) {
-                        if (drv_ctx.frame_rate.fps_denominator) {
-                            refresh_rate = drv_ctx.frame_rate.fps_numerator /
-                                    (float) drv_ctx.frame_rate.fps_denominator;
-                        }
+                // calculate and set refresh rate for every frame from second frame onwards
+                // display will assume the default refresh rate for first frame (which is 60 fps)
+                if (m_fps_prev) {
+                    if (drv_ctx.frame_rate.fps_denominator) {
+                        refresh_rate = drv_ctx.frame_rate.fps_numerator /
+                            (float) drv_ctx.frame_rate.fps_denominator;
                     }
                 }
             }

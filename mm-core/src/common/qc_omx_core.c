@@ -463,7 +463,7 @@ OMX_GetHandle(OMX_OUT OMX_HANDLETYPE*     handle,
 
       // Load VPP omx component for decoder if vpp
       // property is enabled
-      if ((property_get("media.vpp.enable", value, NULL))
+      if ((property_get("vendor.media.vpp.enable", value, NULL))
            && (!strcmp("1", value) || !strcmp("true", value))) {
         DEBUG_PRINT("VPP property is enabled");
         if (!strcmp(core[cmp_index].so_lib_name, "libOmxVdec.so")) {

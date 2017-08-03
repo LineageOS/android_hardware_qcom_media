@@ -1108,16 +1108,13 @@ class omx_vdec: public qc_omx_component
         OMX_NATIVE_WINDOWTYPE m_display_id;
         OMX_U32 client_extradata;
 #ifdef _ANDROID_
-        bool m_debug_timestamp;
         bool perf_flag;
         OMX_U32 proc_frms, latency;
         perf_metrics fps_metrics;
         perf_metrics dec_time;
-        bool m_reject_avc_1080p_mp;
         bool m_enable_android_native_buffers;
         bool m_use_android_native_buffers;
         bool m_debug_extradata;
-        bool m_debug_concealedmb;
         bool m_disable_dynamic_buf_mode;
         OMX_U32 m_conceal_color;
 #endif
@@ -1198,8 +1195,6 @@ class omx_vdec: public qc_omx_component
         OMX_ERRORTYPE enable_smoothstreaming();
         OMX_ERRORTYPE enable_adaptive_playback(unsigned long width, unsigned long height);
         bool m_disable_ubwc_mode;
-        bool m_disable_split_mode;
-        bool m_enable_downscalar;
         OMX_U32 m_downscalar_width;
         OMX_U32 m_downscalar_height;
         int decide_downscalar();
