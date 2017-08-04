@@ -81,6 +81,10 @@ void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
 
     ADD_EXTENSION("qti-ext-enc-dynamic-frame-rate", OMX_IndexConfigVideoFramerate, OMX_DirOutput)
     ADD_PARAM_END("frame-rate", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-extradata-enable", OMX_QcomIndexParamIndexExtraDataType, OMX_DirOutput)
+    ADD_PARAM_END("types", OMX_AndroidVendorValueString)
+
 }
 
 OMX_ERRORTYPE omx_video::get_vendor_extension_config(
@@ -186,6 +190,29 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
         case OMX_IndexConfigVideoFramerate:
         {
             setStatus &= vExt.setParamInt32(ext, "frame-rate", m_sConfigFramerate.xEncodeFramerate);
+            break;
+        }
+        case  OMX_QcomIndexParamIndexExtraDataType:
+        {
+            char exType[OMX_MAX_STRINGVALUE_SIZE+1];
+            memset (exType,0, (sizeof(char)*OMX_MAX_STRINGVALUE_SIZE));
+            if ((OMX_BOOL)(m_sExtraData & VENC_EXTRADATA_LTRINFO)){
+                if((strlcat(exType, getStringForExtradataType(OMX_ExtraDataVideoLTRInfo),
+                                OMX_MAX_STRINGVALUE_SIZE)) >= OMX_MAX_STRINGVALUE_SIZE) {
+                    DEBUG_PRINT_LOW("extradata string size exceeds size %d",OMX_MAX_STRINGVALUE_SIZE );
+                }
+            }
+            if ((OMX_BOOL)(m_sExtraData & VENC_EXTRADATA_MBINFO)) {
+                if (exType[0]!=0) {
+                    strlcat(exType,"|", OMX_MAX_STRINGVALUE_SIZE);
+                }
+                if((strlcat(exType, getStringForExtradataType(OMX_ExtraDataVideoEncoderMBInfo),
+                                OMX_MAX_STRINGVALUE_SIZE)) >= OMX_MAX_STRINGVALUE_SIZE) {
+                    DEBUG_PRINT_LOW("extradata string size exceeds size %d",OMX_MAX_STRINGVALUE_SIZE );
+                }
+            }
+            setStatus &= vExt.setParamString(ext, "types", exType);
+            DEBUG_PRINT_LOW("VendorExt: getparam: Extradata %s",exType);
             break;
         }
         default:
@@ -521,7 +548,38 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
             if (err != OMX_ErrorNone) {
                 DEBUG_PRINT_ERROR("set_config: OMX_IndexConfigVideoFramerate failed !");
             }
-
+            break;
+        }
+        case  OMX_QcomIndexParamIndexExtraDataType:
+        {
+            QOMX_INDEXEXTRADATATYPE extraDataParam;
+            char exType[OMX_MAX_STRINGVALUE_SIZE];
+            OMX_INIT_STRUCT(&extraDataParam, QOMX_INDEXEXTRADATATYPE);
+            valueSet |= vExt.readParamString(ext, "types", exType);
+            if (!valueSet) {
+                break;
+            }
+            char *rest = exType;
+            char *token = strtok_r(exType, "|", &rest);
+            do {
+                extraDataParam.bEnabled = OMX_TRUE;
+                extraDataParam.nIndex = (OMX_INDEXTYPE)getIndexForExtradataType(token);
+                if (extraDataParam.nIndex < 0) {
+                    DEBUG_PRINT_HIGH(" extradata %s not supported ",token);
+                    continue;
+                }
+                if (extraDataParam.nIndex == (OMX_INDEXTYPE)OMX_ExtraDataVideoLTRInfo ||
+                    extraDataParam.nIndex == (OMX_INDEXTYPE)OMX_ExtraDataVideoEncoderMBInfo) {
+                    extraDataParam.nPortIndex = (OMX_U32)PORT_INDEX_OUT;
+                }
+                DEBUG_PRINT_HIGH("VENDOR-EXT: set_config: extradata: enable for index = %d",
+                                  extraDataParam.nIndex);
+                err = set_parameter(
+                       NULL, (OMX_INDEXTYPE)OMX_QcomIndexParamIndexExtraDataType, &extraDataParam);
+                if (err != OMX_ErrorNone) {
+                    DEBUG_PRINT_ERROR("set_config: OMX_QcomIndexParamIndexExtraDataType failed !");
+                }
+            } while ((token = strtok_r(NULL, "|", &rest)));
             break;
         }
         default:
