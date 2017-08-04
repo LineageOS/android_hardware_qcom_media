@@ -250,6 +250,7 @@ struct msm_venc_temporal_layers {
     OMX_U32 nKeyFrameInterval;
     OMX_U32 nMinQuantizer;
     OMX_U32 nMaxQuantizer;
+    OMX_VIDEO_ANDROID_TEMPORALLAYERINGPATTERNTYPE ePattern;
 };
 
 enum v4l2_ports {
@@ -338,6 +339,18 @@ class venc_dev
                 OMX_U32 * /*nMaxBLayers*/, OMX_VIDEO_ANDROID_TEMPORALLAYERINGPATTERNTYPE */*SupportedPattern*/);
         bool venc_check_for_hybrid_hp(OMX_VIDEO_ANDROID_TEMPORALLAYERINGPATTERNTYPE ePattern);
         bool venc_check_for_hierp(OMX_VIDEO_ANDROID_TEMPORALLAYERINGPATTERNTYPE ePattern);
+        int venc_find_hier_type(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE &temporalSettings);
+        OMX_ERRORTYPE venc_disable_hp();
+        OMX_ERRORTYPE venc_disable_hhp();
+        OMX_ERRORTYPE venc_set_hp(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE &temporalSettings);
+        OMX_ERRORTYPE venc_set_hhp(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE &temporalSettings);
+        OMX_ERRORTYPE venc_set_bitrate_ratio(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE &temporalSettings);
+        bool venc_convert_abs2cum_bitrate(QOMX_EXTNINDEX_VIDEO_HYBRID_HP_MODE *,
+                                OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE &temporalSettings);
+        bool venc_validate_temporal_settings();
+        bool venc_validate_temporal_extn(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE &temporalSettings);
+        OMX_ERRORTYPE venc_set_temporal_settings(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE &temporalSettings);
+        void venc_copy_temporal_settings(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE &temporalSettings);
         bool venc_get_output_log_flag();
         int venc_output_log_buffers(const char *buffer_addr, int buffer_len);
         int venc_input_log_buffers(OMX_BUFFERHEADERTYPE *buffer, int fd, int plane_offset,
@@ -489,6 +502,8 @@ class venc_dev
         struct msm_venc_color_space         color_space;
         msm_venc_temporal_layers            temporal_layers_config;
         OMX_BOOL                            downscalar_enabled;
+        bool client_req_disable_bframe;
+        bool client_req_disable_temporal_layers;
 
         bool venc_query_cap(struct v4l2_queryctrl &cap);
         bool venc_validate_range(OMX_S32 id, OMX_S32 val);
@@ -543,8 +558,8 @@ class venc_dev
         bool venc_set_roi_qp_info(OMX_QTI_VIDEO_CONFIG_ROIINFO *roiInfo);
         bool venc_set_blur_resolution(OMX_QTI_VIDEO_CONFIG_BLURINFO *blurInfo);
         bool venc_set_colorspace(OMX_U32 primaries, OMX_U32 range, OMX_U32 transfer_chars, OMX_U32 matrix_coeffs);
-        OMX_ERRORTYPE venc_set_temporal_layers(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE *pTemporalParams);
-        OMX_ERRORTYPE venc_set_temporal_layers_internal();
+        bool venc_reconfigure_temporal_settings();
+        bool venc_reconfigure_ltrmode();
         bool venc_set_iframesize_type(QOMX_VIDEO_IFRAMESIZE_TYPE type);
         unsigned long venc_get_color_format(OMX_COLOR_FORMATTYPE eColorFormat);
         unsigned long venc_get_codectype(OMX_VIDEO_CODINGTYPE eCompressionFormat);
