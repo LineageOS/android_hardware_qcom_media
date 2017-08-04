@@ -645,6 +645,7 @@ class omx_vdec: public qc_omx_component
                 OMX_U32              port,
                 OMX_PTR              appData,
                 void *               eglImage);
+        int get_capture_capability() {return capture_capability;};
         void complete_pending_buffer_done_cbs();
         struct video_driver_context drv_ctx;
         int m_poll_efd;

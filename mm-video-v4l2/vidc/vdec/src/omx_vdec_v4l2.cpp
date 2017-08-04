@@ -232,6 +232,15 @@ void* async_message_thread (void *input)
                 omx->m_color_space = (ptr[4] == MSM_VIDC_BT2020 ? (omx_vdec::BT2020):
                                       (omx_vdec:: EXCEPT_BT2020));
                 DEBUG_PRINT_HIGH("VIDC Port Reconfig ColorSpace - %d", omx->m_color_space);
+
+
+                if (omx->get_capture_capability() == V4L2_PIX_FMT_NV12 &&
+                    !omx->m_progressive) {
+                    DEBUG_PRINT_ERROR("Hardware does not support interlace with NV12 color format.");
+                    vdec_msg.msgcode = VDEC_MSG_EVT_HW_ERROR;
+                    vdec_msg.status_code = VDEC_S_EFATAL;
+                }
+
                 if (omx->async_message_process(input,&vdec_msg) < 0) {
                     DEBUG_PRINT_HIGH("async_message_thread Exited");
                     break;
@@ -277,10 +286,17 @@ void* async_message_thread (void *input)
                     omx->m_color_space = (ptr[4] == MSM_VIDC_BT2020 ? (omx_vdec::BT2020):
                                        (omx_vdec:: EXCEPT_BT2020));
                     send_msg = true;
-                    vdec_msg.msgcode=VDEC_MSG_EVT_CONFIG_CHANGED;
-                    vdec_msg.status_code=VDEC_S_SUCCESS;
-                    vdec_msg.msgdata.output_frame.picsize.frame_height = ptr[0];
-                    vdec_msg.msgdata.output_frame.picsize.frame_width = ptr[1];
+                    if (omx->get_capture_capability() == V4L2_PIX_FMT_NV12 &&
+                        !omx->m_progressive) {
+                        DEBUG_PRINT_ERROR("Hardware does not support interlace with NV12 color format.");
+                        vdec_msg.msgcode = VDEC_MSG_EVT_HW_ERROR;
+                        vdec_msg.status_code = VDEC_S_EFATAL;
+                    } else {
+                        vdec_msg.msgcode=VDEC_MSG_EVT_CONFIG_CHANGED;
+                        vdec_msg.status_code=VDEC_S_SUCCESS;
+                        vdec_msg.msgdata.output_frame.picsize.frame_height = ptr[0];
+                        vdec_msg.msgdata.output_frame.picsize.frame_width = ptr[1];
+                    }
 
                 } else {
                     struct v4l2_decoder_cmd dec;
@@ -3470,7 +3486,9 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                OMX_PARAM_PORTDEFINITIONTYPE *portDefn =
                                    (OMX_PARAM_PORTDEFINITIONTYPE *) paramData;
                                DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamPortDefinition");
-                               decide_dpb_buffer_mode(is_down_scalar_enabled);
+                               if (decide_dpb_buffer_mode(is_down_scalar_enabled)) {
+                                   return OMX_ErrorBadParameter;
+                               }
                                eRet = update_portdef(portDefn);
                                if (eRet == OMX_ErrorNone)
                                    m_port_def = *portDefn;
@@ -3947,7 +3965,10 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                    /* update output port resolution with client supplied dimensions
                                       in case scaling is enabled, else it follows input resolution set
                                    */
-                                   decide_dpb_buffer_mode(is_down_scalar_enabled);
+                                   if (decide_dpb_buffer_mode(is_down_scalar_enabled)) {
+                                       return OMX_ErrorBadParameter;
+                                   }
+
                                    if (is_down_scalar_enabled) {
                                        DEBUG_PRINT_LOW("SetParam OP: WxH(%u x %u)",
                                                (unsigned int)portDefn->format.video.nFrameWidth,
