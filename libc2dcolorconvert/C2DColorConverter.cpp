@@ -183,8 +183,10 @@ bool C2DColorConverter::convertC2D(int srcFd, void *srcBase, void * srcData,
     } else {
 
       srcMappedGpuAddr = (uint8_t *)getMappedGPUAddr(srcFd, srcData, mSrcSize);
-      if (!srcMappedGpuAddr)
-        return false;
+      if (!srcMappedGpuAddr) {
+          pthread_mutex_unlock(&mLock);
+          return false;
+      }
 
       if (isYUVSurface(mSrcFormat)) {
         ret = updateYUVSurfaceDef(srcMappedGpuAddr, srcBase, srcData, true);
@@ -197,6 +199,7 @@ bool C2DColorConverter::convertC2D(int srcFd, void *srcBase, void * srcData,
         dstMappedGpuAddr = (uint8_t *)getMappedGPUAddr(dstFd, dstData, mDstSize);
         if (!dstMappedGpuAddr) {
           unmapGPUAddr((unsigned long)srcMappedGpuAddr);
+          pthread_mutex_unlock(&mLock);
           return false;
         }
 
