@@ -61,14 +61,18 @@ C2DColorConverter::C2DColorConverter()
     mC2DFlush = (LINK_c2dFlush)dlsym(mC2DLibHandle, "c2dFlush");
     mC2DFinish = (LINK_c2dFinish)dlsym(mC2DLibHandle, "c2dFinish");
     mC2DWaitTimestamp = (LINK_c2dWaitTimestamp)dlsym(mC2DLibHandle, "c2dWaitTimestamp");
-    mC2DDestroySurface = (LINK_c2dDestroySurface)dlsym(mC2DLibHandle, "c2dDestroySurfaceq");
+    mC2DDestroySurface = (LINK_c2dDestroySurface)dlsym(mC2DLibHandle, "c2dDestroySurface");
     mC2DMapAddr = (LINK_c2dMapAddr)dlsym(mC2DLibHandle, "c2dMapAddr");
     mC2DUnMapAddr = (LINK_c2dUnMapAddr)dlsym(mC2DLibHandle, "c2dUnMapAddr");
 
     if (!mC2DCreateSurface || !mC2DUpdateSurface || !mC2DReadSurface
         || !mC2DDraw || !mC2DFlush || !mC2DFinish || !mC2DWaitTimestamp
         || !mC2DDestroySurface || !mC2DMapAddr || !mC2DUnMapAddr) {
-        ALOGE("%s: dlsym ERROR. C2D is disabled.", __FUNCTION__);
+        ALOGE("%s: dlsym ERROR. C2D is disabled. mC2DCreateSurface[%p] mC2DUpdateSurface[%p] "
+              "mC2DReadSurface[%p] mC2DDraw[%p] mC2DFlush[%p] mC2DFinish[%p] mC2DWaitTimestamp[%p] "
+              "mC2DDestroySurface[%p] mC2DMapAddr[%p] mC2DUnMapAddr[%p]", __FUNCTION__,
+              mC2DCreateSurface, mC2DUpdateSurface, mC2DReadSurface, mC2DDraw, mC2DFlush, mC2DFinish,
+              mC2DWaitTimestamp, mC2DDestroySurface, mC2DMapAddr, mC2DUnMapAddr);
         enabled = false;
         return;
     }
