@@ -84,7 +84,7 @@ bool VendorExtension::setParamInt32(
 
 bool VendorExtension::setParamInt64(
         OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext, const char *paramKey,
-        OMX_S32 setInt64) const {
+        OMX_S64 setInt64) const {
     int paramIndex = indexOfParam(paramKey);
     if (!_isParamAccessTypeOK(ext, paramIndex, OMX_AndroidVendorValueInt64)) {
         return false;
@@ -120,7 +120,7 @@ bool VendorExtension::readParamInt32(
 
 bool VendorExtension::readParamInt64(
         OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext, const char *paramKey,
-        OMX_S32 *readInt64) const {
+        OMX_S64 *readInt64) const {
     int paramIndex = indexOfParam(paramKey);
     if (!_isParamAccessTypeOK(ext, paramIndex, OMX_AndroidVendorValueInt64)) {
         return false;
@@ -176,6 +176,18 @@ OMX_ERRORTYPE VendorExtension::isConfigValid(
     }
 
     return OMX_ErrorNone;
+}
+
+bool VendorExtension::isConfigKey(
+         OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext,
+         const char *paramKey) const {
+
+    bool retStatus = false;
+    if (!strncmp((char *)ext->cName, paramKey, OMX_MAX_STRINGNAME_SIZE)) {
+        retStatus = true;
+    }
+
+    return retStatus;
 }
 
 //static
