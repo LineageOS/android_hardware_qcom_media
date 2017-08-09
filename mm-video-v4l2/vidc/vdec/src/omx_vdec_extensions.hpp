@@ -35,6 +35,10 @@ void omx_vdec::init_vendor_extensions (VendorExtensionStore &store) {
     ADD_PARAM_END("enable", OMX_AndroidVendorValueInt32)
     ADD_EXTENSION("qti-ext-dec-dither", OMX_QTIIndexParamDitherControl, OMX_DirOutput)
     ADD_PARAM_END("control", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-dec-caps-vt-driver-version", OMX_QTIIndexParamCapabilitiesVTDriverVersion, OMX_DirOutput)
+    ADD_PARAM_END("number", OMX_AndroidVendorValueInt32)
+
 }
 
 OMX_ERRORTYPE omx_vdec::get_vendor_extension_config(
@@ -68,6 +72,11 @@ OMX_ERRORTYPE omx_vdec::get_vendor_extension_config(
             setStatus &= vExt.setParamInt32(ext, "control", m_dither_config);
             break;
         }
+        case OMX_QTIIndexParamCapabilitiesVTDriverVersion:
+        {
+            setStatus &= vExt.setParamInt32(ext, "number", 65536);
+            break;
+        }
         default:
         {
             return OMX_ErrorNotImplemented;
@@ -79,7 +88,7 @@ OMX_ERRORTYPE omx_vdec::get_vendor_extension_config(
 OMX_ERRORTYPE omx_vdec::set_vendor_extension_config(
                 OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext) {
 
-    ALOGI("set_vendor_extension_config");
+    DEBUG_PRINT_LOW("set_vendor_extension_config");
     if (ext->nIndex >= mVendorExtensionStore.size()) {
         DEBUG_PRINT_ERROR("unrecognized vendor extension index (%u) max(%u)",
                 ext->nIndex, mVendorExtensionStore.size());
@@ -147,6 +156,10 @@ OMX_ERRORTYPE omx_vdec::set_vendor_extension_config(
             if (err != OMX_ErrorNone) {
                 DEBUG_PRINT_ERROR("set_config: OMX_QTIIndexParamDitherControl failed !");
             }
+            break;
+        }
+        case OMX_QTIIndexParamCapabilitiesVTDriverVersion:
+        {
             break;
         }
         default:

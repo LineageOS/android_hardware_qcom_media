@@ -138,7 +138,7 @@ struct VendorExtension {
     bool setParamInt32(OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext, const char *paramKey,
             OMX_S32 setInt32) const;
     bool setParamInt64(OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext, const char *paramKey,
-            OMX_S32 setInt64) const;
+            OMX_S64 setInt64) const;
     bool setParamString(OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext, const char *paramKey,
             const char *setStr) const;
 
@@ -147,7 +147,7 @@ struct VendorExtension {
     bool readParamInt32(OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext, const char *paramKey,
             OMX_S32 *readInt32) const;
     bool readParamInt64(OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext, const char *paramKey,
-            OMX_S32 *readInt64) const;
+            OMX_S64 *readInt64) const;
     bool readParamInt64(OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext, const char *paramKey,
             char *readStr) const;
 
@@ -156,6 +156,9 @@ struct VendorExtension {
     //    for each param, check if key and type both match
     // Must be called to check whether config data provided with setConfig is valid
     OMX_ERRORTYPE isConfigValid(OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext) const;
+
+    // Compare the keys for correct configuration
+    bool isConfigKey(OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext, const char *paramKey) const;
 
     // utils
     static const char* typeString(OMX_ANDROID_VENDOR_VALUETYPE type);

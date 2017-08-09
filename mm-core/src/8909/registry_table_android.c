@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2014, The Linux Foundation. All rights reserved.
+Copyright (c) 2014, 2017, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -300,7 +300,7 @@ omx_core_cb_type core[] =
       "audio_encoder.amrnb"
     }
   },
-      {
+  {
     "OMX.qcom.audio.encoder.g711mlaw",
     NULL,   // Create instance function
     // Unique instance handle
@@ -395,32 +395,6 @@ omx_core_cb_type core[] =
     "libOmxAmrDec.so",
     {
       "audio_decoder.amrnb"
-    }
-  },
- {
-    "OMX.qcom.audio.decoder.aac",
-    NULL,   // Create instance function
-    // Unique instance handle
-    {
-      NULL
-    },
-    NULL,   // Shared object library handle
-    "libOmxAacDec.so",
-    {
-      "audio_decoder.aac"
-    }
-  },
- {
-    "OMX.qcom.audio.decoder.multiaac",
-    NULL,   // Create instance function
-    // Unique instance handle
-    {
-      NULL
-    },
-    NULL,   // Shared object library handle
-    "libOmxAacDec.so",
-    {
-      "audio_decoder.aac"
     }
   },
   {
@@ -524,6 +498,48 @@ omx_core_cb_type core[] =
     "libOmxFlacDecSw.so",
     {
       "audio_decoder.flac"
+    }
+  },
+  {
+    "OMX.QCOM.CUST.COMP.START",
+    NULL, //Create instance function
+    //Unique instance handle
+    {
+      NULL,
+      NULL,
+      NULL,
+      NULL
+    },
+    NULL,
+    NULL,   // Shared object library handle
+    {
+      NULL
+    }
+  },
+  {
+    "OMX.qcom.audio.decoder.aac",
+    NULL,   // Create instance function
+    // Unique instance handle
+    {
+      NULL
+    },
+    NULL,   // Shared object library handle
+    "libOmxAacDec.so",
+    {
+      "audio_decoder.aac"
+    }
+  },
+  {
+    "OMX.qcom.audio.decoder.multiaac",
+    NULL,   // Create instance function
+    // Unique instance handle
+    {
+      NULL
+    },
+    NULL,   // Shared object library handle
+    "libOmxAacDec.so",
+    {
+      "audio_decoder.aac"
     }
   }
 };
