@@ -278,6 +278,17 @@ int32_t C2DColorConverter::getDummySurfaceDef(ColorConvertFormat format,
 {
     void *surfaceDef = NULL;
     C2D_SURFACE_TYPE hostSurfaceType;
+    C2D_STATUS ret;
+
+    if (isSource){
+        if (mSrcSurface) {
+            mC2DDestroySurface(mSrcSurface);
+            mSrcSurface = 0;
+        }
+    } else if (mDstSurface) {
+        mC2DDestroySurface(mDstSurface);
+        mDstSurface = 0;
+    }
 
     if (isYUVSurface(format)) {
         C2D_YUV_SURFACE_DEF **surfaceYUVDef = (C2D_YUV_SURFACE_DEF **)
@@ -342,14 +353,14 @@ int32_t C2DColorConverter::getDummySurfaceDef(ColorConvertFormat format,
         hostSurfaceType = C2D_SURFACE_RGB_HOST;
     }
 
-    mC2DCreateSurface(isSource ? &mSrcSurface :
+    ret = mC2DCreateSurface(isSource ? &mSrcSurface :
                       &mDstSurface,
                       isSource ? C2D_SOURCE : C2D_TARGET,
                       (C2D_SURFACE_TYPE)(hostSurfaceType
                                          | C2D_SURFACE_WITH_PHYS
                                          | C2D_SURFACE_WITH_PHYS_DUMMY),
                       surfaceDef);
-    return 0;
+    return (int32_t) ret;
 }
 
 C2D_STATUS C2DColorConverter::updateYUVSurfaceDef(uint8_t *gpuAddr, void *base,
