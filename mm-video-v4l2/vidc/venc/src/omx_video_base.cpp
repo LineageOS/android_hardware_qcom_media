@@ -4934,7 +4934,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
     if (buffer->nFilledLen > 0 && handle) {
 
         ColorConvertFormat c2dSrcFmt = RGBA8888;
-        ColorConvertFormat c2dDestFmt = NV12_UBWC;
+        ColorConvertFormat c2dDestFmt = NV12_128m;
 
         ColorMapping::const_iterator found =
              mMapPixelFormat2Converter.find(handle->format);
