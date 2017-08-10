@@ -47,9 +47,9 @@
 
 #include "omx_swvdec_utils.h"
 
-#define OMX_SWVDEC_LOGLEVEL_DEFAULT 2 ///< default OMX SwVdec loglevel
+#define OMX_SWVDEC_LOGLEVEL_DEFAULT 3 ///< default OMX SwVdec loglevel
 
-unsigned int g_omx_swvdec_logmask = (1 << OMX_SWVDEC_LOGLEVEL_DEFAULT) - 1;
+unsigned int g_omx_swvdec_logmask = OMX_SWVDEC_LOGLEVEL_DEFAULT;
                               ///< global OMX SwVdec logmask variable definition
 
 /**
@@ -61,13 +61,13 @@ void omx_swvdec_log_init()
 
     char property_value[PROPERTY_VALUE_MAX] = {0};
 
-    if (property_get("omx_swvdec.log.level", property_value, NULL))
+    if (property_get("vendor.vidc.debug.level", property_value, NULL))
     {
         omx_swvdec_loglevel = atoi(property_value);
 
-        if (omx_swvdec_loglevel > 3)
+        if (omx_swvdec_loglevel > 7)
         {
-            omx_swvdec_loglevel = 3;
+            omx_swvdec_loglevel = 7;
         }
 
         if (omx_swvdec_loglevel < 0)
@@ -76,15 +76,15 @@ void omx_swvdec_log_init()
         }
 
         OMX_SWVDEC_LOG_HIGH(
-            "omx_swvdec.log.level: %d; %s",
+            "vendor.vidc.debug.level: %d; %s",
             omx_swvdec_loglevel,
-            (omx_swvdec_loglevel == 3) ? "error, high, & low logs" :
-            ((omx_swvdec_loglevel == 2) ? "error & high logs" :
+            (omx_swvdec_loglevel == 7) ? "error, high, & low logs" :
+            ((omx_swvdec_loglevel == 3) ? "error & high logs" :
              ((omx_swvdec_loglevel == 1) ? "error logs" :
               "no logs")));
     }
 
-    g_omx_swvdec_logmask = (unsigned int) ((1 << omx_swvdec_loglevel) - 1);
+    g_omx_swvdec_logmask = omx_swvdec_loglevel;
 }
 
 /**
@@ -184,35 +184,35 @@ omx_swvdec_diag::omx_swvdec_diag():
         snprintf(time_string, sizeof(time_string), "19700101T000000");
     }
 
-    // default ip filename: "/data/misc/media/omx_swvdec_YYYYmmddTHHMMSS_ip.bin"
+    // default ip filename: "/data/vendor/media/omx_swvdec_YYYYmmddTHHMMSS_ip.bin"
     snprintf(filename_ip,
              sizeof(filename_ip),
              "%s/omx_swvdec_%s_ip.bin",
              DIAG_FILE_PATH,
              time_string);
 
-    // default op filename: "/data/misc/media/omx_swvdec_YYYYmmddTHHMMSS_op.yuv"
+    // default op filename: "/data/vendor/media/omx_swvdec_YYYYmmddTHHMMSS_op.yuv"
     snprintf(filename_op,
              sizeof(filename_op),
              "%s/omx_swvdec_%s_op.yuv",
              DIAG_FILE_PATH,
              time_string);
 
-    if (property_get("omx_swvdec.dump.ip", property_value, NULL))
+    if (property_get("vendor.vidc.dec.log.in", property_value, NULL))
     {
         m_dump_ip = atoi(property_value);
 
-        OMX_SWVDEC_LOG_HIGH("omx_swvdec.dump.ip: %d", m_dump_ip);
+        OMX_SWVDEC_LOG_HIGH("vendor.vidc.dec.log.in: %d", m_dump_ip);
     }
 
-    if (property_get("omx_swvdec.dump.op", property_value, NULL))
+    if (property_get("vendor.vidc.dec.log.out", property_value, NULL))
     {
         m_dump_op = atoi(property_value);
 
-        OMX_SWVDEC_LOG_HIGH("omx_swvdec.dump.op: %d", m_dump_op);
+        OMX_SWVDEC_LOG_HIGH("vendor.vidc.dec.log.out: %d", m_dump_op);
     }
 
-    if (m_dump_ip && property_get("omx_swvdec.filename.ip",
+    if (m_dump_ip && property_get("vendor.vidc.dec.log.filename.ip",
                                   property_value,
                                   filename_ip) && (strlen(property_value) > 0 ) )
     {
@@ -228,7 +228,7 @@ omx_swvdec_diag::omx_swvdec_diag():
         else
         {
             strlcpy(m_filename_ip, property_value,m_filename_ip_size);
-            OMX_SWVDEC_LOG_HIGH("omx_swvdec.filename.ip: %s", m_filename_ip);
+            OMX_SWVDEC_LOG_HIGH("vendor.vidc.dec.log.filename.ip: %s", m_filename_ip);
             if ((m_file_ip = fopen(m_filename_ip, "wb")) == NULL)
             {
                 OMX_SWVDEC_LOG_ERROR("cannot open input file '%s' logging erro is : %d",
@@ -237,7 +237,7 @@ omx_swvdec_diag::omx_swvdec_diag():
         }
     }
 
-    if (m_dump_op && property_get("omx_swvdec.filename.op",
+    if (m_dump_op && property_get("vendor.vidc.dec.log.filename.op",
                                   property_value,
                                   filename_op) && (strlen(property_value) > 0 ))
     {
@@ -253,7 +253,7 @@ omx_swvdec_diag::omx_swvdec_diag():
         else
         {
             strlcpy(m_filename_op, property_value,m_filename_op_size);
-            OMX_SWVDEC_LOG_HIGH("omx_swvdec.filename.op: %s", m_filename_op);
+            OMX_SWVDEC_LOG_HIGH("vendor.vidc.dec.log.filename.op: %s", m_filename_op);
             if ((m_file_op = fopen(m_filename_op, "wb")) == NULL)
             {
                 OMX_SWVDEC_LOG_ERROR("cannot open output file '%s' logging error : %d",
