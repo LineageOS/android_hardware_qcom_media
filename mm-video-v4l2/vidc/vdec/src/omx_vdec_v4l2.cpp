@@ -13299,11 +13299,6 @@ void omx_vdec::perf_control::request_cores(int frame_duration_us)
 
 bool omx_vdec::perf_control::load_lib()
 {
-
-#ifndef PERF_ENABLE
-    return false;
-#endif
-
     char perf_lib_path[PROPERTY_VALUE_MAX] = {0};
     if (m_perf_lib)
         return true;
