@@ -348,6 +348,10 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     m_sErrorCorrection.bEnableRVLC = OMX_FALSE;
     m_sErrorCorrection.nResynchMarkerSpacing = 0;
 
+    OMX_INIT_STRUCT(&m_sSliceSpacing, QOMX_VIDEO_PARAM_SLICE_SPACING_TYPE);
+    m_sSliceSpacing.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
+    m_sSliceSpacing.eSliceMode = QOMX_SLICEMODE_MB_COUNT;
+
     OMX_INIT_STRUCT(&m_sIntraRefresh, OMX_VIDEO_PARAM_INTRAREFRESHTYPE);
     m_sIntraRefresh.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
     m_sIntraRefresh.eRefreshMode = OMX_VIDEO_IntraRefreshMax;
@@ -581,6 +585,15 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
 
     OMX_INIT_STRUCT(&m_sParamAVTimerTimestampMode, QOMX_ENABLETYPE);
     m_sParamAVTimerTimestampMode.bEnable = OMX_FALSE;
+
+    OMX_INIT_STRUCT(&m_sConfigQP, OMX_SKYPE_VIDEO_CONFIG_QP);
+    m_sConfigQP.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
+    m_sConfigQP.nQP = 30;
+
+    OMX_INIT_STRUCT(&m_sParamControlInputQueue , QOMX_ENABLETYPE);
+    m_sParamControlInputQueue.bEnable = OMX_FALSE;
+
+    OMX_INIT_STRUCT(&m_sConfigInputTrigTS, OMX_TIME_CONFIG_TIMESTAMPTYPE);
 
     m_state                   = OMX_StateLoaded;
     m_sExtraData = 0;
@@ -1313,6 +1326,19 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 memcpy(&m_sErrorCorrection,pParam, sizeof(m_sErrorCorrection));
                 break;
             }
+        case OMX_QcomIndexParamVideoSliceSpacing:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_VIDEO_PARAM_SLICE_SPACING_TYPE);
+                DEBUG_PRINT_LOW("OMX_QcomIndexParamVideoSliceSpacing");
+                QOMX_VIDEO_PARAM_SLICE_SPACING_TYPE* pParam =
+                    (QOMX_VIDEO_PARAM_SLICE_SPACING_TYPE*)paramData;
+                if (!handle->venc_set_param(paramData, (OMX_INDEXTYPE)OMX_QcomIndexParamVideoSliceSpacing)) {
+                    DEBUG_PRINT_ERROR("ERROR: Request for setting slice spacing failed");
+                    return OMX_ErrorUnsupportedSetting;
+                }
+                memcpy(&m_sSliceSpacing, pParam, sizeof(m_sSliceSpacing));
+                break;
+            }
         case OMX_IndexParamVideoIntraRefresh:
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_INTRAREFRESHTYPE);
@@ -1806,7 +1832,12 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 memcpy(&m_sParamAVTimerTimestampMode, paramData, sizeof(QOMX_ENABLETYPE));
                 break;
             }
-        case OMX_IndexParamVideoSliceFMO:
+        case OMX_QcomIndexParamVencControlInputQueue:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
+                memcpy(&m_sParamControlInputQueue, paramData, sizeof(QOMX_ENABLETYPE));
+                break;
+            }
         default:
             {
                 DEBUG_PRINT_ERROR("ERROR: Setparameter: unknown param %d", paramIndex);
@@ -2233,16 +2264,20 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
             {
                 OMX_TIME_CONFIG_TIMESTAMPTYPE* pParam =
                     (OMX_TIME_CONFIG_TIMESTAMPTYPE*) configData;
-                pthread_mutex_lock(&timestamp.m_lock);
-                timestamp.m_TimeStamp = (OMX_U64)pParam->nTimestamp;
-                DEBUG_PRINT_LOW("Buffer = %p, Timestamp = %llu", timestamp.pending_buffer, (OMX_U64)pParam->nTimestamp);
-                if (timestamp.is_buffer_pending && (OMX_U64)timestamp.pending_buffer->nTimeStamp == timestamp.m_TimeStamp) {
-                    DEBUG_PRINT_INFO("Queueing back pending buffer %p", timestamp.pending_buffer);
-                    this->post_event((unsigned long)hComp,(unsigned long)timestamp.pending_buffer,m_input_msg_id);
-                    timestamp.pending_buffer = NULL;
-                    timestamp.is_buffer_pending = false;
-                }
-                pthread_mutex_unlock(&timestamp.m_lock);
+                unsigned long buf;
+                unsigned long p2;
+                unsigned long bufTime;
+
+                pthread_mutex_lock(&m_TimeStampInfo.m_lock);
+                m_TimeStampInfo.ts = (OMX_S64)pParam->nTimestamp;
+                    while (m_TimeStampInfo.deferred_inbufq.m_size &&
+                          !(m_TimeStampInfo.deferred_inbufq.get_q_msg_type() > m_TimeStampInfo.ts)) {
+                        m_TimeStampInfo.deferred_inbufq.pop_entry(&buf,&p2,&bufTime);
+                        DEBUG_PRINT_INFO("Queueing back pending buffer %lu timestamp %lu", buf, bufTime);
+                        this->post_event((unsigned long)hComp, (unsigned long)buf, m_input_msg_id);
+                   }
+                pthread_mutex_unlock(&m_TimeStampInfo.m_lock);
+                memcpy(&m_sConfigInputTrigTS, pParam, sizeof(m_sConfigInputTrigTS));
                 break;
             }
 #ifdef SUPPORT_CONFIG_INTRA_REFRESH
@@ -2458,17 +2493,18 @@ bool omx_venc::dev_buffer_ready_to_queue(OMX_BUFFERHEADERTYPE *buffer)
 {
     bool bRet = true;
 
-    pthread_mutex_lock(&timestamp.m_lock);
+    pthread_mutex_lock(&m_TimeStampInfo.m_lock);
 
-    if ((!m_slowLatencyMode.bLowLatencyMode) || ((OMX_U64)buffer->nTimeStamp == (OMX_U64)timestamp.m_TimeStamp)) {
+    if ((!m_sParamControlInputQueue.bEnable) ||
+        ((OMX_S64)buffer->nTimeStamp <= (OMX_S64)m_TimeStampInfo.ts)) {
         DEBUG_PRINT_LOW("ETB is ready to be queued");
     } else {
-        DEBUG_PRINT_INFO("ETB is defeffed due to timeStamp mismatch");
-        timestamp.is_buffer_pending = true;
-        timestamp.pending_buffer = buffer;
+        DEBUG_PRINT_INFO("ETB is deferred due to timeStamp mismatch  buf_ts %lld timestamp.ts %lld",
+                        (OMX_S64)buffer->nTimeStamp, (OMX_S64)m_TimeStampInfo.ts);
+        m_TimeStampInfo.deferred_inbufq.insert_entry((unsigned long)buffer, 0, buffer->nTimeStamp);
         bRet = false;
     }
-    pthread_mutex_unlock(&timestamp.m_lock);
+    pthread_mutex_unlock(&m_TimeStampInfo.m_lock);
     return bRet;
 }
 
@@ -2700,10 +2736,17 @@ int omx_venc::async_message_process (void *context, void* message)
                     OMX_COMPONENT_GENERATE_EBD);
             break;
         case VEN_MSG_OUTPUT_BUFFER_DONE:
+        {
             omxhdr = (OMX_BUFFERHEADERTYPE*)m_sVenc_msg->buf.clientdata;
+            OMX_U32 bufIndex = (OMX_U32)(omxhdr - omx->m_out_mem_ptr);
 
             if ( (omxhdr != NULL) &&
-                    ((OMX_U32)(omxhdr - omx->m_out_mem_ptr)  < omx->m_sOutPortDef.nBufferCountActual)) {
+                    (bufIndex  < omx->m_sOutPortDef.nBufferCountActual)) {
+                auto_lock l(omx->m_buf_lock);
+                if (BITMASK_ABSENT(&(omx->m_out_bm_count), bufIndex)) {
+                    DEBUG_PRINT_ERROR("Recieved FBD for buffer that is already freed !");
+                    break;
+                }
                 if (!omx->is_secure_session() && (m_sVenc_msg->buf.len <=  omxhdr->nAllocLen)) {
                     omxhdr->nFilledLen = m_sVenc_msg->buf.len;
                     omxhdr->nOffset = m_sVenc_msg->buf.offset;
@@ -2746,6 +2789,7 @@ int omx_venc::async_message_process (void *context, void* message)
             omx->post_event ((unsigned long)omxhdr,m_sVenc_msg->statuscode,
                     OMX_COMPONENT_GENERATE_FBD);
             break;
+        }
         case VEN_MSG_NEED_OUTPUT_BUFFER:
             //TBD what action needs to be done here??
             break;

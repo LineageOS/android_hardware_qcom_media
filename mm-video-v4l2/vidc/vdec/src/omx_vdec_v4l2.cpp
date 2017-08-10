@@ -8155,6 +8155,7 @@ OMX_ERRORTYPE  omx_vdec::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
             }
 
             if (release_output_done()) {
+                free_extradata();
                 break;
             }
         }
@@ -12556,11 +12557,13 @@ omx_vdec::allocate_color_convert_buf::allocate_color_convert_buf()
 {
     enabled = false;
     omx = NULL;
+    m_c2d_init_success = false;
     init_members();
     ColorFormat = OMX_COLOR_FormatMax;
     dest_format = YCbCr420P;
     m_c2d_width = 0;
     m_c2d_height = 0;
+    m_c2d_output_format = 0;
 }
 
 void omx_vdec::allocate_color_convert_buf::set_vdec_client(void *client)
@@ -12573,7 +12576,7 @@ void omx_vdec::allocate_color_convert_buf::init_members()
     allocated_count = 0;
     buffer_size_req = 0;
     buffer_alignment_req = 0;
-    m_c2d_width = m_c2d_height = 0;
+    m_c2d_width = m_c2d_height = m_c2d_output_format = 0;
     memset(m_platform_list_client,0,sizeof(m_platform_list_client));
     memset(m_platform_entry_client,0,sizeof(m_platform_entry_client));
     memset(m_pmem_info_client,0,sizeof(m_pmem_info_client));
@@ -12583,6 +12586,16 @@ void omx_vdec::allocate_color_convert_buf::init_members()
 #endif
     for (int i = 0; i < MAX_COUNT; i++)
         pmem_fd[i] = -1;
+
+    if (m_c2d_init_success)
+        return;
+
+    if (!c2d.init()) {
+        DEBUG_PRINT_ERROR("c2d init failed");
+    } else {
+        DEBUG_PRINT_HIGH("c2d init success ");
+        m_c2d_init_success = true;
+    }
 }
 
 omx_vdec::allocate_color_convert_buf::~allocate_color_convert_buf()
@@ -12606,6 +12619,15 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
         DEBUG_PRINT_HIGH("No color conversion required");
         return status;
     }
+
+    bool skip_get_buffersize = (omx->drv_ctx.video_resolution.frame_height == m_c2d_height &&
+               omx->drv_ctx.video_resolution.frame_width == m_c2d_width && m_c2d_output_format == dest_format);
+
+    if (skip_get_buffersize) {
+        DEBUG_PRINT_HIGH("Skip querying c2d buffer size as resolution and format not changed");
+        return status;
+    }
+
     pthread_mutex_lock(&omx->c_lock);
 
     memset(&fmt, 0x0, sizeof(struct v4l2_format));
@@ -12659,6 +12681,7 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
             buffer_size_req = destination_size;
             m_c2d_height = height;
             m_c2d_width = width;
+            m_c2d_output_format = dest_format;
         }
     }
 fail_update_buf_req:
@@ -12675,6 +12698,10 @@ bool omx_vdec::allocate_color_convert_buf::set_color_format(
     if (!omx) {
         DEBUG_PRINT_ERROR("Invalid client in color convert");
         return false;
+    }
+    if (!m_c2d_init_success) {
+        DEBUG_PRINT_HIGH("c2d is not initialized");
+        return status;
     }
     pthread_mutex_lock(&omx->c_lock);
     if (omx->drv_ctx.output_format == VDEC_YUV_FORMAT_NV12)
@@ -12717,18 +12744,18 @@ bool omx_vdec::allocate_color_convert_buf::set_color_format(
             ColorFormat = dest_color_format;
             dest_format = (dest_color_format == OMX_COLOR_FormatYUV420Planar) ?
                     YCbCr420P : YCbCr420SP;
-            if (enabled)
-                c2d.destroy();
-            enabled = false;
-            if (!c2d.init()) {
-                DEBUG_PRINT_ERROR("open failed for c2d");
-                status = false;
-            } else
+            c2d.close();
+            status = c2d.open(omx->drv_ctx.video_resolution.frame_height,
+                       omx->drv_ctx.video_resolution.frame_width,
+                       NV12_128m,dest_format);
+            if (status)
                 enabled = true;
+            else
+                DEBUG_PRINT_ERROR("C2D open failed ");
         }
     } else {
         if (enabled)
-            c2d.destroy();
+            c2d.close();
         enabled = false;
     }
     pthread_mutex_unlock(&omx->c_lock);
@@ -13135,10 +13162,12 @@ void omx_vdec::buf_ref_remove()
                         out_dynamic_list[i].mapped_size);
         }
 
-         DEBUG_PRINT_LOW("buf_ref_remove: [REMOVED] fd = %u ref_count = %u",
-                 (unsigned int)out_dynamic_list[i].fd, (unsigned int)out_dynamic_list[i].ref_count);
-         close(out_dynamic_list[i].dup_fd);
-         out_dynamic_list[i].dup_fd = -1;
+        if (out_dynamic_list[i].dup_fd > -1) {
+            DEBUG_PRINT_LOW("buf_ref_remove: [REMOVED] fd = %u ref_count = %u",
+                    (unsigned int)out_dynamic_list[i].fd, (unsigned int)out_dynamic_list[i].ref_count);
+            close(out_dynamic_list[i].dup_fd);
+            out_dynamic_list[i].dup_fd = -1;
+        }
     }
     pthread_mutex_unlock(&m_lock);
 

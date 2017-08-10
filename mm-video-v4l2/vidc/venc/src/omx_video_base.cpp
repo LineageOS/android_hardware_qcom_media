@@ -309,8 +309,9 @@ omx_video::omx_video():
 
     mUsesColorConversion = false;
     pthread_mutex_init(&m_lock, NULL);
-    pthread_mutex_init(&timestamp.m_lock, NULL);
-    timestamp.is_buffer_pending = false;
+    pthread_mutex_init(&m_TimeStampInfo.m_lock, NULL);
+    m_TimeStampInfo.deferred_inbufq.m_size=0;
+    m_TimeStampInfo.deferred_inbufq.m_read = m_TimeStampInfo.deferred_inbufq.m_write = 0;
     sem_init(&m_cmd_lock,0,0);
     DEBUG_PRINT_LOW("meta_buffer_hdr = %p", meta_buffer_hdr);
 
@@ -320,6 +321,8 @@ omx_video::omx_video():
     property_get("ro.board.platform", platform_name, "0");
     strlcpy(m_platform, platform_name, sizeof(m_platform));
 #endif
+
+    pthread_mutex_init(&m_buf_lock, NULL);
 }
 
 
@@ -357,10 +360,12 @@ omx_video::~omx_video()
         pthread_join(async_thread_id,NULL);
 #endif
     pthread_mutex_destroy(&m_lock);
-    pthread_mutex_destroy(&timestamp.m_lock);
+    pthread_mutex_destroy(&m_TimeStampInfo.m_lock);
     sem_destroy(&m_cmd_lock);
     DEBUG_PRINT_HIGH("m_etb_count = %" PRIu64 ", m_fbd_count = %" PRIu64, m_etb_count,
             m_fbd_count);
+
+    pthread_mutex_destroy(&m_buf_lock);
     DEBUG_PRINT_HIGH("omx_video: Destructor exit");
     DEBUG_PRINT_HIGH("Exiting OMX Video Encoder ...");
 }
@@ -1344,6 +1349,10 @@ bool omx_video::execute_input_flush(void)
             m_pCallbacks.EmptyBufferDone(&m_cmp,m_app_data,(OMX_BUFFERHEADERTYPE *)p2);
         }
     }
+    while (m_TimeStampInfo.deferred_inbufq.m_size) {
+        m_TimeStampInfo.deferred_inbufq.pop_entry(&p1,&p2,&ident);
+        m_pCallbacks.EmptyBufferDone(&m_cmp,m_app_data,(OMX_BUFFERHEADERTYPE *)p1);
+    }
     if (mUseProxyColorFormat) {
         if (psource_frame) {
             m_pCallbacks.EmptyBufferDone(&m_cmp,m_app_data,psource_frame);
@@ -1407,6 +1416,12 @@ bool omx_video::execute_flush_all(void)
             m_pCallbacks.EmptyBufferDone(&m_cmp,m_app_data,(OMX_BUFFERHEADERTYPE *)p2);
         }
     }
+
+    while (m_TimeStampInfo.deferred_inbufq.m_size) {
+        m_TimeStampInfo.deferred_inbufq.pop_entry(&p1,&p2,&ident);
+        m_pCallbacks.EmptyBufferDone(&m_cmp,m_app_data,(OMX_BUFFERHEADERTYPE *)p1);
+    }
+
     if(mUseProxyColorFormat) {
         if(psource_frame) {
             m_pCallbacks.EmptyBufferDone(&m_cmp,m_app_data,psource_frame);
@@ -2742,6 +2757,7 @@ OMX_ERRORTYPE  omx_video::use_output_buffer(
         return OMX_ErrorBadParameter;
     }
 
+    auto_lock l(m_buf_lock);
     if (!m_out_mem_ptr) {
         output_use_buffer = true;
         int nBufHdrSize        = 0;
@@ -3069,24 +3085,23 @@ OMX_ERRORTYPE omx_video::free_output_buffer(OMX_BUFFERHEADERTYPE *bufferHdr)
             if(!secure_session) {
                 munmap (m_pOutput_pmem[index].buffer,
                         m_pOutput_pmem[index].size);
-            } else {
+                close (m_pOutput_pmem[index].fd);
+            } else if (m_pOutput_pmem[index].buffer) {
+                native_handle_t *handle;
                 if (allocate_native_handle) {
-                    native_handle_t *handle = NULL;
                     handle = (native_handle_t *)m_pOutput_pmem[index].buffer;
-                    native_handle_close(handle);
-                    native_handle_delete(handle);
                 } else {
-                    char *data = (char*) m_pOutput_pmem[index].buffer;
-                    native_handle_t *handle = NULL;
-                    memcpy(&handle, data + sizeof(OMX_U32), sizeof(native_handle_t*));
-                    native_handle_delete(handle);
+                    handle = ((output_metabuffer *)m_pOutput_pmem[index].buffer)->nh;
                     free(m_pOutput_pmem[index].buffer);
                 }
+                native_handle_close(handle);
+                native_handle_delete(handle);
             }
-            close (m_pOutput_pmem[index].fd);
 #ifdef USE_ION
             free_ion_memory(&m_pOutput_ion[index]);
 #endif
+
+            m_pOutput_pmem[index].buffer = NULL;
             m_pOutput_pmem[index].fd = -1;
         } else if ( m_pOutput_pmem[index].fd > 0 && (output_use_buffer == true
                     && m_use_output_pmem == OMX_FALSE)) {
@@ -3707,6 +3722,7 @@ OMX_ERRORTYPE  omx_video::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
                 nPortIndex, (unsigned int)m_sOutPortDef.nBufferCountActual);
         if (nPortIndex < m_sOutPortDef.nBufferCountActual &&
                 BITMASK_PRESENT(&m_out_bm_count, nPortIndex)) {
+            auto_lock l(m_buf_lock);
             // Clear the bit associated with it.
             BITMASK_CLEAR(&m_out_bm_count,nPortIndex);
             m_sOutPortDef.bPopulated = OMX_FALSE;

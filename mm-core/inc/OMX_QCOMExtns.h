@@ -644,6 +644,33 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     OMX_QTIIndexParamEnableAVTimerTimestamps = 0x7F000071,
 
     OMX_QcomIndexParamAUDelimiter = 0x7F000072,
+
+    /* OMX.QTI.index.config.video.getdsmode */
+    OMX_QTIIndexConfigGetDSMode = 0x7F000073,
+
+    /* Controlled Input queue mode for frame accurate configuration */
+    OMX_QcomIndexParamVencControlInputQueue = 0x7F000074,
+
+    /**
+    *  Configure Slice Header Spacing
+    *  This index will be used to configure both byte based
+    *  and MB based slice header spacing. This is the preferred
+    *  alternative to OMX_IndexParamVideoAvc (for MB based)
+    *  and OMX_IndexParamVideoErrorCorrection (for byte based)
+    */
+    OMX_QcomIndexParamVideoSliceSpacing = 0x7F000075,
+
+    /* Capabilities */
+    OMX_QTIIndexParamCapabilitiesVTDriverVersion = 0x7F100000,
+
+    OMX_QTIIndexParamCapabilitiesMaxTemporalLayers = 0x7F100001,
+
+    OMX_QTIIndexParamCapabilitiesMaxLTR = 0x7F100002,
+
+    OMX_QTIIndexParamCapabilitiesMaxDownScaleRatio= 0x7F100003,
+
+    OMX_QTIIndexParamCapabilitiesRotationSupport= 0x7F100004,
+
 };
 
 /**
@@ -1809,6 +1836,7 @@ typedef struct QOMX_VIDEO_CUSTOM_BUFFERSIZE {
 #define OMX_QTI_INDEX_CONFIG_VIDEO_BLURINFO "OMX.QTI.index.config.BlurInfo"
 #define OMX_QTI_INDEX_PARAM_VIDEO_CLIENT_EXTRADATA "OMX.QTI.index.param.client.extradata"
 #define OMX_QTI_INDEX_CONFIG_COLOR_ASPECTS "OMX.google.android.index.describeColorAspects"
+#define OMX_QTI_INDEX_CONFIG_VIDEO_GETDSMODE "OMX.QTI.index.config.video.getdsmode"
 
 typedef enum {
     QOMX_VIDEO_FRAME_PACKING_CHECKERBOARD = 0,
@@ -2197,6 +2225,20 @@ typedef struct QOMX_VIDEO_DITHER_CONTROL {
     OMX_U32 nPortIndex;
     QOMX_VIDEO_DITHERTYPE eDitherType;
 } QOMX_VIDEO_DITHER_CONTROL;
+
+typedef enum QOMX_VIDEO_SLICEMODETYPE {
+    QOMX_SLICEMODE_DISABLE = 0,
+    QOMX_SLICEMODE_MB_COUNT = 0x01,
+    QOMX_SLICEMODE_BYTE_COUNT = 0x02,
+} QOMX_VIDEO_SLICEMODETYPE;
+
+typedef struct QOMX_VIDEO_PARAM_SLICE_SPACING_TYPE {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    QOMX_VIDEO_SLICEMODETYPE eSliceMode;
+    OMX_U32 nSliceSize;
+} QOMX_VIDEO_PARAM_SLICE_SPACING_TYPE;
 
 #ifdef __cplusplus
 }
