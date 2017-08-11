@@ -1397,7 +1397,6 @@ typedef enum OMX_QCOM_EXTRADATATYPE
     OMX_ExtraDataVQZipSEI  =               0x7F000010,
     OMX_ExtraDataDisplayColourSEI =        0x7F000011,
     OMX_ExtraDataLightLevelSEI =           0x7F000012,
-    OMX_ExtraDataEncoderOverrideQPInfo =   0x7F000013,
     OMX_ExtraDataOutputCropInfo =          0x7F000014,
 } OMX_QCOM_EXTRADATATYPE;
 
