@@ -1065,15 +1065,9 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool split_opb_dpb_with_same_colo
     }
 
     if (tp10_enable && !dither_enable) {
-        /* When thumbnails enabled, always output in NV12 UBWC */
-        if(drv_ctx.idr_only_decoding) {
-            drv_ctx.output_format = VDEC_YUV_FORMAT_NV12_UBWC;
-            capture_capability = V4L2_PIX_FMT_NV12_UBWC;
-        } else {
-            drv_ctx.output_format = VDEC_YUV_FORMAT_NV12_TP10_UBWC;
-            capture_capability = V4L2_PIX_FMT_NV12_TP10_UBWC;
+        drv_ctx.output_format = VDEC_YUV_FORMAT_NV12_TP10_UBWC;
+        capture_capability = V4L2_PIX_FMT_NV12_TP10_UBWC;
 
-        }
         memset(&fmt, 0x0, sizeof(struct v4l2_format));
         fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
         rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_FMT, &fmt);
@@ -1148,7 +1142,7 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool split_opb_dpb_with_same_colo
                 eRet = set_dpb(false, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_NONE);
             }
         } else if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10) {
-            if (dither_enable || drv_ctx.idr_only_decoding) {
+            if (dither_enable) {
                 //split DPB-OPB
                 //DPB -> TP10UBWC, OPB -> UBWC
                 eRet = set_dpb(true, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_TP10_UBWC);
@@ -10918,7 +10912,7 @@ omx_vdec::allocate_color_convert_buf::allocate_color_convert_buf()
     mMapOutput2Convert.insert( {
             {VDEC_YUV_FORMAT_NV12, NV12_128m},
             {VDEC_YUV_FORMAT_NV12_UBWC, NV12_UBWC},
-            {VDEC_YUV_FORMAT_NV12_TP10_UBWC, NV12_TP10},
+            {VDEC_YUV_FORMAT_NV12_TP10_UBWC, TP10_UBWC},
         });
 }
 
