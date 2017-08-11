@@ -639,6 +639,26 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     /* OMX.QTI.index.config.video.getdsmode */
     OMX_QTIIndexConfigGetDSMode = 0x7F000075,
 
+    /*
+     * Client configured profile and level for sufficiency
+     * This index will be set by the OMX client which will
+     * specify profile and level of the clip upto which
+     * buffer sufficiency should be considered. if the profile
+     * or level of the clip exceeds the client specified
+     * profile and level via this index, sufficient buffer
+     * events will be converted to insufficient.
+     * Structure to be used for this extension is:
+     * typedef struct OMX_VIDEO_PARAM_PROFILELEVELTYPE {
+     * OMX_U32 nSize;
+     * OMX_VERSIONTYPE nVersion;
+     * OMX_U32 nPortIndex;
+     * OMX_U32 eProfile;
+     * OMX_U32 eLevel;
+     * OMX_U32 nProfileIndex; // index not needed
+     * } OMX_VIDEO_PARAM_PROFILELEVELTYPE;
+     */
+    OMX_QTIIndexParamClientConfiguredProfileLevelForSufficiency = 0x7F000076,
+
     /* Capabilities */
     OMX_QTIIndexParamCapabilitiesVTDriverVersion = 0x7F100000,
 

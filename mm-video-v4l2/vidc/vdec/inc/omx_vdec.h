@@ -682,6 +682,15 @@ class omx_vdec: public qc_omx_component
         };
         enum color_space_type m_color_space;
 
+        /*
+         * Class variables to track client set profile and level
+         * via OMX_QTIIndexParamClientConfiguredMaxProfileLevelForSufficiency
+         */
+        bool mClientSessionForSufficiency;
+        OMX_U32 mClientSetProfile;
+        OMX_U32 mClientSetLevel;
+        inline int get_session_codec_type();
+
     private:
         // Bit Positions
         enum flags_bit_positions {

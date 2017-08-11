@@ -291,6 +291,9 @@ void* async_message_thread (void *input)
                 struct vdec_msginfo vdec_msg;
                 DEBUG_PRINT_HIGH("VIDC Port Reconfig received sufficient");
                 unsigned int *ptr = (unsigned int *)(void *)dqevent.u.data;
+                int tmp_profile = 0;
+                int tmp_level = 0;
+                int codec = omx->get_session_codec_type();
                 event_fields_changed |= (omx->dpb_bit_depth != (int)ptr[2]);
                 event_fields_changed |= (omx->m_progressive != (int)ptr[3]);
                 tmp_color_space = (ptr[4] == MSM_VIDC_BT2020 ? (omx_vdec::BT2020):
@@ -306,8 +309,17 @@ void* async_message_thread (void *input)
 
                  event_fields_changed |= (omx->drv_ctx.video_resolution.frame_height != ptr[7]);
                  event_fields_changed |= (omx->drv_ctx.video_resolution.frame_width != ptr[8]);
+                 profile_level_converter::convert_v4l2_profile_to_omx(codec, ptr[9], &tmp_profile);
+                 profile_level_converter::convert_v4l2_level_to_omx(codec, ptr[10], &tmp_level);
 
-                if (event_fields_changed) {
+                 if ((codec == V4L2_PIX_FMT_H264) ||
+                     (codec  == V4L2_PIX_FMT_HEVC)) {
+                     event_fields_changed |= (omx->mClientSessionForSufficiency &&
+                                              ((tmp_profile != (int)omx->mClientSetProfile) ||
+                                               (tmp_level > (int)omx->mClientSetLevel)));
+                 }
+
+                 if (event_fields_changed) {
                     DEBUG_PRINT_HIGH("VIDC Port Reconfig Old Resolution(H,W) = (%d,%d) New Resolution(H,W) = (%d,%d))",
                                      omx->drv_ctx.video_resolution.frame_height,
                                      omx->drv_ctx.video_resolution.frame_width,
@@ -319,6 +331,11 @@ void* async_message_thread (void *input)
                     DEBUG_PRINT_HIGH("VIDC Port Reconfig Old colorSpace = %s New colorspace = %s",
                                      (omx->m_color_space == omx_vdec::BT2020 ? "BT2020": "EXCEPT_BT2020"),
                                      (tmp_color_space == omx_vdec::BT2020 ? "BT2020": "EXCEPT_BT2020"));
+                    DEBUG_PRINT_HIGH("Client Session for sufficiency feature is %s", omx->mClientSessionForSufficiency ? "enabled": "disabled");
+                    DEBUG_PRINT_HIGH("VIDC Port Reconfig Client (Profile,Level) = (%d,%d) bitstream(Profile,Level) = (%d,%d))",
+                                     omx->mClientSetProfile,
+                                     omx->mClientSetLevel,
+                                     tmp_profile, tmp_level);
                     omx->dpb_bit_depth = ptr[2];
                     omx->m_progressive = ptr[3];
                     omx->m_color_space = (ptr[4] == MSM_VIDC_BT2020 ? (omx_vdec::BT2020):
@@ -633,6 +650,10 @@ bool is_platform_tp10capture_supported()
     return true;
 }
 
+inline int omx_vdec::get_session_codec_type()
+{
+    return output_capability;
+}
 /* ======================================================================
    FUNCTION
    omx_vdec::omx_vdec
@@ -855,6 +876,9 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     init_color_aspects_map();
 
     profile_level_converter::init();
+    mClientSessionForSufficiency = false;
+    mClientSetProfile = 0;
+    mClientSetLevel = 0;
 }
 
 static const int event_type[] = {
@@ -3806,6 +3830,17 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             eRet = OMX_ErrorNone;
             break;
         }
+        case OMX_QTIIndexParamClientConfiguredProfileLevelForSufficiency:
+        {
+            VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_PROFILELEVELTYPE);
+            DEBUG_PRINT_LOW("get_parameter: OMX_QTIIndexParamClientConfiguredProfileLevelForSufficiency");
+            OMX_VIDEO_PARAM_PROFILELEVELTYPE *pParam =
+                (OMX_VIDEO_PARAM_PROFILELEVELTYPE *) paramData;
+            pParam->eProfile = mClientSetProfile;
+            pParam->eLevel = mClientSetLevel;
+            eRet = OMX_ErrorNone;
+            break;
+        }
         default: {
                  DEBUG_PRINT_ERROR("get_parameter: unknown param %08x", paramIndex);
                  eRet =OMX_ErrorUnsupportedIndex;
@@ -4844,6 +4879,25 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             DEBUG_PRINT_LOW("set_parameter: Final Dither Config is: %d", m_dither_config);
             break;
         }
+        case OMX_QTIIndexParamClientConfiguredProfileLevelForSufficiency:
+        {
+            VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_PROFILELEVELTYPE);
+            DEBUG_PRINT_LOW("set_parameter: OMX_QTIIndexParamClientConfiguredProfileLevelForSufficiency");
+            OMX_VIDEO_PARAM_PROFILELEVELTYPE *pParam = (OMX_VIDEO_PARAM_PROFILELEVELTYPE*)paramData;
+
+            if ((output_capability != V4L2_PIX_FMT_H264) ||
+                (output_capability != V4L2_PIX_FMT_HEVC)) {
+                DEBUG_PRINT_ERROR("set_parameter: Unsupported codec for client configured profile and level");
+                eRet = OMX_ErrorBadParameter;
+            }
+
+            DEBUG_PRINT_LOW("set_parameter: Client set profile is: %d", pParam->eProfile);
+            DEBUG_PRINT_LOW("set_parameter: Client set level is: %d", pParam->eLevel);
+            mClientSessionForSufficiency = true;
+            mClientSetProfile = pParam->eProfile;
+            mClientSetLevel = pParam->eLevel;
+            break;
+        }
         default: {
                  DEBUG_PRINT_ERROR("Setparameter: unknown param %d", paramIndex);
                  eRet = OMX_ErrorUnsupportedIndex;
@@ -5281,7 +5335,9 @@ OMX_ERRORTYPE  omx_vdec::get_extension_index(OMX_IN OMX_HANDLETYPE      hComp,
         *indexType = (OMX_INDEXTYPE)OMX_QTIIndexConfigDescribeColorAspects;
     } else if (extn_equals(paramName, "OMX.google.android.index.describeHDRStaticInfo")) {
         *indexType = (OMX_INDEXTYPE)OMX_QTIIndexConfigDescribeHDRColorInfo;
-    } else {
+    } else if (extn_equals(paramName, "OMX.QTI.index.param.ClientConfiguredProfileLevel")) {
+        *indexType = (OMX_INDEXTYPE)OMX_QTIIndexParamClientConfiguredProfileLevelForSufficiency;
+    }else {
         DEBUG_PRINT_ERROR("Extension: %s not implemented", paramName);
         return OMX_ErrorNotImplemented;
     }
