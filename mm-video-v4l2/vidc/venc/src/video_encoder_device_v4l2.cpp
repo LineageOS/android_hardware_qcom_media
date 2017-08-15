@@ -175,23 +175,11 @@ venc_dev::venc_dev(class omx_venc *venc_class)
 #else
     is_gralloc_source_ubwc = 0;
 #endif
-
-    property_get("persist.vidc.enc.csc.enable", property_value, "0");
-    if(!(strncmp(property_value, "1", PROPERTY_VALUE_MAX)) ||
-            !(strncmp(property_value, "true", PROPERTY_VALUE_MAX))) {
-        is_csc_enabled = 1;
-    } else {
-        is_csc_enabled = 0;
-    }
+    // TODO: Support in XML
+    is_csc_enabled = 0;
 
 #ifdef _PQ_
-    property_get("vidc.enc.disable.pq", property_value, "0");
-    if(!(strncmp(property_value, "1", PROPERTY_VALUE_MAX)) ||
-        !(strncmp(property_value, "true", PROPERTY_VALUE_MAX))) {
-        m_pq.is_pq_force_disable = 1;
-    } else {
-        m_pq.is_pq_force_disable = 0;
-    }
+    m_pq.is_pq_force_disable = 0;
 #endif // _PQ_
 
      property_value[0] = '\0';
@@ -1261,8 +1249,6 @@ bool venc_dev::venc_open(OMX_U32 codec)
     char buffer[10];
 
     property_get("ro.board.platform", platform_name, "0");
-    property_get("vidc.enc.narrow.searchrange", property_value, "0");
-    enable_mv_narrow_searchrange = atoi(property_value);
 
     if (!strncmp(platform_name, "msm8610", 7)) {
         device_name = (OMX_STRING)"/dev/video/q6_enc";
