@@ -102,7 +102,7 @@ enum ColorConvertFormat {
     NV12_2K,
     NV12_128m,
     NV12_UBWC,
-    NV12_TP10,
+    TP10_UBWC,
     NO_COLOR_FORMAT
 };
 

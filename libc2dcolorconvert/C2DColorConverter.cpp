@@ -266,6 +266,7 @@ bool C2DColorConverter::isYUVSurface(ColorConvertFormat format)
         case NV12_2K:
         case NV12_128m:
         case NV12_UBWC:
+        case TP10_UBWC:
             return true;
         default:
             return false;
@@ -442,6 +443,8 @@ uint32_t C2DColorConverter::getC2DFormat(ColorConvertFormat format)
             return C2D_COLOR_FORMAT_420_YV12;
         case NV12_UBWC:
             return C2D_COLOR_FORMAT_420_NV12 | C2D_FORMAT_UBWC_COMPRESSED;
+        case TP10_UBWC:
+            return C2D_COLOR_FORMAT_420_TP10 | C2D_FORMAT_UBWC_COMPRESSED;
         default:
             ALOGW("%s: Format not supported , %d", __FUNCTION__, format);
             return -1;
@@ -472,6 +475,8 @@ size_t C2DColorConverter::calcStride(ColorConvertFormat format, size_t width)
             return ALIGN(width, ALIGN16);
         case NV12_UBWC:
             return VENUS_Y_STRIDE(COLOR_FMT_NV12_UBWC, width);
+        case TP10_UBWC:
+            return VENUS_Y_STRIDE(COLOR_FMT_NV12_BPP10_UBWC, width);
         default:
             ALOGW("%s: Format not supported , %d", __FUNCTION__, format);
             return 0;
@@ -501,6 +506,11 @@ size_t C2DColorConverter::calcYSize(ColorConvertFormat format, size_t width, siz
                     VENUS_Y_SCANLINES(COLOR_FMT_NV12_UBWC, height), ALIGN4K) +
                  ALIGN( VENUS_Y_META_STRIDE(COLOR_FMT_NV12_UBWC, width) *
                    VENUS_Y_META_SCANLINES(COLOR_FMT_NV12_UBWC, height), ALIGN4K);
+        case TP10_UBWC:
+            return ALIGN( VENUS_Y_STRIDE(COLOR_FMT_NV12_BPP10_UBWC, width) *
+                          VENUS_Y_SCANLINES(COLOR_FMT_NV12_BPP10_UBWC, height), ALIGN4K) +
+                ALIGN( VENUS_Y_META_STRIDE(COLOR_FMT_NV12_BPP10_UBWC, width) *
+                       VENUS_Y_META_SCANLINES(COLOR_FMT_NV12_BPP10_UBWC, height), ALIGN4K);
         default:
             ALOGW("%s: Format not supported , %d", __FUNCTION__, format);
             return 0;
@@ -568,6 +578,9 @@ size_t C2DColorConverter::calcSize(ColorConvertFormat format, size_t width, size
             break;
         case NV12_UBWC:
             size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12_UBWC, width, height);
+            break;
+        case TP10_UBWC:
+            size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12_BPP10_UBWC, width, height);
             break;
         default:
             ALOGW("%s: Format not supported , %d", __FUNCTION__, format);
@@ -674,6 +687,7 @@ size_t C2DColorConverter::calcLumaAlign(ColorConvertFormat format) {
         case NV12_128m:
           return 1;
         case NV12_UBWC:
+        case TP10_UBWC:
           return ALIGN4K;
         default:
           ALOGW("%s: unknown format (%d) passed for luma alignment number.",
@@ -691,6 +705,7 @@ size_t C2DColorConverter::calcSizeAlign(ColorConvertFormat format) {
         case NV12_2K:
         case NV12_128m:
         case NV12_UBWC:
+        case TP10_UBWC:
           return ALIGN4K;
         default:
           ALOGW("%s: unknown format (%d) passed for size alignment number",
@@ -719,6 +734,7 @@ C2DBytesPerPixel C2DColorConverter::calcBytesPerPixel(ColorConvertFormat format)
         case NV12_2K:
         case NV12_128m:
         case NV12_UBWC:
+        case TP10_UBWC:
             bpp.numerator = 3;
             bpp.denominator = 2;
             break;
