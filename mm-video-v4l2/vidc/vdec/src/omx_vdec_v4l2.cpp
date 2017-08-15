@@ -981,24 +981,6 @@ omx_vdec::~omx_vdec()
     DEBUG_PRINT_INFO("Exit OMX vdec Destructor: fd=%d",drv_ctx.video_driver_fd);
 }
 
-int release_buffers(omx_vdec* obj, enum vdec_buffer buffer_type)
-{
-    struct v4l2_requestbuffers bufreq;
-    int rc = 0;
-    if (buffer_type == VDEC_BUFFER_TYPE_OUTPUT) {
-        bufreq.memory = V4L2_MEMORY_USERPTR;
-        bufreq.count = 0;
-        bufreq.type=V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-        rc = ioctl(obj->drv_ctx.video_driver_fd,VIDIOC_REQBUFS, &bufreq);
-    } else if(buffer_type == VDEC_BUFFER_TYPE_INPUT) {
-        bufreq.memory = V4L2_MEMORY_USERPTR;
-        bufreq.count = 0;
-        bufreq.type=V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
-        rc = ioctl(obj->drv_ctx.video_driver_fd,VIDIOC_REQBUFS, &bufreq);
-    }
-    return rc;
-}
-
 OMX_ERRORTYPE omx_vdec::set_dpb(bool is_split_mode, int dpb_color_format)
 {
     int rc = 0;
@@ -1463,8 +1445,6 @@ void omx_vdec::process_event_cb(void *ctxt)
                                 if (p2 == OMX_CORE_OUTPUT_PORT_INDEX) {
                                     OMX_ERRORTYPE eRet = OMX_ErrorNone;
                                     pThis->stream_off(OMX_CORE_OUTPUT_PORT_INDEX);
-                                    if (release_buffers(pThis, VDEC_BUFFER_TYPE_OUTPUT))
-                                        DEBUG_PRINT_HIGH("Failed to release output buffers");
                                     OMX_ERRORTYPE eRet1 = pThis->get_buffer_req(&pThis->drv_ctx.op_buf);
                                     pThis->in_reconfig = false;
                                     if (eRet !=  OMX_ErrorNone) {
@@ -6629,8 +6609,6 @@ OMX_ERRORTYPE  omx_vdec::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
                 free_input_buffer(buffer);
             }
             m_inp_bPopulated = OMX_FALSE;
-            if(release_input_done())
-                release_buffers(this, VDEC_BUFFER_TYPE_INPUT);
             /*Free the Buffer Header*/
             if (release_input_done()) {
                 DEBUG_PRINT_HIGH("ALL input buffers are freed/released");
@@ -6660,9 +6638,6 @@ OMX_ERRORTYPE  omx_vdec::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
             m_out_bPopulated = OMX_FALSE;
             client_buffers.free_output_buffer (buffer);
 
-            if(release_output_done()) {
-                release_buffers(this, VDEC_BUFFER_TYPE_OUTPUT);
-            }
             if (release_output_done()) {
                 free_output_buffer_header();
             }
@@ -8609,6 +8584,7 @@ int omx_vdec::stream_off(OMX_U32 port)
     enum v4l2_buf_type btype;
     int rc = 0;
     enum v4l2_ports v4l2_port = OUTPUT_PORT;
+    struct v4l2_requestbuffers bufreq;
 
     if (port == OMX_CORE_INPUT_PORT_INDEX) {
         btype = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
@@ -8643,6 +8619,18 @@ int omx_vdec::stream_off(OMX_U32 port)
         streaming[v4l2_port] = false;
     }
 
+    if (port == OMX_CORE_INPUT_PORT_INDEX) {
+        bufreq.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
+    } else if (port == OMX_CORE_OUTPUT_PORT_INDEX) {
+        bufreq.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+    }
+
+    bufreq.memory = V4L2_MEMORY_USERPTR;
+    bufreq.count = 0;
+    rc = ioctl(drv_ctx.video_driver_fd,VIDIOC_REQBUFS, &bufreq);
+    if (rc) {
+        DEBUG_PRINT_ERROR("Failed to release buffers on %d Port", v4l2_port);
+    }
     return rc;
 }
 
