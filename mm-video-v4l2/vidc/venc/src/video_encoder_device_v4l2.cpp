@@ -872,7 +872,10 @@ bool venc_dev::handle_output_extradata(void *buffer, int index)
     OMX_BUFFERHEADERTYPE *p_bufhdr = (OMX_BUFFERHEADERTYPE *) buffer;
     OMX_OTHER_EXTRADATATYPE *p_extra = NULL;
     OMX_OTHER_EXTRADATATYPE *p_clientextra = NULL;
-    if(venc_handle->m_sExtraData) {
+
+    if(venc_handle->m_client_output_extradata_mem_ptr && venc_handle->m_sExtraData
+        && venc_handle->m_client_out_extradata_info.getSize() >=
+        output_extradata_info.buffer_size) {
         p_clientextra = (OMX_OTHER_EXTRADATATYPE * )
             ((venc_handle->m_client_output_extradata_mem_ptr + index) ->pBuffer);
     }
