@@ -2101,14 +2101,13 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
         case OMX_IndexParamVideoIntraRefresh:
             {
                 DEBUG_PRINT_LOW("venc_set_param:OMX_IndexParamVideoIntraRefresh");
-                OMX_VIDEO_PARAM_INTRAREFRESHTYPE *intra_refresh =
+                OMX_VIDEO_PARAM_INTRAREFRESHTYPE *intra_refresh_param =
                     (OMX_VIDEO_PARAM_INTRAREFRESHTYPE *)paramData;
 
-                if (intra_refresh->nPortIndex == (OMX_U32) PORT_INDEX_OUT) {
-                    if (venc_set_intra_refresh(intra_refresh->eRefreshMode, intra_refresh->nCirMBs) == false) {
-                        DEBUG_PRINT_ERROR("ERROR: Setting Intra refresh failed");
-                        return false;
-                    }
+                if (intra_refresh_param->nPortIndex == (OMX_U32) PORT_INDEX_OUT) {
+                    intra_refresh.irmode     = intra_refresh_param->eRefreshMode;
+                    intra_refresh.mbcount    = intra_refresh_param->nCirMBs;
+                    intra_refresh.framecount = 0;
                 } else {
                     DEBUG_PRINT_ERROR("ERROR: Invalid Port Index for OMX_IndexParamVideoIntraRefresh");
                 }
@@ -2829,17 +2828,8 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
 
                 if (intra_refresh_period->nPortIndex == (OMX_U32) PORT_INDEX_OUT) {
                     intra_refresh.framecount = intra_refresh_period->nRefreshPeriod;
-                    OMX_U32 mb_size = 16;
-                    OMX_U32 num_mbs_per_frame = (ALIGN(m_sVenc_cfg.dvs_height, mb_size)/mb_size) * (ALIGN(m_sVenc_cfg.dvs_width, mb_size)/mb_size);
-                    OMX_U32 num_intra_refresh_mbs = 0;
-                    if (intra_refresh_period->nRefreshPeriod) {
-                        num_intra_refresh_mbs = ceil(num_mbs_per_frame / intra_refresh_period->nRefreshPeriod);
-                    }
-
-                    if (venc_set_intra_refresh(OMX_VIDEO_IntraRefreshRandom, num_intra_refresh_mbs) == false) {
-                        DEBUG_PRINT_ERROR("ERROR: Setting Intra refresh failed");
-                        return false;
-                    }
+                    intra_refresh.irmode     = OMX_VIDEO_IntraRefreshMax;
+                    intra_refresh.mbcount    = 0;
                 } else {
                     DEBUG_PRINT_ERROR("ERROR: Invalid Port Index for OMX_IndexConfigVideoIntraRefreshType");
                 }
@@ -4910,11 +4900,15 @@ bool venc_dev::venc_reconfigure_intra_refresh_period() {
         OMX_U32 num_intra_refresh_mbs = 0;
         num_intra_refresh_mbs = ceil(num_mbs_per_frame / intra_refresh.framecount);
 
-        if (venc_set_intra_refresh(OMX_VIDEO_IntraRefreshRandom, num_intra_refresh_mbs) == false) {
-            DEBUG_PRINT_ERROR("ERROR: Setting Intra refresh failed");
-            return false;
-        }
+        intra_refresh.irmode     = OMX_VIDEO_IntraRefreshRandom;
+        intra_refresh.mbcount    = num_intra_refresh_mbs;
     }
+
+    if (venc_set_intra_refresh() == false) {
+        DEBUG_PRINT_ERROR("ERROR: Setting Intra refresh failed");
+        return false;
+    }
+
     return true;
 }
 
@@ -5278,7 +5272,7 @@ bool venc_dev::venc_set_multislice_cfg(OMX_U32 nSlicemode, OMX_U32 nSlicesize)
     return status;
 }
 
-bool venc_dev::venc_set_intra_refresh(OMX_VIDEO_INTRAREFRESHTYPE ir_mode, OMX_U32 irMBs)
+bool venc_dev::venc_set_intra_refresh()
 {
     bool status = true;
     int rc;
@@ -5287,18 +5281,18 @@ bool venc_dev::venc_set_intra_refresh(OMX_VIDEO_INTRAREFRESHTYPE ir_mode, OMX_U3
     control_mbs.id    = V4L2_CID_MPEG_VIDC_VIDEO_IR_MBS;
     control_mbs.value = 0;
     // There is no disabled mode.  Disabled mode is indicated by a 0 count.
-    if (ir_mode == OMX_VIDEO_IntraRefreshMax || irMBs == 0) {
+    if (intra_refresh.irmode == OMX_VIDEO_IntraRefreshMax || intra_refresh.mbcount == 0) {
         control_mode.value = V4L2_CID_MPEG_VIDC_VIDEO_INTRA_REFRESH_NONE;
         return status;
-    } else if (ir_mode == OMX_VIDEO_IntraRefreshCyclic) {
+    } else if (intra_refresh.irmode == OMX_VIDEO_IntraRefreshCyclic) {
         control_mode.value = V4L2_CID_MPEG_VIDC_VIDEO_INTRA_REFRESH_CYCLIC;
-        control_mbs.value  = irMBs;
-    } else if (ir_mode == OMX_VIDEO_IntraRefreshRandom) {
+        control_mbs.value  = intra_refresh.mbcount;
+    } else if (intra_refresh.irmode == OMX_VIDEO_IntraRefreshRandom) {
         control_mode.value = V4L2_CID_MPEG_VIDC_VIDEO_INTRA_REFRESH_RANDOM;
-        control_mbs.value  = irMBs;
+        control_mbs.value  = intra_refresh.mbcount;
     } else {
         DEBUG_PRINT_ERROR("ERROR: Invalid IntraRefresh Parameters:"
-                " mb mode:%d", ir_mode);
+                " mb mode:%lu", intra_refresh.irmode);
         return false;
     }
 
