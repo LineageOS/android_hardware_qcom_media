@@ -3327,6 +3327,8 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
                              OMX_VIDEO_HEVCProfileMain10 };
     int mpeg2_profiles[2] = { OMX_VIDEO_MPEG2ProfileSimple,
                               OMX_VIDEO_MPEG2ProfileMain};
+    int vp9_profiles[2] = { OMX_VIDEO_VP9Profile0,
+                            OMX_VIDEO_VP9Profile2HDR};
 
     if (!profileLevelType)
         return OMX_ErrorBadParameter;
@@ -3337,9 +3339,11 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
     if (output_capability == V4L2_PIX_FMT_H264) {
         level_cap.id = V4L2_CID_MPEG_VIDEO_H264_LEVEL;
         profile_cap.id = V4L2_CID_MPEG_VIDEO_H264_PROFILE;
-    } else if (output_capability == V4L2_PIX_FMT_VP8 ||
-              output_capability == V4L2_PIX_FMT_VP9) {
+    } else if (output_capability == V4L2_PIX_FMT_VP8) {
         level_cap.id = V4L2_CID_MPEG_VIDC_VIDEO_VP8_PROFILE_LEVEL;
+    } else if (output_capability == V4L2_PIX_FMT_VP9) {
+        level_cap.id = V4L2_CID_MPEG_VIDC_VIDEO_VP9_LEVEL;
+        profile_cap.id = V4L2_CID_MPEG_VIDC_VIDEO_VP9_PROFILE;
     } else if (output_capability == V4L2_PIX_FMT_HEVC) {
         level_cap.id = V4L2_CID_MPEG_VIDC_VIDEO_HEVC_TIER_LEVEL;
         profile_cap.id = V4L2_CID_MPEG_VIDC_VIDEO_HEVC_PROFILE;
@@ -3385,8 +3389,7 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
                                           (unsigned int)profileLevelType->nProfileIndex);
             return OMX_ErrorNoMore;
         }
-    } else if (output_capability == V4L2_PIX_FMT_VP8 ||
-               output_capability == V4L2_PIX_FMT_VP9) {
+    } else if (output_capability == V4L2_PIX_FMT_VP8) {
         if (profileLevelType->nProfileIndex == 0) {
             profileLevelType->eProfile = OMX_VIDEO_VP8ProfileMain;
         } else {
@@ -3396,6 +3399,14 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
         }
         /* Driver has no notion of VP8 profile. Only one profile is supported.  Return this */
         return OMX_ErrorNone;
+    } else if (output_capability == V4L2_PIX_FMT_VP9) {
+        if (profileLevelType->nProfileIndex < (sizeof(vp9_profiles)/sizeof(int))) {
+            profileLevelType->eProfile = vp9_profiles[profileLevelType->nProfileIndex];
+        } else {
+            DEBUG_PRINT_LOW("VP9: get_parameter: OMX_IndexParamVideoProfileLevelQuerySupported nProfileIndex ret NoMore %u",
+                                          (unsigned int)profileLevelType->nProfileIndex);
+            return OMX_ErrorNoMore;
+        }
     } else if (output_capability == V4L2_PIX_FMT_HEVC) {
         if (profileLevelType->nProfileIndex < (sizeof(hevc_profiles)/sizeof(int))) {
             profileLevelType->eProfile =  hevc_profiles[profileLevelType->nProfileIndex];
