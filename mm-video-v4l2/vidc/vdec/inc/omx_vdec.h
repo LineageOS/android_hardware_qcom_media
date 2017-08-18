@@ -340,6 +340,8 @@ struct extradata_info {
 struct prefetch_info {
     size_t pf_size;
     OMX_U32 pf_skip_count;
+    OMX_U32 size_limit;
+    OMX_U32 res_limit;
     bool no_more_pf;
 };
 
