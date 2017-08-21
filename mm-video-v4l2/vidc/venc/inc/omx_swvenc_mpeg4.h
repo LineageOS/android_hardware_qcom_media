@@ -141,6 +141,9 @@ class omx_venc: public omx_video
                     OMX_VIDEO_ANDROID_TEMPORALLAYERINGPATTERNTYPE */*SupportedPattern*/) {
             return false;
         }
+        OMX_ERRORTYPE dev_get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVELTYPE */*profileLevelType*/) {
+            return OMX_ErrorNone;
+        }
         bool dev_is_video_session_supported(OMX_U32 width, OMX_U32 height);
         bool dev_color_align(OMX_BUFFERHEADERTYPE *buffer, OMX_U32 width,
                         OMX_U32 height);

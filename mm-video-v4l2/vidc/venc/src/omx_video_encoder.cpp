@@ -2184,6 +2184,11 @@ bool omx_venc::dev_get_temporal_layer_caps(OMX_U32 *nMaxLayers,
     return handle->venc_get_temporal_layer_caps(nMaxLayers, nMaxBLayers, eSupportedPattern);
 }
 
+OMX_ERRORTYPE omx_venc::dev_get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVELTYPE *profileLevelType)
+{
+    return handle->venc_get_supported_profile_level(profileLevelType);
+}
+
 bool omx_venc::dev_loaded_start()
 {
     return handle->venc_loaded_start();

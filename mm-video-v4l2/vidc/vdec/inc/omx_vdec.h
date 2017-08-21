@@ -1341,6 +1341,7 @@ class omx_vdec: public qc_omx_component
         void convert_hdr_info_to_metadata(HDRStaticInfo& hdr_info, ColorMetaData &color_mdata);
         void get_preferred_color_aspects(ColorAspects& preferredColorAspects);
         void get_preferred_hdr_info(HDRStaticInfo& preferredHDRInfo);
+        bool vdec_query_cap(struct v4l2_queryctrl &cap);
 };
 
 enum instance_state {
