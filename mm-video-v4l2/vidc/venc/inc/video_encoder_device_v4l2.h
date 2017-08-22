@@ -476,7 +476,7 @@ class venc_dev
         bool venc_set_multislice_cfg(OMX_U32 slicemode, OMX_U32 slicesize);
         bool venc_set_entropy_config(OMX_BOOL enable, OMX_U32 i_cabac_level);
         bool venc_set_inloop_filter(OMX_VIDEO_AVCLOOPFILTERTYPE loop_filter);
-        bool venc_set_intra_refresh (OMX_VIDEO_INTRAREFRESHTYPE intrarefresh, OMX_U32 irMBs);
+        bool venc_set_intra_refresh ();
         bool venc_set_error_resilience(OMX_VIDEO_PARAM_ERRORCORRECTIONTYPE* error_resilience);
         bool venc_set_voptiming_cfg(OMX_U32 nTimeIncRes);
         void venc_config_print();
