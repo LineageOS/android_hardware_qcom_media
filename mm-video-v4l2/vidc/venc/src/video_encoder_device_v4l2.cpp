@@ -6476,6 +6476,11 @@ bool venc_dev::venc_convert_abs2cum_bitrate(QOMX_EXTNINDEX_VIDEO_HYBRID_HP_MODE 
         cumulativeBitrate += pHybrid->nTemporalLayerBitrateRatio[i];
     }
 
+    if (cumulativeBitrate == 0) {
+        temporal_settings.bBitrateRatiosSpecified = OMX_FALSE;
+        return true;
+    }
+
     DEBUG_PRINT_LOW("TemporalLayer: Cumulative bitrate is: %u", cumulativeBitrate);
     for (i = 0; i < temporal_settings.nPLayerCountActual; i++) {
         temporal_settings.nBitrateRatios[i] = ((pHybrid->nTemporalLayerBitrateRatio[i] * 100)/cumulativeBitrate) + cumulativeRatio;
