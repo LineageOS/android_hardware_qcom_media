@@ -356,6 +356,7 @@ class venc_dev
                         unsigned long inputformat);
         int venc_extradata_log_buffers(char *buffer_addr);
         bool venc_set_bitrate_type(OMX_U32 type);
+        bool venc_get_hevc_profile(OMX_U32* profile);
 
 #ifdef _VQZIP_
         class venc_dev_vqzip
