@@ -182,10 +182,11 @@ int hypv_ioctl(int fd, int cmd, void *data)
         if (fd_index >= MAX_HVFE_HANDLE_STORAGE) {
             DEBUG_PRINT_ERROR("invalid fd_index=%d", fd_index);
             rc = -1;
+        } else {
+            rc = video_fe_ioctl(g_hvfe_handle_storage[fd_index], cmd, data);
+            DEBUG_PRINT_INFO("hyp ioctl: fd=%d, fd_index=%d, cmd=0x%x, data=0x%p, rc =%d",
+                              fd, fd_index, cmd, data, rc);
         }
-        rc = video_fe_ioctl(g_hvfe_handle_storage[fd_index], cmd, data);
-        DEBUG_PRINT_INFO("hyp ioctl: fd=%d, fd_index=%d, cmd=0x%x, data=0x%p, rc =%d",
-                          fd, fd_index, cmd, data, rc);
     } else {
         DEBUG_PRINT_ERROR("native ioctl: fd=%d, cmd=0x%x, data=0x%p", fd, cmd, data);
         rc = ioctl(fd, cmd, data);
