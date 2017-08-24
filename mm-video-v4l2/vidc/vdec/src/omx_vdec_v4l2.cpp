@@ -10738,9 +10738,11 @@ OMX_ERRORTYPE omx_vdec::allocate_output_headers()
         drv_ctx.ptr_respbuffer = (struct vdec_output_frameinfo  *)\
                      calloc (sizeof (struct vdec_output_frameinfo),
                              drv_ctx.op_buf.actualcount);
-        if (!drv_ctx.ptr_outputbuffer || !drv_ctx.ptr_respbuffer) {
-            DEBUG_PRINT_ERROR("Failed to alloc drv_ctx.ptr_outputbuffer or drv_ctx.ptr_respbuffer");
-            free(pPtr);
+        if (!pPtr || !drv_ctx.ptr_outputbuffer || !drv_ctx.ptr_respbuffer) {
+            DEBUG_PRINT_ERROR("allocate_output_headers: allocation failed");
+            free(pPtr); pPtr = NULL;
+            free(drv_ctx.ptr_outputbuffer); drv_ctx.ptr_outputbuffer = NULL;
+            free(drv_ctx.ptr_respbuffer); drv_ctx.ptr_respbuffer = NULL;
             return OMX_ErrorInsufficientResources;
         }
 
@@ -10749,7 +10751,9 @@ OMX_ERRORTYPE omx_vdec::allocate_output_headers()
                       calloc (sizeof(struct vdec_ion),drv_ctx.op_buf.actualcount);
         if (!drv_ctx.op_buf_ion_info) {
             DEBUG_PRINT_ERROR("Failed to alloc drv_ctx.op_buf_ion_info");
-            free(pPtr);
+            free(pPtr); pPtr = NULL;
+            free(drv_ctx.ptr_outputbuffer); drv_ctx.ptr_outputbuffer = NULL;
+            free(drv_ctx.ptr_respbuffer); drv_ctx.ptr_respbuffer = NULL;
             return OMX_ErrorInsufficientResources;
         }
 #endif
