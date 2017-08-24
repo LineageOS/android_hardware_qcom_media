@@ -49,6 +49,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #include <qdMetaData.h>
+#include <color_metadata.h>
 #include "PlatformConfig.h"
 
 #define ATRACE_TAG ATRACE_TAG_VIDEO
@@ -85,6 +86,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define VENC_BFRAME_MAX_WIDTH       1920
 #define VENC_BFRAME_MAX_HEIGHT      1088
 
+#undef LOG_TAG
+#define LOG_TAG "OMX-VENC: venc_dev"
 //constructor
 venc_dev::venc_dev(class omx_venc *venc_class)
 {
@@ -3718,12 +3721,13 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                     }
 
                     if (!streaming[OUTPUT_PORT]) {
-                        int color_space = 0;
+                        ColorMetaData colorData= {};
                         // Moment of truth... actual colorspace is known here..
-                        ColorSpace_t colorSpace = ITU_R_601;
-                        if (getMetaData(handle, GET_COLOR_SPACE, &colorSpace) == 0) {
-                            DEBUG_PRINT_INFO("ENC_CONFIG: gralloc ColorSpace = %d (601=%d 601_FR=%d 709=%d)",
-                                    colorSpace, ITU_R_601, ITU_R_601_FR, ITU_R_709);
+                        if (getMetaData(handle, GET_COLOR_METADATA, &colorData) == 0) {
+                            DEBUG_PRINT_INFO("ENC_CONFIG: gralloc Color MetaData colorPrimaries=%d colorRange=%d "
+                                             "transfer=%d matrixcoefficients=%d",
+                                             colorData.colorPrimaries, colorData.range,
+                                             colorData.transfer, colorData.matrixCoefficients);
                         }
 
                         struct v4l2_format fmt;
@@ -3739,7 +3743,11 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                             // Disregard the Colorspace in gralloc-handle in case of RGB and use
                             //   [a] 601 for non-UBWC case : C2D output is (apparently) 601-LR
                             //   [b] 601 for UBWC case     : Venus can convert to 601-LR or FR. use LR for now.
-                            colorSpace = ITU_R_601;
+                            //set colormetadata corresponding to ITU_R_601;
+                            colorData.colorPrimaries =  ColorPrimaries_BT601_6_525;
+                            colorData.range = Range_Limited;
+                            colorData.transfer = Transfer_SMPTE_170M;
+                            colorData.matrixCoefficients = MatrixCoEff_BT601_6_525;
                             m_sVenc_cfg.inputformat = isUBWC ? V4L2_PIX_FMT_RGBA8888_UBWC : V4L2_PIX_FMT_RGB32;
                             DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = RGBA8888 %s", isUBWC ? "UBWC" : "Linear");
                         } else if (handle->format == QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m) {
@@ -3747,60 +3755,20 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                             DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = NV12 Linear");
                         }
 
-                        // If device recommendation (persist.vidc.enc.csc.enable) is to use 709, force CSC
-                        if (colorSpace == ITU_R_601_FR && is_csc_enabled) {
+                        // If CSC is enabled, then set control with colorspace from gralloc metadata
+                        if (is_csc_enabled) {
                             struct v4l2_control control;
                             control.id = V4L2_CID_MPEG_VIDC_VIDEO_VPE_CSC;
                             control.value = V4L2_CID_MPEG_VIDC_VIDEO_VPE_CSC_ENABLE;
                             if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
-                                DEBUG_PRINT_ERROR("venc_empty_buf: Failed to set VPE CSC for 601_to_709");
-                            } else {
-                                DEBUG_PRINT_INFO("venc_empty_buf: Will convert 601-FR to 709");
-                                colorSpace = ITU_R_709;
+                                DEBUG_PRINT_ERROR("venc_empty_buf: Failed to set VPE CSC");
                             }
                         }
 
-                        msm_vidc_h264_color_primaries_values primary;
-                        msm_vidc_h264_transfer_chars_values transfer;
-                        msm_vidc_h264_matrix_coeff_values matrix;
-                        OMX_U32 range;
-
-                        switch (colorSpace) {
-                            case ITU_R_601_FR:
-                            {
-                                primary = MSM_VIDC_BT601_6_525;
-                                range = 1; // full
-                                transfer = MSM_VIDC_TRANSFER_601_6_525;
-                                matrix = MSM_VIDC_MATRIX_601_6_525;
-
-                                fmt.fmt.pix_mp.colorspace = V4L2_COLORSPACE_470_SYSTEM_BG;
-                                break;
-                            }
-                            case ITU_R_709:
-                            {
-                                primary = MSM_VIDC_BT709_5;
-                                range = 0; // limited
-                                transfer = MSM_VIDC_TRANSFER_BT709_5;
-                                matrix = MSM_VIDC_MATRIX_BT_709_5;
-
-                                fmt.fmt.pix_mp.colorspace = V4L2_COLORSPACE_REC709;
-                                break;
-                            }
-                            default:
-                            {
-                                // 601 or something else ? assume 601
-                                primary = MSM_VIDC_BT601_6_625;
-                                range = 0; //limited
-                                transfer = MSM_VIDC_TRANSFER_601_6_625;
-                                matrix = MSM_VIDC_MATRIX_601_6_625;
-
-                                fmt.fmt.pix_mp.colorspace = V4L2_COLORSPACE_470_SYSTEM_BG;
-                                break;
-                            }
-                        }
-                        DEBUG_PRINT_INFO("ENC_CONFIG: selected ColorSpace = %d (601=%d 601_FR=%d 709=%d)",
-                                    colorSpace, ITU_R_601, ITU_R_601_FR, ITU_R_709);
-                        venc_set_colorspace(primary, range, transfer, matrix);
+                        /* Enum values from gralloc ColorMetaData matches with the driver values
+                           as it is standard compliant */
+                        venc_set_colorspace(colorData.colorPrimaries, colorData.range,
+                                            colorData.transfer, colorData.matrixCoefficients);
 
                         fmt.fmt.pix_mp.pixelformat = m_sVenc_cfg.inputformat;
                         fmt.fmt.pix_mp.height = m_sVenc_cfg.input_height;
