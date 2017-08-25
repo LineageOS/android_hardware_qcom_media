@@ -11177,9 +11177,9 @@ OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::set_buffer_req(
                 buffer_size, expectedSize);
         return OMX_ErrorBadParameter;
     }
-    if (actual_count < omx->drv_ctx.op_buf.actualcount) {
+    if (actual_count < omx->drv_ctx.op_buf.mincount) {
         DEBUG_PRINT_ERROR("OP Requirements: Client count(%u) insufficient v/s requested(%u)",
-                actual_count, omx->drv_ctx.op_buf.actualcount);
+                actual_count, omx->drv_ctx.op_buf.mincount);
         return OMX_ErrorBadParameter;
     }
 
@@ -11198,10 +11198,7 @@ OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::set_buffer_req(
         }
     }
 
-    if (actual_count > omx->drv_ctx.op_buf.actualcount) {
-        omx->drv_ctx.op_buf.actualcount = actual_count;
-    }
-
+    omx->drv_ctx.op_buf.actualcount = actual_count;
     omx->drv_ctx.extradata_info.count = omx->drv_ctx.op_buf.actualcount;
     omx->drv_ctx.extradata_info.size = omx->drv_ctx.extradata_info.count *
             omx->drv_ctx.extradata_info.buffer_size;
