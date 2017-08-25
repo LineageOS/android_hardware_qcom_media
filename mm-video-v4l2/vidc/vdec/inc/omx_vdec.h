@@ -645,7 +645,6 @@ class omx_vdec: public qc_omx_component
                 OMX_U32              port,
                 OMX_PTR              appData,
                 void *               eglImage);
-        int get_capture_capability() {return capture_capability;};
         void complete_pending_buffer_done_cbs();
         struct video_driver_context drv_ctx;
         int m_poll_efd;
@@ -661,7 +660,7 @@ class omx_vdec: public qc_omx_component
         void buf_ref_remove();
         OMX_BUFFERHEADERTYPE* get_omx_output_buffer_header(int index);
         OMX_ERRORTYPE set_dpb(bool is_split_mode, int dpb_color_format);
-        OMX_ERRORTYPE decide_dpb_buffer_mode(bool split_opb_dpb_with_same_color_fmt);
+        OMX_ERRORTYPE decide_dpb_buffer_mode(bool is_downscalar_enabled);
         int dpb_bit_depth;
         bool async_thread_force_stop;
         volatile bool message_thread_stop;
@@ -1158,7 +1157,7 @@ class omx_vdec: public qc_omx_component
         OMX_QCOM_EXTRADATA_FRAMEINFO *m_extradata;
         OMX_OTHER_EXTRADATATYPE *m_other_extradata;
         bool codec_config_flag;
-        int capture_capability;
+        uint32_t capture_capability;
         int output_capability;
         bool streaming[MAX_PORT];
         OMX_FRAMESIZETYPE framesize;

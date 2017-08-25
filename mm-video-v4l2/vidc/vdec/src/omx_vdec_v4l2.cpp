@@ -270,15 +270,6 @@ void* async_message_thread (void *input)
                 omx->m_color_space = (ptr[4] == MSM_VIDC_BT2020 ? (omx_vdec::BT2020):
                                       (omx_vdec:: EXCEPT_BT2020));
                 DEBUG_PRINT_HIGH("VIDC Port Reconfig ColorSpace - %d", omx->m_color_space);
-
-
-                if (omx->get_capture_capability() == V4L2_PIX_FMT_NV12 &&
-                    !omx->m_progressive) {
-                    DEBUG_PRINT_ERROR("Hardware does not support interlace with NV12 color format.");
-                    vdec_msg.msgcode = VDEC_MSG_EVT_HW_ERROR;
-                    vdec_msg.status_code = VDEC_S_EFATAL;
-                }
-
                 if (omx->async_message_process(input,&vdec_msg) < 0) {
                     DEBUG_PRINT_HIGH("async_message_thread Exited");
                     break;
@@ -341,17 +332,10 @@ void* async_message_thread (void *input)
                     omx->m_color_space = (ptr[4] == MSM_VIDC_BT2020 ? (omx_vdec::BT2020):
                                        (omx_vdec:: EXCEPT_BT2020));
                     send_msg = true;
-                    if (omx->get_capture_capability() == V4L2_PIX_FMT_NV12 &&
-                        !omx->m_progressive) {
-                        DEBUG_PRINT_ERROR("Hardware does not support interlace with NV12 color format.");
-                        vdec_msg.msgcode = VDEC_MSG_EVT_HW_ERROR;
-                        vdec_msg.status_code = VDEC_S_EFATAL;
-                    } else {
-                        vdec_msg.msgcode=VDEC_MSG_EVT_CONFIG_CHANGED;
-                        vdec_msg.status_code=VDEC_S_SUCCESS;
-                        vdec_msg.msgdata.output_frame.picsize.frame_height = ptr[0];
-                        vdec_msg.msgdata.output_frame.picsize.frame_width = ptr[1];
-                    }
+                    vdec_msg.msgcode=VDEC_MSG_EVT_CONFIG_CHANGED;
+                    vdec_msg.status_code=VDEC_S_SUCCESS;
+                    vdec_msg.msgdata.output_frame.picsize.frame_height = ptr[0];
+                    vdec_msg.msgdata.output_frame.picsize.frame_width = ptr[1];
 
                 } else {
                     struct v4l2_decoder_cmd dec;
@@ -1035,17 +1019,31 @@ OMX_ERRORTYPE omx_vdec::set_dpb(bool is_split_mode, int dpb_color_format)
     return OMX_ErrorNone;
 }
 
-
-OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool split_opb_dpb_with_same_color_fmt)
+OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool is_downscalar_enabled)
 {
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
     struct v4l2_format fmt;
     int rc = 0;
-    bool cpu_access = (capture_capability != V4L2_PIX_FMT_NV12_UBWC) &&
-        capture_capability != V4L2_PIX_FMT_NV12_TP10_UBWC;
-    bool tp10_enable = !cpu_access &&
-        dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10;
-    bool dither_enable = true;
+
+    // Default is Combined Mode
+    bool enable_split = false;
+    int dpb_color_format = V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_NONE;
+
+    bool is_client_dest_format_non_ubwc = (
+                     capture_capability != V4L2_PIX_FMT_NV12_UBWC &&
+                     capture_capability != V4L2_PIX_FMT_NV12_TP10_UBWC);
+    bool dither_enable = false;
+    bool capability_changed = false;
+
+    // Check the component for its valid current state
+    if (!BITMASK_PRESENT(&m_flags ,OMX_COMPONENT_IDLE_PENDING) &&
+        !BITMASK_PRESENT(&m_flags, OMX_COMPONENT_OUTPUT_ENABLE_PENDING)) {
+        DEBUG_PRINT_LOW("Invalid state to decide on dpb-opb split");
+        return OMX_ErrorNone;
+    }
+
+    // Downscalar is not supported
+    is_downscalar_enabled = false;
 
     switch (m_dither_config) {
     case DITHER_DISABLE:
@@ -1061,99 +1059,64 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool split_opb_dpb_with_same_colo
         DEBUG_PRINT_ERROR("Unsupported dither configuration:%d", m_dither_config);
     }
 
-    if (tp10_enable && !dither_enable) {
-        drv_ctx.output_format = VDEC_YUV_FORMAT_NV12_TP10_UBWC;
-        capture_capability = V4L2_PIX_FMT_NV12_TP10_UBWC;
+    // Reset v4l2_foramt struct object
+    memset(&fmt, 0x0, sizeof(struct v4l2_format));
 
-        memset(&fmt, 0x0, sizeof(struct v4l2_format));
+    if (is_client_dest_format_non_ubwc){
+        // Assuming all the else blocks are for 8 bit depth
+        if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10) {
+            enable_split = true;
+            dpb_color_format = V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_TP10_UBWC;
+        } else  if (m_progressive == MSM_VIDC_PIC_STRUCT_PROGRESSIVE) {
+            enable_split = true;
+            dpb_color_format = V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_UBWC;
+        } else {
+            // Hardware does not support NV12+interlace clips.
+            // Request NV12_UBWC and convert it to NV12+interlace using C2D
+            // in combined mode
+            drv_ctx.output_format = VDEC_YUV_FORMAT_NV12_UBWC;
+            capture_capability = V4L2_PIX_FMT_NV12_UBWC;
+            capability_changed = true;
+        }
+    } else {
+        if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10) {
+            enable_split = dither_enable;
+
+            if (dither_enable) {
+                dpb_color_format = V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_TP10_UBWC;
+            } else {
+                drv_ctx.output_format = VDEC_YUV_FORMAT_NV12_TP10_UBWC;
+                capture_capability = V4L2_PIX_FMT_NV12_TP10_UBWC;
+                capability_changed = true;
+            }
+        }
+        // 8 bit depth uses the default.
+        // Combined mode
+        // V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_NONE
+    }
+
+    if (capability_changed == true) {
+        // Get format for CAPTURE port
         fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
         rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_FMT, &fmt);
         if (rc) {
             DEBUG_PRINT_ERROR("%s: Failed get format on capture mplane", __func__);
             return OMX_ErrorUnsupportedSetting;
         }
+
+        // Set Capability for CAPTURE port if there is a change
         fmt.fmt.pix_mp.pixelformat = capture_capability;
         rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_FMT, &fmt);
         if (rc) {
             DEBUG_PRINT_ERROR("%s: Failed set format on capture mplane", __func__);
             return OMX_ErrorUnsupportedSetting;
         }
-
     }
 
-
-    if (!BITMASK_PRESENT(&m_flags ,OMX_COMPONENT_IDLE_PENDING) &&
-        !BITMASK_PRESENT(&m_flags, OMX_COMPONENT_OUTPUT_ENABLE_PENDING)) {
-        DEBUG_PRINT_LOW("Invalid state to decide on dpb-opb split");
-        return eRet;
-    }
-
-
-    if (cpu_access) {
-        if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_8) {
-            /* Disabled split mode for VP9. In split mode the DPB buffers are part of the internal
-             * scratch buffers and the driver does not does the reference buffer management for
-             * scratch buffers. In case of VP9 with spatial scalability, when a sequence changed
-             * event is received with the new resolution, and when a flush is sent by the driver, it
-             * releases all the references of internal scratch buffers. However as per the VP9
-             * spatial scalability, even after the flush, the buffers which have not yet received
-             * release reference event should not be unmapped and freed. Currently in driver,
-             * reference buffer management of the internal scratch buffer is not implemented
-             * and hence the DPB buffers get unmapped. For other codecs it does not matter
-             * as with the new SPS/PPS, the DPB is flushed.
-             */
-            bool eligible_for_split_dpb_ubwc =
-               m_progressive == MSM_VIDC_PIC_STRUCT_PROGRESSIVE &&     //@ Due to Venus limitation for Interlaced, Split mode enabled only for Progressive.
-                !drv_ctx.idr_only_decoding;                            //@ Split mode disabled for Thumbnail usecase.
-
-            //Since opb is linear, dpb should also be linear.
-            if (split_opb_dpb_with_same_color_fmt) {
-                eligible_for_split_dpb_ubwc = false;
-            }
-
-            if (eligible_for_split_dpb_ubwc) {
-                //split DPB-OPB
-                //DPB -> UBWC , OPB -> Linear
-                eRet = set_dpb(true, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_UBWC);
-            } else if (split_opb_dpb_with_same_color_fmt) {
-                        //DPB -> Linear, OPB -> Linear
-                        eRet = set_dpb(true, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_NONE);
-            } else {
-                        //DPB-OPB combined linear
-                        eRet = set_dpb(false, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_NONE);
-           }
-        } else if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10) {
-            //split DPB-OPB
-            //DPB -> UBWC, OPB -> Linear
-            eRet = set_dpb(true, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_TP10_UBWC);
-        }
-    } else { //no cpu access
-        if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_8) {
-            if (split_opb_dpb_with_same_color_fmt) {
-                //split DPB-OPB
-                //DPB -> UBWC, OPB -> UBWC
-                eRet = set_dpb(true, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_UBWC);
-            } else {
-                //DPB-OPB combined UBWC
-                eRet = set_dpb(false, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_NONE);
-            }
-        } else if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10) {
-            if (dither_enable) {
-                //split DPB-OPB
-                //DPB -> TP10UBWC, OPB -> UBWC
-                eRet = set_dpb(true, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_TP10_UBWC);
-            } else {
-                //combined DPB-OPB
-                //DPB -> TP10UBWC, OPB -> TP10UBWC
-                eRet = set_dpb(false, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_TP10_UBWC);
-            }
-        }
-    }
+    eRet = set_dpb(enable_split, dpb_color_format);
     if (eRet) {
         DEBUG_PRINT_HIGH("Failed to set DPB buffer mode: %d", eRet);
     }
-
-
 
     return eRet;
 }
@@ -3493,6 +3456,7 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                    (OMX_PARAM_PORTDEFINITIONTYPE *) paramData;
                                DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamPortDefinition");
                                if (decide_dpb_buffer_mode(is_down_scalar_enabled)) {
+                                   DEBUG_PRINT_ERROR("%s:decide_dpb_buffer_mode failed", __func__);
                                    return OMX_ErrorBadParameter;
                                }
                                eRet = update_portdef(portDefn);
@@ -3983,9 +3947,9 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                       in case scaling is enabled, else it follows input resolution set
                                    */
                                    if (decide_dpb_buffer_mode(is_down_scalar_enabled)) {
+                                       DEBUG_PRINT_ERROR("%s:decide_dpb_buffer_mode failed", __func__);
                                        return OMX_ErrorBadParameter;
                                    }
-
                                    if (is_down_scalar_enabled) {
                                        DEBUG_PRINT_LOW("SetParam OP: WxH(%u x %u)",
                                                (unsigned int)portDefn->format.video.nFrameWidth,
