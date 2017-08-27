@@ -5927,7 +5927,7 @@ OMX_ERRORTYPE omx_vdec::allocate_extradata()
         }
     }
 #endif
-    if (!m_other_extradata) {
+    if (drv_ctx.extradata_info.buffer_size && !m_other_extradata) {
         m_other_extradata = (OMX_OTHER_EXTRADATATYPE *)malloc(drv_ctx.extradata_info.buffer_size);
         if (!m_other_extradata) {
             DEBUG_PRINT_ERROR("Failed to alloc memory\n");
@@ -7065,6 +7065,7 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
                              drv_ctx.op_buf.actualcount);
         if (!drv_ctx.ptr_outputbuffer || !drv_ctx.ptr_respbuffer) {
             DEBUG_PRINT_ERROR("Failed to alloc drv_ctx.ptr_outputbuffer or drv_ctx.ptr_respbuffer ");
+            free(pPtr);
             return OMX_ErrorInsufficientResources;
         }
 
@@ -10641,13 +10642,19 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
                 (int)portDefn->nPortIndex);
         eRet = OMX_ErrorBadPortIndex;
     }
+    if (in_reconfig) {
+        m_extradata_info.output_crop_rect.nLeft = 0;
+        m_extradata_info.output_crop_rect.nTop = 0;
+        m_extradata_info.output_crop_rect.nWidth = fmt.fmt.pix_mp.width;
+        m_extradata_info.output_crop_rect.nHeight = fmt.fmt.pix_mp.height;
+    }
     update_resolution(fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height,
         fmt.fmt.pix_mp.plane_fmt[0].bytesperline, fmt.fmt.pix_mp.plane_fmt[0].reserved[0]);
 
-        portDefn->format.video.nFrameHeight =  drv_ctx.video_resolution.frame_height;
-        portDefn->format.video.nFrameWidth  =  drv_ctx.video_resolution.frame_width;
-        portDefn->format.video.nStride = drv_ctx.video_resolution.stride;
-        portDefn->format.video.nSliceHeight = drv_ctx.video_resolution.scan_lines;
+    portDefn->format.video.nFrameHeight =  drv_ctx.video_resolution.frame_height;
+    portDefn->format.video.nFrameWidth  =  drv_ctx.video_resolution.frame_width;
+    portDefn->format.video.nStride = drv_ctx.video_resolution.stride;
+    portDefn->format.video.nSliceHeight = drv_ctx.video_resolution.scan_lines;
 
     if ((portDefn->format.video.eColorFormat == OMX_COLOR_FormatYUV420Planar) ||
        (portDefn->format.video.eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar)) {
@@ -10715,6 +10722,7 @@ OMX_ERRORTYPE omx_vdec::allocate_output_headers()
                              drv_ctx.op_buf.actualcount);
         if (!drv_ctx.ptr_outputbuffer || !drv_ctx.ptr_respbuffer) {
             DEBUG_PRINT_ERROR("Failed to alloc drv_ctx.ptr_outputbuffer or drv_ctx.ptr_respbuffer");
+            free(pPtr);
             return OMX_ErrorInsufficientResources;
         }
 
@@ -10723,6 +10731,7 @@ OMX_ERRORTYPE omx_vdec::allocate_output_headers()
                       calloc (sizeof(struct vdec_ion),drv_ctx.op_buf.actualcount);
         if (!drv_ctx.op_buf_ion_info) {
             DEBUG_PRINT_ERROR("Failed to alloc drv_ctx.op_buf_ion_info");
+            free(pPtr);
             return OMX_ErrorInsufficientResources;
         }
 #endif
