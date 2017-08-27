@@ -273,7 +273,7 @@ public:
     }
 
     OMX_U32 get_average(OMX_U32 sample) {
-        if (avg && abs(avg - sample) > FPS_RESET_THRESHOLD) {
+        if (avg && abs((int)(avg - sample)) > FPS_RESET_THRESHOLD) {
             reset();
         }
 
