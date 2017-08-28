@@ -2060,6 +2060,63 @@ bool omx_venc::dev_get_batch_size(OMX_U32 *size)
     RETURN(false);
 }
 
+OMX_ERRORTYPE omx_venc::dev_get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVELTYPE *profileLevelType)
+{
+    ENTER_FUNC();
+    OMX_ERRORTYPE eRet = OMX_ErrorNone;
+    if (profileLevelType->nPortIndex == 1) {
+        if (profileLevelType == NULL)
+        {
+            DEBUG_PRINT_ERROR("p_profilelevel = NULL");
+            return OMX_ErrorBadParameter;
+        }
+        if (m_sOutPortDef.format.video.eCompressionFormat == OMX_VIDEO_CodingH263)
+        {
+            if (profileLevelType->nProfileIndex == 0)
+            {
+                profileLevelType->eProfile = OMX_VIDEO_H263ProfileBaseline;
+                profileLevelType->eLevel   = OMX_VIDEO_H263Level40;
+
+                DEBUG_PRINT_HIGH("H.263 baseline profile, level 40");
+            }
+            else
+            {
+                DEBUG_PRINT_LOW("dev_get_supported_profile_level:nProfileIndex ret NoMore %u",
+                    (unsigned int)profileLevelType->nProfileIndex);
+                eRet = OMX_ErrorNoMore;
+            }
+        }
+        else if (m_sOutPortDef.format.video.eCompressionFormat == OMX_VIDEO_CodingMPEG4)
+        {
+            if (profileLevelType->nProfileIndex == 0)
+            {
+                profileLevelType->eProfile = OMX_VIDEO_MPEG4ProfileSimple;
+                profileLevelType->eLevel   = OMX_VIDEO_MPEG4Level5;
+
+                DEBUG_PRINT_LOW("MPEG-4 simple profile, level 5");
+            }
+            else
+            {
+                DEBUG_PRINT_LOW("dev_get_supported_profile_level:nProfileIndex ret NoMore %u",
+                    (unsigned int)profileLevelType->nProfileIndex);
+                 eRet = OMX_ErrorNoMore;
+            }
+        }
+        else
+        {
+            DEBUG_PRINT_ERROR("get_parameter: dev_get_supported_profile_level ret NoMore");
+            eRet = OMX_ErrorNoMore;
+        }
+    }
+    else
+    {
+        DEBUG_PRINT_ERROR("get_parameter: dev_get_supported_profile_level should be queried on Input port only %u",
+            (unsigned int)profileLevelType->nPortIndex);
+        eRet = OMX_ErrorBadPortIndex;
+    }
+    return eRet;
+}
+
 bool omx_venc::dev_loaded_start()
 {
    ENTER_FUNC();
