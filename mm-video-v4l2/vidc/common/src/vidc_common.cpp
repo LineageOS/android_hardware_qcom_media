@@ -73,6 +73,13 @@ pl_map profile_level_converter::profile_mpeg2_omx_to_v4l2 ({
 
 pl_map profile_level_converter::profile_mpeg2_v4l2_to_omx ({});
 
+pl_map profile_level_converter::profile_vp9_omx_to_v4l2 ({
+            {OMX_VIDEO_VP9Profile0, V4L2_MPEG_VIDC_VIDEO_VP9_PROFILE_P0},
+            {OMX_VIDEO_VP9Profile2HDR, V4L2_MPEG_VIDC_VIDEO_VP9_PROFILE_P2_10},
+        });
+
+pl_map profile_level_converter::profile_vp9_v4l2_to_omx ({});
+
 pl_map profile_level_converter::level_avc_omx_to_v4l2 ({
             {OMX_VIDEO_AVCLevel1, V4L2_MPEG_VIDEO_H264_LEVEL_1_0},
             {OMX_VIDEO_AVCLevel11, V4L2_MPEG_VIDEO_H264_LEVEL_1_1},
@@ -143,16 +150,33 @@ pl_map profile_level_converter::level_mpeg2_omx_to_v4l2 ({
 
 pl_map profile_level_converter::level_mpeg2_v4l2_to_omx ({});
 
+pl_map profile_level_converter::level_vp9_omx_to_v4l2 ({
+            {OMX_VIDEO_VP9Level1, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_1},
+            {OMX_VIDEO_VP9Level11, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_11},
+            {OMX_VIDEO_VP9Level2, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_2},
+            {OMX_VIDEO_VP9Level21, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_21},
+            {OMX_VIDEO_VP9Level3, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_3},
+            {OMX_VIDEO_VP9Level31, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_31},
+            {OMX_VIDEO_VP9Level4, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_4},
+            {OMX_VIDEO_VP9Level41, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_41},
+            {OMX_VIDEO_VP9Level5, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_5},
+            {OMX_VIDEO_VP9Level51, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_51},
+        });
+
+pl_map profile_level_converter::level_vp9_v4l2_to_omx ({});
+
 codec_map profile_level_converter::profile_omx_to_v4l2_map ({
             {V4L2_PIX_FMT_H264, &profile_avc_omx_to_v4l2},
             {V4L2_PIX_FMT_HEVC, &profile_hevc_omx_to_v4l2},
             {V4L2_PIX_FMT_MPEG2, &profile_mpeg2_omx_to_v4l2},
+            {V4L2_PIX_FMT_VP9, &profile_vp9_omx_to_v4l2},
         });
 
 codec_map profile_level_converter::profile_v4l2_to_omx_map ({
             {V4L2_PIX_FMT_H264, &profile_avc_v4l2_to_omx},
             {V4L2_PIX_FMT_HEVC, &profile_hevc_v4l2_to_omx},
             {V4L2_PIX_FMT_MPEG2, &profile_mpeg2_v4l2_to_omx},
+            {V4L2_PIX_FMT_VP9, &profile_vp9_v4l2_to_omx},
         });
 
 codec_map profile_level_converter::level_omx_to_v4l2_map ({
@@ -160,8 +184,7 @@ codec_map profile_level_converter::level_omx_to_v4l2_map ({
             {V4L2_PIX_FMT_HEVC, &level_hevc_omx_to_v4l2},
             {V4L2_PIX_FMT_MPEG2, &level_mpeg2_omx_to_v4l2},
             {V4L2_PIX_FMT_VP8, &level_vp8_omx_to_v4l2},
-            /* VP9 uses same levels */
-            {V4L2_PIX_FMT_VP9, &level_vp8_omx_to_v4l2},
+            {V4L2_PIX_FMT_VP9, &level_vp9_omx_to_v4l2},
         });
 
 codec_map profile_level_converter::level_v4l2_to_omx_map ({
@@ -169,8 +192,7 @@ codec_map profile_level_converter::level_v4l2_to_omx_map ({
             {V4L2_PIX_FMT_HEVC, &level_hevc_v4l2_to_omx},
             {V4L2_PIX_FMT_MPEG2, &level_mpeg2_v4l2_to_omx},
             {V4L2_PIX_FMT_VP8, &level_vp8_v4l2_to_omx},
-            /* VP9 uses same levels */
-            {V4L2_PIX_FMT_VP9, &level_vp8_v4l2_to_omx},
+            {V4L2_PIX_FMT_VP9, &level_vp9_v4l2_to_omx},
         });
 
 void reverse_map(pl_map source_map, pl_map &dest_map)
@@ -188,10 +210,12 @@ void profile_level_converter::init()
     reverse_map(profile_avc_omx_to_v4l2, profile_avc_v4l2_to_omx);
     reverse_map(profile_hevc_omx_to_v4l2, profile_hevc_v4l2_to_omx);
     reverse_map(profile_mpeg2_omx_to_v4l2, profile_mpeg2_v4l2_to_omx);
+    reverse_map(profile_vp9_omx_to_v4l2, profile_vp9_v4l2_to_omx);
     reverse_map(level_avc_omx_to_v4l2, level_avc_v4l2_to_omx);
     reverse_map(level_hevc_omx_to_v4l2, level_hevc_v4l2_to_omx);
     reverse_map(level_vp8_omx_to_v4l2, level_vp8_v4l2_to_omx);
     reverse_map(level_mpeg2_omx_to_v4l2, level_mpeg2_v4l2_to_omx);
+    reverse_map(level_vp9_omx_to_v4l2, level_vp9_v4l2_to_omx);
 }
 
 bool profile_level_converter::find_map(codec_map map, int key, pl_map **value_map)
