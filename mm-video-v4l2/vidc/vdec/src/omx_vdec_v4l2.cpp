@@ -996,6 +996,7 @@ OMX_ERRORTYPE omx_vdec::set_dpb(bool is_split_mode, int dpb_color_format)
          capture_capability == V4L2_PIX_FMT_NV12 ? "nv12":
          capture_capability == V4L2_PIX_FMT_NV12_UBWC ? "nv12_ubwc":
          capture_capability == V4L2_PIX_FMT_NV12_TP10_UBWC ? "nv12_10bit_ubwc":
+         capture_capability == V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010 ? "P010":
          "unknown");
 
     ctrl[0].id = V4L2_CID_MPEG_VIDC_VIDEO_STREAM_OUTPUT_MODE;
@@ -1068,6 +1069,11 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool is_downscalar_enabled)
         if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10) {
             enable_split = true;
             dpb_color_format = V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_TP10_UBWC;
+            if(is_flexible_format){ // if flexible formats are expected, QCom_P010 is set for 10bit cases here
+                 drv_ctx.output_format = VDEC_YUV_FORMAT_P010_VENUS;
+                 capture_capability = V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010;
+                 capability_changed = true;
+            }
         } else  if (m_progressive == MSM_VIDC_PIC_STRUCT_PROGRESSIVE) {
             enable_split = true;
             dpb_color_format = V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_UBWC;
@@ -1120,6 +1126,19 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool is_downscalar_enabled)
     }
 
     return eRet;
+}
+
+bool omx_vdec::check_supported_flexible_formats(OMX_COLOR_FORMATTYPE required_format)
+{
+    if(required_format == (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m ||
+         required_format == (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420SemiPlanarP010Venus) {
+         //for now, the flexible formats should be QCOM_NV12 by default for 8bit cases
+         //it will change to QCOM_P010 after 10bit port-reconfig accordingly
+       return TRUE;
+    }
+    else {
+       return FALSE;
+    }
 }
 
 int omx_vdec::enable_downscalar()
@@ -2104,7 +2123,32 @@ int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
             bytes_written += fwrite(temp, drv_ctx.video_resolution.frame_width, 1, m_debug.outfile);
             temp += stride_c;
         }
+    }else if (m_debug.outfile && drv_ctx.output_format == VDEC_YUV_FORMAT_P010_VENUS) {
+    int stride = drv_ctx.video_resolution.stride;
+        int scanlines = drv_ctx.video_resolution.scan_lines;
+        if (m_smoothstreaming_mode) {
+            stride = drv_ctx.video_resolution.frame_width * 2;
+            scanlines = drv_ctx.video_resolution.frame_height;
+            stride = (stride + DEFAULT_WIDTH_ALIGNMENT - 1) & (~(DEFAULT_WIDTH_ALIGNMENT - 1));
+            scanlines = (scanlines + DEFAULT_HEIGHT_ALIGNMENT - 1) & (~(DEFAULT_HEIGHT_ALIGNMENT - 1));
+        }
+        unsigned i;
+        DEBUG_PRINT_HIGH("Logging width/height(%u/%u) stride/scanlines(%u/%u)",
+            drv_ctx.video_resolution.frame_width,
+            drv_ctx.video_resolution.frame_height, stride, scanlines);
+        int bytes_written = 0;
+        for (i = 0; i < drv_ctx.video_resolution.frame_height; i++) {
+             bytes_written = fwrite(temp, drv_ctx.video_resolution.frame_width, 2, m_debug.outfile);
+             temp += stride;
+        }
+        temp = (char *)drv_ctx.ptr_outputbuffer[buf_index].bufferaddr + stride * scanlines;
+        int stride_c = stride;
+        for(i = 0; i < drv_ctx.video_resolution.frame_height/2; i++) {
+            bytes_written += fwrite(temp, drv_ctx.video_resolution.frame_width, 2, m_debug.outfile);
+            temp += stride_c;
+        }
     }
+
     return 0;
 }
 
@@ -2324,6 +2368,7 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
 
         dpb_bit_depth = MSM_VIDC_BIT_DEPTH_8;
         m_progressive = MSM_VIDC_PIC_STRUCT_PROGRESSIVE;
+        is_flexible_format = FALSE;
 
         if (m_disable_ubwc_mode) {
             capture_capability = V4L2_PIX_FMT_NV12;
@@ -4228,11 +4273,15 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                         portFmt->eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar) {
                                         op_format = (enum vdec_output_format)VDEC_YUV_FORMAT_NV12;
                                         fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12;
+                                        //check if the required color format is a supported flexible format
+                                        is_flexible_format = check_supported_flexible_formats(portFmt->eColorFormat);
                                     } else if (portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
                                                    QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed ||
                                                portFmt->eColorFormat == OMX_COLOR_FormatYUV420Planar) {
                                         op_format = (enum vdec_output_format)VDEC_YUV_FORMAT_NV12_UBWC;
                                         fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12_UBWC;
+                                        //check if the required color format is a supported flexible format
+                                        is_flexible_format = check_supported_flexible_formats(portFmt->eColorFormat);
                                     } else {
                                         eRet = OMX_ErrorBadParameter;
                                     }
@@ -8375,6 +8424,12 @@ int omx_vdec::async_message_process (void *context, void* message)
                            omx->drv_ctx.video_resolution.scan_lines =
                                VENUS_Y_SCANLINES(COLOR_FMT_NV12_BPP10_UBWC, omx->drv_ctx.video_resolution.frame_height);
                         }
+                        else if(omx->drv_ctx.output_format == VDEC_YUV_FORMAT_P010_VENUS) {
+                           omx->drv_ctx.video_resolution.stride =
+                               VENUS_Y_STRIDE(COLOR_FMT_P010, omx->drv_ctx.video_resolution.frame_width);
+                           omx->drv_ctx.video_resolution.scan_lines =
+                               VENUS_Y_SCANLINES(COLOR_FMT_P010, omx->drv_ctx.video_resolution.frame_height);
+                        }
 
                        omx->post_event(OMX_CORE_OUTPUT_PORT_INDEX,
                                 OMX_IndexConfigCommonOutputCrop,
@@ -10917,11 +10972,14 @@ omx_vdec::allocate_color_convert_buf::allocate_color_convert_buf()
                         QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed;
     mMapOutput2DriverColorFormat[VDEC_YUV_FORMAT_NV12_TP10_UBWC][-1] =
                      QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed;
+    mMapOutput2DriverColorFormat[VDEC_YUV_FORMAT_P010_VENUS][-1] =
+                     QOMX_COLOR_FORMATYUV420SemiPlanarP010Venus;
 
     mMapOutput2Convert.insert( {
             {VDEC_YUV_FORMAT_NV12, NV12_128m},
             {VDEC_YUV_FORMAT_NV12_UBWC, NV12_UBWC},
             {VDEC_YUV_FORMAT_NV12_TP10_UBWC, TP10_UBWC},
+            {VDEC_YUV_FORMAT_P010_VENUS, YCbCr420_VENUS_P010},
         });
 }
 
@@ -11066,7 +11124,9 @@ bool omx_vdec::allocate_color_convert_buf::set_color_format(
         (drv_color_format != (OMX_COLOR_FORMATTYPE)
                 QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mMultiView) &&
         (drv_color_format != (OMX_COLOR_FORMATTYPE)
-                QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed);
+                QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed) &&
+        (drv_color_format != (OMX_COLOR_FORMATTYPE)
+                QOMX_COLOR_FORMATYUV420SemiPlanarP010Venus);
 
     dest_color_format_c2d_enable = (dest_color_format != (OMX_COLOR_FORMATTYPE)
             QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed) &&
@@ -11741,6 +11801,9 @@ void omx_vdec::prefetchNewBuffers() {
         break;
     case VDEC_YUV_FORMAT_NV12_TP10_UBWC:
         color_fmt = COLOR_FMT_NV12_BPP10_UBWC;
+        break;
+    case VDEC_YUV_FORMAT_P010_VENUS:
+        color_fmt = COLOR_FMT_P010;
         break;
     default:
         color_fmt = -1;
