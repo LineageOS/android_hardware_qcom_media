@@ -460,6 +460,7 @@ class venc_dev
         OMX_BOOL                            downscalar_enabled;
         bool client_req_disable_bframe;
         bool client_req_disable_temporal_layers;
+        bool client_req_turbo_mode;
 
         bool venc_query_cap(struct v4l2_queryctrl &cap);
         bool venc_validate_range(OMX_S32 id, OMX_S32 val);

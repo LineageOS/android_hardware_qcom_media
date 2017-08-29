@@ -2198,6 +2198,15 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
                memcpy(pParam, &m_sConfigIntraRefresh, sizeof(m_sConfigIntraRefresh));
                break;
            }
+        case OMX_IndexConfigOperatingRate:
+           {
+               VALIDATE_OMX_PARAM_DATA(configData, OMX_PARAM_U32TYPE);
+               OMX_PARAM_U32TYPE* pParam =
+                   reinterpret_cast<OMX_PARAM_U32TYPE*>(configData);
+               DEBUG_PRINT_LOW("get_config: OMX_IndexConfigOperatingRate");
+               pParam->nU32 = m_nOperatingRate;
+               break;
+           }
        case OMX_QTIIndexConfigVideoBlurResolution:
            {
                VALIDATE_OMX_PARAM_DATA(configData, OMX_QTI_VIDEO_CONFIG_BLURINFO);

@@ -140,11 +140,12 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     memset(&ltrinfo, 0, sizeof(ltrinfo));
     memset(&fd_list, 0, sizeof(fd_list));
     sess_priority.priority = 1;
-    operating_rate = 0;
+    operating_rate = 30;
     memset(&color_space, 0x0, sizeof(color_space));
     memset(&temporal_layers_config, 0x0, sizeof(temporal_layers_config));
     client_req_disable_bframe   = false;
     client_req_disable_temporal_layers  = false;
+    client_req_turbo_mode  = false;
 
 
     Platform::Config::getInt32(Platform::vidc_enc_log_in,
@@ -2824,7 +2825,7 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
         case OMX_IndexConfigOperatingRate:
             {
                 OMX_PARAM_U32TYPE *rate = (OMX_PARAM_U32TYPE *)configData;
-                DEBUG_PRINT_LOW("Set_config: operating rate %d", rate->nU32);
+                DEBUG_PRINT_LOW("Set_config: operating rate %u", rate->nU32);
                 if (!venc_set_operatingrate(rate->nU32)) {
                     DEBUG_PRINT_ERROR("Failed to set operating rate");
                     return false;
@@ -3163,6 +3164,10 @@ unsigned venc_dev::venc_start(void)
     if (vqzip_sei_info.enabled && !venc_set_vqzip_defaults())
         return 1;
 
+    if (!venc_set_priority(sess_priority.priority)) {
+        DEBUG_PRINT_ERROR("Failed to set priority");
+        return 1;
+    }
     // Client can set intra refresh period in terms of frames.
     // This requires reconfiguration on port redefinition as
     // mbcount for IR depends on encode resolution.
@@ -3333,7 +3338,7 @@ void venc_dev::venc_config_print()
 
     DEBUG_PRINT_HIGH("ENC_CONFIG: Peak bitrate: %d", peak_bitrate.peakbitrate);
 
-    DEBUG_PRINT_HIGH("ENC_CONFIG: Session Priority: %u", sess_priority.priority);
+    DEBUG_PRINT_HIGH("ENC_CONFIG: Session Priority: %s", sess_priority.priority ? "NonRealTime" : "RealTime");
 
     DEBUG_PRINT_HIGH("ENC_CONFIG: ROI : %u", m_roi_enabled);
 
@@ -4772,7 +4777,7 @@ bool venc_dev::venc_reconfigure_intra_period()
         isValidFps = true;
     }
 
-    if ((operating_rate >> 16) <= VENC_BFRAME_MAX_FPS) {
+    if (operating_rate <= VENC_BFRAME_MAX_FPS) {
         isValidOpRate = true;
     }
 
@@ -6057,6 +6062,7 @@ bool venc_dev::venc_set_vpx_error_resilience(OMX_BOOL enable)
 bool venc_dev::venc_set_priority(OMX_U32 priority) {
     struct v4l2_control control;
 
+    DEBUG_PRINT_LOW("venc_set_priority: %s", priority ? "NonRealTime" : "RealTime");
     control.id = V4L2_CID_MPEG_VIDC_VIDEO_PRIORITY;
     if (priority == 0)
         control.value = V4L2_MPEG_VIDC_VIDEO_PRIORITY_REALTIME_ENABLE;
@@ -6077,8 +6083,8 @@ bool venc_dev::venc_set_operatingrate(OMX_U32 rate) {
     control.id = V4L2_CID_MPEG_VIDC_VIDEO_OPERATING_RATE;
     control.value = rate;
 
-    DEBUG_PRINT_LOW("venc_set_operating_rate: %d fps", rate >> 16);
-    DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
+    DEBUG_PRINT_LOW("venc_set_operating_rate: %u fps", rate >> 16);
+    DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%u", control.id, control.value);
 
     if(ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
         hw_overload = errno == EBUSY;
@@ -6086,8 +6092,15 @@ bool venc_dev::venc_set_operatingrate(OMX_U32 rate) {
                 rate >> 16, hw_overload ? "HW overload" : strerror(errno));
         return false;
     }
-    operating_rate = rate;
-    DEBUG_PRINT_LOW("Operating Rate Set = %d fps",  rate >> 16);
+    if (rate == QOMX_VIDEO_HIGH_PERF_OPERATING_MODE) {
+        DEBUG_PRINT_LOW("Turbo mode requested");
+        client_req_turbo_mode = true;
+    } else {
+        operating_rate = rate >> 16;
+        client_req_turbo_mode = false;
+        DEBUG_PRINT_LOW("Operating Rate Set = %d fps",  rate >> 16);
+    }
+
     return true;
 }
 
@@ -6492,7 +6505,7 @@ bool venc_dev::venc_convert_abs2cum_bitrate(QOMX_EXTNINDEX_VIDEO_HYBRID_HP_MODE 
 
 bool venc_dev::venc_validate_temporal_settings() {
 
-    if (((m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) < 60) && ((operating_rate >> 16) < 60)) {
+    if (((m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) < 60) && (operating_rate < 60)) {
         DEBUG_PRINT_HIGH("TemporalLayer: Invalid FPS/operating rate settings for Hier layers");
         return false;
     }
