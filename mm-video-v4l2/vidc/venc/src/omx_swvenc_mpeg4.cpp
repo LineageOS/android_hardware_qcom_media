@@ -2084,6 +2084,13 @@ bool omx_venc::dev_loaded_stop_done()
    RETURN(true);
 }
 
+bool omx_venc::is_streamon_done(OMX_U32 port)
+{
+    if (PORT_INDEX_OUT <= port)
+        ENTER_FUNC();
+    RETURN(true);
+}
+
 bool omx_venc::dev_get_buf_req(OMX_U32 *min_buff_count,
         OMX_U32 *actual_buff_count,
         OMX_U32 *buff_size,

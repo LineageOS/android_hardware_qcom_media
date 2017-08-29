@@ -37,6 +37,17 @@ C2DColorConverter::C2DColorConverter()
     enabled = true;
     mSrcSurface = 0;
     mDstSurface = 0;
+
+    mSrcWidth = 0;
+    mSrcHeight = 0;
+    mSrcStride = 0;
+    mDstWidth = 0;
+    mDstHeight = 0;
+    mSrcFormat = NO_COLOR_FORMAT;
+    mDstFormat = NO_COLOR_FORMAT;
+
+    mConversionNeeded = false;
+
     pthread_mutex_init(&mLock, NULL);
 
     mC2DLibHandle = dlopen("libC2D2.so", RTLD_NOW);
@@ -117,6 +128,23 @@ C2DColorConverter::~C2DColorConverter()
     if (mAdrenoUtilsHandle) {
         dlclose(mAdrenoUtilsHandle);
     }
+
+}
+
+bool C2DColorConverter::isPropChanged(size_t srcWidth, size_t srcHeight, size_t dstWidth,
+                                      size_t dstHeight, ColorConvertFormat srcFormat,
+                                      ColorConvertFormat dstFormat, int32_t flags,
+                                      size_t srcStride)
+{
+    return (mSrcWidth  != srcWidth   ||
+            mSrcHeight != srcHeight  ||
+            mDstWidth  != dstWidth   ||
+            mDstHeight != dstHeight  ||
+            mSrcFormat != srcFormat  ||
+            mDstFormat != dstFormat  ||
+            mSrcStride != srcStride  ||
+            (mFlags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED)  !=
+                      (flags  & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED));
 }
 
 bool C2DColorConverter::setResolution(size_t srcWidth, size_t srcHeight,
@@ -130,7 +158,7 @@ bool C2DColorConverter::setResolution(size_t srcWidth, size_t srcHeight,
         pthread_mutex_lock(&mLock);
         mSrcWidth = srcWidth;
         mSrcHeight = srcHeight;
-        mSrcStride = srcStride;;
+        mSrcStride = srcStride;
         mDstWidth = dstWidth;
         mDstHeight = dstHeight;
         mSrcFormat = srcFormat;

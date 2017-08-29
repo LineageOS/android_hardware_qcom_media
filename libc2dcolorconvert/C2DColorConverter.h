@@ -165,6 +165,7 @@ class C2DColorConverter{
   int32_t mFlags;
 
   bool enabled;
+  bool mConversionNeeded;
 
   pthread_mutex_t mLock;
 
@@ -172,6 +173,12 @@ class C2DColorConverter{
   C2DColorConverter();
   ~C2DColorConverter();
 
+  bool getConversionNeeded() { return mConversionNeeded; }
+  void setConversionNeeded(bool needed) { mConversionNeeded = needed; }
+  bool isPropChanged(size_t srcWidth, size_t srcHeight, size_t dstWidth,
+                           size_t dstHeight, ColorConvertFormat srcFormat,
+                           ColorConvertFormat dstFormat, int32_t flags,
+                           size_t srcStride);
   bool setResolution(size_t srcWidth, size_t srcHeight, size_t dstWidth,
                      size_t dstHeight, ColorConvertFormat srcFormat,
                      ColorConvertFormat dstFormat, int32_t flags,
