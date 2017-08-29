@@ -348,6 +348,22 @@ omx_core_cb_type core[] =
     }
   },
   {
+    "OMX.qcom.video.encoder.tme",
+    NULL,   // Create instance function
+    // Unique instance handle
+    {
+      NULL,
+      NULL,
+      NULL,
+      NULL
+    },
+    NULL, // Shared object library handle
+    "libOmxVenc.so",
+    {
+      "video_encoder.tme"
+    }
+  },
+  {
     "OMX.qcom.audio.decoder.Qcelp13",
     NULL, // Create instance function
     // Unique instance handle
@@ -667,7 +683,7 @@ omx_core_cb_type core[] =
   },
   {
     "OMX.qcom.video.decoder.avc.secure.dsmode",
-    NULL, // Create instance function
+    NULL,   // Create instance function
     // Unique instance handle
     {
       NULL,

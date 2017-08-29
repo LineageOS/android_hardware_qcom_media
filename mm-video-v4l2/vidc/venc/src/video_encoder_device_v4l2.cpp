@@ -1350,6 +1350,8 @@ bool venc_dev::venc_open(OMX_U32 codec)
         maxqp = 51;
         codec_profile.profile = V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN;
         profile_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_1;
+    } else if (codec == QOMX_VIDEO_CodingTME) {
+        m_sVenc_cfg.codectype = V4L2_PIX_FMT_TME;
     }
     session_ipb_qp_values.min_i_qp = minqp;
     session_ipb_qp_values.max_i_qp = maxqp;
@@ -1461,13 +1463,15 @@ bool venc_dev::venc_open(OMX_U32 codec)
     resume_in_stopped = 0;
     metadatamode = 0;
 
-    control.id = V4L2_CID_MPEG_VIDEO_HEADER_MODE;
-    control.value = V4L2_MPEG_VIDEO_HEADER_MODE_SEPARATE;
+    if (m_sVenc_cfg.codectype != V4L2_PIX_FMT_TME) {
+        control.id = V4L2_CID_MPEG_VIDEO_HEADER_MODE;
+        control.value = V4L2_MPEG_VIDEO_HEADER_MODE_SEPARATE;
 
-    DEBUG_PRINT_LOW("Calling IOCTL to disable seq_hdr in sync_frame id=%d, val=%d", control.id, control.value);
+        DEBUG_PRINT_LOW("Calling IOCTL to disable seq_hdr in sync_frame id=%d, val=%d", control.id, control.value);
 
-    if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control))
-        DEBUG_PRINT_ERROR("Failed to set control");
+        if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control))
+            DEBUG_PRINT_ERROR("Failed to set control");
+    }
 
     struct v4l2_frmsizeenum frmsize;
 
@@ -1503,6 +1507,17 @@ bool venc_dev::venc_open(OMX_U32 codec)
     input_extradata_info.port_index = OUTPUT_PORT;
     output_extradata_info.port_index = CAPTURE_PORT;
 
+    if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_TME) {
+        control.id = V4L2_CID_MPEG_VIDC_VIDEO_TME_PAYLOAD_VERSION;
+        ret = ioctl(m_nDriver_fd, VIDIOC_G_CTRL,&control);
+
+        if (ret) {
+            DEBUG_PRINT_ERROR("Failed to read TME version");
+            return false;
+        }
+        venc_handle->tme_payload_version = control.value;
+        DEBUG_PRINT_HIGH("TME version is 0x%x", control.value);
+    }
     return true;
 }
 
@@ -1947,8 +1962,10 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                         }
                         m_sOutput_buff_property.datasize = fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
 
-                        if (!venc_set_target_bitrate(portDefn->format.video.nBitrate)) {
-                            return false;
+                        if (m_sVenc_cfg.codectype != V4L2_PIX_FMT_TME) {
+                            if (!venc_set_target_bitrate(portDefn->format.video.nBitrate)) {
+                                return false;
+                            }
                         }
 
                         bufreq.memory = V4L2_MEMORY_USERPTR;
@@ -2116,6 +2133,23 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 OMX_U32 nPFrames = pParam->nKeyFrameInterval > 0 ? pParam->nKeyFrameInterval - 1 : fps - 1;
                 if (!venc_set_intra_period (nPFrames, 0 /* nBFrames */)) {
                     DEBUG_PRINT_ERROR("ERROR: Request for setting intra period failed");
+                    return false;
+                }
+                break;
+            }
+            case (OMX_INDEXTYPE)OMX_IndexParamVideoTme:
+            {
+                DEBUG_PRINT_LOW("venc_set_param:OMX_IndexParamVideoTme");
+                QOMX_VIDEO_PARAM_TMETYPE * pParam = (QOMX_VIDEO_PARAM_TMETYPE*)paramData;
+
+                if (!venc_set_profile(pParam->eProfile)) {
+                    DEBUG_PRINT_ERROR("ERROR: Unsuccessful in updating Profile %d",
+                                        pParam->eProfile);
+                    return false;
+                }
+                if (!venc_set_level(pParam->eLevel)) {
+                    DEBUG_PRINT_ERROR("ERROR: Unsuccessful in updating level %d",
+                                      pParam->eLevel);
                     return false;
                 }
                 break;
@@ -4256,6 +4290,10 @@ bool venc_dev::venc_set_inband_video_header(OMX_BOOL enable)
 {
     struct v4l2_control control;
 
+    if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_TME) {
+        return false;
+    }
+
     control.id = V4L2_CID_MPEG_VIDEO_HEADER_MODE;
     if(enable) {
         control.value = V4L2_MPEG_VIDEO_HEADER_MODE_JOINED_WITH_1ST_FRAME;
@@ -4611,8 +4649,10 @@ bool venc_dev::venc_set_profile(OMX_U32 eProfile)
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8) {
         //In driver VP8 profile is hardcoded. No need to set anything from here
         return true;
-    }  else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
+    } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
         control.id = V4L2_CID_MPEG_VIDC_VIDEO_HEVC_PROFILE;
+    } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_TME) {
+        control.id = V4L2_CID_MPEG_VIDC_VIDEO_TME_PROFILE;
     } else {
         DEBUG_PRINT_ERROR("Wrong CODEC");
         return false;
@@ -4672,7 +4712,10 @@ bool venc_dev::venc_set_level(OMX_U32 eLevel)
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
         control.id = V4L2_CID_MPEG_VIDC_VIDEO_HEVC_TIER_LEVEL;
         control.value = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_UNKNOWN;
-    }  else {
+    } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_TME) {
+        control.id = V4L2_CID_MPEG_VIDC_VIDEO_TME_LEVEL;
+        control.value = V4L2_MPEG_VIDC_VIDEO_TME_LEVEL_INTEGER;
+    } else {
         DEBUG_PRINT_ERROR("Wrong CODEC");
         return false;
     }
@@ -5340,6 +5383,9 @@ unsigned long venc_dev::venc_get_codectype(OMX_VIDEO_CODINGTYPE eCompressionForm
         break;
     case OMX_VIDEO_CodingHEVC:
         codectype = V4L2_PIX_FMT_HEVC;
+        break;
+    case QOMX_VIDEO_CodingTME:
+        codectype = V4L2_PIX_FMT_TME;
         break;
     default:
         DEBUG_PRINT_ERROR("Unsupported eCompressionFormat %#x", eCompressionFormat);
