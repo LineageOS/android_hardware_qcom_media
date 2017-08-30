@@ -4650,25 +4650,7 @@ bool venc_dev::venc_set_level(OMX_U32 eLevel)
         control.value = V4L2_MPEG_VIDEO_H264_LEVEL_UNKNOWN;
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8) {
         control.id = V4L2_CID_MPEG_VIDC_VIDEO_VP8_PROFILE_LEVEL;
-        switch (eLevel) {
-            case OMX_VIDEO_VP8Level_Version0:
-                control.value = V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_0;
-                break;
-            case OMX_VIDEO_VP8Level_Version1:
-                control.value = V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_1;
-                break;
-            case OMX_VIDEO_VP8Level_Version2:
-                control.value = V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_2;
-                break;
-            case OMX_VIDEO_VP8Level_Version3:
-                control.value = V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_3;
-                break;
-            case OMX_VIDEO_VP8LevelUnknown:
-            case OMX_VIDEO_VP8LevelMax:
-            default:
-                control.value = V4L2_MPEG_VIDC_VIDEO_VP8_UNUSED;
-                break;
-        }
+        control.value = V4L2_MPEG_VIDC_VIDEO_VP8_UNUSED;
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
         control.id = V4L2_CID_MPEG_VIDC_VIDEO_HEVC_TIER_LEVEL;
         control.value = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_UNKNOWN;
@@ -4677,12 +4659,11 @@ bool venc_dev::venc_set_level(OMX_U32 eLevel)
         return false;
     }
 
-    /* If OMX_VIDEO_LEVEL_*/
+    /* If OMX_VIDEO_LEVEL_UNKNOWN then set default values assigned above  */
     if (eLevel != OMX_VIDEO_LEVEL_UNKNOWN) {
         if (!profile_level_converter::convert_omx_level_to_v4l2(m_sVenc_cfg.codectype, eLevel, &control.value)) {
-            DEBUG_PRINT_ERROR(" Cannot find v4l2 level for OMX level : %d Codec : %lu ",
+            DEBUG_PRINT_LOW("Warning: Cannot find v4l2 level for OMX level : %d Codec : %lu Setting unknown level",
                               eLevel, m_sVenc_cfg.codectype);
-            return false;
         }
     }
 
