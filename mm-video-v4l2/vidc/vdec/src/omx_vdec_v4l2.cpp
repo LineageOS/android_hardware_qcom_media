@@ -128,9 +128,6 @@ extern "C" {
 #define SZ_4K 0x1000
 #define SZ_1M 0x100000
 
-#define PREFETCH_SIZE 0x12c00000 //300MB
-#define MAX_PREFETCH_RES 0x7E9000//3840x2160
-
 #define Log2(number, power)  { OMX_U32 temp = number; power = 0; while( (0 == (temp & 0x1)) &&  power < 16) { temp >>=0x1; power++; } }
 #define Q16ToFraction(q,num,den) { OMX_U32 power; Log2(q,power);  num = q >> power; den = 0x1 << (16 - power); }
 #define EXTRADATA_IDX(__num_planes) ((__num_planes) ? (__num_planes) - 1 : 0)
@@ -865,6 +862,16 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     DEBUG_PRINT_HIGH("Dither config is %d", m_dither_config);
     m_color_space = EXCEPT_BT2020;
     m_hypervisor = !!HYPERVISOR;
+
+    property_value[0] = '\0';
+    property_get("vidc.dec.pf.size", property_value, "0");
+    if (atoi(property_value))
+        m_pf_info.size_limit = atoi(property_value);
+
+    property_value[0] = '\0';
+    property_get("vidc.dec.pf.res", property_value, "0");
+    if (atoi(property_value))
+        m_pf_info.res_limit = atoi(property_value);
 }
 
 static const int event_type[] = {
@@ -13313,11 +13320,6 @@ void omx_vdec::perf_control::request_cores(int frame_duration_us)
 
 bool omx_vdec::perf_control::load_lib()
 {
-
-#ifndef PERF_ENABLE
-    return false;
-#endif
-
     char perf_lib_path[PROPERTY_VALUE_MAX] = {0};
     if (m_perf_lib)
         return true;
@@ -13532,10 +13534,10 @@ void omx_vdec::prefetchNewBuffers(bool reconfig) {
         return;
     }
 
-    if (drv_ctx.video_resolution.frame_width * drv_ctx.video_resolution.frame_height >= MAX_PREFETCH_RES)
+    if (drv_ctx.video_resolution.frame_width * drv_ctx.video_resolution.frame_height >= m_pf_info.res_limit)
         m_pf_info.no_more_pf = true;
 
-    if (m_pf_info.pf_size >= PREFETCH_SIZE || m_pf_info.no_more_pf)
+    if (m_pf_info.pf_size >= m_pf_info.size_limit || m_pf_info.no_more_pf)
         return;
 
     m_pf_info.pf_skip_count++;
