@@ -4044,7 +4044,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                                 } else {
                                     DEBUG_PRINT_INFO("venc_empty_buf: Will convert 601-FR to 709");
                                     fmt.fmt.pix_mp.colorspace = V4L2_COLORSPACE_REC709;
-                                    venc_set_colorspace(MSM_VIDC_BT709_5, 1,
+                                    venc_set_colorspace(MSM_VIDC_BT709_5, 0,
                                             MSM_VIDC_TRANSFER_BT709_5, MSM_VIDC_MATRIX_BT_709_5);
                                 }
                             } else {
