@@ -344,6 +344,7 @@ enum OMX_QCOM_VIDEO_CODINGTYPE
     QOMX_VIDEO_CodingHevc = OMX_VIDEO_CodingHEVC, /**< keeping old enum for backwards compatibility*/
     QOMX_VIDEO_CodingMVC = 0x7FA30C07,
     QOMX_VIDEO_CodingVp9 = OMX_VIDEO_CodingVP9,   /**< keeping old enum for backwards compatibility*/
+    QOMX_VIDEO_CodingTME = 0x7FA30C09,
 };
 
 enum OMX_QCOM_EXTN_INDEXTYPE
@@ -658,6 +659,9 @@ enum OMX_QCOM_EXTN_INDEXTYPE
      * } OMX_VIDEO_PARAM_PROFILELEVELTYPE;
      */
     OMX_QTIIndexParamClientConfiguredProfileLevelForSufficiency = 0x7F000076,
+
+    /* TME configuration */
+    OMX_IndexParamVideoTme = 0x7F000077,
 
     /* Capabilities */
     OMX_QTIIndexParamCapabilitiesVTDriverVersion = 0x7F100000,
@@ -1669,6 +1673,25 @@ typedef struct QOMX_VIDEO_PARAM_SPARKTYPE {
     QOMX_VIDEO_SPARKFORMATTYPE eFormat;
 } QOMX_VIDEO_PARAM_SPARKTYPE;
 
+typedef enum QOMX_VIDEO_TMEPROFILETYPE {
+    QOMX_VIDEO_TMEProfile0  = 0x1,
+    QOMX_VIDEO_TMEProfile1  = 0x2,
+    QOMX_VIDEO_TMEProfile2  = 0x4,
+    QOMX_VIDEO_TMEProfile3  = 0x8,
+} QOMX_VIDEO_TMEPROFILETYPE;
+
+typedef enum QOMX_VIDEO_TMELEVELTYPE {
+    QOMX_VIDEO_TMELevelInteger  = 0x1,
+} QOMX_VIDEO_TMELEVELTYPE;
+
+typedef struct QOMX_VIDEO_PARAM_TMETYPE {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    QOMX_VIDEO_TMEPROFILETYPE eProfile;
+    QOMX_VIDEO_TMELEVELTYPE eLevel;
+    OMX_U32 ePayloadVersion;
+} QOMX_VIDEO_PARAM_TMETYPE;
 
 typedef struct QOMX_VIDEO_QUERY_DECODER_INSTANCES {
     OMX_U32 nSize;
@@ -1769,6 +1792,7 @@ typedef struct QOMX_VIDEO_CUSTOM_BUFFERSIZE {
 #define OMX_QTI_INDEX_PARAM_VIDEO_CLIENT_EXTRADATA "OMX.QTI.index.param.client.extradata"
 #define OMX_QTI_INDEX_CONFIG_COLOR_ASPECTS "OMX.google.android.index.describeColorAspects"
 #define OMX_QTI_INDEX_CONFIG_VIDEO_GETDSMODE "OMX.QTI.index.config.video.getdsmode"
+#define OMX_QTI_INDEX_PARAM_TME "OMX.QTI.index.param.tme"
 
 typedef enum {
     QOMX_VIDEO_FRAME_PACKING_CHECKERBOARD = 0,
