@@ -1571,6 +1571,9 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                             &m_sOutPortDef.nBufferCountActual,
                             &m_sOutPortDef.nBufferSize,
                             m_sOutPortDef.nPortIndex);
+                        dev_get_dimensions(m_sOutPortDef.nPortIndex,
+                            &m_sOutPortDef.format.video.nFrameWidth,
+                            &m_sOutPortDef.format.video.nFrameHeight);
                     }
 
                     memcpy(portDefn, &m_sOutPortDef, sizeof(m_sOutPortDef));
