@@ -2625,6 +2625,15 @@ bool omx_venc::dev_get_buf_req(OMX_U32 *min_buff_count,
 
 }
 
+bool omx_venc::dev_get_dimensions(OMX_U32 port,
+        OMX_U32 *width,
+        OMX_U32 *height)
+{
+    return handle->venc_get_dimensions(port,
+            width,
+            height);
+}
+
 bool omx_venc::dev_set_buf_req(OMX_U32 *min_buff_count,
         OMX_U32 *actual_buff_count,
         OMX_U32 *buff_size,
