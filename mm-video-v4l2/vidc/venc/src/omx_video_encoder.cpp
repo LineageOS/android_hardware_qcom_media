@@ -2268,6 +2268,11 @@ bool omx_venc::dev_get_buf_req(OMX_U32 *min_buff_count,
 
 }
 
+bool omx_venc::is_streamon_done(OMX_U32 port)
+{
+    return handle->is_streamon_done(port);
+}
+
 bool omx_venc::dev_set_buf_req(OMX_U32 *min_buff_count,
         OMX_U32 *actual_buff_count,
         OMX_U32 *buff_size,

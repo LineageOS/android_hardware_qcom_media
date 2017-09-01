@@ -3098,6 +3098,11 @@ unsigned venc_dev::venc_stop( void)
     return rc;
 }
 
+bool venc_dev::is_streamon_done(OMX_U32 port)
+{
+    return streaming[port];
+}
+
 unsigned venc_dev::venc_pause(void)
 {
     pthread_mutex_lock(&pause_resume_mlock);

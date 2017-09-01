@@ -125,6 +125,7 @@ class omx_venc: public omx_video
         bool dev_empty_buf(void *, void *,unsigned,unsigned);
         bool dev_fill_buf(void *, void *,unsigned,unsigned);
         bool dev_get_buf_req(OMX_U32 *,OMX_U32 *,OMX_U32 *,OMX_U32);
+        bool is_streamon_done(OMX_U32 port);
         bool dev_set_buf_req(OMX_U32 const *,OMX_U32 const *,OMX_U32 const *,OMX_U32);
         bool dev_get_seq_hdr(void *, unsigned, unsigned *);
         bool dev_loaded_start(void);

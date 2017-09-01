@@ -299,6 +299,7 @@ class venc_dev
         void venc_close();
         unsigned venc_stop(void);
         unsigned venc_pause(void);
+        bool is_streamon_done(OMX_U32 port);
         unsigned venc_start(void);
         unsigned venc_flush(unsigned);
 #ifdef _ANDROID_ICS_

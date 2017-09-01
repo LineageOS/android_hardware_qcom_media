@@ -4950,7 +4950,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
     /*Enable following code once private handle color format is
       updated correctly*/
 
-    if (buffer->nFilledLen > 0 && handle) {
+    if (buffer->nFilledLen > 0 && handle && !is_streamon_done((OMX_U32) PORT_INDEX_OUT)) {
 
         ColorConvertFormat c2dSrcFmt = RGBA8888;
         ColorConvertFormat c2dDestFmt = NV12_128m;
@@ -4960,18 +4960,21 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
 
         if (found != mMapPixelFormat2Converter.end()) {
             c2dSrcFmt = (ColorConvertFormat)found->second;
+            c2dcc.setConversionNeeded(true);
         } else {
-            DEBUG_PRINT_INFO("Couldn't find color mapping for (%x)."
-                             "Set src format to default RGBA8888", handle->format);
+            DEBUG_PRINT_HIGH("Couldn't find color mapping for (%x).", handle->format);
+            c2dcc.setConversionNeeded(false);
         }
 
         mUsesColorConversion = is_conv_needed(handle->format, handle->flags);
 
-        if (mUsesColorConversion) {
-            DEBUG_PRINT_HIGH("open Color conv for W: %u, H: %u",
-                             (unsigned int)m_sInPortDef.format.video.nFrameWidth,
-                             (unsigned int)m_sInPortDef.format.video.nFrameHeight);
-
+        if (c2dcc.getConversionNeeded() &&
+            c2dcc.isPropChanged(m_sInPortDef.format.video.nFrameWidth,
+                                m_sInPortDef.format.video.nFrameHeight,
+                                m_sInPortDef.format.video.nFrameWidth,
+                                m_sInPortDef.format.video.nFrameHeight,
+                                c2dSrcFmt, c2dDestFmt,
+                                handle->flags, handle->width)) {
             DEBUG_PRINT_HIGH("C2D setResolution (0x%X -> 0x%x) HxW (%dx%d) Stride (%d)",
                              c2dSrcFmt, c2dDestFmt,
                              m_sInPortDef.format.video.nFrameHeight,
@@ -4997,12 +5000,12 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
                 return OMX_ErrorBadParameter;
             }
             mC2dDestFmt = c2dDestFmt;
-
-            dev_get_buf_req (&m_sInPortDef.nBufferCountMin,
-                             &m_sInPortDef.nBufferCountActual,
-                             &m_sInPortDef.nBufferSize,
-                             m_sInPortDef.nPortIndex);
         }
+
+        dev_get_buf_req (&m_sInPortDef.nBufferCountMin,
+                         &m_sInPortDef.nBufferCountActual,
+                         &m_sInPortDef.nBufferSize,
+                         m_sInPortDef.nPortIndex);
     }
 
     if (input_flush_progress == true) {
@@ -5093,13 +5096,14 @@ OMX_ERRORTYPE omx_video::convert_queue_buffer(OMX_HANDLETYPE hComp,
             DEBUG_PRINT_LOW("Buffer header %p Filled len size %u",
                     pdest_frame, (unsigned int)pdest_frame->nFilledLen);
         }
-    } else {
+    } else if (c2dcc.getConversionNeeded()) {
         uva = (unsigned char *)mmap(NULL, Input_pmem_info.size,
                 PROT_READ|PROT_WRITE,
                 MAP_SHARED,Input_pmem_info.fd,0);
         if (uva == MAP_FAILED) {
             ret = OMX_ErrorBadParameter;
         } else {
+            DEBUG_PRINT_HIGH("Start Color Conversion...");
             if (!c2dcc.convertC2D(Input_pmem_info.fd, uva,
                                   uva, m_pInput_pmem[index].fd,
                                   pdest_frame->pBuffer,
