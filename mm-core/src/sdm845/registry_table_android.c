@@ -650,6 +650,22 @@ omx_core_cb_type core[] =
     }
   },
   {
+    "OMX.qti.vdec.vpp",
+    NULL, // Create instance function
+    // Unique instance handle
+    {
+      NULL,
+      NULL,
+      NULL,
+      NULL
+    },
+    NULL,   // Shared object library handle
+    "libOmxVpp.so",
+    {
+      "iv_processor.yuv"
+    }
+  },
+  {
     "OMX.QCOM.CUST.COMP.START",
     NULL, //Create instance function
     //Unique instance handle
@@ -711,22 +727,6 @@ omx_core_cb_type core[] =
     "libOmxVenc.so",
     {
       "video_encoder.hevc"
-    }
-  },
-  {
-    "OMX.qti.vdec.vpp",
-    NULL, // Create instance function
-    // Unique instance handle
-    {
-      NULL,
-      NULL,
-      NULL,
-      NULL
-    },
-    NULL,   // Shared object library handle
-    "libOmxVpp.so",
-    {
-      "video_decoder.vpp"
     }
   }
 };
