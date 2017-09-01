@@ -3787,6 +3787,15 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         } else if (handle->format == QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m) {
                             m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV12;
                             DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = NV12 Linear");
+                        } else if (handle->format == HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC) {
+                            if ((m_codec == OMX_VIDEO_CodingHEVC) &&
+                                 (codec_profile.profile == V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10)) {
+                                m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV12_TP10_UBWC;
+                                DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = TP10UBWC");
+                            } else {
+                                DEBUG_PRINT_ERROR("ENC_CONFIG: TP10UBWC colorformat not supported for this codec and profile");
+                                return false;
+                            }
                         }
 
                         // If CSC is enabled, then set control with colorspace from gralloc metadata
@@ -6682,6 +6691,16 @@ bool venc_dev::venc_reconfigure_ltrmode() {
     return true;
 }
 
+bool venc_dev::venc_get_hevc_profile(OMX_U32* profile)
+{
+    if (profile == nullptr) return false;
+
+    if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
+        if(profile_level_converter::convert_v4l2_profile_to_omx(V4L2_PIX_FMT_HEVC, codec_profile.profile, (int*)profile)) {
+            return true;
+        } else return false;
+    } else return false;
+}
 bool venc_dev::venc_get_profile_level(OMX_U32 *eProfile,OMX_U32 *eLevel)
 {
     bool status = true;

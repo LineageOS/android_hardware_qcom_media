@@ -2119,7 +2119,13 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             {
                 if (paramData == NULL) { return OMX_ErrorBadParameter; }
                 OMX_U32 *consumerUsage = (OMX_U32 *)paramData;
+                OMX_U32 eProfile = 0;
                 DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamConsumerUsageBits");
+                bool hevc = dev_get_hevc_profile(&eProfile);
+                if(hevc && eProfile == (OMX_U32)OMX_VIDEO_HEVCProfileMain10) {
+                    DEBUG_PRINT_INFO("Setting TP10 consumer usage bits");
+                    m_sParamConsumerUsage |= GRALLOC1_CONSUMER_USAGE_PRIVATE_10BIT_TP;
+                }
                 memcpy(consumerUsage, &m_sParamConsumerUsage, sizeof(m_sParamConsumerUsage));
                 break;
             }

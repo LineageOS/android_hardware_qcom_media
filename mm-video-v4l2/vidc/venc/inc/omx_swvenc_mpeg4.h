@@ -167,6 +167,7 @@ class omx_venc: public omx_video
            OMX_U32 port
         );
         int swvenc_input_log_buffers(const char *buffer, int bufferlen);
+        bool dev_get_hevc_profile(OMX_U32*) { return false; }
 
 };
 

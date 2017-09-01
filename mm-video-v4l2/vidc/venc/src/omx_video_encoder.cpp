@@ -2462,3 +2462,8 @@ int omx_venc::dev_extradata_log_buffers(char *buffer)
 {
     return handle->venc_extradata_log_buffers(buffer);
 }
+
+bool omx_venc::dev_get_hevc_profile(OMX_U32* profile)
+{
+    return handle->venc_get_hevc_profile(profile);
+}

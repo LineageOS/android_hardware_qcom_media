@@ -92,6 +92,7 @@ class omx_venc: public omx_video
         bool dev_get_output_log_flag();
         int dev_output_log_buffers(const char *buffer_addr, int buffer_len);
         int dev_extradata_log_buffers(char *buffer);
+        bool dev_get_hevc_profile(OMX_U32* profile);
 };
 
 #ifdef _UBWC_
