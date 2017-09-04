@@ -80,6 +80,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define SZ_4K 0x1000
 #define SZ_1M 0x100000
+#define MAX_FPS_PQ 60
 
 /* MPEG4 profile and level table*/
 static const unsigned int mpeg4_profile_level_table[][MAX_PROFILE_PARAMS]= {
@@ -8220,8 +8221,7 @@ bool venc_dev::venc_check_for_pq(void)
         m_pq.caps.max_width * m_pq.caps.max_height;
 
     frame_rate_supported =
-        (m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) <=
-        (m_pq.caps.max_mb_per_sec / ((m_sVenc_cfg.input_height * m_sVenc_cfg.input_width) / 256));
+        (operating_rate >> 16) <= MAX_FPS_PQ;
 
     frame_rate_supported = (((operating_rate >> 16) > 0) && ((operating_rate >> 16) < 5)) ? false : frame_rate_supported;
 
