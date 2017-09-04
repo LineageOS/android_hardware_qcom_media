@@ -1578,6 +1578,11 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                             (unsigned int)m_sOutPortDef.nBufferSize, (unsigned int)m_sOutPortDef.nBufferCountMin,
                             (unsigned int)m_sOutPortDef.nBufferCountActual);
                     memcpy(portDefn, &m_sOutPortDef, sizeof(m_sOutPortDef));
+
+                    if (secure_session || allocate_native_handle) {
+                        portDefn->nBufferSize =
+                                sizeof(native_handle_t) + (sizeof(int) * (1/*numFds*/ + 3/*numInts*/));
+                    }
                 } else {
                     DEBUG_PRINT_ERROR("ERROR: GetParameter called on Bad Port Index");
                     eRet = OMX_ErrorBadPortIndex;
