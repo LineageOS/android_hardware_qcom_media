@@ -337,6 +337,14 @@ struct extradata_info {
     OMX_U32 output_height;
 };
 
+struct prefetch_info {
+    size_t pf_size;
+    OMX_U32 pf_skip_count;
+    OMX_U32 size_limit;
+    OMX_U32 res_limit;
+    bool no_more_pf;
+};
+
 // OMX video decoder class
 class omx_vdec: public qc_omx_component
 {
@@ -482,6 +490,7 @@ class omx_vdec: public qc_omx_component
         OMX_ERRORTYPE decide_dpb_buffer_mode(bool split_opb_dpb_with_same_color_fmt);
         void request_perf_level(enum vidc_perf_level perf_level);
         int dpb_bit_depth;
+        struct prefetch_info m_pf_info;
         bool async_thread_force_stop;
         volatile bool message_thread_stop;
         struct extradata_info m_extradata_info;
@@ -1242,7 +1251,8 @@ class omx_vdec: public qc_omx_component
         }
 
         static OMX_ERRORTYPE describeColorFormat(OMX_PTR params);
-        void prefetchNewBuffers();
+        void prefetchNewBuffers(bool in_reconfig);
+        void drainPrefetchedBuffers();
 
         class client_extradata_info {
             private:
