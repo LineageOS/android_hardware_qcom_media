@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2009, 2011, 2015 The Linux Foundation. All rights reserved.
+Copyright (c) 2009, 2011, 2015, 2017 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -229,6 +229,15 @@ typedef struct QOMX_AUDIO_PARAM_AC3TYPE {
    OMX_BOOL bLfeOn;
    OMX_BOOL bDelaySurroundChannels;
 } QOMX_AUDIO_PARAM_AC3TYPE;
+
+typedef struct OMX_AUDIO_PARAM_ANDROID_PROFILETYPE {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    OMX_U32 eProfile;      /**< type is OMX_AUDIO_AACPROFILETYPE or OMX_AUDIO_WMAPROFILETYPE
+                             depending on context */
+    OMX_U32 nProfileIndex; /**< Used to query for individual profile support information */
+} OMX_AUDIO_PARAM_ANDROID_PROFILETYPE;
 
 typedef enum OMX_AUDIO_AC3_CHANNEL_ROUTING
 {
