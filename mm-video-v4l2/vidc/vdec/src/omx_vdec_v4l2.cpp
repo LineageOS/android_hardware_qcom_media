@@ -6944,6 +6944,8 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
         (unsigned long)temp_buffer->offset;
     plane.reserved[0] = temp_buffer->pmem_fd;
     plane.reserved[1] = temp_buffer->offset;
+    plane.reserved[3] = (unsigned long)buffer->pMarkData;
+    plane.reserved[4] = (unsigned long)buffer->hMarkTargetComponent;
     plane.data_offset = 0;
     buf.m.planes = &plane;
     buf.length = 1;
@@ -8201,6 +8203,9 @@ int omx_vdec::async_message_process (void *context, void* message)
                    ((omxhdr - omx->m_out_mem_ptr) < (int)omx->drv_ctx.op_buf.actualcount) &&
                    (((struct vdec_output_frameinfo *)omxhdr->pOutputPortPrivate
                      - omx->drv_ctx.ptr_respbuffer) < (int)omx->drv_ctx.op_buf.actualcount)) {
+
+               omxhdr->pMarkData = (OMX_PTR)(unsigned long)plane[0].reserved[3];
+               omxhdr->hMarkTargetComponent = (OMX_HANDLETYPE)(unsigned long)plane[0].reserved[4];
 
                if (vdec_msg->msgdata.output_frame.len <=  omxhdr->nAllocLen) {
                    omxhdr->nFilledLen = vdec_msg->msgdata.output_frame.len;
