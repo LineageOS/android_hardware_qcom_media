@@ -8223,7 +8223,6 @@ bool venc_dev::venc_check_for_pq(void)
     frame_rate_supported =
         (operating_rate >> 16) <= MAX_FPS_PQ;
 
-    frame_rate_supported = (((operating_rate >> 16) > 0) && ((operating_rate >> 16) < 5)) ? false : frame_rate_supported;
 
     yuv_format_supported = ((m_sVenc_cfg.inputformat == V4L2_PIX_FMT_NV12 && (m_pq.caps.color_formats & BIT(COLOR_FMT_NV12)))
             || (m_sVenc_cfg.inputformat == V4L2_PIX_FMT_NV21 && (m_pq.caps.color_formats & BIT(COLOR_FMT_NV21)))
