@@ -4408,9 +4408,15 @@ OMX_ERRORTYPE omx_video::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVE
                 profileLevelType->eProfile = OMX_VIDEO_AVCProfileHigh;
                 profileLevelType->eLevel   = OMX_VIDEO_AVCLevel52;
             } else if (profileLevelType->nProfileIndex == 3) {
-                profileLevelType->eProfile = QOMX_VIDEO_AVCProfileConstrainedBaseline;
+                profileLevelType->eProfile = OMX_VIDEO_AVCProfileConstrainedBaseline;
                 profileLevelType->eLevel   = OMX_VIDEO_AVCLevel52;
             } else if (profileLevelType->nProfileIndex == 4) {
+                profileLevelType->eProfile = QOMX_VIDEO_AVCProfileConstrainedBaseline;
+                profileLevelType->eLevel   = OMX_VIDEO_AVCLevel52;
+            } else if (profileLevelType->nProfileIndex == 5) {
+                profileLevelType->eProfile = OMX_VIDEO_AVCProfileConstrainedHigh;
+                profileLevelType->eLevel   = OMX_VIDEO_AVCLevel52;
+            } else if (profileLevelType->nProfileIndex == 6) {
                 profileLevelType->eProfile = QOMX_VIDEO_AVCProfileConstrainedHigh;
                 profileLevelType->eLevel   = OMX_VIDEO_AVCLevel52;
             } else {
