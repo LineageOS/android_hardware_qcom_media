@@ -487,6 +487,7 @@ class venc_dev
         bool venc_reconfigure_intra_refresh_period();
         bool venc_reconfig_reqbufs();
         bool venc_set_vpe_rotation(OMX_S32 rotation_angle);
+        bool venc_set_mirror(OMX_U32 mirror);
         bool venc_set_ltrmode(OMX_U32 enable, OMX_U32 count);
         bool venc_set_useltr(OMX_U32 frameIdx);
         bool venc_set_markltr(OMX_U32 frameIdx);
