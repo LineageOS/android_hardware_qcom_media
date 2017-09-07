@@ -1169,6 +1169,26 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool split_opb_dpb_with_same_colo
             if (dither_enable) {
                 //split DPB-OPB
                 //DPB -> TP10UBWC, OPB -> UBWC
+
+                if (capture_capability != V4L2_PIX_FMT_NV12_UBWC) {
+                    drv_ctx.output_format = VDEC_YUV_FORMAT_NV12_UBWC;
+                    capture_capability = V4L2_PIX_FMT_NV12_UBWC;
+
+                    memset(&fmt, 0x0, sizeof(struct v4l2_format));
+                    fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+                    rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_FMT, &fmt);
+                    if (rc) {
+                        DEBUG_PRINT_ERROR("%s: Failed get format on capture mplane", __func__);
+                        return OMX_ErrorUnsupportedSetting;
+                    }
+                    fmt.fmt.pix_mp.pixelformat = capture_capability;
+                    rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_FMT, &fmt);
+                    if (rc) {
+                        DEBUG_PRINT_ERROR("%s: Failed set format on capture mplane", __func__);
+                        return OMX_ErrorUnsupportedSetting;
+                    }
+                }
+
                 eRet = set_dpb(true, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_TP10_UBWC);
             } else {
                 //combined DPB-OPB
