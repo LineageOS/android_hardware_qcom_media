@@ -2027,16 +2027,18 @@ OMX_ERRORTYPE  omx_venc::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
     }
 
     /*Check if the input buffers have to be cleaned up*/
-    if (m_inp_mem_ptr
+    OMX_BUFFERHEADERTYPE* ptr = m_inp_mem_ptr;
 #ifdef _ANDROID_ICS_
-            && !meta_mode_enable
+    if (meta_mode_enable) {
+        ptr = meta_buffer_hdr;
+    }
 #endif
-       ) {
+    if (ptr) {
         DEBUG_PRINT_LOW("Freeing the Input Memory");
         for (i=0; i<m_sInPortDef.nBufferCountActual; i++ ) {
             if (BITMASK_PRESENT(&m_inp_bm_count, i)) {
                 BITMASK_CLEAR(&m_inp_bm_count, i);
-                free_input_buffer (&m_inp_mem_ptr[i]);
+                free_input_buffer(ptr + i);
             }
 
             if (release_input_done()) {
@@ -2044,8 +2046,8 @@ OMX_ERRORTYPE  omx_venc::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
             }
         }
 
-
-        free(m_inp_mem_ptr);
+        if (m_inp_mem_ptr != meta_buffer_hdr)
+            free(m_inp_mem_ptr);
         m_inp_mem_ptr = NULL;
     }
 
