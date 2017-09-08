@@ -423,7 +423,7 @@ class venc_dev
         bool hw_overload;
         bool is_gralloc_source_ubwc;
         bool is_camera_source_ubwc;
-        bool is_csc_enabled;
+        bool is_csc_custom_matrix_enabled;
         OMX_U32 fd_list[64];
 
     private:

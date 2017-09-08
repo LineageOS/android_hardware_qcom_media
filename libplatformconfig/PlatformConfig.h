@@ -56,6 +56,7 @@ typedef enum {
     vidc_enc_log_out,
     vidc_dec_conceal_color_8bit,
     vidc_dec_conceal_color_10bit,
+    vidc_enc_csc_custom_matrix,
 } Config_t;
 
 struct configStr {
@@ -70,6 +71,7 @@ static const struct configStr configStrMap[] = {
     {vidc_enc_log_out, "vidc_enc_log_out"},
     {vidc_dec_conceal_color_8bit, "vidc_dec_conceal_color_8bit"},
     {vidc_dec_conceal_color_10bit, "vidc_dec_conceal_color_10bit"},
+    {vidc_enc_csc_custom_matrix, "vidc_enc_csc_custom_matrix"},
 };
 
 class Config {

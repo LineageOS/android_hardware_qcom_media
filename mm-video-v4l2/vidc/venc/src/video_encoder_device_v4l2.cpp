@@ -154,6 +154,8 @@ venc_dev::venc_dev(class omx_venc *venc_class)
             (int32_t *)&m_debug.in_buffer_log, 0);
     Platform::Config::getInt32(Platform::vidc_enc_log_out,
             (int32_t *)&m_debug.out_buffer_log, 0);
+    Platform::Config::getInt32(Platform::vidc_enc_csc_custom_matrix,
+            (int32_t *)&is_csc_custom_matrix_enabled, 0);
 
     char property_value[PROPERTY_VALUE_MAX] = {0};
 
@@ -178,8 +180,6 @@ venc_dev::venc_dev(class omx_venc *venc_class)
 #else
     is_gralloc_source_ubwc = 0;
 #endif
-    // TODO: Support in XML
-    is_csc_enabled = 0;
 
      property_value[0] = '\0';
      property_get("vendor.vidc.log.loc", property_value, BUFFER_LOG_LOC);
@@ -3669,6 +3669,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                     if (!streaming[OUTPUT_PORT] && !(m_sVenc_cfg.inputformat == V4L2_PIX_FMT_RGB32 ||
                         m_sVenc_cfg.inputformat == V4L2_PIX_FMT_RGBA8888_UBWC)) {
 
+                        unsigned int is_csc_enabled = 0;
                         struct v4l2_format fmt;
                         OMX_COLOR_FORMATTYPE color_format = (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
 
@@ -3760,6 +3761,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                     }
 
                     if (!streaming[OUTPUT_PORT]) {
+                        unsigned int is_csc_enabled = 0;
                         ColorMetaData colorData= {};
                         // Moment of truth... actual colorspace is known here..
                         if (getMetaData(handle, GET_COLOR_METADATA, &colorData) == 0) {
@@ -3803,13 +3805,47 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                             }
                         }
 
+                        DEBUG_PRINT_INFO("color_space.primaries %d colorData.colorPrimaries %d, is_csc_custom_matrix_enabled=%d",
+                                         color_space.primaries, colorData.colorPrimaries, is_csc_custom_matrix_enabled);
+
+                        bool is_color_space_601fr = (colorData.colorPrimaries == ColorPrimaries_BT601_6_525) &&
+                                                    (colorData.range == Range_Full) &&
+                                                    (colorData.transfer == Transfer_SMPTE_170M) &&
+                                                    (colorData.matrixCoefficients == MatrixCoEff_BT601_6_525);
+
+                        if (is_color_space_601fr &&
+                            color_space.primaries == ColorPrimaries_BT709_5)
+                        {
+                            DEBUG_PRINT_INFO("Enable CSC from BT601 to BT709 supported.");
+                            is_csc_enabled = 1;
+                        }
+
                         // If CSC is enabled, then set control with colorspace from gralloc metadata
                         if (is_csc_enabled) {
                             struct v4l2_control control;
+
+                            /* Set 601FR as the Color Space. When we set CSC, this will be passed to
+                               fimrware as the InputPrimaries */
+                            venc_set_colorspace(colorData.colorPrimaries, colorData.range,
+                                                colorData.transfer, colorData.matrixCoefficients);
+
                             control.id = V4L2_CID_MPEG_VIDC_VIDEO_VPE_CSC;
                             control.value = V4L2_CID_MPEG_VIDC_VIDEO_VPE_CSC_ENABLE;
                             if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
                                 DEBUG_PRINT_ERROR("venc_empty_buf: Failed to set VPE CSC");
+                            }
+                            if (is_csc_custom_matrix_enabled) {
+                                control.id = V4L2_CID_MPEG_VIDC_VIDEO_VPE_CSC_CUSTOM_MATRIX;
+                                control.value = 1;
+                                if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
+                                    DEBUG_PRINT_ERROR("venc_empty_buf: Failed to enable VPE CSC custom matrix");
+                                } else {
+                                    DEBUG_PRINT_INFO("venc_empty_buf: Enabled VPE CSC custom matrix");
+                                    colorData.colorPrimaries =  ColorPrimaries_BT709_5;
+                                    colorData.range = Range_Limited;
+                                    colorData.transfer = Transfer_sRGB;
+                                    colorData.matrixCoefficients = MatrixCoEff_BT709_5;
+                                }
                             }
                         }
 
