@@ -2412,6 +2412,9 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
             m_decoder_capability.max_height = frmsize.stepwise.max_height;
         }
 
+        /* Based on UBWC enable, decide split mode to driver before calling S_FMT */
+        eRet = set_dpb(m_disable_ubwc_mode, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_UBWC);
+
         memset(&fmt, 0x0, sizeof(struct v4l2_format));
         fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
         fmt.fmt.pix_mp.height = drv_ctx.video_resolution.frame_height;
