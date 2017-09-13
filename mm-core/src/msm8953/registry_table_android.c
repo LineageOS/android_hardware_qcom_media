@@ -206,7 +206,7 @@ omx_core_cb_type core[] =
     NULL,   // Shared object library handle
     "libOmxAmrDec.so",
     {
-      "audio_decoder.amrnb"
+      "audio_decoder.amr"
     }
   },
   {
@@ -219,7 +219,7 @@ omx_core_cb_type core[] =
     NULL,   // Shared object library handle
     "libOmxAmrDec.so",
     {
-      "audio_decoder.amrwb"
+      "audio_decoder.amr"
     }
   },
   {
@@ -382,32 +382,6 @@ omx_core_cb_type core[] =
     }
   },
   {
-    "OMX.qcom.audio.decoder.g711mlaw",
-    NULL,   // Create instance function
-    // Unique instance handle
-    {
-      NULL
-    },
-    NULL,   // Shared object library handle
-    "libOmxG711Dec.so",
-    {
-      "audio_decoder.g711"
-    }
-  },
-  {
-    "OMX.qcom.audio.decoder.g711alaw",
-    NULL,   // Create instance function
-    // Unique instance handle
-    {
-      NULL
-    },
-    NULL,   // Shared object library handle
-    "libOmxG711Dec.so",
-    {
-      "audio_decoder.g711"
-    }
-  },
-  {
     "OMX.qti.audio.decoder.alac.sw",
     NULL,   // Create instance function
     // Unique instance handle
@@ -453,22 +427,6 @@ omx_core_cb_type core[] =
     "libOmxApeDecSw.so",
     {
       "audio_decoder.ape"
-    }
-  },
-  {
-    "OMX.qti.audio.decoder.flac.sw",
-    NULL,   // Create instance function
-    // Unique instance handle
-    {
-      NULL,
-      NULL,
-      NULL,
-      NULL
-    },
-    NULL,   // Shared object library handle
-    "libOmxFlacDecSw.so",
-    {
-      "audio_decoder.flac"
     }
   },
   {
@@ -534,38 +492,6 @@ omx_core_cb_type core[] =
     "libOmxAmrEnc.so",
     {
       "audio_encoder.amrwb"
-    }
-  },
-  {
-    "OMX.qcom.audio.encoder.g711mlaw",
-    NULL,   // Create instance function
-    // Unique instance handle
-    {
-      NULL,
-      NULL,
-      NULL,
-      NULL
-    },
-    NULL,   // Shared object library handle
-    "libOmxG711Enc.so",
-    {
-      "audio_encoder.g711"
-    }
-  },
-  {
-    "OMX.qcom.audio.encoder.g711alaw",
-    NULL,   // Create instance function
-    // Unique instance handle
-    {
-      NULL,
-      NULL,
-      NULL,
-      NULL
-    },
-    NULL,   // Shared object library handle
-    "libOmxG711Enc.so",
-    {
-      "audio_encoder.g711"
     }
   },
   {
