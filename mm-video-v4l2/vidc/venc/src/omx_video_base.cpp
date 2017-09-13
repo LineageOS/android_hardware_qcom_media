@@ -2122,6 +2122,7 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 memcpy(pParam, &m_slowLatencyMode, sizeof(m_slowLatencyMode));
                 break;
            }
+#ifndef _DISABLE_TEMPORAL_LAYER_
         case OMX_IndexParamAndroidVideoTemporalLayering:
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE);
@@ -2135,6 +2136,7 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 memcpy(pLayerInfo, &m_sParamTemporalLayers, sizeof(m_sParamTemporalLayers));
                 break;
             }
+#endif
         case OMX_QTIIndexParamDisablePQ:
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, QOMX_DISABLETYPE);
@@ -2148,7 +2150,6 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 pParam->bDisable = pq_status ? OMX_FALSE : OMX_TRUE;
                 break;
             }
-        case OMX_IndexParamVideoSliceFMO:
         default:
             {
                 DEBUG_PRINT_LOW("ERROR: get_parameter: unknown param %08x", paramIndex);
@@ -2351,6 +2352,7 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
                 }
                 break;
             }
+#ifndef _DISABLE_TEMPORAL_LAYER_
         case OMX_IndexParamAndroidVideoTemporalLayering:
             {
                 VALIDATE_OMX_PARAM_DATA(configData, OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE);
@@ -2360,6 +2362,7 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
                 memcpy(configData, &m_sConfigTemporalLayers, sizeof(m_sConfigTemporalLayers));
                 break;
             }
+#endif
         case OMX_IndexConfigAndroidVendorExtension:
             {
                 VALIDATE_OMX_PARAM_DATA(configData, OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE);
