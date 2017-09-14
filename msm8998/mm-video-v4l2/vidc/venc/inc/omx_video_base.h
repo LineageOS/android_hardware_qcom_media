@@ -699,6 +699,7 @@ class omx_video: public qc_omx_component
         bool allocate_native_handle;
 
         uint64_t m_out_bm_count;
+        uint64_t m_client_out_bm_count;
         uint64_t m_inp_bm_count;
         uint64_t m_flags;
         uint64_t m_etb_count;
