@@ -9745,8 +9745,9 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                     struct msm_vidc_interlace_payload *payload;
                     payload = (struct msm_vidc_interlace_payload *)(void *)data->data;
                     if (payload) {
+                        DEBUG_PRINT_LOW("Interlace format %#x", payload->format);
                         enable = OMX_InterlaceFrameProgressive;
-                        switch (payload->format) {
+                        switch (payload->format & 0x1F) {
                             case MSM_VIDC_INTERLACE_FRAME_PROGRESSIVE:
                                 drv_ctx.interlace = VDEC_InterlaceFrameProgressive;
                                 break;
@@ -9781,10 +9782,10 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
 
                     }
                     if (client_extradata & OMX_INTERLACE_EXTRADATA) {
-                        append_interlace_extradata(p_extra, payload->format);
+                        append_interlace_extradata(p_extra, (payload->format & 0x1F));
                         p_extra = (OMX_OTHER_EXTRADATATYPE *) (((OMX_U8 *) p_extra) + ALIGN(p_extra->nSize, 4));
                         if (p_client_extra) {
-                            append_interlace_extradata(p_client_extra, payload->format);
+                            append_interlace_extradata(p_client_extra, (payload->format & 0x1F));
                             p_client_extra = (OMX_OTHER_EXTRADATATYPE *)
                                 (((OMX_U8 *)p_client_extra) + ALIGN(p_client_extra->nSize, 4));
                         }
