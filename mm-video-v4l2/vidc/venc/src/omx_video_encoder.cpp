@@ -2331,8 +2331,24 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
         case OMX_IndexConfigAndroidVideoTemporalLayering:
             {
                 VALIDATE_OMX_PARAM_DATA(configData, OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE);
-                DEBUG_PRINT_ERROR("Setting/modifying Temporal layers at run-time is not supported !");
-                return OMX_ErrorUnsupportedSetting;
+                OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE* pParam =
+                    (OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE*)configData;
+                if (!handle->venc_set_config(configData, (OMX_INDEXTYPE)OMX_IndexConfigAndroidVideoTemporalLayering)) {
+                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_IndexConfigAndroidVideoTemporalLayering failed");
+                    return OMX_ErrorUnsupportedSetting;
+                }
+                // save the actual configuration applied
+                memcpy(&m_sConfigTemporalLayers, pParam, sizeof(m_sConfigTemporalLayers));
+                // keep the config data in sync
+                m_sParamTemporalLayers.ePattern = m_sConfigTemporalLayers.ePattern;
+                m_sParamTemporalLayers.nBLayerCountActual = m_sConfigTemporalLayers.nBLayerCountActual;
+                m_sParamTemporalLayers.nPLayerCountActual = m_sConfigTemporalLayers.nPLayerCountActual;
+                m_sParamTemporalLayers.bBitrateRatiosSpecified = m_sConfigTemporalLayers.bBitrateRatiosSpecified;
+                memcpy(&m_sParamTemporalLayers.nBitrateRatios[0],
+                        &m_sConfigTemporalLayers.nBitrateRatios[0],
+                        OMX_VIDEO_ANDROID_MAXTEMPORALLAYERS * sizeof(OMX_U32));
+
+                break;
             }
         case OMX_QcomIndexConfigPerfLevel:
             {
