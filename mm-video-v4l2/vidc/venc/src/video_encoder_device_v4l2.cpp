@@ -6550,13 +6550,31 @@ bool venc_dev::venc_convert_abs2cum_bitrate(QOMX_EXTNINDEX_VIDEO_HYBRID_HP_MODE 
 
 bool venc_dev::venc_validate_temporal_settings() {
 
-    if (((m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) < 60) && (operating_rate < 60)) {
-        DEBUG_PRINT_HIGH("TemporalLayer: Invalid FPS/operating rate settings for Hier layers");
+    bool fps_30_plus = false;
+    bool fps_60_plus = false;
+    bool res_1080p_plus = false;
+
+    fps_30_plus = (((m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) > 30) || ((operating_rate) > 30));
+    fps_60_plus = (((m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) > 60) || ((operating_rate) > 60));
+    res_1080p_plus = ((m_sVenc_cfg.input_width * m_sVenc_cfg.input_height / 256) > (1920 * 1088 / 256));
+
+    if (res_1080p_plus == false && fps_60_plus == false) {
+        DEBUG_PRINT_HIGH("TemporalLayer: Hier layers cannot be enabled for res <= 1080p & fps <= 60");
+        return false;
+    }
+
+    if (res_1080p_plus == true && fps_30_plus == false) {
+        DEBUG_PRINT_HIGH("TemporalLayer: Hier layers cannot be enabled for res > 1080p & fps <= 30");
         return false;
     }
 
     if (intra_period.num_bframes > 0) {
         DEBUG_PRINT_HIGH("TemporalLayer: Invalid B-frame settings for Hier layers");
+        return false;
+    }
+
+    if (rate_ctrl.rcmode == V4L2_CID_MPEG_VIDC_VIDEO_RATE_CONTROL_OFF) {
+        DEBUG_PRINT_HIGH("TemporalLayer: Hier layers cannot be enabled when RC is off");
         return false;
     }
 
