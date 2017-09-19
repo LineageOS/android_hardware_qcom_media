@@ -485,7 +485,7 @@ class venc_dev
         void venc_config_print();
         bool venc_set_slice_delivery_mode(OMX_U32 enable);
         bool venc_set_extradata(OMX_U32 extra_data, OMX_BOOL enable);
-        bool venc_set_idr_period(OMX_U32 nPFrames, OMX_U32 nIDRPeriod);
+        bool venc_set_idr_period(OMX_U32 nIDRPeriod);
         bool venc_reconfigure_intra_period();
         bool venc_reconfigure_intra_refresh_period();
         bool venc_reconfig_reqbufs();
