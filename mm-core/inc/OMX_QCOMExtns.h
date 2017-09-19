@@ -467,7 +467,7 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     /* OMX.google.android.index.prependSPSPPSToIDRFrames */
     OMX_QcomIndexParamSequenceHeaderWithIDR = 0x7F00002A,
 
-    OMX_QcomIndexParamH264AUDelimiter = 0x7F00002B,
+    OMX_QcomIndexParamAUDelimiter = 0x7F00002B,
 
     OMX_QcomIndexParamVideoDownScalar = 0x7F00002C,
 
@@ -643,13 +643,11 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     /* use av-timer ticks as timestamp (used by VT-client) */
     OMX_QTIIndexParamEnableAVTimerTimestamps = 0x7F000071,
 
-    OMX_QcomIndexParamAUDelimiter = 0x7F000072,
-
     /* OMX.QTI.index.config.video.getdsmode */
-    OMX_QTIIndexConfigGetDSMode = 0x7F000073,
+    OMX_QTIIndexConfigGetDSMode = 0x7F000072,
 
     /* Controlled Input queue mode for frame accurate configuration */
-    OMX_QcomIndexParamVencControlInputQueue = 0x7F000074,
+    OMX_QcomIndexParamVencControlInputQueue = 0x7F000073,
 
     /**
     *  Configure Slice Header Spacing
@@ -658,7 +656,7 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     *  alternative to OMX_IndexParamVideoAvc (for MB based)
     *  and OMX_IndexParamVideoErrorCorrection (for byte based)
     */
-    OMX_QcomIndexParamVideoSliceSpacing = 0x7F000075,
+    OMX_QcomIndexParamVideoSliceSpacing = 0x7F000074,
 
     /* Capabilities */
     OMX_QTIIndexParamCapabilitiesVTDriverVersion = 0x7F100000,
@@ -1123,18 +1121,6 @@ typedef struct OMX_QCOM_VIDEO_CONFIG_QPRANGE
    OMX_U32 nMinQP;          /** The number for minimum quantization parameter */
    OMX_U32 nMaxQP;          /** The number for maximum quantization parameter */
 } OMX_QCOM_VIDEO_CONFIG_QPRANGE;
-
-/**
- * This structure describes the parameters for the
- * OMX_QcomIndexParamH264AUDelimiter extension.  It enables/disables
- * the AU delimiters in the H264 stream, which is used by WFD.
- */
-typedef struct OMX_QCOM_VIDEO_CONFIG_H264_AUD
-{
-   OMX_U32 nSize;           /** Size of the structure in bytes */
-   OMX_VERSIONTYPE nVersion;/** OMX specification version information */
-   OMX_BOOL bEnable;        /** Enable/disable the setting */
-} OMX_QCOM_VIDEO_CONFIG_H264_AUD;
 
 /**
  * This structure describes the parameters for the

@@ -80,6 +80,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define SZ_4K 0x1000
 #define SZ_1M 0x100000
+#define MAX_FPS_PQ 60
 
 /* MPEG4 profile and level table*/
 static const unsigned int mpeg4_profile_level_table[][MAX_PROFILE_PARAMS]= {
@@ -1990,10 +1991,48 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                         if (num_input_planes > 1)
                             input_extradata_info.count = m_sInput_buff_property.actualcount + 1;
 
+                        m_sVenc_cfg.dvs_height = portDefn->format.video.nFrameHeight;
+                        m_sVenc_cfg.dvs_width = portDefn->format.video.nFrameWidth;
+
+                        memset(&fmt, 0, sizeof(fmt));
+                        fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+                        fmt.fmt.pix_mp.height = m_sVenc_cfg.dvs_height;
+                        fmt.fmt.pix_mp.width = m_sVenc_cfg.dvs_width;
+                        fmt.fmt.pix_mp.pixelformat = m_sVenc_cfg.codectype;
+
+                        if (ioctl(m_nDriver_fd, VIDIOC_S_FMT, &fmt)) {
+                            DEBUG_PRINT_ERROR("VIDIOC_S_FMT CAPTURE_MPLANE Failed");
+                            hw_overload = errno == EBUSY;
+                            return false;
+                        }
+
+                        m_sOutput_buff_property.datasize = fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
+
+                        m_sOutput_buff_property.actualcount = portDefn->nBufferCountActual;
+                        bufreq.memory = V4L2_MEMORY_USERPTR;
+                        bufreq.count = portDefn->nBufferCountActual;
+                        bufreq.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+
+                        if (ioctl(m_nDriver_fd,VIDIOC_REQBUFS, &bufreq)) {
+                            DEBUG_PRINT_ERROR("VIDIOC_REQBUFS CAPTURE_MPLANE Failed");
+                            return false;
+                        }
+
+                        if (bufreq.count == portDefn->nBufferCountActual)
+                            m_sOutput_buff_property.mincount = m_sOutput_buff_property.actualcount = bufreq.count;
+
+                        if (portDefn->nBufferCountActual >= m_sOutput_buff_property.mincount)
+                            m_sOutput_buff_property.actualcount = portDefn->nBufferCountActual;
+
+                        if (fmt.fmt.pix_mp.num_planes > 1)
+                            output_extradata_info.count = m_sOutput_buff_property.actualcount;
+
                     }
 
                     DEBUG_PRINT_LOW("input: actual: %u, min: %u, count_req: %u",
                             (unsigned int)portDefn->nBufferCountActual, (unsigned int)m_sInput_buff_property.mincount, bufreq.count);
+                    DEBUG_PRINT_LOW("Output: actual: %u, min: %u, count_req: %u",
+                            (unsigned int)portDefn->nBufferCountActual, (unsigned int)m_sOutput_buff_property.mincount, bufreq.count);
                 } else if (portDefn->nPortIndex == PORT_INDEX_OUT) {
                     m_sVenc_cfg.dvs_height = portDefn->format.video.nFrameHeight;
                     m_sVenc_cfg.dvs_width = portDefn->format.video.nFrameWidth;
@@ -3042,10 +3081,30 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                 }
                 break;
             }
-        case OMX_IndexParamAndroidVideoTemporalLayering:
+        case OMX_IndexConfigAndroidVideoTemporalLayering:
             {
-                DEBUG_PRINT_ERROR("TemporalLayer: Changing layer-configuration dynamically is not supported!");
-                return false;
+                OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE *pParam =
+                    (OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE *) configData;
+                OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE temporalParams;
+                OMX_INIT_STRUCT(&temporalParams, OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE);
+                temporalParams.eSupportedPatterns = OMX_VIDEO_AndroidTemporalLayeringPatternAndroid;
+
+                memset(&temporalParams, 0x0, sizeof(temporalParams));
+                temporalParams.nPLayerCountActual      = pParam->nPLayerCountActual;
+                temporalParams.nBLayerCountActual      = pParam->nBLayerCountActual;
+                temporalParams.bBitrateRatiosSpecified = pParam->bBitrateRatiosSpecified;
+                temporalParams.ePattern                = pParam->ePattern;
+
+                if (temporalParams.bBitrateRatiosSpecified == OMX_TRUE) {
+                    for (OMX_U32 i = 0; i < temporalParams.nPLayerCountActual; ++i) {
+                        temporalParams.nBitrateRatios[i] = pParam->nBitrateRatios[i];
+                    }
+                }
+                if (venc_set_temporal_layers(&temporalParams, true) != OMX_ErrorNone) {
+                    DEBUG_PRINT_ERROR("set_config: Failed to configure temporal layers");
+                    return false;
+                }
+                break;
             }
         case OMX_QcomIndexConfigQp:
             {
@@ -7234,7 +7293,7 @@ bool venc_dev::venc_get_temporal_layer_caps(OMX_U32 *nMaxLayers,
 }
 
 OMX_ERRORTYPE venc_dev::venc_set_temporal_layers(
-        OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE *pTemporalParams) {
+        OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE *pTemporalParams, bool istemporalConfig) {
 
     if (!(m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264
             || m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC
@@ -7289,7 +7348,7 @@ OMX_ERRORTYPE venc_dev::venc_set_temporal_layers(
         return OMX_ErrorUnsupportedSetting;
     }
 
-    if (!venc_set_intra_period(intra_period.num_pframes, intra_period.num_bframes)) {
+    if (!istemporalConfig && !venc_set_intra_period(intra_period.num_pframes, intra_period.num_bframes)) {
         DEBUG_PRINT_ERROR("TemporalLayer : Failed to set Intra-period nP(%lu)/pB(%lu)",
                 intra_period.num_pframes, intra_period.num_bframes);
         return OMX_ErrorUnsupportedSetting;
@@ -7341,7 +7400,7 @@ OMX_ERRORTYPE venc_dev::venc_set_temporal_layers(
         //  since we do not plan to support dynamic changes to number of layers
         control.id = V4L2_CID_MPEG_VIDC_VIDEO_MAX_HIERP_LAYERS;
         control.value = pTemporalParams->nPLayerCountActual - 1;
-        if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
+        if (!istemporalConfig && ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
             DEBUG_PRINT_ERROR("Failed to set max HP layers to %u", control.value);
             return OMX_ErrorUnsupportedSetting;
 
@@ -7358,7 +7417,7 @@ OMX_ERRORTYPE venc_dev::venc_set_temporal_layers(
     }
 
     // SVC-NALs to indicate layer-id in case of H264 needs explicit enablement..
-    if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264) {
+    if (!istemporalConfig && m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264) {
         DEBUG_PRINT_LOW("TemporalLayer: Enable H264_SVC_NAL");
         control.id = V4L2_CID_MPEG_VIDC_VIDEO_H264_NAL_SVC;
         control.value = V4L2_CID_MPEG_VIDC_VIDEO_H264_NAL_SVC_ENABLED;
@@ -8220,10 +8279,8 @@ bool venc_dev::venc_check_for_pq(void)
         m_pq.caps.max_width * m_pq.caps.max_height;
 
     frame_rate_supported =
-        (m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) <=
-        (m_pq.caps.max_mb_per_sec / ((m_sVenc_cfg.input_height * m_sVenc_cfg.input_width) / 256));
+        (operating_rate >> 16) <= MAX_FPS_PQ;
 
-    frame_rate_supported = (((operating_rate >> 16) > 0) && ((operating_rate >> 16) < 5)) ? false : frame_rate_supported;
 
     yuv_format_supported = ((m_sVenc_cfg.inputformat == V4L2_PIX_FMT_NV12 && (m_pq.caps.color_formats & BIT(COLOR_FMT_NV12)))
             || (m_sVenc_cfg.inputformat == V4L2_PIX_FMT_NV21 && (m_pq.caps.color_formats & BIT(COLOR_FMT_NV21)))

@@ -242,6 +242,7 @@ class omx_video: public qc_omx_component
         virtual bool dev_empty_buf(void *, void *,unsigned,unsigned) = 0;
         virtual bool dev_fill_buf(void *buffer, void *,unsigned,unsigned) = 0;
         virtual bool dev_get_buf_req(OMX_U32 *,OMX_U32 *,OMX_U32 *,OMX_U32) = 0;
+        virtual bool dev_get_dimensions(OMX_U32 ,OMX_U32 *,OMX_U32 *) = 0;
         virtual bool dev_get_seq_hdr(void *, unsigned, unsigned *) = 0;
         virtual bool dev_loaded_start(void) = 0;
         virtual bool dev_loaded_stop(void) = 0;
