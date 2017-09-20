@@ -11112,7 +11112,7 @@ OMX_BUFFERHEADERTYPE* omx_vdec::allocate_color_convert_buf::get_il_buf_hdr()
 
             DEBUG_PRINT_INFO("C2D: Start color convertion");
             status = c2dcc.convertC2D(omx->drv_ctx.ptr_outputbuffer[index].pmem_fd,
-                                      omx->m_out_mem_ptr->pBuffer, bufadd->pBuffer,
+                                      bufadd->pBuffer, bufadd->pBuffer,
                                       pmem_fd[index], pmem_baseaddress[index],
                                       pmem_baseaddress[index]);
 
