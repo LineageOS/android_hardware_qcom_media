@@ -1897,11 +1897,13 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
         case OMX_IndexConfigOperatingRate:
             {
                 VALIDATE_OMX_PARAM_DATA(configData, OMX_PARAM_U32TYPE);
+                OMX_PARAM_U32TYPE* pParam = (OMX_PARAM_U32TYPE*) configData;
                 if (!handle->venc_set_config(configData, (OMX_INDEXTYPE)OMX_IndexConfigOperatingRate)) {
-                    DEBUG_PRINT_ERROR("Failed to set OMX_IndexConfigOperatingRate");
+                    DEBUG_PRINT_ERROR("Failed to set OMX_IndexConfigOperatingRate %u", pParam->nU32 >> 16);
                     return handle->hw_overload ? OMX_ErrorInsufficientResources :
                             OMX_ErrorUnsupportedSetting;
                 }
+                m_nOperatingRate = pParam->nU32;
                 break;
             }
         case OMX_QTIIndexConfigVideoRoiInfo:

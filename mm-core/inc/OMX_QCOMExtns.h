@@ -1050,7 +1050,7 @@ typedef struct OMX_QCOM_VIDEO_CONFIG_AUD
     OMX_BOOL bEnable;        /** Enable/disable the setting */
 } OMX_QCOM_VIDEO_CONFIG_AUD;
 
-#define QOMX_VIDEO_HIGH_PERF_OPERATING_MODE    (UINT_MAX << 16)
+#define QOMX_VIDEO_HIGH_PERF_OPERATING_MODE    (0x7FFFFFFF)
 
 /**
  * Note: This will get deprecated

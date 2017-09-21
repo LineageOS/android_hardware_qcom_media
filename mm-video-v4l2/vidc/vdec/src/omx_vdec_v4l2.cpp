@@ -833,6 +833,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_smoothstreaming_width = 0;
     m_smoothstreaming_height = 0;
     m_decode_order_mode = false;
+    m_client_req_turbo_mode = false;
     is_q6_platform = false;
     m_input_pass_buffer_fd = false;
     memset(&m_extradata_info, 0, sizeof(m_extradata_info));
@@ -5178,7 +5179,14 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
         control.id = V4L2_CID_MPEG_VIDC_VIDEO_OPERATING_RATE;
         control.value = rate->nU32;
 
-        operating_frame_rate = rate->nU32 >> 16;
+        if (rate->nU32 == QOMX_VIDEO_HIGH_PERF_OPERATING_MODE) {
+            DEBUG_PRINT_LOW("Turbo mode requested");
+            m_client_req_turbo_mode = true;
+        } else {
+            operating_frame_rate = rate->nU32 >> 16;
+            m_client_req_turbo_mode = false;
+            DEBUG_PRINT_LOW("Operating Rate Set = %d fps",  operating_frame_rate);
+        }
 
         if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
             ret = errno == -EBUSY ? OMX_ErrorInsufficientResources :

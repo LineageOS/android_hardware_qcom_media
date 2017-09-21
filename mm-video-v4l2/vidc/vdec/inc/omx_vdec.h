@@ -1186,6 +1186,7 @@ class omx_vdec: public qc_omx_component
         OMX_U32 m_reconfig_height;
         bool m_smoothstreaming_mode;
         bool m_decode_order_mode;
+        bool m_client_req_turbo_mode;
 
         bool m_input_pass_buffer_fd;
         DescribeColorAspectsParams m_client_color_space;
