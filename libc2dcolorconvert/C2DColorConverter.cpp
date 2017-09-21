@@ -109,16 +109,20 @@ C2DColorConverter::~C2DColorConverter()
             mSrcSurface = 0;
         }
 
-        if (isYUVSurface(mSrcFormat)) {
-            delete ((C2D_YUV_SURFACE_DEF *)mSrcSurfaceDef);
-        } else {
-            delete ((C2D_RGB_SURFACE_DEF *)mSrcSurfaceDef);
+        if (mSrcSurfaceDef) {
+            if (isYUVSurface(mSrcFormat)) {
+                delete ((C2D_YUV_SURFACE_DEF *)mSrcSurfaceDef);
+            } else {
+                delete ((C2D_RGB_SURFACE_DEF *)mSrcSurfaceDef);
+            }
         }
 
-        if (isYUVSurface(mDstFormat)) {
-            delete ((C2D_YUV_SURFACE_DEF *)mDstSurfaceDef);
-        } else {
-            delete ((C2D_RGB_SURFACE_DEF *)mDstSurfaceDef);
+        if (mDstSurfaceDef) {
+            if (isYUVSurface(mDstFormat)) {
+                delete ((C2D_YUV_SURFACE_DEF *)mDstSurfaceDef);
+            } else {
+                delete ((C2D_RGB_SURFACE_DEF *)mDstSurfaceDef);
+            }
         }
     }
 
