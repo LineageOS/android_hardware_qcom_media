@@ -614,38 +614,6 @@ omx_core_cb_type core[] =
     }
   },
   {
-    "OMX.qcom.audio.encoder.g711mlaw",
-    NULL,   // Create instance function
-    // Unique instance handle
-    {
-      NULL,
-      NULL,
-      NULL,
-      NULL
-    },
-    NULL,   // Shared object library handle
-    "libOmxG711Enc.so",
-    {
-      "audio_encoder.g711"
-    }
-  },
-  {
-    "OMX.qcom.audio.encoder.g711alaw",
-    NULL,   // Create instance function
-    // Unique instance handle
-    {
-      NULL,
-      NULL,
-      NULL,
-      NULL
-    },
-    NULL,   // Shared object library handle
-    "libOmxG711Enc.so",
-    {
-      "audio_encoder.g711"
-    }
-  },
-  {
     "OMX.qcom.audio.encoder.amrwb",
     NULL,   // Create instance function
     // Unique instance handle
@@ -694,7 +662,7 @@ omx_core_cb_type core[] =
     NULL,   // Shared object library handle
     "libOmxAmrDec.so",
     {
-     "audio_decoder.amrwb"
+     "audio_decoder.amr"
     }
   },
   {
@@ -707,7 +675,7 @@ omx_core_cb_type core[] =
     NULL,   // Shared object library handle
     "libOmxAmrDec.so",
     {
-      "audio_decoder.amrnb"
+      "audio_decoder.amr"
     }
   },
   {
