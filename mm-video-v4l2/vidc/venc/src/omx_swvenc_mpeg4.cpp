@@ -2117,6 +2117,25 @@ OMX_ERRORTYPE omx_venc::dev_get_supported_profile_level(OMX_VIDEO_PARAM_PROFILEL
     return eRet;
 }
 
+bool omx_venc::dev_get_supported_color_format(unsigned index, OMX_U32 *colorFormat) {
+    // we support two formats
+    // index 0 - Venus flavour of YUV420SP
+    // index 1 - opaque which internally maps to YUV420SP
+    // index 2 - vannilla YUV420SP
+    // this can be extended in the future
+    int supportedFormats[] = {
+        [0] = QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m,
+        [1] = QOMX_COLOR_FormatYVU420SemiPlanar,
+        [2] = QOMX_COLOR_FormatAndroidOpaque,
+        [3] = OMX_COLOR_FormatYUV420SemiPlanar,
+    };
+
+    if (index > (sizeof(supportedFormats)/sizeof(*supportedFormats) - 1))
+        return false;
+    *colorFormat = supportedFormats[index];
+    return true;
+}
+
 bool omx_venc::dev_loaded_start()
 {
    ENTER_FUNC();

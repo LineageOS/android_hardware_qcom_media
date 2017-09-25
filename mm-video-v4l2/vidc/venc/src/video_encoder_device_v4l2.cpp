@@ -1030,6 +1030,46 @@ OMX_ERRORTYPE venc_dev::venc_get_supported_profile_level(OMX_VIDEO_PARAM_PROFILE
     return eRet;
 }
 
+bool venc_dev::venc_get_supported_color_format(unsigned index, OMX_U32 *colorFormat) {
+#ifdef _UBWC_
+    //we support following formats
+    //index 0 - Compressed (UBWC) Venus flavour of YUV420SP
+    //index 1 - Venus flavour of YUV420SP
+    //index 2 - Compressed (UBWC) TP10 (10bit packed)
+    //index 3 - Compressed (UBWC) Venus flavour of RGBA8888
+    //index 4 - Venus flavour of RGBA8888
+    //index 5 - opaque which internally maps to YUV420SP.
+    //index 6 - vannilla YUV420SP
+    //this can be extended in the future
+    int supportedFormats[] = {
+        [0] = QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed,
+        [1] = QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m,
+        [2] = QOMX_COLOR_FormatYVU420SemiPlanar,
+        [3] = QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed,
+        [4] = QOMX_COLOR_Format32bitRGBA8888Compressed,
+        [5] = QOMX_COLOR_Format32bitRGBA8888,
+        [6] = QOMX_COLOR_FormatAndroidOpaque,
+        [7] = OMX_COLOR_FormatYUV420SemiPlanar,
+    };
+#else
+    //we support two formats
+    //index 0 - Venus flavour of YUV420SP
+    //index 1 - opaque which internally maps to YUV420SP.
+    //index 2 - vannilla YUV420SP
+    //this can be extended in the future
+    int supportedFormats[] = {
+        [0] = QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m,
+        [1] = QOMX_COLOR_FormatYVU420SemiPlanar,
+        [2] = QOMX_COLOR_FormatAndroidOpaque,
+        [3] = OMX_COLOR_FormatYUV420SemiPlanar,
+    }
+#endif
+    if (index > (sizeof(supportedFormats)/sizeof(*supportedFormats) - 1))
+        return false;
+    *colorFormat = supportedFormats[index];
+    return true;
+}
+
 OMX_ERRORTYPE venc_dev::allocate_extradata(struct extradata_buffer_info *extradata_info, int flags)
 {
     if (extradata_info->allocated) {

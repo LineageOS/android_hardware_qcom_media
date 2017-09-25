@@ -2236,6 +2236,10 @@ OMX_ERRORTYPE omx_venc::dev_get_supported_profile_level(OMX_VIDEO_PARAM_PROFILEL
     return handle->venc_get_supported_profile_level(profileLevelType);
 }
 
+bool omx_venc::dev_get_supported_color_format(unsigned index, OMX_U32 *colorFormat) {
+    return handle->venc_get_supported_color_format(index, colorFormat);
+}
+
 bool omx_venc::dev_loaded_start()
 {
     return handle->venc_loaded_start();
