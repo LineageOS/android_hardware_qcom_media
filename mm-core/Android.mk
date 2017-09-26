@@ -16,6 +16,8 @@ ifeq ($(filter $(TARGET_BOARD_PLATFORM), sdm845),$(TARGET_BOARD_PLATFORM))
 MM_CORE_TARGET = sdm845
 else ifeq ($(filter $(TARGET_BOARD_PLATFORM), msmpeafowl),$(TARGET_BOARD_PLATFORM))
 MM_CORE_TARGET = msmpeafowl
+else ifeq ($(filter $(TARGET_BOARD_PLATFORM), sdm670),$(TARGET_BOARD_PLATFORM))
+MM_CORE_TARGET = sdm670
 else
 MM_CORE_TARGET = default
 endif
@@ -69,7 +71,7 @@ LOCAL_CFLAGS            := $(OMXCORE_CFLAGS)
 
 LOCAL_SRC_FILES         := src/common/omx_core_cmp.cpp
 LOCAL_SRC_FILES         += src/common/qc_omx_core.c
-ifneq (,$(filter sdm845 msmpeafowl,$(TARGET_BOARD_PLATFORM)))
+ifneq (,$(filter sdm845 msmpeafowl sdm670,$(TARGET_BOARD_PLATFORM)))
 LOCAL_SRC_FILES         += src/$(MM_CORE_TARGET)/registry_table_android.c
 else
 LOCAL_SRC_FILES         += src/$(MM_CORE_TARGET)/qc_registry_table_android.c
@@ -95,7 +97,7 @@ LOCAL_CFLAGS            := $(OMXCORE_CFLAGS)
 
 LOCAL_SRC_FILES         := src/common/omx_core_cmp.cpp
 LOCAL_SRC_FILES         += src/common/qc_omx_core.c
-ifneq (,$(filter sdm845 msmpeafowl,$(TARGET_BOARD_PLATFORM)))
+ifneq (,$(filter sdm845 msmpeafowl sdm670,$(TARGET_BOARD_PLATFORM)))
 LOCAL_SRC_FILES         += src/$(MM_CORE_TARGET)/registry_table.c
 else
 LOCAL_SRC_FILES         += src/$(MM_CORE_TARGET)/qc_registry_table.c
