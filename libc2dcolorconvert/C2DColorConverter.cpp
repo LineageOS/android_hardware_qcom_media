@@ -118,6 +118,8 @@ C2DColorConverter::C2DColorConverter(size_t srcWidth, size_t srcHeight, size_t d
       mAdrenoUtilsHandle(NULL)
 {
      mError = 0;
+     mSrcSurfaceDef = NULL;
+     mDstSurfaceDef = NULL;
      if (NV12_UBWC == dstFormat) {
          ALOGE("%s: FATAL ERROR: could not support UBWC output formats ", __FUNCTION__);
          mError = -1;
@@ -209,6 +211,8 @@ C2DColorConverter::~C2DColorConverter()
         } else {
             delete ((C2D_RGB_SURFACE_DEF *)mDstSurfaceDef);
         }
+        mSrcSurfaceDef = NULL;
+        mDstSurfaceDef = NULL;
     }
 
     if (mC2DLibHandle) {
