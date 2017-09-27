@@ -173,6 +173,8 @@ C2DColorConverter::C2DColorConverter(size_t srcWidth, size_t srcHeight, size_t d
     mDstSize = calcSize(dstFormat, dstWidth, dstHeight);
     mSrcYSize = calcYSize(srcFormat, srcWidth, srcHeight);
     mDstYSize = calcYSize(dstFormat, dstWidth, dstHeight);
+    mSrcSurfaceDef = NULL;
+    mDstSurfaceDef = NULL;
 
     mFlags = flags; // can be used for rotation
 
@@ -209,6 +211,8 @@ C2DColorConverter::~C2DColorConverter()
         } else {
             delete ((C2D_RGB_SURFACE_DEF *)mDstSurfaceDef);
         }
+        mSrcSurfaceDef = NULL;
+        mDstSurfaceDef = NULL;
     }
 
     if (mC2DLibHandle) {
