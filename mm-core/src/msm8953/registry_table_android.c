@@ -54,6 +54,19 @@ omx_core_cb_type core[] =
     }
   },
   {
+    "OMX.qcom.video.decoder.avc.secure",
+    NULL, // Create instance function
+    // Unique instance handle
+    {
+      NULL
+     },
+     NULL,   // Shared object library handle
+    "libOmxVdec.so",
+    {
+     "video_decoder.avc"
+    }
+  },
+  {
     "OMX.qcom.video.decoder.divx4",
     NULL,   // Create instance function
     // Unique instance handle
@@ -119,6 +132,19 @@ omx_core_cb_type core[] =
     }
   },
   {
+     "OMX.qcom.video.decoder.mpeg2.secure",
+     NULL, // Create instance function
+     // Unique instance handle
+     {
+       NULL
+     },
+     NULL,   // Shared object library handle
+     "libOmxVdec.so",
+     {
+       "video_decoder.mpeg2"
+     }
+  },
+  {
     "OMX.qcom.video.decoder.vc1",
     NULL, // Create instance function
     // Unique instance handle
@@ -132,7 +158,33 @@ omx_core_cb_type core[] =
     }
   },
   {
+    "OMX.qcom.video.decoder.vc1.secure",
+    NULL, // Create instance function
+    // Unique instance handle
+    {
+      NULL
+    },
+    NULL,   // Shared object library handle
+    "libOmxVdec.so",
+    {
+      "video_decoder.vc1"
+    }
+  },
+  {
     "OMX.qcom.video.decoder.wmv",
+    NULL, // Create instance function
+    // Unique instance handle
+    {
+      NULL
+    },
+    NULL,   // Shared object library handle
+    "libOmxVdec.so",
+    {
+      "video_decoder.vc1"
+    }
+  },
+  {
+    "OMX.qcom.video.decoder.wmv.secure",
     NULL, // Create instance function
     // Unique instance handle
     {
@@ -169,6 +221,19 @@ omx_core_cb_type core[] =
     {
       "video_decoder.hevc"
     }
+  },
+  {
+     "OMX.qcom.video.decoder.hevc.secure",
+     NULL,   // Create instance function
+     // Unique instance handle
+     {
+       NULL
+     },
+     NULL,   // Shared object library handle
+     "libOmxVdec.so",
+     {
+       "video_decoder.hevc"
+     }
   },
   {
     "OMX.qcom.video.decoder.vp8",
@@ -592,19 +657,6 @@ omx_core_cb_type core[] =
     }
   },
   {
-    "OMX.qcom.video.decoder.vc1.secure",
-    NULL, // Create instance function
-    // Unique instance handle
-    {
-      NULL
-    },
-    NULL,   // Shared object library handle
-    "libOmxVdec.so",
-    {
-      "video_decoder.vc1"
-    }
-  },
-  {
     "OMX.qcom.file.muxer",
     NULL, // Create instance function
     // Unique instance handle
@@ -631,69 +683,17 @@ omx_core_cb_type core[] =
     }
   },
   {
-    "OMX.qcom.video.decoder.avc.secure",
-    NULL, // Create instance function
-    // Unique instance handle
-    {
-      NULL
-    },
-    NULL,   // Shared object library handle
-    "libOmxVdec.so",
-    {
-      "video_decoder.avc"
-    }
-  },
-  {
-    "OMX.qcom.video.decoder.hevc.secure",
-    NULL,   // Create instance function
-    // Unique instance handle
-    {
-      NULL
-    },
-    NULL,   // Shared object library handle
-    "libOmxVdec.so",
-    {
-      "video_decoder.hevc"
-    }
-  },
-  {
-    "OMX.qcom.video.decoder.mpeg2.secure",
-    NULL, // Create instance function
-    // Unique instance handle
-    {
-      NULL
-    },
-    NULL,   // Shared object library handle
-    "libOmxVdec.so",
-    {
-      "video_decoder.mpeg2"
-    }
-  },
-  {
     "OMX.qcom.video.encoder.avc.secure",
-    NULL, // Create instance function
-    // Unique instance handle
-    {
-      NULL
-    },
-    NULL,   // Shared object library handle
-    "libOmxVenc.so",
-    {
-      "video_encoder.avc"
-    }
-  },
-  {
-    "OMX.qcom.video.decoder.wmv.secure",
-    NULL, // Create instance function
-    // Unique instance handle
-    {
-      NULL
-    },
-    NULL,   // Shared object library handle
-    "libOmxVdec.so",
-    {
-      "video_decoder.vc1"
-    }
+     NULL, // Create instance function
+     // Unique instance handle
+     {
+       NULL
+     },
+     NULL,   // Shared object library handle
+     "libOmxVenc.so",
+     {
+       "video_encoder.avc"
+     }
   },
   {
     "OMX.qcom.audio.decoder.aac",
