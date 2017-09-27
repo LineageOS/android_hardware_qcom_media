@@ -45,6 +45,8 @@ C2DColorConverter::C2DColorConverter()
     mDstHeight = 0;
     mSrcFormat = NO_COLOR_FORMAT;
     mDstFormat = NO_COLOR_FORMAT;
+    mSrcSurfaceDef = NULL;
+    mDstSurfaceDef = NULL;
 
     mConversionNeeded = false;
 
@@ -124,6 +126,8 @@ C2DColorConverter::~C2DColorConverter()
                 delete ((C2D_RGB_SURFACE_DEF *)mDstSurfaceDef);
             }
         }
+        mSrcSurfaceDef = NULL;
+        mDstSurfaceDef = NULL;
     }
 
     if (mC2DLibHandle) {
