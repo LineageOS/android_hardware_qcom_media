@@ -1301,6 +1301,10 @@ typedef struct OMX_QCOM_FRAME_PACK_ARRANGEMENT
 typedef struct OMX_QCOM_EXTRADATA_QP
 {
    OMX_U32        nQP;
+   OMX_U32        nQPSum;           /* Decode Only */
+   OMX_U32        nSkipQPSum;       /* Decode Only */
+   OMX_U32        nSkipNumBlocks;   /* Decode Only */
+   OMX_U32        nTotalNumBlocks;  /* Decode Only */
 } OMX_QCOM_EXTRADATA_QP;
 
 typedef struct OMX_QCOM_EXTRADATA_BITS_INFO
