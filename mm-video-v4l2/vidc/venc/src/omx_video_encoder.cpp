@@ -195,6 +195,10 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     m_sConfigFrameRotation.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
     m_sConfigFrameRotation.nRotation = 0;
 
+    OMX_INIT_STRUCT(&m_sConfigFrameMirror, OMX_CONFIG_MIRRORTYPE);
+    m_sConfigFrameMirror.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
+    m_sConfigFrameMirror.eMirror = OMX_MirrorNone;
+
     OMX_INIT_STRUCT(&m_sConfigAVCIDRPeriod, OMX_VIDEO_CONFIG_AVCINTRAPERIOD);
     m_sConfigAVCIDRPeriod.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
 
@@ -1739,7 +1743,23 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
 
                 break;
             }
-        case OMX_IndexConfigCommonRotate:
+        case OMX_IndexConfigCommonMirror:
+            {
+                VALIDATE_OMX_PARAM_DATA(configData, OMX_CONFIG_MIRRORTYPE);
+                OMX_CONFIG_MIRRORTYPE *pParam = reinterpret_cast<OMX_CONFIG_MIRRORTYPE*>(configData);
+
+                if (pParam->nPortIndex != PORT_INDEX_OUT) {
+                   DEBUG_PRINT_ERROR("ERROR: Unsupported port index: %u", (unsigned int)pParam->nPortIndex);
+                   return OMX_ErrorBadPortIndex;
+                }
+                if (handle->venc_set_config(configData,OMX_IndexConfigCommonMirror) != true) {
+                       DEBUG_PRINT_ERROR("ERROR: Set OMX_IndexConfigCommonMirror failed");
+                       return OMX_ErrorUnsupportedSetting;
+                }
+                m_sConfigFrameMirror.eMirror = pParam->eMirror;
+                break;
+            }
+       case OMX_IndexConfigCommonRotate:
             {
                 VALIDATE_OMX_PARAM_DATA(configData, OMX_CONFIG_ROTATIONTYPE);
                 OMX_CONFIG_ROTATIONTYPE *pParam =

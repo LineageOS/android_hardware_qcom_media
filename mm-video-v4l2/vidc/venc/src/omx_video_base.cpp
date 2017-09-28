@@ -2211,6 +2211,13 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
                 memcpy(pParam, &m_sConfigFrameRotation, sizeof(m_sConfigFrameRotation));
                 break;
             }
+        case OMX_IndexConfigCommonMirror:
+            {
+                VALIDATE_OMX_PARAM_DATA(configData, OMX_CONFIG_MIRRORTYPE);
+                OMX_CONFIG_MIRRORTYPE* pParam = reinterpret_cast<OMX_CONFIG_MIRRORTYPE*>(configData);
+                memcpy(pParam, &m_sConfigFrameMirror, sizeof(m_sConfigFrameMirror));
+                break;
+            }
         case QOMX_IndexConfigVideoIntraperiod:
             {
                 DEBUG_PRINT_LOW("get_config:QOMX_IndexConfigVideoIntraperiod");

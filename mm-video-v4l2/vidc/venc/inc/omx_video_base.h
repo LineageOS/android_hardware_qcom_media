@@ -686,6 +686,7 @@ class omx_video: public qc_omx_component
         OMX_PARAM_BUFFERSUPPLIERTYPE m_sInBufSupplier;
         OMX_PARAM_BUFFERSUPPLIERTYPE m_sOutBufSupplier;
         OMX_CONFIG_ROTATIONTYPE m_sConfigFrameRotation;
+        OMX_CONFIG_MIRRORTYPE m_sConfigFrameMirror;
         OMX_CONFIG_INTRAREFRESHVOPTYPE m_sConfigIntraRefreshVOP;
         OMX_U32 m_QPSet;
         OMX_VIDEO_PARAM_QUANTIZATIONTYPE m_sSessionQuantization;
