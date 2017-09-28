@@ -1029,6 +1029,43 @@ OMX_ERRORTYPE  omx_venc::set_parameter
             break;
         }
 
+        case OMX_QcomIndexParamVideoIPBQPRange:
+        {
+            DEBUG_PRINT_LOW("set_parameter: OMX_QcomIndexParamVideoIPBQPRange");
+            OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE *session_qp_range = (OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE*) paramData;
+            if (session_qp_range->nPortIndex == PORT_INDEX_OUT)
+            {
+                Prop.id = SWVENC_PROPERTY_ID_QP_RANGE;
+                Prop.info.qp_range.min_qp_packed = ((session_qp_range->minBQP << 16) |
+                                                    (session_qp_range->minPQP <<  8) |
+                                                    (session_qp_range->minIQP <<  0));
+                Prop.info.qp_range.max_qp_packed = ((session_qp_range->maxBQP << 16) |
+                                                    (session_qp_range->maxPQP <<  8) |
+                                                    (session_qp_range->maxIQP <<  0));
+
+                Ret = swvenc_setproperty(m_hSwVenc, &Prop);
+                if (Ret != SWVENC_S_SUCCESS)
+                {
+                   DEBUG_PRINT_ERROR("%s, swvenc_setproperty failed (%d)",
+                     __FUNCTION__, Ret);
+                   RETURN(OMX_ErrorUnsupportedSetting);
+                }
+
+                m_sSessionQPRange.minIQP = session_qp_range->minIQP;
+                m_sSessionQPRange.maxIQP = session_qp_range->maxIQP;
+                m_sSessionQPRange.minPQP = session_qp_range->minPQP;
+                m_sSessionQPRange.maxPQP = session_qp_range->maxPQP;
+                m_sSessionQPRange.minBQP = session_qp_range->minBQP;
+                m_sSessionQPRange.maxBQP = session_qp_range->maxBQP;
+            }
+            else
+            {
+                DEBUG_PRINT_ERROR("ERROR: Unsupported port Index for Session QP range setting");
+                eRet = OMX_ErrorBadPortIndex;
+            }
+            break;
+        }
+
         case OMX_QcomIndexPortDefn:
         {
             OMX_QCOM_PARAM_PORTDEFINITIONTYPE* pParam =
