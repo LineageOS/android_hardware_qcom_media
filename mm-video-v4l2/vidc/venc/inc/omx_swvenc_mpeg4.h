@@ -118,6 +118,7 @@ class omx_venc: public omx_video
         bool m_bIsOutFrameSizeSet;
         bool m_bIsInFlipDone;
         bool m_bIsOutFlipDone;
+        bool m_bUseAVTimerTimestamps;
         sp<GraphicBuffer> dstBuffer;
         SWVENC_IPBUFFER *m_pIpbuffers;
 

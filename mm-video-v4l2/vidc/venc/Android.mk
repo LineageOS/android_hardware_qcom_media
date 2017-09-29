@@ -124,6 +124,7 @@ LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 LOCAL_PRELINK_MODULE      := false
 LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl libplatformconfig
 LOCAL_SHARED_LIBRARIES    += libMpeg4SwEncoder
+LOCAL_SHARED_LIBRARIES    += libqdMetaData
 
 ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_SW_VENC_ROTATION)),true)
 LOCAL_SHARED_LIBRARIES += libui
