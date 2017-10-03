@@ -2182,7 +2182,7 @@ bool omx_venc::is_streamon_done(OMX_U32 port)
 {
     if (PORT_INDEX_OUT <= port)
         ENTER_FUNC();
-    RETURN(true);
+    RETURN(false);
 }
 
 bool omx_venc::dev_get_buf_req(OMX_U32 *min_buff_count,
