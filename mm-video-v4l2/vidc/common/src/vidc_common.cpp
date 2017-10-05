@@ -308,3 +308,30 @@ bool profile_level_converter::convert_omx_level_to_v4l2(int codec, int omx_level
 
     return find_item(level_map, omx_level, v4l2_level);
 }
+
+IvfFileHeader:: IvfFileHeader() :
+    signature{'D','K','I','F'},
+    version(),
+    size(32),
+    fourCC{'V','P','8','0'},
+    unused()
+{
+}
+
+IvfFileHeader:: IvfFileHeader(bool isVp9, int width, int height,
+                    int rate, int scale, int frameCount) :
+    IvfFileHeader() {
+    this->width = width;
+    this->height = height;
+    this->rate = rate;
+    this->scale = scale;
+    this->frameCount = frameCount;
+    fourCC[2] = isVp9 ? '9' : '8';
+}
+
+IvfFrameHeader:: IvfFrameHeader(): filledLen(), timeStamp() {}
+
+IvfFrameHeader:: IvfFrameHeader(uint32_t filledLen, uint64_t timeStamp) :
+    filledLen(filledLen),
+    timeStamp(timeStamp) {
+}
