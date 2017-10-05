@@ -2691,6 +2691,12 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 }
                 break;
             }
+        case OMX_QTIIndexParamColorSpaceConversion:
+            {
+                QOMX_ENABLETYPE *pParam = (QOMX_ENABLETYPE *)paramData;
+                csc_enable = pParam->bEnable;
+                DEBUG_PRINT_INFO("CSC settings: Enabled : %d ", pParam->bEnable);
+            }
         default:
             DEBUG_PRINT_ERROR("ERROR: Unsupported parameter in venc_set_param: %u",
                     index);
@@ -3861,7 +3867,6 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                     }
 
                     if (!streaming[OUTPUT_PORT]) {
-                        unsigned int is_csc_enabled = 0;
                         ColorMetaData colorData= {};
                         // Moment of truth... actual colorspace is known here..
                         if (getMetaData(handle, GET_COLOR_METADATA, &colorData) == 0) {
@@ -3908,23 +3913,10 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         DEBUG_PRINT_INFO("color_space.primaries %d colorData.colorPrimaries %d, is_csc_custom_matrix_enabled=%d",
                                          color_space.primaries, colorData.colorPrimaries, is_csc_custom_matrix_enabled);
 
-                        bool is_color_space_601fr = (colorData.colorPrimaries == ColorPrimaries_BT601_6_525) &&
-                                                    (colorData.range == Range_Full) &&
-                                                    (colorData.transfer == Transfer_SMPTE_170M) &&
-                                                    (colorData.matrixCoefficients == MatrixCoEff_BT601_6_525);
-
-                        if (is_color_space_601fr &&
-                            color_space.primaries == ColorPrimaries_BT709_5)
-                        {
-                            DEBUG_PRINT_INFO("Enable CSC from BT601 to BT709 supported.");
-                            is_csc_enabled = 1;
-                        }
-
-                        // If CSC is enabled, then set control with colorspace from gralloc metadata
-                        if (is_csc_enabled) {
+                        if (csc_enable) {
                             struct v4l2_control control;
 
-                            /* Set 601FR as the Color Space. When we set CSC, this will be passed to
+                            /* Set Camera Color Space. When we set CSC, this will be passed to
                                fimrware as the InputPrimaries */
                             venc_set_colorspace(colorData.colorPrimaries, colorData.range,
                                                 colorData.transfer, colorData.matrixCoefficients);
@@ -3934,18 +3926,21 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                             if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
                                 DEBUG_PRINT_ERROR("venc_empty_buf: Failed to set VPE CSC");
                             }
-                            if (is_csc_custom_matrix_enabled) {
-                                control.id = V4L2_CID_MPEG_VIDC_VIDEO_VPE_CSC_CUSTOM_MATRIX;
-                                control.value = 1;
-                                if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
-                                    DEBUG_PRINT_ERROR("venc_empty_buf: Failed to enable VPE CSC custom matrix");
-                                } else {
-                                    DEBUG_PRINT_INFO("venc_empty_buf: Enabled VPE CSC custom matrix");
-                                    colorData.colorPrimaries =  ColorPrimaries_BT709_5;
-                                    colorData.range = Range_Limited;
-                                    colorData.transfer = Transfer_sRGB;
-                                    colorData.matrixCoefficients = MatrixCoEff_BT709_5;
+                            else {
+                                if (is_csc_custom_matrix_enabled) {
+                                    control.id = V4L2_CID_MPEG_VIDC_VIDEO_VPE_CSC_CUSTOM_MATRIX;
+                                    control.value = 1;
+                                    if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
+                                        DEBUG_PRINT_ERROR("venc_empty_buf: Failed to enable VPE CSC custom matrix");
+                                    } else {
+                                        DEBUG_PRINT_INFO("venc_empty_buf: Enabled VPE CSC custom matrix");
+                                    }
                                 }
+                                /* Change Colorspace to 709*/
+                                colorData.colorPrimaries =  ColorPrimaries_BT709_5;
+                                colorData.range = Range_Limited;
+                                colorData.transfer = Transfer_sRGB;
+                                colorData.matrixCoefficients = MatrixCoEff_BT709_5;
                             }
                         }
 

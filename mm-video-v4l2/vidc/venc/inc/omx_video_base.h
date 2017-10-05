@@ -729,6 +729,7 @@ class omx_video: public qc_omx_component
         OMX_TIME_CONFIG_TIMESTAMPTYPE m_sConfigInputTrigTS;
         QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE m_sParamLowLatency;
         OMX_U32 m_nOperatingRate;
+        QOMX_ENABLETYPE m_sParamColorSpaceConversion;
 
         // fill this buffer queue
         omx_cmd_queue m_ftb_q;

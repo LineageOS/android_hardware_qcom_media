@@ -104,6 +104,8 @@ void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
     ADD_PARAM    ("max-p-count", OMX_AndroidVendorValueInt32)
     ADD_PARAM_END("max-b-count", OMX_AndroidVendorValueInt32)
 
+    ADD_EXTENSION("qti-ext-enc-colorspace-conversion", OMX_QTIIndexParamColorSpaceConversion, OMX_DirInput)
+    ADD_PARAM_END("enable", OMX_AndroidVendorValueInt32)
 }
 
 OMX_ERRORTYPE omx_video::get_vendor_extension_config(
@@ -270,6 +272,11 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
             }
             setStatus &= vExt.setParamInt32(ext, "max-p-count",nPLayerCountMax);
             setStatus &= vExt.setParamInt32(ext, "max-b-count",nBLayerCountMax);
+            break;
+        }
+        case OMX_QTIIndexParamColorSpaceConversion:
+        {
+            setStatus &= vExt.setParamInt32(ext, "enable", m_sParamColorSpaceConversion.bEnable);
             break;
         }
         default:
@@ -656,6 +663,25 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
                     DEBUG_PRINT_ERROR("set_config: OMX_QcomIndexParamIndexExtraDataType failed !");
                 }
             } while ((token = strtok_r(NULL, "|", &rest)));
+            break;
+        }
+        case OMX_QTIIndexParamColorSpaceConversion:
+        {
+            QOMX_ENABLETYPE colorspaceConversionParam;
+            memcpy(&colorspaceConversionParam, &m_sParamColorSpaceConversion, sizeof(QOMX_ENABLETYPE));
+            valueSet |= vExt.readParamInt32(ext, "enable", (OMX_S32 *)&(colorspaceConversionParam.bEnable));
+            if (!valueSet) {
+                break;
+            }
+
+            DEBUG_PRINT_HIGH("VENDOR-EXT: set_param: color space conversion enable=%u", colorspaceConversionParam.bEnable);
+
+            err = set_parameter(
+                   NULL, (OMX_INDEXTYPE)OMX_QTIIndexParamColorSpaceConversion, &colorspaceConversionParam);
+            if (err != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("set_param: OMX_QTIIndexParamColorSpaceConversion failed !");
+            }
+
             break;
         }
         case OMX_QTIIndexParamCapabilitiesVTDriverVersion:

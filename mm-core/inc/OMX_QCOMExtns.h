@@ -663,6 +663,9 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     /* TME configuration */
     OMX_IndexParamVideoTme = 0x7F000077,
 
+    /* Set Color Space Conversion */
+    OMX_QTIIndexParamColorSpaceConversion = 0x7F000078,
+
     /* Capabilities */
     OMX_QTIIndexParamCapabilitiesVTDriverVersion = 0x7F100000,
 
