@@ -1614,46 +1614,13 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
 
                 if (portFmt->nPortIndex == (OMX_U32) PORT_INDEX_IN) {
                     unsigned index = portFmt->nIndex;
-
-#ifdef _UBWC_
-                    //we support following formats
-                    //index 0 - Compressed (UBWC) Venus flavour of YUV420SP
-                    //index 1 - Venus flavour of YUV420SP
-                    //index 2 - Compressed (UBWC) TP10 (10bit packed)
-                    //index 3 - Compressed (UBWC) Venus flavour of RGBA8888
-                    //index 4 - Venus flavour of RGBA8888
-                    //index 5 - opaque which internally maps to YUV420SP.
-                    //index 6 - vannilla YUV420SP
-                    //this can be extended in the future
-                    int supportedFormats[] = {
-                        [0] = QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed,
-                        [1] = QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m,
-                        [2] = QOMX_COLOR_FormatYVU420SemiPlanar,
-                        [3] = QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed,
-                        [4] = QOMX_COLOR_Format32bitRGBA8888Compressed,
-                        [5] = QOMX_COLOR_Format32bitRGBA8888,
-                        [6] = QOMX_COLOR_FormatAndroidOpaque,
-                        [7] = OMX_COLOR_FormatYUV420SemiPlanar,
-                    };
-#else
-                    //we support two formats
-                    //index 0 - Venus flavour of YUV420SP
-                    //index 1 - opaque which internally maps to YUV420SP.
-                    //index 2 - vannilla YUV420SP
-                    //this can be extended in the future
-                    int supportedFormats[] = {
-                        [0] = QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m,
-                        [1] = QOMX_COLOR_FormatYVU420SemiPlanar,
-                        [2] = QOMX_COLOR_FormatAndroidOpaque,
-                        [3] = OMX_COLOR_FormatYUV420SemiPlanar,
-                    };
-#endif
-                    if (index > (sizeof(supportedFormats)/sizeof(*supportedFormats) - 1))
-                        eRet = OMX_ErrorNoMore;
-                    else {
+                    OMX_U32 colorFormat = OMX_COLOR_FormatUnused;
+                    if(dev_get_supported_color_format(index, &colorFormat)) {
                         memcpy(portFmt, &m_sInPortFormat, sizeof(m_sInPortFormat));
                         portFmt->nIndex = index; //restore index set from client
-                        portFmt->eColorFormat = (OMX_COLOR_FORMATTYPE)supportedFormats[index];
+                        portFmt->eColorFormat = (OMX_COLOR_FORMATTYPE)colorFormat;
+                    } else {
+                        eRet = OMX_ErrorNoMore;
                     }
                 } else if (portFmt->nPortIndex == (OMX_U32) PORT_INDEX_OUT) {
                     memcpy(portFmt, &m_sOutPortFormat, sizeof(m_sOutPortFormat));
