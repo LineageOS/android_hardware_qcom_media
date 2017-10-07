@@ -9311,6 +9311,12 @@ bool omx_vdec::handle_color_space_info(void *data)
     memset(&tempAspects, 0x0, sizeof(ColorAspects));
     ColorAspects *aspects = &tempAspects;
 
+    /* Set default coloraspects to BT601-LR */
+    aspects->mPrimaries = ColorAspects::PrimariesBT601_6_525;
+    aspects->mRange = ColorAspects::RangeLimited;
+    aspects->mTransfer = ColorAspects::TransferSMPTE170M;
+    aspects->mMatrixCoeffs = ColorAspects::MatrixBT601_6;
+
     switch(output_capability) {
         case V4L2_PIX_FMT_MPEG2:
             {
@@ -9358,6 +9364,8 @@ bool omx_vdec::handle_color_space_info(void *data)
                 if (vpx_color_space_payload->color_space == 0) {
                     aspects->mPrimaries = ColorAspects::PrimariesBT601_6_525;
                     aspects->mRange = ColorAspects::RangeLimited;
+                    aspects->mTransfer = ColorAspects::TransferSMPTE170M;
+                    aspects->mMatrixCoeffs = ColorAspects::MatrixBT601_6;
                 } else {
                     DEBUG_PRINT_ERROR("Unsupported Color space for VP8");
                     break;
@@ -9627,7 +9635,7 @@ void omx_vdec::get_preferred_color_aspects(ColorAspects& preferredColorAspects)
     // For VPX, use client-color if specified.
     // For the rest, try to use the stream-color if present
     bool preferClientColor = (output_capability == V4L2_PIX_FMT_VP8 ||
-                              output_capability == V4L2_PIX_FMT_VP9);
+         output_capability == V4L2_PIX_FMT_VP9);
 
     const ColorAspects &preferredColor = preferClientColor ?
         m_client_color_space.sAspects : m_internal_color_space.sAspects;
@@ -10065,6 +10073,14 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                 memset(&final_hdr_info, 0, sizeof(final_hdr_info));
                 memset(&color_mdata, 0, sizeof(color_mdata));
                 get_preferred_color_aspects(final_color_aspects);
+
+                /* For VP8, always set the metadata on gralloc handle to 601-LR */
+                if (output_capability == V4L2_PIX_FMT_VP8) {
+                    final_color_aspects.mPrimaries = ColorAspects::PrimariesBT601_6_525;
+                    final_color_aspects.mRange = ColorAspects::RangeLimited;
+                    final_color_aspects.mTransfer = ColorAspects::TransferSMPTE170M;
+                    final_color_aspects.mMatrixCoeffs = ColorAspects::MatrixBT601_6;
+                }
                 get_preferred_hdr_info(final_hdr_info);
                 convert_color_aspects_to_metadata(final_color_aspects, color_mdata);
                 convert_hdr_info_to_metadata(final_hdr_info, color_mdata);
@@ -11006,8 +11022,9 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
                 src_format = (ColorConvertFormat) found->second;;
             }
 
-            DEBUG_PRINT_INFO("C2D: Set Resolution, Interlace(%d) Convertion(%#X -> %#X)"
-                             " src(%dX%d) dest(%dX%d)", omx->drv_ctx.interlace,
+            DEBUG_PRINT_INFO("C2D: Set Resolution, Interlace(%s) Conversion(%#X -> %#X)"
+                             " src(%dX%d) dest(%dX%d)",
+                             (omx->drv_ctx.interlace != VDEC_InterlaceFrameProgressive) ? "true": "false",
                              src_format, dest_format, width,
                              omx->drv_ctx.interlace !=
                                   VDEC_InterlaceFrameProgressive?(height+1)/2 : height,
