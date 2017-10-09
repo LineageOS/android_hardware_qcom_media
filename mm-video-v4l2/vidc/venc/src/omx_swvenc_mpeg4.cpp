@@ -2436,12 +2436,14 @@ OMX_ERRORTYPE omx_venc::dev_get_supported_profile_level(OMX_VIDEO_PARAM_PROFILEL
 {
     ENTER_FUNC();
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
+
+   if (profileLevelType == NULL)
+   {
+        DEBUG_PRINT_ERROR("p_profilelevel = NULL");
+        return OMX_ErrorBadParameter;
+   }
+
     if (profileLevelType->nPortIndex == 1) {
-        if (profileLevelType == NULL)
-        {
-            DEBUG_PRINT_ERROR("p_profilelevel = NULL");
-            return OMX_ErrorBadParameter;
-        }
         if (m_sOutPortDef.format.video.eCompressionFormat == OMX_VIDEO_CodingH263)
         {
             if (profileLevelType->nProfileIndex == 0)

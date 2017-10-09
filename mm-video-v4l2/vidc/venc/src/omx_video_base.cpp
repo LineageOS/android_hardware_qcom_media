@@ -4089,7 +4089,13 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
 OMX_ERRORTYPE  omx_video::fill_this_buffer(OMX_IN OMX_HANDLETYPE  hComp,
         OMX_IN OMX_BUFFERHEADERTYPE* buffer)
 {
+   if (buffer == NULL ||(buffer->nSize != sizeof(OMX_BUFFERHEADERTYPE))) {
+      DEBUG_PRINT_ERROR("ERROR: omx_video::ftb-->Invalid buffer or size");
+      return OMX_ErrorBadParameter;
+    }
+
     DEBUG_PRINT_LOW("FTB: buffer->pBuffer[%p]", buffer->pBuffer);
+
     if (m_state != OMX_StateExecuting &&
             m_state != OMX_StatePause &&
             m_state != OMX_StateIdle) {
@@ -4099,11 +4105,6 @@ OMX_ERRORTYPE  omx_video::fill_this_buffer(OMX_IN OMX_HANDLETYPE  hComp,
 
     if (buffer->nOutputPortIndex == PORT_INDEX_EXTRADATA_OUT) {
         DEBUG_PRINT_ERROR("ERROR: omx_video::ftb-->invalid port in header");
-        return OMX_ErrorBadParameter;
-    }
-
-    if (buffer == NULL ||(buffer->nSize != sizeof(OMX_BUFFERHEADERTYPE))) {
-        DEBUG_PRINT_ERROR("ERROR: omx_video::ftb-->Invalid buffer or size");
         return OMX_ErrorBadParameter;
     }
 
