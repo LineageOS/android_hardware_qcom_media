@@ -5186,6 +5186,12 @@ OMX_ERRORTYPE omx_video::push_input_buffer(OMX_HANDLETYPE hComp)
         } else {
             VideoGrallocMetadata *media_buffer = (VideoGrallocMetadata *)psource_frame->pBuffer;
             private_handle_t *handle = (private_handle_t *)media_buffer->pHandle;
+            bool is_venus_supported_format = (handle->format == HAL_PIXEL_FORMAT_NV12_ENCODEABLE ||
+                handle->format == QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m ||
+                handle->format == QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed ||
+                handle->format == QOMX_COLOR_Format32bitRGBA8888Compressed ||
+                handle->format == HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC);
+
             Input_pmem_info.buffer = media_buffer;
             Input_pmem_info.fd = handle->fd;
             Input_pmem_info.offset = 0;
@@ -5193,11 +5199,7 @@ OMX_ERRORTYPE omx_video::push_input_buffer(OMX_HANDLETYPE hComp)
             m_graphicbuffer_size = Input_pmem_info.size;
             if (is_conv_needed(handle->format, handle->flags))
                 ret = convert_queue_buffer(hComp,Input_pmem_info,index);
-            else if (handle->format == HAL_PIXEL_FORMAT_NV12_ENCODEABLE ||
-                    handle->format == QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m ||
-                    handle->format == QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed ||
-                    handle->format == HAL_PIXEL_FORMAT_RGBA_8888 ||
-                    handle->format == QOMX_COLOR_Format32bitRGBA8888Compressed)
+            else if (is_venus_supported_format)
                 ret = queue_meta_buffer(hComp);
             else
                 ret = OMX_ErrorBadParameter;
