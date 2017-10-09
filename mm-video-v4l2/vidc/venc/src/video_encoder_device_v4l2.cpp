@@ -6377,7 +6377,7 @@ bool venc_dev::venc_get_temporal_layer_caps(OMX_U32 *nMaxLayers,
 }
 
 bool venc_dev::venc_check_for_hybrid_hp(OMX_VIDEO_ANDROID_TEMPORALLAYERINGPATTERNTYPE ePattern) {
-    //Hybrid HP is only for H264 and VBR
+    //Hybrid HP is only for H264 and CFR
     if (m_sVenc_cfg.codectype != V4L2_PIX_FMT_H264) {
         DEBUG_PRINT_LOW("TemporalLayer: Hybrid HierP is not supported for non H264");
         return false;
@@ -6388,8 +6388,10 @@ bool venc_dev::venc_check_for_hybrid_hp(OMX_VIDEO_ANDROID_TEMPORALLAYERINGPATTER
         return false;
     }
 
-    if (rate_ctrl.rcmode != RC_VBR_CFR && rate_ctrl.rcmode != RC_VBR_VFR) {
-        DEBUG_PRINT_LOW("TemporalLayer: RC must be VBR for Hybrid");
+    if (rate_ctrl.rcmode != V4L2_CID_MPEG_VIDC_VIDEO_RATE_CONTROL_VBR_CFR &&
+        rate_ctrl.rcmode != V4L2_CID_MPEG_VIDC_VIDEO_RATE_CONTROL_CBR_CFR &&
+        rate_ctrl.rcmode != V4L2_CID_MPEG_VIDC_VIDEO_RATE_CONTROL_MBR_CFR) {
+        DEBUG_PRINT_LOW("TemporalLayer: RC must be CFR for Hybrid");
         return false;
     }
 
