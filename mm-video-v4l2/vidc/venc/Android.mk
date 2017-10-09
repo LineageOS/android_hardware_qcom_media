@@ -25,6 +25,7 @@ TARGETS_THAT_NEED_SW_VENC_MPEG4 := msm8909 msm8937 sdm845 msmpeafowl sdm670
 TARGETS_THAT_NEED_SW_VENC_HEVC := msm8992
 TARGETS_THAT_SUPPORT_UBWC := msm8996 msm8998 sdm845 msmpeafowl sdm670
 TARGETS_THAT_SUPPORT_VQZIP := msm8996 msm8998
+TARGETS_THAT_SUPPORT_SW_VENC_ROTATION := sdm845 msmpeafowl sdm670
 
 ifeq ($(TARGET_BOARD_PLATFORM),msm8610)
 libmm-venc-def += -D_MSM8610_
@@ -67,6 +68,10 @@ libmm-venc-inc      += frameworks/native/include/media/openmax
 libmm-venc-inc      += hardware/qcom/media/libc2dcolorconvert
 libmm-venc-inc      += $(TARGET_OUT_HEADERS)/libvqzip
 libmm-venc-inc      += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+
+ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_SW_VENC_ROTATION)),true)
+libmm-venc-inc      += hardware/libhardware/include/hardware
+endif
 
 # Common Dependencies
 libmm-venc-add-dep  := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
@@ -119,6 +124,12 @@ LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 LOCAL_PRELINK_MODULE      := false
 LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl libplatformconfig
 LOCAL_SHARED_LIBRARIES    += libMpeg4SwEncoder
+
+ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_SW_VENC_ROTATION)),true)
+LOCAL_SHARED_LIBRARIES += libui
+LOCAL_SHARED_LIBRARIES += libutils
+endif
+
 # ifeq ($(BOARD_USES_ADRENO), true)
 LOCAL_SHARED_LIBRARIES    += libc2dcolorconvert
 # endif # ($(BOARD_USES_ADRENO), true)

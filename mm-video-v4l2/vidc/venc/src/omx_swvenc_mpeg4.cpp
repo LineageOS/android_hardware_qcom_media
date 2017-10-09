@@ -38,6 +38,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "PlatformConfig.h"
 
+/* use GraphicBuffer for rotation */
+#include <ui/GraphicBufferAllocator.h>
+#include <gralloc.h>
 
 /*----------------------------------------------------------------------------
  * Preprocessor Definitions and Constants
@@ -103,6 +106,13 @@ omx_venc::omx_venc()
     mUseProxyColorFormat = false;
     get_syntaxhdr_enable = false;
     m_bSeqHdrRequested = false;
+    m_bDimensionsNeedFlip = false;
+    m_bIsRotationSupported = false;
+    m_bIsInFrameSizeSet = false;
+    m_bIsOutFrameSizeSet = false;
+    m_bIsInFlipDone = false;
+    m_bIsOutFlipDone = false;
+    m_pIpbuffers = nullptr;
     set_format = false;
 
     EXIT_FUNC();
@@ -475,6 +485,12 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
 
     EXIT_FUNC();
 
+    {
+        VendorExtensionStore *extStore = const_cast<VendorExtensionStore *>(&mVendorExtensionStore);
+        init_sw_vendor_extensions(*extStore);
+        mVendorExtensionStore.dumpExtensions((const char *)m_nkind);
+    }
+
     RETURN(eRet);
 }
 
@@ -629,6 +645,20 @@ OMX_ERRORTYPE  omx_venc::set_parameter
                 DEBUG_PRINT_LOW("i/p new actual cnt = %u", m_sInPortDef.nBufferCountActual);
                 DEBUG_PRINT_LOW("i/p new min cnt = %u", m_sInPortDef.nBufferCountMin);
                 DEBUG_PRINT_LOW("i/p new buffersize = %u", m_sInPortDef.nBufferSize);
+
+                // when rotation is setting before portdefinition, if need flip dimensions
+                // in port flip will be set here
+                if (m_bDimensionsNeedFlip && !m_bIsInFlipDone) {
+                    DEBUG_PRINT_HIGH("flip in port dimension(for swcodec) in portdefinition");
+                    OMX_ERRORTYPE err = swvenc_do_flip_inport();
+                    if (err != OMX_ErrorNone) {
+                        DEBUG_PRINT_ERROR("%s, swvenc_do_flip_inport falied (%d)",
+                                __FUNCTION__, err);
+                        RETURN(err);
+                    }
+                    m_bIsInFlipDone = true;
+                }
+                m_bIsInFrameSizeSet = true;
             }
             else if (PORT_INDEX_OUT == portDefn->nPortIndex)
             {
@@ -693,6 +723,18 @@ OMX_ERRORTYPE  omx_venc::set_parameter
                 DEBUG_PRINT_LOW("o/p new actual cnt = %u", m_sOutPortDef.nBufferCountActual);
                 DEBUG_PRINT_LOW("o/p new min cnt = %u", m_sOutPortDef.nBufferCountMin);
                 DEBUG_PRINT_LOW("o/p new buffersize = %u", m_sOutPortDef.nBufferSize);
+                // when rotation is setting before portdefinition, if need flip dimensions
+                // out port flip will be set here
+                if (m_bDimensionsNeedFlip && !m_bIsOutFlipDone) {
+                    DEBUG_PRINT_HIGH("flip out port dimension in portdefinition");
+                    OMX_ERRORTYPE err = swvenc_do_flip_outport();
+                    m_bIsOutFlipDone = true;
+                    DEBUG_PRINT_HIGH("Out Port Definition: rotation (%d), flipped WxH (%d x %d)",
+                            m_sConfigFrameRotation.nRotation,
+                            m_sOutPortDef.format.video.nFrameWidth,
+                            m_sOutPortDef.format.video.nFrameHeight);
+                }
+                m_bIsOutFrameSizeSet = true;
             }
             else
             {
@@ -1607,9 +1649,101 @@ OMX_ERRORTYPE  omx_venc::set_config
         }
         case OMX_IndexConfigCommonRotate:
         {
-            DEBUG_PRINT_ERROR("ERROR: OMX_IndexConfigCommonRotate not supported");
-            RETURN(OMX_ErrorUnsupportedSetting);
-            break;
+            if (m_codec == SWVENC_CODEC_H263) {
+                OMX_CONFIG_ROTATIONTYPE *pParam =
+                    reinterpret_cast<OMX_CONFIG_ROTATIONTYPE *>(configData);
+                DEBUG_PRINT_HIGH("set_config(): OMX_IndexConfigCommonRotate");
+                m_bIsRotationSupported = true;
+
+                // XXX: diffrent from h/w encoder rotation, h/w encoder only need to update out
+                // port info. For h/w encoder, rotation is processed in h/w encoder firmware, this
+                // is after ETB, so input info doesn't change. While s/w encoder rotation is
+                // processed before ETB, so need to change in port info.
+                if (pParam->nPortIndex != PORT_INDEX_IN) {
+                    DEBUG_PRINT_ERROR("ERROR: Unsupported port index: %u",
+                            (unsigned int)pParam->nPortIndex);
+                    RETURN(OMX_ErrorBadPortIndex);
+                }
+                if (pParam->nRotation == 0 ||
+                        pParam->nRotation == 90 ||
+                        pParam->nRotation == 180 ||
+                        pParam->nRotation == 270) {
+                    DEBUG_PRINT_HIGH("set_config(): Rotation Angle %u",
+                            (unsigned int)pParam->nRotation);
+                    if (m_pIpbuffers == nullptr) {
+                        // m_pIpbuffers is used to store original ipbuffer, because after rotation,
+                        // will send new rotated ipbuffer to encoder, in EBD will also get new
+                        // ipbuffer. so we can restore original ipbuffer from to m_pIpbuffers and
+                        // return it to framework
+                        m_pIpbuffers = new SWVENC_IPBUFFER[m_sInPortDef.nBufferCountActual];
+                    }
+                    if (m_pIpbuffers == nullptr) {
+                        DEBUG_PRINT_ERROR("create ipbuffer array failed");
+                        return OMX_ErrorUndefined;
+                    }
+                } else {
+                    DEBUG_PRINT_ERROR("ERROR: Unsupported Rotation Angle %u",
+                            (unsigned int)pParam->nRotation);
+                    RETURN(OMX_ErrorUnsupportedSetting);
+                }
+                if (m_sConfigFrameRotation.nRotation == pParam->nRotation) {
+                    DEBUG_PRINT_HIGH("set_config(): rotation (%d) not changed", pParam->nRotation);
+                    break;
+                }
+
+                OMX_S32 rotation_diff = pParam->nRotation - m_sConfigFrameRotation.nRotation;
+                if (rotation_diff < 0)
+                    rotation_diff = -rotation_diff;
+                if (rotation_diff == 90 || rotation_diff == 270) {
+                    // in the case that rotation angle is 90 or 270 degree, if original buffer size
+                    // is 640x480, after rotation, rotated buffer size will be 480x640, so need to
+                    // flip dimensions in such cases.
+                    m_bDimensionsNeedFlip = true;
+                    OMX_ERRORTYPE err = OMX_ErrorNone;
+                    // flip and set new dimensions must be called after real dimension set
+                    if (m_bIsInFrameSizeSet && !m_bIsInFlipDone) {
+                        err = swvenc_do_flip_inport();
+                        if (err != OMX_ErrorNone) {
+                            DEBUG_PRINT_ERROR("set_config(): flipping failed");
+                            RETURN(err);
+                        }
+
+                        m_bIsInFlipDone = true;
+                    } else {
+                        DEBUG_PRINT_HIGH("set_config(): in port frame size isn't set, will do flip later");
+                    }
+                    if (m_bIsOutFrameSizeSet && !m_bIsOutFlipDone) {
+                        err = swvenc_do_flip_outport();
+                        m_bIsOutFlipDone = true;
+                        DEBUG_PRINT_HIGH("set_config(): out port flip done, rotation (%d), flipped WxH (%d x %d)",
+                                pParam->nRotation,
+                                m_sOutPortDef.format.video.nFrameWidth,
+                                m_sOutPortDef.format.video.nFrameHeight);
+                    } else {
+                        DEBUG_PRINT_HIGH("set_config(): out port frame size isn't set, will do flip later");
+                    }
+                } else {
+                    m_bDimensionsNeedFlip = false;
+                    DEBUG_PRINT_HIGH("set_config(): rotation (%d), no need to flip WxH",
+                            pParam->nRotation);
+                }
+
+                // save rotation angle
+                m_sConfigFrameRotation.nRotation = pParam->nRotation;
+                break;
+            } else {
+                DEBUG_PRINT_ERROR("ERROR: rotation is not supported for current codec");
+                RETURN(OMX_ErrorUnsupportedSetting);
+
+
+            }
+        }
+        case OMX_IndexConfigAndroidVendorExtension:
+        {
+            OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext =
+                reinterpret_cast<OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *>(configData);
+            OMX_ERRORTYPE err = set_vendor_extension_config(ext);
+            RETURN(err);
         }
         default:
             DEBUG_PRINT_ERROR("ERROR: unsupported index %d", (int) configIndex);
@@ -1622,6 +1756,187 @@ OMX_ERRORTYPE  omx_venc::set_config
     RETURN(OMX_ErrorNone);
 }
 
+OMX_ERRORTYPE omx_venc::swvenc_do_flip_inport() {
+    ENTER_FUNC();
+    OMX_U32 inWidth = m_sInPortDef.format.video.nFrameWidth;
+    OMX_U32 inHeight = m_sInPortDef.format.video.nFrameHeight;
+
+    // set new dimensions to encoder
+    SWVENC_PROPERTY Prop;
+    SWVENC_STATUS Ret = SWVENC_S_SUCCESS;
+    Prop.id = SWVENC_PROPERTY_ID_FRAME_SIZE;
+    Prop.info.frame_size.height = inWidth;
+    Prop.info.frame_size.width = inHeight;
+
+    DEBUG_PRINT_HIGH("setting flipped dimensions to swencoder, WxH (%d x %d)",
+            inWidth, inHeight);
+    Ret = swvenc_setproperty(m_hSwVenc, &Prop);
+    if (Ret != SWVENC_S_SUCCESS) {
+        // currently, set dimensions to encoder can only be called when encoder is
+        // in init state, while setVendorParameter() in ACodec can be called when
+        // OMX component is in Executing state, in this case, encoder is in ready
+        // state, will report unsupported error.
+        DEBUG_PRINT_ERROR("ERROR: setting new dimension to encoder failed (%d)",
+                Ret);
+        return OMX_ErrorUnsupportedSetting;
+    }
+
+    // don't flip in port dimensions m_sInPortDef.format.video.nFrameWidth(mFrameHeight)
+    // app may require this dimensions by get_parameter
+
+    // update attributes, here dimensions are flipped, so use inHeight for calculating
+    // stride, inWidth for scanlines, and swapp parameters in venus size calculation
+    int stride = VENUS_Y_STRIDE(COLOR_FMT_NV12, inHeight);
+    int scanlines = VENUS_Y_SCANLINES(COLOR_FMT_NV12, inWidth);
+    Prop.id = SWVENC_PROPERTY_ID_FRAME_ATTRIBUTES;
+    Prop.info.frame_attributes.stride_luma = stride;
+    Prop.info.frame_attributes.stride_chroma = stride;
+    Prop.info.frame_attributes.offset_luma = 0;
+    Prop.info.frame_attributes.offset_chroma = scanlines * stride;
+    Prop.info.frame_attributes.size =
+        VENUS_BUFFER_SIZE(COLOR_FMT_NV12, inHeight, inWidth);
+
+    Ret = swvenc_setproperty(m_hSwVenc, &Prop);
+    if (Ret != SWVENC_S_SUCCESS) {
+        DEBUG_PRINT_ERROR("ERROR: update frame attributes failed (%d)", Ret);
+        return OMX_ErrorUnsupportedSetting;
+    }
+
+    // till now, attributes of omx input port is different from sw encoder input port,
+    // omx input port stores original attributes, sw encoder input port stores flipped
+    // attributes. no need to update buffer requirements from sw encoder here, but need
+    // to update in output port, omx output port should also store flipped attrinutes
+
+    EXIT_FUNC();
+    return OMX_ErrorNone;
+}
+
+OMX_ERRORTYPE omx_venc::swvenc_do_flip_outport() {
+    ENTER_FUNC();
+    // for out port, no need to set dimensions to encoder
+    OMX_U32 outWidth = m_sOutPortDef.format.video.nFrameWidth;
+    OMX_U32 outHeight = m_sOutPortDef.format.video.nFrameHeight;
+
+    // update out port info
+    m_sOutPortDef.format.video.nFrameWidth = outHeight;
+    m_sOutPortDef.format.video.nFrameHeight = outWidth;
+
+    // attributes in sw encoder has been updated after flipping dimensions, so need to update
+    // omx out port buffer requirements, they should have the same attributes
+    DEBUG_PRINT_LOW("flip outport, o/p previous actual cnt = %u", m_sOutPortDef.nBufferCountActual);
+    DEBUG_PRINT_LOW("flip outport, o/p previous min cnt = %u", m_sOutPortDef.nBufferCountMin);
+    DEBUG_PRINT_LOW("flip outport, o/p previous buffersize = %u", m_sOutPortDef.nBufferSize);
+
+    SWVENC_STATUS Ret = SWVENC_S_SUCCESS;
+    Ret = swvenc_get_buffer_req(&m_sOutPortDef.nBufferCountMin,
+            &m_sOutPortDef.nBufferCountActual,
+            &m_sOutPortDef.nBufferSize,
+            &m_sOutPortDef.nBufferAlignment,
+            PORT_INDEX_OUT);
+    if (Ret != SWVENC_S_SUCCESS) {
+        DEBUG_PRINT_ERROR("ERROR: %s, flip outport swvenc_get_buffer_req failed(%d)", __FUNCTION__,
+                Ret);
+        return OMX_ErrorUndefined;
+    }
+
+    DEBUG_PRINT_LOW("flip outport, o/p new actual cnt = %u", m_sOutPortDef.nBufferCountActual);
+    DEBUG_PRINT_LOW("flip outport, o/p new min cnt = %u", m_sOutPortDef.nBufferCountMin);
+    DEBUG_PRINT_LOW("flip outport, o/p new buffersize = %u", m_sOutPortDef.nBufferSize);
+
+    EXIT_FUNC();
+    return OMX_ErrorNone;
+}
+
+bool omx_venc::swvenc_do_rotate(int fd, SWVENC_IPBUFFER & ipbuffer, OMX_U32 index) {
+    // declarations and definitions of variables rotation needs
+    private_handle_t *privateHandle = nullptr;
+
+    int s_width = m_sInPortDef.format.video.nFrameWidth;
+    int s_height = m_sInPortDef.format.video.nFrameHeight;
+    int d_width = m_bDimensionsNeedFlip ? s_height : s_width;
+    int d_height = m_bDimensionsNeedFlip ? s_width : s_height;
+
+    uint32_t rotation = m_sConfigFrameRotation.nRotation;
+
+    uint32_t usage = GraphicBuffer::USAGE_HW_TEXTURE | GraphicBuffer::USAGE_SW_READ_OFTEN |
+        GraphicBuffer::USAGE_SW_WRITE_OFTEN | GraphicBuffer::USAGE_HW_RENDER;
+    uint32_t dstusage = GraphicBuffer::USAGE_HW_TEXTURE | GraphicBuffer::USAGE_HW_VIDEO_ENCODER |
+        GraphicBuffer::USAGE_HW_RENDER | GraphicBuffer::USAGE_SW_READ_OFTEN |
+        GraphicBuffer::USAGE_SW_WRITE_OFTEN;
+
+    int src_stride = VENUS_Y_STRIDE(COLOR_FMT_NV12, s_width);
+    int src_scanlines = VENUS_Y_SCANLINES(COLOR_FMT_NV12, s_height);
+    int src_size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12, s_width, s_height);
+    int dst_size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12, d_width, d_height);
+
+    uint32_t format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS;
+
+    // privateHandle is created for creating GraphicBuffer in rotation case
+    privateHandle = new private_handle_t(fd, ipbuffer.size, usage, BUFFER_TYPE_VIDEO, format,
+            src_stride, src_scanlines);
+    if (privateHandle == nullptr) {
+        DEBUG_PRINT_ERROR("failed to create private handle");
+        return false;
+    }
+
+    sp<GraphicBuffer> srcBuffer = new GraphicBuffer(s_width, s_height, format, 1, usage,
+            src_stride, (native_handle_t *)privateHandle, false);
+    if (srcBuffer.get() == NULL) {
+        DEBUG_PRINT_ERROR("create source buffer failed");
+        swvenc_delete_pointer(privateHandle);
+        return false;
+    }
+
+    // reuse dstBuffer
+    if (dstBuffer.get() == NULL) {
+        dstBuffer = new GraphicBuffer(d_width, d_height, format, dstusage);
+    }
+    if (dstBuffer.get() == NULL) {
+        DEBUG_PRINT_ERROR("create destination buffer failed");
+        swvenc_delete_pointer(privateHandle);
+        return false;
+    }
+    SWVENC_STATUS ret = swvenc_rotateFrame(s_width, s_height, d_height, d_width,
+            rotation, srcBuffer->getNativeBuffer(), dstBuffer->getNativeBuffer());
+
+    if (ret == SWVENC_S_SUCCESS) {
+        void *buf = nullptr;
+        if (dstBuffer->lock(dstusage, &buf) == 0 && buf != nullptr) {
+            DEBUG_PRINT_HIGH("store original ipbuffer[p_buffer(%p), size(%d), filled_length(%d)], new ipbuffer[p_buffer(%p), size(%d), filled_length(%d)]",
+                    ipbuffer.p_buffer,
+                    ipbuffer.size,
+                    ipbuffer.filled_length,
+                    (unsigned char *)buf,
+                    dst_size,
+                    dst_size);
+            if (index >= m_sInPortDef.nBufferCountActual) {
+                DEBUG_PRINT_ERROR("incorrect buffer index");
+                swvenc_delete_pointer(privateHandle);
+                return false;
+            }
+            m_pIpbuffers[index].size = ipbuffer.size;
+            m_pIpbuffers[index].filled_length = ipbuffer.filled_length;
+            m_pIpbuffers[index].p_buffer = ipbuffer.p_buffer;
+            ipbuffer.size = dst_size;
+            ipbuffer.filled_length = dst_size;
+            ipbuffer.p_buffer = (unsigned char *)buf;
+            dstBuffer->unlock();
+            DEBUG_PRINT_HIGH("copy rotated buffer successfully");
+        } else {
+            DEBUG_PRINT_ERROR("copy rotated buffer failed");
+            swvenc_delete_pointer(privateHandle);
+            return false;
+        }
+    } else {
+        DEBUG_PRINT_ERROR("rotate failed");
+        swvenc_delete_pointer(privateHandle);
+        return false;
+    }
+
+    swvenc_delete_pointer(privateHandle);
+    return true;
+}
+
 OMX_ERRORTYPE  omx_venc::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
 {
     ENTER_FUNC();
@@ -1630,6 +1945,13 @@ OMX_ERRORTYPE  omx_venc::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
     DEBUG_PRINT_HIGH("omx_venc(): Inside component_deinit()");
 
     (void)hComp;
+
+    if (m_bIsRotationSupported) {
+        swvenc_rotation_deinit();
+        if (m_pIpbuffers != nullptr) {
+            delete [] m_pIpbuffers;
+        }
+    }
 
     if (OMX_StateLoaded != m_state)
     {
@@ -1730,7 +2052,13 @@ OMX_U32 omx_venc::dev_start(void)
    }
 
    m_stopped = false;
-
+   if (m_bIsRotationSupported){
+       Ret = swvenc_rotation_init();
+       if (Ret == SWVENC_S_UNSUPPORTED) {
+           DEBUG_PRINT_ERROR("ERROR: Rotation not supported for this target");
+           m_bIsRotationSupported = false;
+        }
+   }
    RETURN(0);
 }
 
@@ -1925,17 +2253,24 @@ bool omx_venc::dev_empty_buf
       ipbuffer.timestamp,
       ipbuffer.p_client_data);
 
+    if (m_debug.in_buffer_log)
+    {
+       swvenc_input_log_buffers((const char*)ipbuffer.p_buffer, ipbuffer.filled_length);
+    }
+
+    if (m_bIsRotationSupported && m_sConfigFrameRotation.nRotation != 0) {
+        if(!swvenc_do_rotate((int)fd, ipbuffer, (OMX_U32)index)) {
+            DEBUG_PRINT_ERROR("rotate failed");
+            return OMX_ErrorUndefined;
+        }
+    }
+
     Ret = swvenc_emptythisbuffer(m_hSwVenc, &ipbuffer);
     if (Ret != SWVENC_S_SUCCESS)
     {
        DEBUG_PRINT_ERROR("%s, swvenc_emptythisbuffer failed (%d)",
          __FUNCTION__, Ret);
        RETURN(false);
-    }
-
-    if (m_debug.in_buffer_log)
-    {
-       swvenc_input_log_buffers((const char*)ipbuffer.p_buffer, ipbuffer.filled_length);
     }
 
     RETURN(true);
@@ -2573,6 +2908,20 @@ SWVENC_STATUS omx_venc::swvenc_empty_buffer_done
         error = OMX_ErrorUndefined;
     }
 
+    if (m_pIpbuffers != nullptr) {
+        int index = omxhdr - ((mUseProxyColorFormat && !mUsesColorConversion) ? meta_buffer_hdr : m_inp_mem_ptr);
+        DEBUG_PRINT_HIGH("restore ipbuffer[p_buffer(%p), size(%d), filled_length(%d)] to original ipbuffer[p_buffer(%p), size(%d), filled_length(%d)]",
+                p_ipbuffer->p_buffer,
+                p_ipbuffer->size,
+                p_ipbuffer->filled_length,
+                m_pIpbuffers[index].p_buffer,
+                m_pIpbuffers[index].size,
+                m_pIpbuffers[index].filled_length);
+        p_ipbuffer->size = m_pIpbuffers[index].size;
+        p_ipbuffer->filled_length = m_pIpbuffers[index].filled_length;
+        p_ipbuffer->p_buffer = m_pIpbuffers[index].p_buffer;
+    }
+
     if (omxhdr != NULL)
     {
         // unmap the input buffer->pBuffer
@@ -3125,4 +3474,11 @@ SWVENC_STATUS omx_venc::swvenc_set_color_format
         Ret = SWVENC_S_FAILURE;
     }
     RETURN(Ret);
+}
+
+// don't use init_vendor_extensions() from omx_video_extensions.hpp, sw component doesn't support
+// all the vendor extensions like hw component
+void omx_venc::init_sw_vendor_extensions(VendorExtensionStore &store) {
+    ADD_EXTENSION("qti-ext-enc-preprocess-rotate", OMX_IndexConfigCommonRotate, OMX_DirOutput)
+    ADD_PARAM_END("angle", OMX_AndroidVendorValueInt32)
 }

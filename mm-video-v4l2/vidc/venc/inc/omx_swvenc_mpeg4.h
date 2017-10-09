@@ -39,6 +39,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "swvenc_api.h"
 #include "swvenc_types.h"
 
+#include <ui/GraphicBuffer.h>
+
 extern "C" {
     OMX_API void * get_omx_component_factory_fn(void);
 }
@@ -104,9 +106,20 @@ class omx_venc: public omx_video
             void         *p_client
         );
 
+        static void init_sw_vendor_extensions(VendorExtensionStore &store);
+
     private:
         venc_debug_cap m_debug;
         bool m_bSeqHdrRequested;
+
+        bool m_bDimensionsNeedFlip;
+        bool m_bIsRotationSupported;
+        bool m_bIsInFrameSizeSet;
+        bool m_bIsOutFrameSizeSet;
+        bool m_bIsInFlipDone;
+        bool m_bIsOutFlipDone;
+        sp<GraphicBuffer> dstBuffer;
+        SWVENC_IPBUFFER *m_pIpbuffers;
 
         int  m_pipe_in;
         int  m_pipe_out;
@@ -152,6 +165,17 @@ class omx_venc: public omx_video
         int dev_extradata_log_buffers(char *buffer);
         bool swvenc_color_align(OMX_BUFFERHEADERTYPE *buffer, OMX_U32 width,
                                 OMX_U32 height);
+        OMX_ERRORTYPE swvenc_do_flip_inport();
+        OMX_ERRORTYPE swvenc_do_flip_outport();
+        bool swvenc_do_rotate(int, SWVENC_IPBUFFER &, OMX_U32);
+
+        template<typename T>
+        inline void swvenc_delete_pointer(T * &ptr) {
+            if (ptr != nullptr) {
+                delete ptr;
+                ptr = nullptr;
+            }
+        }
 
         SWVENC_STATUS swvenc_set_rc_mode(OMX_VIDEO_CONTROLRATETYPE eControlRate);
         SWVENC_STATUS swvenc_set_profile_level(OMX_U32 eProfile,OMX_U32 eLevel);
