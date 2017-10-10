@@ -3600,6 +3600,8 @@ bool venc_dev::venc_color_align(OMX_BUFFERHEADERTYPE *buffer,
                     src_buf + line * width,
                     width);
         }
+        /* Inform driver to do cache flush on total buffer */
+        buffer->nFilledLen = buffer->nAllocLen;
     } else {
         DEBUG_PRINT_ERROR("Failed to align Chroma. from %u to %u : \
                 Insufficient bufferLen=%u v/s Required=%u",
