@@ -300,14 +300,17 @@ void* async_message_thread (void *input)
 
                  event_fields_changed |= (omx->drv_ctx.video_resolution.frame_height != ptr[7]);
                  event_fields_changed |= (omx->drv_ctx.video_resolution.frame_width != ptr[8]);
-                 profile_level_converter::convert_v4l2_profile_to_omx(codec, ptr[9], &tmp_profile);
-                 profile_level_converter::convert_v4l2_level_to_omx(codec, ptr[10], &tmp_level);
 
                  if ((codec == V4L2_PIX_FMT_H264) ||
                      (codec  == V4L2_PIX_FMT_HEVC)) {
-                     event_fields_changed |= (omx->mClientSessionForSufficiency &&
-                                              ((tmp_profile != (int)omx->mClientSetProfile) ||
-                                               (tmp_level > (int)omx->mClientSetLevel)));
+                     if (profile_level_converter::convert_v4l2_profile_to_omx(
+                                                         codec, ptr[9], &tmp_profile) &&
+                         profile_level_converter::convert_v4l2_level_to_omx(
+                                                         codec, ptr[10], &tmp_level)) {
+                         event_fields_changed |= (omx->mClientSessionForSufficiency &&
+                                                  ((tmp_profile != (int)omx->mClientSetProfile) ||
+                                                   (tmp_level > (int)omx->mClientSetLevel)));
+                     }
                  }
 
                  if (event_fields_changed) {

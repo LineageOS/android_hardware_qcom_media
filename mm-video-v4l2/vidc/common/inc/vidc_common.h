@@ -62,8 +62,8 @@ class profile_level_converter {
 
     //Constructor that initializes and performs the mapping
     profile_level_converter() = delete;
-    static bool find_item(pl_map *map, int key, int *value);
-    static bool find_map(codec_map map, int key, pl_map **value_map);
+    static bool find_item(const pl_map &map, int key, int *value);
+    static bool find_map(const codec_map &map, int key, pl_map **value_map);
 
     public:
     static void init();
