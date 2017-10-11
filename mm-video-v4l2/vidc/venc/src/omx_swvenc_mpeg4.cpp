@@ -2265,6 +2265,17 @@ int omx_venc::dev_set_format(int color)
     //return handle->venc_set_format(color);
 }
 
+bool omx_venc::dev_get_dimensions(OMX_U32 index, OMX_U32 *width, OMX_U32 *height)
+{
+   ENTER_FUNC();
+
+   (void)index;
+   (void)width;
+   (void)height;
+
+   RETURN(true);
+}
+
 bool omx_venc::dev_color_align(OMX_BUFFERHEADERTYPE *buffer,
                 OMX_U32 width, OMX_U32 height)
 {

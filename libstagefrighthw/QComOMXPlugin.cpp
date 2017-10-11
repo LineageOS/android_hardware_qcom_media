@@ -121,8 +121,18 @@ OMX_ERRORTYPE QComOMXPlugin::getRolesOfComponent(
 
     if (numRoles > 0) {
         OMX_U8 **array = new OMX_U8 *[numRoles];
+        if (!array) {
+            return OMX_ErrorInsufficientResources;
+        }
         for (OMX_U32 i = 0; i < numRoles; ++i) {
             array[i] = new OMX_U8[OMX_MAX_STRINGNAME_SIZE];
+            if (!array[i]) {
+                for (OMX_U32 j = 0; j < i; ++j) {
+                    delete[] array[j];
+                }
+                delete[] array;
+                return OMX_ErrorInsufficientResources;
+            }
         }
 
         OMX_U32 numRoles2;
