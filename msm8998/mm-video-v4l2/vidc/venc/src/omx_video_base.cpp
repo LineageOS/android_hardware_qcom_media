@@ -289,6 +289,8 @@ omx_video::omx_video():
     pending_output_buffers(0),
     allocate_native_handle(false),
     m_out_bm_count(0),
+    m_client_out_bm_count(0),
+    m_client_in_bm_count(0),
     m_inp_bm_count(0),
     m_flags(0),
     m_etb_count(0),
@@ -2623,6 +2625,7 @@ OMX_ERRORTYPE  omx_video::use_input_buffer(
 
         *bufferHdr = (m_inp_mem_ptr + i);
         BITMASK_SET(&m_inp_bm_count,i);
+        BITMASK_SET(&m_client_in_bm_count,i);
 
         (*bufferHdr)->pBuffer           = (OMX_U8 *)buffer;
         (*bufferHdr)->nSize             = sizeof(OMX_BUFFERHEADERTYPE);
@@ -2751,7 +2754,6 @@ OMX_ERRORTYPE  omx_video::use_output_buffer(
         return OMX_ErrorBadParameter;
     }
 
-    auto_lock l(m_buf_lock);
     if (!m_out_mem_ptr) {
         output_use_buffer = true;
         int nBufHdrSize        = 0;
@@ -2902,6 +2904,7 @@ OMX_ERRORTYPE  omx_video::use_output_buffer(
             }
 
             BITMASK_SET(&m_out_bm_count,i);
+            BITMASK_SET(&m_client_out_bm_count,i);
         } else {
             DEBUG_PRINT_ERROR("ERROR: All o/p Buffers have been Used, invalid use_buf call for "
                     "index = %u", i);
@@ -2939,6 +2942,8 @@ OMX_ERRORTYPE  omx_video::use_buffer(
         DEBUG_PRINT_ERROR("ERROR: Use Buffer in Invalid State");
         return OMX_ErrorInvalidState;
     }
+
+    auto_lock l(m_buf_lock);
     if (port == PORT_INDEX_IN) {
         auto_lock l(m_lock);
         eRet = use_input_buffer(hComp,bufferHdr,port,appData,bytes,buffer);
@@ -2948,7 +2953,6 @@ OMX_ERRORTYPE  omx_video::use_buffer(
         DEBUG_PRINT_ERROR("ERROR: Invalid Port Index received %d",(int)port);
         eRet = OMX_ErrorBadPortIndex;
     }
-
     if (eRet == OMX_ErrorNone) {
         if (allocate_done()) {
             if (BITMASK_PRESENT(&m_flags,OMX_COMPONENT_IDLE_PENDING)) {
@@ -3011,7 +3015,6 @@ OMX_ERRORTYPE omx_video::free_input_buffer(OMX_BUFFERHEADERTYPE *bufferHdr)
     }
 
     if (index < m_sInPortDef.nBufferCountActual && m_pInput_pmem) {
-        auto_lock l(m_lock);
 
         if (mUseProxyColorFormat) {
             if (m_opq_pmem_q.m_size) {
@@ -3565,7 +3568,7 @@ OMX_ERRORTYPE  omx_video::allocate_buffer(OMX_IN OMX_HANDLETYPE                h
         DEBUG_PRINT_ERROR("ERROR: Allocate Buf in Invalid State");
         return OMX_ErrorInvalidState;
     }
-
+     auto_lock l(m_buf_lock);
     // What if the client calls again.
     if (port == PORT_INDEX_IN) {
         auto_lock l(m_lock);
@@ -3637,7 +3640,16 @@ OMX_ERRORTYPE  omx_video::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
     unsigned int nPortIndex;
 
     DEBUG_PRINT_LOW("In for encoder free_buffer");
-
+    auto_lock l(m_buf_lock);
+    if (port == PORT_INDEX_OUT) { //client called freebuffer, clearing client buffer bitmask right away to avoid use after free
+        nPortIndex = buffer - (OMX_BUFFERHEADERTYPE*)m_out_mem_ptr;
+        if(BITMASK_PRESENT(&m_client_out_bm_count, nPortIndex))
+            BITMASK_CLEAR(&m_client_out_bm_count,nPortIndex);
+    } else if (port == PORT_INDEX_IN) {
+        nPortIndex = buffer - (meta_mode_enable?meta_buffer_hdr:m_inp_mem_ptr);
+        if(BITMASK_PRESENT(&m_client_in_bm_count, nPortIndex))
+            BITMASK_CLEAR(&m_client_in_bm_count,nPortIndex);
+    }
     if (m_state == OMX_StateIdle &&
             (BITMASK_PRESENT(&m_flags ,OMX_COMPONENT_LOADING_PENDING))) {
         DEBUG_PRINT_LOW(" free buffer while Component in Loading pending");
@@ -3717,7 +3729,6 @@ OMX_ERRORTYPE  omx_video::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
                 nPortIndex, (unsigned int)m_sOutPortDef.nBufferCountActual);
         if (nPortIndex < m_sOutPortDef.nBufferCountActual &&
                 BITMASK_PRESENT(&m_out_bm_count, nPortIndex)) {
-            auto_lock l(m_buf_lock);
             // Clear the bit associated with it.
             BITMASK_CLEAR(&m_out_bm_count,nPortIndex);
             m_sOutPortDef.bPopulated = OMX_FALSE;
@@ -3997,9 +4008,9 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
     {
         DEBUG_PRINT_LOW("Heap UseBuffer case, so memcpy the data");
 
-        auto_lock l(m_lock);
+        auto_lock l(m_buf_lock);
         pmem_data_buf = (OMX_U8 *)m_pInput_pmem[nBufIndex].buffer;
-        if (pmem_data_buf && BITMASK_PRESENT(&m_inp_bm_count, nBufIndex)) {
+        if (pmem_data_buf && BITMASK_PRESENT(&m_client_in_bm_count, nBufIndex)) {
             memcpy (pmem_data_buf, (buffer->pBuffer + buffer->nOffset),
                     buffer->nFilledLen);
         }
