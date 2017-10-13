@@ -243,11 +243,9 @@ void profile_level_converter::init()
     reverse_map(level_tme_omx_to_v4l2, level_tme_v4l2_to_omx);
 }
 
-bool profile_level_converter::find_map(codec_map map, int key, pl_map **value_map)
+bool profile_level_converter::find_map(const codec_map &map, int key, pl_map **value_map)
 {
-    codec_map::iterator map_it;
-
-    map_it = map.find (key);
+    auto map_it = map.find (key);
     if (map_it == map.end()) {
         DEBUG_PRINT_ERROR(" Invalid codec : %d Cannot find map for this codec", key);
         return false;
@@ -256,12 +254,10 @@ bool profile_level_converter::find_map(codec_map map, int key, pl_map **value_ma
     return true;
 }
 
-bool profile_level_converter::find_item(pl_map *map, int key, int *value)
+bool profile_level_converter::find_item(const pl_map &map, int key, int *value)
 {
-    pl_map::iterator it;
-
-    it = map->find (key);
-    if (it == map->end()) {
+    auto it = map.find (key);
+    if (it == map.end()) {
         DEBUG_PRINT_ERROR(" Invalid key : %d Cannot find key in map ", key);
         return false;
     }
@@ -276,7 +272,7 @@ bool profile_level_converter::convert_v4l2_profile_to_omx(int codec, int v4l2_pr
     if (!find_map(profile_v4l2_to_omx_map, codec, &profile_map))
         return false;
 
-    return find_item(profile_map, v4l2_profile, omx_profile);
+    return find_item(*profile_map, v4l2_profile, omx_profile);
 }
 
 bool profile_level_converter::convert_omx_profile_to_v4l2(int codec, int omx_profile, int *v4l2_profile)
@@ -286,7 +282,7 @@ bool profile_level_converter::convert_omx_profile_to_v4l2(int codec, int omx_pro
     if (!find_map(profile_omx_to_v4l2_map, codec, &profile_map))
         return false;
 
-    return find_item(profile_map, omx_profile, v4l2_profile);
+    return find_item(*profile_map, omx_profile, v4l2_profile);
 }
 
 bool profile_level_converter::convert_v4l2_level_to_omx(int codec, int v4l2_level, int *omx_level)
@@ -296,7 +292,7 @@ bool profile_level_converter::convert_v4l2_level_to_omx(int codec, int v4l2_leve
     if (!find_map(level_v4l2_to_omx_map, codec, &level_map))
         return false;
 
-    return find_item(level_map, v4l2_level, omx_level);
+    return find_item(*level_map, v4l2_level, omx_level);
 }
 
 bool profile_level_converter::convert_omx_level_to_v4l2(int codec, int omx_level, int *v4l2_level)
@@ -306,5 +302,5 @@ bool profile_level_converter::convert_omx_level_to_v4l2(int codec, int omx_level
     if (!find_map(level_omx_to_v4l2_map, codec, &level_map))
         return false;
 
-    return find_item(level_map, omx_level, v4l2_level);
+    return find_item(*level_map, omx_level, v4l2_level);
 }
