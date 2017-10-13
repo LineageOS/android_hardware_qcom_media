@@ -66,7 +66,9 @@ LOCAL_MODULE            := libOmxCore
 LOCAL_MODULE_TAGS       := optional
 LOCAL_VENDOR_MODULE     := true
 LOCAL_SHARED_LIBRARIES  := liblog libdl libcutils
+ifeq ($(call is-board-platform-in-list, $(MSM_VIDC_TARGET_LIST)),true)
 LOCAL_SHARED_LIBRARIES  += libplatformconfig
+endif
 LOCAL_CFLAGS            := $(OMXCORE_CFLAGS)
 
 LOCAL_SRC_FILES         := src/common/omx_core_cmp.cpp
@@ -92,7 +94,9 @@ LOCAL_MODULE            := libmm-omxcore
 LOCAL_MODULE_TAGS       := optional
 LOCAL_VENDOR_MODULE     := true
 LOCAL_SHARED_LIBRARIES  := liblog libdl libcutils
+ifeq ($(call is-board-platform-in-list, $(MSM_VIDC_TARGET_LIST)),true)
 LOCAL_SHARED_LIBRARIES  += libplatformconfig
+endif
 LOCAL_CFLAGS            := $(OMXCORE_CFLAGS)
 
 LOCAL_SRC_FILES         := src/common/omx_core_cmp.cpp
