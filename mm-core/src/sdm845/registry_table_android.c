@@ -602,22 +602,6 @@ omx_core_cb_type core[] =
     }
   },
   {
-    "OMX.qcom.file.muxer",
-    NULL, // Create instance function
-    // Unique instance handle
-    {
-      NULL,
-      NULL,
-      NULL,
-      NULL
-    },
-    NULL,   // Shared object library handle
-    "libOmxMux.so",
-    {
-      "container_muxer.mp2"
-    }
-  },
-  {
     "OMX.qti.vdec.vpp",
     NULL, // Create instance function
     // Unique instance handle
@@ -647,6 +631,22 @@ omx_core_cb_type core[] =
     NULL,   // Shared object library handle
     {
       NULL
+    }
+  },
+  {
+    "OMX.qcom.file.muxer",
+    NULL, // Create instance function
+    // Unique instance handle
+    {
+      NULL,
+      NULL,
+      NULL,
+      NULL
+    },
+    NULL,   // Shared object library handle
+    "libOmxMux.so",
+    {
+      "container_muxer.mp2"
     }
   },
   {
