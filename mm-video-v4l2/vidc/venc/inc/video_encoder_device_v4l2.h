@@ -325,6 +325,7 @@ class venc_dev
         bool venc_get_dimensions(OMX_U32 portIndex, OMX_U32 *w, OMX_U32 *h);
         bool venc_loaded_start(void);
         bool venc_loaded_stop(void);
+        bool venc_handle_empty_eos_buffer(void);
         bool venc_loaded_start_done(void);
         bool venc_loaded_stop_done(void);
         bool venc_is_video_session_supported(unsigned long width, unsigned long height);
