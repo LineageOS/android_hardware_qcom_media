@@ -42,6 +42,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <ui/GraphicBufferAllocator.h>
 #include <gralloc.h>
 
+/* def: GET_VT_TIMESTAMP */
+#include <qdMetaData.h>
+
 /*----------------------------------------------------------------------------
  * Preprocessor Definitions and Constants
  * -------------------------------------------------------------------------*/
@@ -112,6 +115,7 @@ omx_venc::omx_venc()
     m_bIsOutFrameSizeSet = false;
     m_bIsInFlipDone = false;
     m_bIsOutFlipDone = false;
+    m_bUseAVTimerTimestamps = false;
     m_pIpbuffers = nullptr;
     set_format = false;
 
@@ -427,6 +431,10 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     m_sParamH263.bForceRoundingTypeToZero = OMX_TRUE;
     m_sParamH263.nPictureHeaderRepetition = 0;
     m_sParamH263.nGOBHeaderInterval = 1;
+
+    // av-timer init (for ims-vt)
+    OMX_INIT_STRUCT(&m_sParamAVTimerTimestampMode, QOMX_ENABLETYPE);
+    m_sParamAVTimerTimestampMode.bEnable = OMX_FALSE;
 
     m_state                   = OMX_StateLoaded;
     m_sExtraData = 0;
@@ -1464,6 +1472,15 @@ OMX_ERRORTYPE  omx_venc::set_parameter
             break;
         }
 
+        case OMX_QTIIndexParamEnableAVTimerTimestamps:
+        {
+            VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
+            QOMX_ENABLETYPE *pParam = (QOMX_ENABLETYPE *)paramData;
+            m_bUseAVTimerTimestamps = pParam->bEnable == OMX_TRUE;
+            DEBUG_PRINT_INFO("AVTimer timestamps %s", m_bUseAVTimerTimestamps ? "enabled" : "disabled");
+            break;
+        }
+
         default:
         {
             DEBUG_PRINT_ERROR("ERROR: Setparameter: unknown param %d", paramIndex);
@@ -2183,7 +2200,15 @@ bool omx_venc::dev_empty_buf
                 VideoGrallocMetadata *meta_buf = (VideoGrallocMetadata *)bufhdr->pBuffer;
                 private_handle_t *handle = (private_handle_t *)meta_buf->pHandle;
                 size = handle->size;
-                if(set_format)
+                if (m_bUseAVTimerTimestamps) {
+                    uint64_t avTimerTimestampNs = bufhdr->nTimeStamp * 1000;
+                    if (getMetaData(handle, GET_VT_TIMESTAMP, &avTimerTimestampNs) == 0
+                            && avTimerTimestampNs > 0) {
+                        bufhdr->nTimeStamp = avTimerTimestampNs / 1000;
+                        DEBUG_PRINT_LOW("AVTimer TS: %llu us", (unsigned long long)bufhdr->nTimeStamp);
+                    }
+                }
+                if (set_format)
                 {
                     DEBUG_PRINT_LOW("color format = 0x%x",handle->format);
                     if (((OMX_COLOR_FORMATTYPE)handle->format) != m_sInPortFormat.eColorFormat)
@@ -3483,4 +3508,8 @@ SWVENC_STATUS omx_venc::swvenc_set_color_format
 void omx_venc::init_sw_vendor_extensions(VendorExtensionStore &store) {
     ADD_EXTENSION("qti-ext-enc-preprocess-rotate", OMX_IndexConfigCommonRotate, OMX_DirOutput)
     ADD_PARAM_END("angle", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-enc-timestamp-source-avtimer", OMX_QTIIndexParamEnableAVTimerTimestamps,
+            OMX_DirOutput)
+    ADD_PARAM_END("enable", OMX_AndroidVendorValueInt32)
 }
