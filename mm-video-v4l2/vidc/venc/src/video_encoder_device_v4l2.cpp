@@ -1961,6 +1961,24 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                         if (num_input_planes > 1)
                             input_extradata_info.count = m_sInput_buff_property.actualcount + 1;
 
+                        if (!downscalar_enabled) {
+                            m_sVenc_cfg.dvs_height = portDefn->format.video.nFrameHeight;
+                            m_sVenc_cfg.dvs_width = portDefn->format.video.nFrameWidth;
+                        }
+                        memset(&fmt, 0, sizeof(fmt));
+                        fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+                        fmt.fmt.pix_mp.height = m_sVenc_cfg.dvs_height;
+                        fmt.fmt.pix_mp.width = m_sVenc_cfg.dvs_width;
+                        fmt.fmt.pix_mp.pixelformat = m_sVenc_cfg.codectype;
+
+                        if (ioctl(m_nDriver_fd, VIDIOC_S_FMT, &fmt)) {
+                            DEBUG_PRINT_ERROR("VIDIOC_S_FMT CAPTURE_MPLANE Failed");
+                            hw_overload = errno == EBUSY;
+                            return false;
+                        }
+
+                        m_sOutput_buff_property.datasize = fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
+
                     } else {
                         DEBUG_PRINT_LOW("venc_set_param: OMX_IndexParamPortDefinition: parameters not changed on port %d",
                             portDefn->nPortIndex);
