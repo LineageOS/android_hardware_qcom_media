@@ -34,6 +34,9 @@ void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
     ADD_EXTENSION("qti-ext-enc-preprocess-rotate", OMX_IndexConfigCommonRotate, OMX_DirOutput)
     ADD_PARAM_END("angle", OMX_AndroidVendorValueInt32)
 
+    ADD_EXTENSION("qti-ext-enc-preprocess-mirror", OMX_IndexConfigCommonMirror, OMX_DirOutput)
+    ADD_PARAM_END("flip", OMX_AndroidVendorValueInt32)
+
     ADD_EXTENSION("qti-ext-enc-avc-intra-period", OMX_IndexConfigVideoAVCIntraPeriod, OMX_DirOutput)
     ADD_PARAM    ("n-pframes",    OMX_AndroidVendorValueInt32)
     ADD_PARAM_END("n-idr-period", OMX_AndroidVendorValueInt32)
@@ -127,6 +130,11 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
         case OMX_IndexConfigCommonRotate:
         {
             setStatus &= vExt.setParamInt32(ext, "angle", m_sConfigFrameRotation.nRotation);
+            break;
+        }
+        case OMX_IndexConfigCommonMirror:
+        {
+            setStatus &= vExt.setParamInt32(ext, "flip", m_sConfigFrameMirror.eMirror);
             break;
         }
         case OMX_IndexConfigVideoAVCIntraPeriod:
@@ -313,6 +321,25 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
                     NULL, OMX_IndexConfigCommonRotate, &rotationParam);
             if (err != OMX_ErrorNone) {
                 DEBUG_PRINT_ERROR("set_config: OMX_IndexConfigCommonRotate failed !");
+            }
+            break;
+        }
+        case OMX_IndexConfigCommonMirror:
+        {
+            OMX_CONFIG_MIRRORTYPE mirrorParam;
+            memcpy(&mirrorParam, &m_sConfigFrameMirror, sizeof(OMX_CONFIG_MIRRORTYPE));
+            valueSet |= vExt.readParamInt32(ext, "flip", (OMX_S32*)&mirrorParam.eMirror);
+            if (!valueSet) {
+                break;
+            }
+
+            DEBUG_PRINT_HIGH("VENDOR-EXT: set_config: OMX_IndexConfigCommonMirror : %d",
+                             mirrorParam.eMirror);
+
+            err = set_config(
+                    NULL, OMX_IndexConfigCommonMirror, &mirrorParam);
+            if (err != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("set_config: OMX_IndexConfigCommonMirror failed !");
             }
             break;
         }
