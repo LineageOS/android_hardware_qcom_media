@@ -10396,9 +10396,15 @@ void omx_vdec::print_debug_extradata(OMX_OTHER_EXTRADATATYPE *extra)
         OMX_QCOM_EXTRADATA_QP * qp = (OMX_QCOM_EXTRADATA_QP *)(void *)extra->data;
         DEBUG_PRINT_HIGH(
                 "---- QP (Frame quantization parameter) ----\n"
-                "    Frame QP: %u \n"
+                "              Frame QP: %u \n"
+                "       Sum of Frame QP: %u \n"
+                "     Sum of Skipped QP: %u \n"
+                "    Num Skipped Blocks: %u \n"
+                "          Total Blocks: %u \n"
                 "================ End of QP ================\n",
-                (unsigned int)qp->nQP);
+                (unsigned int)qp->nQP,(unsigned int)qp->nQPSum,
+                (unsigned int)qp->nSkipQPSum,(unsigned int)qp->nSkipNumBlocks,
+                (unsigned int)qp->nTotalNumBlocks);
     } else if (extra->eType == (OMX_EXTRADATATYPE)OMX_ExtraDataInputBitsInfo) {
         OMX_QCOM_EXTRADATA_BITS_INFO * bits = (OMX_QCOM_EXTRADATA_BITS_INFO *)(void *)extra->data;
         DEBUG_PRINT_HIGH(
@@ -10696,6 +10702,10 @@ void omx_vdec::append_qp_extradata(OMX_OTHER_EXTRADATATYPE *extra,
     extra->nDataSize = sizeof(OMX_QCOM_EXTRADATA_QP);
     qp = (OMX_QCOM_EXTRADATA_QP *)(void *)extra->data;
     qp->nQP = qp_payload->frame_qp;
+    qp->nQPSum = qp_payload->qp_sum;
+    qp->nSkipQPSum = qp_payload->skip_qp_sum;
+    qp->nSkipNumBlocks = qp_payload->skip_num_blocks;
+    qp->nTotalNumBlocks = qp_payload->total_num_blocks;
     print_debug_extradata(extra);
 }
 
