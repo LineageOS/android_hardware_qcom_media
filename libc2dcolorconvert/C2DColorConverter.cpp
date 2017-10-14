@@ -90,8 +90,8 @@ C2DColorConverter::C2DColorConverter()
         return;
     }
 
-    mAdrenoComputeAlignedWidthAndHeight = (LINK_AdrenoComputeAlignedWidthAndHeight)dlsym(mAdrenoUtilsHandle, "compute_aligned_width_and_height");
-    if (!mAdrenoComputeAlignedWidthAndHeight) {
+    mAdrenoComputeFmtAlignedWidthAndHeight = (LINK_adreno_compute_fmt_aligned_width_and_height)dlsym(mAdrenoUtilsHandle, "compute_fmt_aligned_width_and_height");
+    if (!mAdrenoComputeFmtAlignedWidthAndHeight) {
         ALOGE("%s: dlsym compute_aligned_width_and_height ERROR. C2D is disabled.", __FUNCTION__);
         enabled = false;
         return;
@@ -566,15 +566,23 @@ size_t C2DColorConverter::calcSize(ColorConvertFormat format, size_t width, size
     switch (format) {
         case RGB565:
             bpp = 2;
-            mAdrenoComputeAlignedWidthAndHeight(width, height, bpp, tile_mode, raster_mode, padding_threshold,
-                                                &alignedw, &alignedh);
+            mAdrenoComputeFmtAlignedWidthAndHeight(width, height,
+                                                   0, ADRENO_PIXELFORMAT_B5G6R5,
+                                                   1, tile_mode, raster_mode,
+                                                   padding_threshold,
+                                                   &alignedw, &alignedh);
+            ALOGV("%s: alignedw %d alignedh %d", __FUNCTION__,alignedw, alignedh);
             size = alignedw * alignedh * bpp;
             size = ALIGN(size, ALIGN4K);
             break;
         case RGBA8888:
             bpp = 4;
-            mAdrenoComputeAlignedWidthAndHeight(width, height, bpp, tile_mode, raster_mode, padding_threshold,
-                                                &alignedw, &alignedh);
+            mAdrenoComputeFmtAlignedWidthAndHeight(width, height,
+                                                   0, ADRENO_PIXELFORMAT_R8G8B8A8 ,
+                                                   1, tile_mode, raster_mode,
+                                                   padding_threshold,
+                                                   &alignedw, &alignedh);
+            ALOGV("%s: alignedw %d alignedh %d", __FUNCTION__,alignedw, alignedh);
             if (mSrcStride)
               size = mSrcStride *  alignedh * bpp;
             else
