@@ -466,7 +466,8 @@ OMX_GetHandle(OMX_OUT OMX_HANDLETYPE*     handle,
       if ((property_get("vendor.media.vpp.enable", value, NULL))
            && (!strcmp("1", value) || !strcmp("true", value))) {
         DEBUG_PRINT("VPP property is enabled");
-        if (!strcmp(core[cmp_index].so_lib_name, "libOmxVdec.so")) {
+        if (!strcmp(core[cmp_index].so_lib_name, "libOmxVdec.so")
+                || !strcmp(core[cmp_index].so_lib_name, "libOmxSwVdec.so")) {
           vpp_cmp_index = get_cmp_index("OMX.qti.vdec.vpp");
           if (vpp_cmp_index < 0) {
             DEBUG_PRINT_ERROR("Unable to find VPP OMX lib in registry ");
