@@ -822,7 +822,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_fill_output_msg = OMX_COMPONENT_GENERATE_FTB;
     client_buffers.set_vdec_client(this);
     dynamic_buf_mode = false;
-    out_dynamic_list = NULL;
     is_down_scalar_enabled = false;
     m_downscalar_width = 0;
     m_downscalar_height = 0;
@@ -7171,7 +7170,6 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
     if (dynamic_buf_mode) {
         drv_ctx.ptr_outputbuffer[nPortIndex].offset = 0;
         drv_ctx.ptr_outputbuffer[nPortIndex].buffer_len = buffer->nAllocLen;
-        buf_ref_add(nPortIndex);
         drv_ctx.ptr_outputbuffer[nPortIndex].mmaped_size = buffer->nAllocLen;
     }
 
@@ -8557,7 +8555,6 @@ void omx_vdec::free_output_buffer_header()
         drv_ctx.op_buf_ion_info = NULL;
     }
 #endif
-    buf_ref_remove();
 }
 
 void omx_vdec::free_input_buffer_header()
@@ -9016,14 +9013,6 @@ OMX_ERRORTYPE omx_vdec::allocate_output_headers()
             return OMX_ErrorInsufficientResources;
         }
 #endif
-        if (dynamic_buf_mode) {
-            out_dynamic_list = (struct dynamic_buf_list *) \
-                calloc (sizeof(struct dynamic_buf_list), drv_ctx.op_buf.actualcount);
-            if (out_dynamic_list) {
-               for (unsigned int i = 0; i < drv_ctx.op_buf.actualcount; i++)
-                  out_dynamic_list[i].dup_fd = -1;
-            }
-        }
 
         if (m_out_mem_ptr && pPtr && drv_ctx.ptr_outputbuffer
                 && drv_ctx.ptr_respbuffer) {
@@ -11411,94 +11400,6 @@ OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::cache_ops(
         return OMX_ErrorUndefined;
     }
     return OMX_ErrorNone;
-}
-
-void omx_vdec::buf_ref_add(int nPortIndex)
-{
-    unsigned long i = 0;
-    bool buf_present = false;
-    long fd = drv_ctx.ptr_outputbuffer[nPortIndex].pmem_fd;
-    OMX_U32 offset = drv_ctx.ptr_outputbuffer[nPortIndex].offset;
-
-    if (!dynamic_buf_mode || !out_dynamic_list) {
-        return;
-    }
-
-    pthread_mutex_lock(&m_lock);
-    for (i = 0; i < drv_ctx.op_buf.actualcount; i++) {
-        //check the buffer fd, offset, uv addr with list contents
-        //If present increment reference.
-        if ((out_dynamic_list[i].fd == fd) &&
-            (out_dynamic_list[i].offset == offset)) {
-               DEBUG_PRINT_LOW("buf_ref_add: [ALREADY PRESENT] fd = %u ref_count = %u",
-                     (unsigned int)out_dynamic_list[i].fd, (unsigned int)out_dynamic_list[i].ref_count);
-               if (!secure_mode) {
-                   drv_ctx.ptr_outputbuffer[nPortIndex].bufferaddr = out_dynamic_list[i].buffaddr;
-               }
-               buf_present = true;
-               break;
-        }
-    }
-    if (!buf_present) {
-        for (i = 0; i < drv_ctx.op_buf.actualcount; i++) {
-            //search for a entry to insert details of the new buffer
-            if (out_dynamic_list[i].dup_fd < 0) {
-                out_dynamic_list[i].fd = fd;
-                out_dynamic_list[i].offset = offset;
-                out_dynamic_list[i].dup_fd = dup(fd);
-                out_dynamic_list[i].ref_count++;
-                DEBUG_PRINT_LOW("buf_ref_add: [ADDED] fd = %u ref_count = %u",
-                     (unsigned int)out_dynamic_list[i].fd, (unsigned int)out_dynamic_list[i].ref_count);
-
-                if (!secure_mode) {
-                    drv_ctx.ptr_outputbuffer[nPortIndex].bufferaddr =
-                            (OMX_U8*)mmap(0, drv_ctx.ptr_outputbuffer[nPortIndex].buffer_len,
-                                          PROT_READ|PROT_WRITE, MAP_SHARED,
-                                          drv_ctx.ptr_outputbuffer[nPortIndex].pmem_fd, 0);
-                    //mmap returns (void *)-1 on failure and sets error code in errno.
-                    if (drv_ctx.ptr_outputbuffer[nPortIndex].bufferaddr == MAP_FAILED) {
-                        DEBUG_PRINT_ERROR("buf_ref_add: mmap failed - errno: %d", errno);
-                        drv_ctx.ptr_outputbuffer[nPortIndex].bufferaddr = NULL;
-                        break;
-                    }
-                    out_dynamic_list[i].buffaddr = drv_ctx.ptr_outputbuffer[nPortIndex].bufferaddr;
-                    out_dynamic_list[i].mapped_size = drv_ctx.ptr_outputbuffer[nPortIndex].buffer_len;
-                    DEBUG_PRINT_LOW("mmap: %p %ld", out_dynamic_list[i].buffaddr, out_dynamic_list[i].mapped_size);
-                }
-                break;
-            }
-        }
-    }
-   pthread_mutex_unlock(&m_lock);
-}
-
-void omx_vdec::buf_ref_remove()
-{
-    unsigned long i = 0;
-
-    if (!dynamic_buf_mode || !out_dynamic_list) {
-        return;
-    }
-
-    pthread_mutex_lock(&m_lock);
-    for (i = 0; i < drv_ctx.op_buf.actualcount; i++) {
-        if (!secure_mode && out_dynamic_list[i].buffaddr && out_dynamic_list[i].mapped_size) {
-            DEBUG_PRINT_LOW("munmap: %p %ld", out_dynamic_list[i].buffaddr, out_dynamic_list[i].mapped_size);
-            munmap(out_dynamic_list[i].buffaddr,
-                        out_dynamic_list[i].mapped_size);
-        }
-
-         DEBUG_PRINT_LOW("buf_ref_remove: [REMOVED] fd = %u ref_count = %u",
-                 (unsigned int)out_dynamic_list[i].fd, (unsigned int)out_dynamic_list[i].ref_count);
-         close(out_dynamic_list[i].dup_fd);
-         out_dynamic_list[i].dup_fd = -1;
-    }
-    pthread_mutex_unlock(&m_lock);
-
-    if (out_dynamic_list) {
-        free(out_dynamic_list);
-        out_dynamic_list = NULL;
-    }
 }
 
 void omx_vdec::send_codec_config() {
