@@ -1199,17 +1199,6 @@ class omx_vdec: public qc_omx_component
             //for surface mode (normal playback), advertise native/accelerated formats first
             OMX_COLOR_FORMATTYPE format = (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
 
-            if (!m_disable_ubwc_mode) {
-                OMX_COLOR_FORMATTYPE formatsDefault[] = {
-                    [0] = (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed,
-                    [1] = (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m,
-                    [2] = OMX_COLOR_FormatYUV420SemiPlanar,
-                    [3] = OMX_COLOR_FormatYUV420Planar,
-                    [4] = (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mMultiView,
-                };
-                format = (index < sizeof(formatsDefault) / sizeof(OMX_COLOR_FORMATTYPE)) ?
-                    formatsDefault[index] : OMX_COLOR_FormatMax;
-            } else {
                 OMX_COLOR_FORMATTYPE formatsDefault[] = {
                     [0] = (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m,
                     [1] = OMX_COLOR_FormatYUV420SemiPlanar,
@@ -1218,7 +1207,6 @@ class omx_vdec: public qc_omx_component
                 };
                 format = (index < sizeof(formatsDefault) / sizeof(OMX_COLOR_FORMATTYPE)) ?
                     formatsDefault[index] : OMX_COLOR_FormatMax;
-            }
             return format;
         }
 
