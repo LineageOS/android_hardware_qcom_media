@@ -1004,49 +1004,17 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool force_split_mode)
     bool cpu_access = capture_capability != V4L2_PIX_FMT_NV12_UBWC;
 
     if (cpu_access) {
-        if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_8) {
-            if ((m_force_compressed_for_dpb || (m_progressive && (eCompressionFormat != OMX_VIDEO_CodingVP9))) &&
-                !force_split_mode && !m_disable_split_mode && !drv_ctx.idr_only_decoding) {
-            /* Disabled split mode for VP9. In split mode the DPB buffers are part of the internal
-             * scratch buffers and the driver does not does the reference buffer management for
-             * scratch buffers. In case of VP9 with spatial scalability, when a sequence changed
-             * event is received with the new resolution, and when a flush is sent by the driver, it
-             * releases all the references of internal scratch buffers. However as per the VP9
-             * spatial scalability, even after the flush, the buffers which have not yet received
-             * release reference event should not be unmapped and freed. Currently in driver,
-             * reference buffer management of the internal scratch buffer is not implemented
-             * and hence the DPB buffers get unmapped. For other codecs it does not matter
-             * as with the new SPS/PPS, the DPB is flushed.
-             */
-                //split DPB-OPB
-                //DPB -> UBWC , OPB -> Linear
-                eRet = set_dpb(true, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_UBWC);
-            } else if (force_split_mode) {
+            if (force_split_mode) {
                         //DPB -> Linear, OPB -> Linear
                         eRet = set_dpb(true, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_NONE);
             } else {
                         //DPB-OPB combined linear
                         eRet = set_dpb(false, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_NONE);
            }
-        } else if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10) {
-            //split DPB-OPB
-            //DPB -> UBWC, OPB -> Linear
-            eRet = set_dpb(true, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_TP10_UBWC);
-        }
     } else { //no cpu access
         if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_8) {
-            if (force_split_mode) {
-                //split DPB-OPB
-                //DPB -> UBWC, OPB -> UBWC
-                eRet = set_dpb(true, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_UBWC);
-            } else {
                 //DPB-OPB combined UBWC
                 eRet = set_dpb(false, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_NONE);
-            }
-        } else if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10) {
-            //split DPB-OPB
-            //DPB -> UBWC, OPB -> UBWC
-            eRet = set_dpb(true, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_TP10_UBWC);
         }
     }
     if (eRet) {
