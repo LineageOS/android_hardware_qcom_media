@@ -1001,9 +1001,9 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool force_split_mode)
         return eRet;
     }
 
-    bool cpu_access = capture_capability != V4L2_PIX_FMT_NV12_UBWC;
-
-    if (cpu_access) {
+    if (m_disable_ubwc_mode) {
+        eRet = set_dpb(force_split_mode, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_NONE);
+    } else if (capture_capability != V4L2_PIX_FMT_NV12_UBWC) {
         if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_8) {
             if ((m_force_compressed_for_dpb || (m_progressive && (eCompressionFormat != OMX_VIDEO_CodingVP9))) &&
                 !force_split_mode && !m_disable_split_mode && !drv_ctx.idr_only_decoding) {
