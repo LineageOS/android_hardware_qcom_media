@@ -1004,50 +1004,18 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool force_split_mode)
     bool cpu_access = capture_capability != V4L2_PIX_FMT_NV12_UBWC;
 
     if (cpu_access) {
-        if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_8) {
-            if ((m_force_compressed_for_dpb || (m_progressive && (eCompressionFormat != OMX_VIDEO_CodingVP9))) &&
-                !force_split_mode && !m_disable_split_mode && !drv_ctx.idr_only_decoding) {
-            /* Disabled split mode for VP9. In split mode the DPB buffers are part of the internal
-             * scratch buffers and the driver does not does the reference buffer management for
-             * scratch buffers. In case of VP9 with spatial scalability, when a sequence changed
-             * event is received with the new resolution, and when a flush is sent by the driver, it
-             * releases all the references of internal scratch buffers. However as per the VP9
-             * spatial scalability, even after the flush, the buffers which have not yet received
-             * release reference event should not be unmapped and freed. Currently in driver,
-             * reference buffer management of the internal scratch buffer is not implemented
-             * and hence the DPB buffers get unmapped. For other codecs it does not matter
-             * as with the new SPS/PPS, the DPB is flushed.
-             */
-                //split DPB-OPB
-                //DPB -> UBWC , OPB -> Linear
-                eRet = set_dpb(true, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_UBWC);
-            } else if (force_split_mode) {
+            if (force_split_mode) {
                         //DPB -> Linear, OPB -> Linear
                         eRet = set_dpb(true, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_NONE);
             } else {
                         //DPB-OPB combined linear
                         eRet = set_dpb(false, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_NONE);
            }
-        } else if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10) {
-            //split DPB-OPB
-            //DPB -> UBWC, OPB -> Linear
-            eRet = set_dpb(true, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_TP10_UBWC);
-        }
     } else { //no cpu access
         if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_8) {
-            if (force_split_mode) {
-                //split DPB-OPB
-                //DPB -> UBWC, OPB -> UBWC
-                eRet = set_dpb(true, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_UBWC);
-            } else {
                 //DPB-OPB combined UBWC
                 eRet = set_dpb(false, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_NONE);
             }
-        } else if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10) {
-            //split DPB-OPB
-            //DPB -> UBWC, OPB -> UBWC
-            eRet = set_dpb(true, V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_TP10_UBWC);
-        }
     }
     if (eRet) {
         DEBUG_PRINT_HIGH("Failed to set DPB buffer mode: %d", eRet);
@@ -1164,12 +1132,6 @@ int omx_vdec::decide_downscalar()
         switch (capture_capability) {
             case V4L2_PIX_FMT_NV12:
                 color_format = COLOR_FMT_NV12;
-                break;
-            case V4L2_PIX_FMT_NV12_UBWC:
-                color_format = COLOR_FMT_NV12_UBWC;
-                break;
-            case V4L2_PIX_FMT_NV12_TP10_UBWC:
-                color_format = COLOR_FMT_NV12_BPP10_UBWC;
                 break;
             default:
                 DEBUG_PRINT_ERROR("Color format not recognized\n");
@@ -1975,48 +1937,7 @@ int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
     buf_index = buffer - m_out_mem_ptr;
     temp = (char *)drv_ctx.ptr_outputbuffer[buf_index].bufferaddr;
 
-    if (drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_UBWC) {
-        DEBUG_PRINT_HIGH("Logging UBWC yuv width/height(%u/%u)",
-            drv_ctx.video_resolution.frame_width,
-            drv_ctx.video_resolution.frame_height);
-
-        if (m_debug.outfile)
-            fwrite(temp, buffer->nFilledLen, 1, m_debug.outfile);
-
-        if (m_debug.out_ymeta_file && m_debug.out_uvmeta_file) {
-            unsigned int width = 0, height = 0;
-            unsigned int y_plane, y_meta_plane;
-            int y_stride = 0, y_sclines = 0;
-            int y_meta_stride = 0, y_meta_scanlines = 0, uv_meta_stride = 0, uv_meta_scanlines = 0;
-            int color_fmt = COLOR_FMT_NV12_UBWC;
-            int i;
-            int bytes_written = 0;
-
-            width = drv_ctx.video_resolution.frame_width;
-            height = drv_ctx.video_resolution.frame_height;
-            y_meta_stride = VENUS_Y_META_STRIDE(color_fmt, width);
-            y_meta_scanlines = VENUS_Y_META_SCANLINES(color_fmt, height);
-            y_stride = VENUS_Y_STRIDE(color_fmt, width);
-            y_sclines = VENUS_Y_SCANLINES(color_fmt, height);
-            uv_meta_stride = VENUS_UV_META_STRIDE(color_fmt, width);
-            uv_meta_scanlines = VENUS_UV_META_SCANLINES(color_fmt, height);
-
-            y_meta_plane = MSM_MEDIA_ALIGN(y_meta_stride * y_meta_scanlines, 4096);
-            y_plane = MSM_MEDIA_ALIGN(y_stride * y_sclines, 4096);
-
-            temp = (char *)drv_ctx.ptr_outputbuffer[buf_index].bufferaddr;
-            for (i = 0; i < y_meta_scanlines; i++) {
-                 bytes_written = fwrite(temp, y_meta_stride, 1, m_debug.out_ymeta_file);
-                 temp += y_meta_stride;
-            }
-
-            temp = (char *)drv_ctx.ptr_outputbuffer[buf_index].bufferaddr + y_meta_plane + y_plane;
-            for(i = 0; i < uv_meta_scanlines; i++) {
-                bytes_written += fwrite(temp, uv_meta_stride, 1, m_debug.out_uvmeta_file);
-                temp += uv_meta_stride;
-            }
-        }
-    } else if (drv_ctx.output_format == VDEC_YUV_FORMAT_NV12 && m_debug.outfile) {
+    if (drv_ctx.output_format == VDEC_YUV_FORMAT_NV12 && m_debug.outfile) {
         int stride = drv_ctx.video_resolution.stride;
         int scanlines = drv_ctx.video_resolution.scan_lines;
         if (m_smoothstreaming_mode) {
@@ -2331,11 +2252,7 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
 
     if (eRet == OMX_ErrorNone) {
         OMX_COLOR_FORMATTYPE dest_color_format;
-        if (m_disable_ubwc_mode) {
             drv_ctx.output_format = VDEC_YUV_FORMAT_NV12;
-        } else {
-            drv_ctx.output_format = VDEC_YUV_FORMAT_NV12_UBWC;
-        }
         if (eCompressionFormat == (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingMVC)
             dest_color_format = (OMX_COLOR_FORMATTYPE)
                 QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mMultiView;
@@ -2350,11 +2267,7 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         dpb_bit_depth = MSM_VIDC_BIT_DEPTH_8;
         m_progressive = MSM_VIDC_PIC_STRUCT_PROGRESSIVE;
 
-        if (m_disable_ubwc_mode) {
             capture_capability = V4L2_PIX_FMT_NV12;
-        } else {
-            capture_capability = V4L2_PIX_FMT_NV12_UBWC;
-        }
 
         struct v4l2_capability cap;
         ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_QUERYCAP, &cap);
@@ -4056,9 +3969,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                                if (drv_ctx.output_format == VDEC_YUV_FORMAT_NV12) {
                                                    stride = VENUS_Y_STRIDE(COLOR_FMT_NV12, portDefn->format.video.nFrameWidth);
                                                    slice = VENUS_Y_SCANLINES(COLOR_FMT_NV12, portDefn->format.video.nFrameHeight);
-                                               } else if (drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_UBWC) {
-                                                   stride = VENUS_Y_STRIDE(COLOR_FMT_NV12_UBWC, portDefn->format.video.nFrameWidth);
-                                                   slice = VENUS_Y_SCANLINES(COLOR_FMT_NV12_UBWC, portDefn->format.video.nFrameHeight);
                                                } else {
                                                    stride = portDefn->format.video.nFrameWidth;
                                                    slice = portDefn->format.video.nFrameHeight;
@@ -4268,18 +4178,10 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                             portFmt->eColorFormat == OMX_COLOR_FormatYUV420Planar ||
                                             portFmt->eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar) {
                                         op_format = (enum vdec_output_fromat)VDEC_YUV_FORMAT_NV12;
-                                    } else if (portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
-                                                QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed) {
-                                        op_format = (enum vdec_output_fromat)VDEC_YUV_FORMAT_NV12_UBWC;
                                     } else
                                         eRet = OMX_ErrorBadParameter;
 
-                                    if (portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
-                                                QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed) {
-                                        fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12_UBWC;
-                                    } else {
-                                        fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12;
-                                    }
+                                    fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12;
 
                                     if (eRet == OMX_ErrorNone) {
                                         drv_ctx.output_format = op_format;
@@ -4987,7 +4889,7 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 eRet = OMX_ErrorBadParameter;
                 break;
             }
-            m_disable_ubwc_mode = pParam->bEnable;
+            m_disable_ubwc_mode = 1;
             DEBUG_PRINT_LOW("set_parameter: UBWC %s for OPB", pParam->bEnable ? "disabled" : "enabled");
             break;
         }
@@ -8796,11 +8698,6 @@ int omx_vdec::async_message_process (void *context, void* message)
                                VENUS_Y_STRIDE(COLOR_FMT_NV12, omx->drv_ctx.video_resolution.frame_width);
                            omx->drv_ctx.video_resolution.scan_lines =
                                VENUS_Y_SCANLINES(COLOR_FMT_NV12, omx->drv_ctx.video_resolution.frame_height);
-                       } else if (omx->drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_UBWC) {
-                           omx->drv_ctx.video_resolution.stride =
-                               VENUS_Y_STRIDE(COLOR_FMT_NV12_UBWC, omx->drv_ctx.video_resolution.frame_width);
-                           omx->drv_ctx.video_resolution.scan_lines =
-                               VENUS_Y_SCANLINES(COLOR_FMT_NV12_UBWC, omx->drv_ctx.video_resolution.frame_height);
                        }
 
                        omx->post_event(OMX_CORE_OUTPUT_PORT_INDEX,
@@ -10904,9 +10801,6 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                            case MSM_VIDC_HAL_INTERLACE_COLOR_FORMAT_NV12:
                                interlace_color_format = (int)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
                                break;
-                           case MSM_VIDC_HAL_INTERLACE_COLOR_FORMAT_NV12_UBWC:
-                               interlace_color_format = (int)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed;
-                               break;
                            default:
                                interlace_color_format = (int)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
                                DEBUG_PRINT_ERROR("Error - Unknown color format hint for interlaced frame");
@@ -12102,10 +11996,7 @@ bool omx_vdec::allocate_color_convert_buf::set_color_format(
         else
             drv_color_format = (OMX_COLOR_FORMATTYPE)
                 QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
-     else if (omx->drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_UBWC) {
-         drv_color_format = (OMX_COLOR_FORMATTYPE)
-                  QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed;
-     } else {
+    else {
         DEBUG_PRINT_ERROR("Incorrect color format");
         status = false;
     }
@@ -12419,8 +12310,6 @@ bool omx_vdec::allocate_color_convert_buf::get_color_format(OMX_COLOR_FORMATTYPE
                         QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mMultiView;
                 else
                     dest_color_format = (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
-        } else if (omx->drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_UBWC){
-             dest_color_format = (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed;
         } else
             status = false;
     } else {
@@ -12907,9 +12796,6 @@ void omx_vdec::prefetchNewBuffers() {
     switch ((int)drv_ctx.output_format) {
     case VDEC_YUV_FORMAT_NV12:
         color_fmt = COLOR_FMT_NV12;
-        break;
-    case VDEC_YUV_FORMAT_NV12_UBWC:
-        color_fmt = COLOR_FMT_NV12_UBWC;
         break;
     default:
         color_fmt = -1;
