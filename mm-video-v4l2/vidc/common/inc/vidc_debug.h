@@ -200,6 +200,31 @@ public:
     }
 };
 
+struct __attribute__((packed)) IvfFileHeader {
+    uint8_t signature[4];
+    uint16_t version;
+    uint16_t size;
+    uint8_t fourCC[4];
+    uint16_t width;
+    uint16_t height;
+    uint32_t rate;
+    uint32_t scale;
+    uint32_t frameCount;
+    uint32_t unused;
+
+    IvfFileHeader();
+    IvfFileHeader(bool isVp9, int width, int height,
+                int rate, int scale, int nFrameCount);
+};
+
+struct __attribute__((packed)) IvfFrameHeader {
+    uint32_t filledLen;
+    uint64_t timeStamp;
+
+    IvfFrameHeader();
+    IvfFrameHeader(uint32_t size, uint64_t timeStamp);
+};
+
 #define VIDC_TRACE_NAME_LOW(_name) AutoTracer _tracer(PRIO_TRACE_LOW, _name);
 #define VIDC_TRACE_NAME_HIGH(_name) AutoTracer _tracer(PRIO_TRACE_HIGH, _name);
 
