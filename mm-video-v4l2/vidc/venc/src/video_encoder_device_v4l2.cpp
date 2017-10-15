@@ -1064,7 +1064,7 @@ bool venc_dev::venc_get_supported_color_format(unsigned index, OMX_U32 *colorFor
         [1] = QOMX_COLOR_FormatYVU420SemiPlanar,
         [2] = QOMX_COLOR_FormatAndroidOpaque,
         [3] = OMX_COLOR_FormatYUV420SemiPlanar,
-    }
+    };
 #endif
     if (index > (sizeof(supportedFormats)/sizeof(*supportedFormats) - 1))
         return false;
