@@ -3124,6 +3124,24 @@ bool venc_dev::venc_handle_empty_eos_buffer( void)
     struct v4l2_encoder_cmd enc;
     int rc = 0;
 
+    if (!streaming[OUTPUT_PORT]) {
+        enum v4l2_buf_type buf_type;
+        buf_type=V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
+        int ret = 0;
+
+        DEBUG_PRINT_HIGH("Calling streamon before issuing stop command for EOS");
+        ret = ioctl(m_nDriver_fd, VIDIOC_STREAMON, &buf_type);
+        if (ret) {
+            DEBUG_PRINT_ERROR("Failed to call streamon");
+            if (errno == EBUSY) {
+                hw_overload = true;
+            }
+            return false;
+        } else {
+            streaming[OUTPUT_PORT] = true;
+        }
+    }
+
     memset(&enc, 0, sizeof(enc));
     enc.cmd = V4L2_ENC_CMD_STOP;
     DEBUG_PRINT_LOW("Sending : Encoder STOP comamnd");
