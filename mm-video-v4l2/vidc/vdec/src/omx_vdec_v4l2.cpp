@@ -1909,30 +1909,6 @@ int omx_vdec::update_resolution(int width, int height, int stride, int scan_line
     return format_changed;
 }
 
-OMX_ERRORTYPE omx_vdec::is_video_session_supported()
-{
-    if ((drv_ctx.video_resolution.frame_width *
-                drv_ctx.video_resolution.frame_height >
-                m_decoder_capability.max_width *
-                m_decoder_capability.max_height) ||
-            (drv_ctx.video_resolution.frame_width*
-             drv_ctx.video_resolution.frame_height <
-             m_decoder_capability.min_width *
-             m_decoder_capability.min_height)) {
-        DEBUG_PRINT_ERROR(
-                "Unsupported WxH = (%u)x(%u) supported range is min(%u)x(%u) - max(%u)x(%u)",
-                drv_ctx.video_resolution.frame_width,
-                drv_ctx.video_resolution.frame_height,
-                m_decoder_capability.min_width,
-                m_decoder_capability.min_height,
-                m_decoder_capability.max_width,
-                m_decoder_capability.max_height);
-        return OMX_ErrorUnsupportedSetting;
-    }
-    DEBUG_PRINT_HIGH("video session supported");
-    return OMX_ErrorNone;
-}
-
 int omx_vdec::log_input_buffers(const char *buffer_addr, int buffer_len, uint64_t timeStamp)
 {
     if (m_debug.in_buffer_log && !m_debug.infile) {
@@ -4003,9 +3979,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                            m_extradata_info.output_crop_rect.nWidth = rectangle.nWidth;
                                            m_extradata_info.output_crop_rect.nHeight = rectangle.nHeight;
 
-                                           eRet = is_video_session_supported();
-                                           if (eRet)
-                                               break;
                                            memset(&fmt, 0x0, sizeof(struct v4l2_format));
                                            fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
                                            fmt.fmt.pix_mp.height = (unsigned int)portDefn->format.video.nFrameHeight;
@@ -4134,9 +4107,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
 
                                            update_resolution(frameWidth, frameHeight,
                                                    frameWidth, frameHeight);
-                                           eRet = is_video_session_supported();
-                                           if (eRet)
-                                               break;
                                            if (is_down_scalar_enabled) {
                                                memset(&fmt, 0x0, sizeof(struct v4l2_format));
                                                fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
@@ -8760,10 +8730,6 @@ OMX_ERRORTYPE omx_vdec::get_buffer_req(vdec_allocatorproperty *buffer_prop)
     } else {
         int extra_idx = 0;
 
-        eRet = is_video_session_supported();
-        if (eRet)
-            return eRet;
-
         buffer_prop->buffer_size = fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
         buf_size = buffer_prop->buffer_size;
         extra_idx = EXTRADATA_IDX(drv_ctx.num_planes);
@@ -11662,11 +11628,6 @@ OMX_ERRORTYPE omx_vdec::enable_adaptive_playback(unsigned long nMaxFrameWidth,
 
      update_resolution(m_smoothstreaming_width, m_smoothstreaming_height,
                        m_smoothstreaming_width, m_smoothstreaming_height);
-     eRet = is_video_session_supported();
-     if (eRet != OMX_ErrorNone) {
-         DEBUG_PRINT_ERROR("video session is not supported");
-         return eRet;
-     }
 
      //Get upper limit buffer size for max smooth streaming resolution set
      fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
