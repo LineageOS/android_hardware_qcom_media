@@ -3615,8 +3615,8 @@ bool omx_vdec::post_event(unsigned long p1,
 }
 
 static int get_max_h264_level() {
-#ifdef MAX_H264_LEVEL_4
-    return OMX_VIDEO_AVCLevel4;
+#ifdef MAX_H264_LEVEL_42
+    return OMX_VIDEO_AVCLevel42;
 #elif MAX_H264_LEVEL_51
     return OMX_VIDEO_AVCLevel51;
 #elif MAX_H264_LEVEL_52
