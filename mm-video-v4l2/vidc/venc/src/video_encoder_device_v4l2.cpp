@@ -3126,8 +3126,21 @@ bool venc_dev::venc_handle_empty_eos_buffer( void)
 
     if (!streaming[OUTPUT_PORT]) {
         enum v4l2_buf_type buf_type;
-        buf_type=V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
+        struct v4l2_control control;
         int ret = 0;
+
+        /* If first ETB is an EOS with 0 filled length there is a limitation */
+        /* for which we need to combine sequence header with 1st frame       */
+        control.id = V4L2_CID_MPEG_VIDEO_HEADER_MODE;
+        control.value = V4L2_MPEG_VIDEO_HEADER_MODE_JOINED_WITH_1ST_FRAME;
+        DEBUG_PRINT_LOW("Combining sequence header with 1st frame ");
+        ret = ioctl(m_nDriver_fd,  VIDIOC_S_CTRL, &control);
+        if (ret) {
+            DEBUG_PRINT_ERROR("Failed to set header mode");
+            return false;
+        }
+
+        buf_type=V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
 
         DEBUG_PRINT_HIGH("Calling streamon before issuing stop command for EOS");
         ret = ioctl(m_nDriver_fd, VIDIOC_STREAMON, &buf_type);
