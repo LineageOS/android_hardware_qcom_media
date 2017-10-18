@@ -661,8 +661,6 @@ class omx_vdec: public qc_omx_component
         pthread_t msg_thread_id;
         pthread_t async_thread_id;
         bool is_component_secure();
-        void buf_ref_add(int nPortIndex);
-        void buf_ref_remove();
         OMX_BUFFERHEADERTYPE* get_omx_output_buffer_header(int index);
         OMX_ERRORTYPE set_dpb(bool is_split_mode, int dpb_color_format);
         OMX_ERRORTYPE decide_dpb_buffer_mode(bool is_downscalar_enabled);
@@ -1186,7 +1184,6 @@ class omx_vdec: public qc_omx_component
 
         //variables to handle dynamic buffer mode
         bool dynamic_buf_mode;
-        struct dynamic_buf_list *out_dynamic_list;
         OMX_U32 m_reconfig_width;
         OMX_U32 m_reconfig_height;
         bool m_smoothstreaming_mode;
