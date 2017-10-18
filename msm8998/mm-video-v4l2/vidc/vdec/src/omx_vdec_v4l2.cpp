@@ -6729,7 +6729,7 @@ OMX_ERRORTYPE  omx_vdec::allocate_input_buffer(
     OMX_BUFFERHEADERTYPE *input = NULL;
     unsigned   i = 0;
     unsigned char *buf_addr = NULL;
-    int pmem_fd = -1;
+    int pmem_fd = -1, ret = 0;
 
     (void) hComp;
     (void) port;
@@ -6742,6 +6742,21 @@ OMX_ERRORTYPE  omx_vdec::allocate_input_buffer(
     }
 
     if (!m_inp_mem_ptr) {
+        struct v4l2_requestbuffers bufreq;
+        bufreq.memory = V4L2_MEMORY_USERPTR;
+        bufreq.type=V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
+        bufreq.count = drv_ctx.ip_buf.actualcount;
+        ret = ioctl(drv_ctx.video_driver_fd,VIDIOC_REQBUFS, &bufreq);
+        if (ret) {
+            DEBUG_PRINT_ERROR("Setting buffer requirements (reqbufs) failed %s", strerror(errno));
+            /*TODO: How to handle this case */
+            eRet = OMX_ErrorInsufficientResources;
+        } else if (bufreq.count != drv_ctx.ip_buf.actualcount) {
+            DEBUG_PRINT_ERROR("%s Count(%d) is not expected to change to %d",
+                __FUNCTION__, drv_ctx.ip_buf.actualcount, bufreq.count);
+            eRet = OMX_ErrorInsufficientResources;
+        }
+
         DEBUG_PRINT_HIGH("Allocate i/p buffer Header: Cnt(%d) Sz(%u)",
                 drv_ctx.ip_buf.actualcount,
                 (unsigned int)drv_ctx.ip_buf.buffer_size);
