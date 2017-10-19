@@ -748,7 +748,7 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     }
 
                     DEBUG_PRINT_HIGH("AVC: BFrames: %u", (unsigned int)avc_param.nBFrames);
-                    avc_param.bEntropyCodingCABAC = (OMX_BOOL)(0);
+                    avc_param.bEntropyCodingCABAC = (OMX_BOOL)(1);
                     avc_param.nCabacInitIdc = 0;
                 } else {
                     if (pParam->nBFrames) {
