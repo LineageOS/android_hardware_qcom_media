@@ -9353,12 +9353,6 @@ bool omx_vdec::handle_color_space_info(void *data)
     memset(&tempAspects, 0x0, sizeof(ColorAspects));
     ColorAspects *aspects = &tempAspects;
 
-    /* Set default coloraspects to BT601-LR */
-    aspects->mPrimaries = ColorAspects::PrimariesBT601_6_525;
-    aspects->mRange = ColorAspects::RangeLimited;
-    aspects->mTransfer = ColorAspects::TransferSMPTE170M;
-    aspects->mMatrixCoeffs = ColorAspects::MatrixBT601_6;
-
     switch(output_capability) {
         case V4L2_PIX_FMT_MPEG2:
             {
