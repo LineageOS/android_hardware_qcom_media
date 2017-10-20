@@ -656,7 +656,6 @@ class omx_vdec: public qc_omx_component
         OMX_ERRORTYPE allocate_extradata();
         void free_extradata();
         int update_resolution(int width, int height, int stride, int scan_lines);
-        OMX_ERRORTYPE is_video_session_supported();
         Signal signal;
         pthread_t msg_thread_id;
         pthread_t async_thread_id;

@@ -550,12 +550,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     portDefn->format.video.eColorFormat, portDefn->format.video.eCompressionFormat);
 
                 if (PORT_INDEX_IN == portDefn->nPortIndex) {
-                    if (!dev_is_video_session_supported(portDefn->format.video.nFrameWidth,
-                                portDefn->format.video.nFrameHeight)) {
-                        DEBUG_PRINT_ERROR("video session not supported");
-                        omx_report_unsupported_setting();
-                        return OMX_ErrorUnsupportedSetting;
-                    }
                     if (portDefn->nBufferCountActual > MAX_NUM_INPUT_BUFFERS) {
                         DEBUG_PRINT_ERROR("ERROR: (In_PORT) actual count (%u) exceeds max(%u)",
                                 (unsigned int)portDefn->nBufferCountActual, (unsigned int)MAX_NUM_INPUT_BUFFERS);
