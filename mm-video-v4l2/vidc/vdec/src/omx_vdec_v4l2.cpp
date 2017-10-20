@@ -8791,10 +8791,12 @@ OMX_ERRORTYPE omx_vdec::set_buffer_req(vdec_allocatorproperty *buffer_prop)
         fmt.fmt.pix_mp.plane_fmt[0].sizeimage = buf_size;
 
         if (buffer_prop->buffer_type == VDEC_BUFFER_TYPE_INPUT) {
+            control.id = V4L2_CID_MIN_BUFFERS_FOR_OUTPUT;
             fmt.type =V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
             fmt.fmt.pix_mp.pixelformat = output_capability;
             ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_FMT, &fmt);
         } else if (buffer_prop->buffer_type == VDEC_BUFFER_TYPE_OUTPUT) {
+            control.id = V4L2_CID_MIN_BUFFERS_FOR_CAPTURE;
             c_fmt.type =V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
             c_fmt.fmt.pix_mp.pixelformat = capture_capability;
             ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_FMT, &c_fmt);
