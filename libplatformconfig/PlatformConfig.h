@@ -52,6 +52,7 @@ typedef enum {
 typedef enum {
     vidc_dec_log_in = 0,
     vidc_dec_log_out,
+    vidc_dec_hfr_fps,
     vidc_enc_log_in,
     vidc_enc_log_out,
     vidc_dec_conceal_color_8bit,
@@ -67,6 +68,7 @@ struct configStr {
 static const struct configStr configStrMap[] = {
     {vidc_dec_log_in, "vidc_dec_log_in"},
     {vidc_dec_log_out, "vidc_dec_log_out"},
+    {vidc_dec_hfr_fps, "vidc_dec_hfr_fps"},
     {vidc_enc_log_in, "vidc_enc_log_in"},
     {vidc_enc_log_out, "vidc_enc_log_out"},
     {vidc_dec_conceal_color_8bit, "vidc_dec_conceal_color_8bit"},
