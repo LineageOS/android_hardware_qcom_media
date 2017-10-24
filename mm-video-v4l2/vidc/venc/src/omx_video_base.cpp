@@ -1576,6 +1576,11 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     }
 
                     memcpy(portDefn, &m_sOutPortDef, sizeof(m_sOutPortDef));
+
+                    if (secure_session || allocate_native_handle) {
+                        portDefn->nBufferSize =
+                                sizeof(native_handle_t) + (sizeof(int) * (1/*numFds*/ + 3/*numInts*/));
+                    }
                 } else if (portDefn->nPortIndex == (OMX_U32) PORT_INDEX_EXTRADATA_OUT) {
                     portDefn->nBufferSize = m_client_out_extradata_info.getSize();
                     portDefn->nBufferCountMin= m_sOutPortDef.nBufferCountMin;
