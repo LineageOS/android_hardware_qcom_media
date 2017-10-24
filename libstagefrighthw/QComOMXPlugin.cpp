@@ -102,6 +102,20 @@ OMX_ERRORTYPE QComOMXPlugin::enumerateComponents(
     return (*mComponentNameEnum)(name, size, index);
 }
 
+void QComOMXPlugin::freeArrayOfAllocatedMemory(
+        OMX_U8 **array,
+        OMX_S32 count) {
+
+    if (count == 0)
+        return;
+
+    do {
+        count--;
+        delete[] array[count];
+        array[count] = NULL;
+    } while (count > 0);
+}
+
 OMX_ERRORTYPE QComOMXPlugin::getRolesOfComponent(
         const char *name,
         Vector<String8> *roles) {
@@ -121,21 +135,32 @@ OMX_ERRORTYPE QComOMXPlugin::getRolesOfComponent(
 
     if (numRoles > 0) {
         OMX_U8 **array = new OMX_U8 *[numRoles];
+        if (array == NULL) {
+            return OMX_ErrorInsufficientResources;
+        }
+
         for (OMX_U32 i = 0; i < numRoles; ++i) {
             array[i] = new OMX_U8[OMX_MAX_STRINGNAME_SIZE];
+            if (array[i] == NULL) {
+                freeArrayOfAllocatedMemory(array, i);
+                delete[] array;
+                array = NULL;
+
+                return OMX_ErrorInsufficientResources;
+            }
         }
 
         OMX_U32 numRoles2;
         err = (*mGetRolesOfComponentHandle)(
                 const_cast<OMX_STRING>(name), &numRoles2, array);
 
-	if (err != OMX_ErrorNone) {
-	  return err;
-	}
 
-	if (numRoles2 != numRoles) {
-	  return err;
-	}
+        if (err != OMX_ErrorNone || numRoles2 != numRoles) {
+            freeArrayOfAllocatedMemory(array, numRoles);
+            delete[] array;
+            array = NULL;
+            return err == OMX_ErrorNone?OMX_ErrorBadParameter:err;
+        }
 
         for (OMX_U32 i = 0; i < numRoles; ++i) {
             String8 s((const char *)array[i]);

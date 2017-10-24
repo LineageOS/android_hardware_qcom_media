@@ -60,6 +60,8 @@ private:
     typedef OMX_ERRORTYPE (*GetRolesOfComponentFunc)(
             OMX_STRING, OMX_U32 *, OMX_U8 **);
 
+    void freeArrayOfAllocatedMemory(OMX_U8 **array, OMX_S32 count);
+
     InitFunc mInit;
     DeinitFunc mDeinit;
     ComponentNameEnumFunc mComponentNameEnum;
