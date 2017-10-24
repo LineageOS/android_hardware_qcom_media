@@ -2902,6 +2902,12 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
 
                 venc_copy_temporal_settings(temporalParams);
 
+                // Set temporal layers with these settings
+                if (!venc_reconfigure_temporal_settings()) {
+                    DEBUG_PRINT_ERROR("Reconfiguring temporal settings failed");
+                    return false;
+                }
+
                 break;
             }
         case OMX_QcomIndexConfigBaseLayerId:
@@ -3359,6 +3365,12 @@ unsigned venc_dev::venc_start(void)
     if (!venc_reconfigure_temporal_settings()) {
         DEBUG_PRINT_ERROR("Reconfiguring temporal settings failed");
         return 1;
+    }
+
+    // Note HP settings could change GOP structure
+    if (!venc_set_intra_period(intra_period.num_pframes, intra_period.num_bframes)) {
+        DEBUG_PRINT_ERROR("TemporalLayer: Failed to set nPframes/nBframes");
+        return OMX_ErrorUndefined;
     }
 
     // If Hybrid HP is enable, LTR needs to be reset
@@ -6534,7 +6546,7 @@ OMX_ERRORTYPE venc_dev::venc_set_hp(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE
         return OMX_ErrorUnsupportedSetting;
     }
 
-    maxLayerCount = control.value;
+    maxLayerCount = control.value + 1;
 
     control.id = V4L2_CID_MPEG_VIDC_VIDEO_HIER_P_NUM_LAYERS;
     control.value = temporal_settings.nPLayerCountActual - 1;
@@ -6822,12 +6834,6 @@ OMX_ERRORTYPE venc_dev::venc_set_temporal_settings(OMX_VIDEO_PARAM_ANDROID_TEMPO
             return OMX_ErrorUnsupportedSetting;
         }
         memset(&temporal_layers_config, 0x0, sizeof(temporal_layers_config));
-    }
-
-    // Note HP settings could change GOP structure
-    if (!venc_set_intra_period(intra_period.num_pframes, intra_period.num_bframes)) {
-        DEBUG_PRINT_ERROR("TemporalLayer: Failed to set nPframes/nBframes");
-        return OMX_ErrorUndefined;
     }
 
     return OMX_ErrorNone;
