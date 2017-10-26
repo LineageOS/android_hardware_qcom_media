@@ -114,8 +114,9 @@ LOCAL_SRC_FILES         += src/hevc_utils.cpp
 LOCAL_STATIC_LIBRARIES  := libOmxVidcCommon
 LOCAL_SRC_FILES         += src/omx_vdec_msm8974.cpp
 LOCAL_CLANG := false
-include $(BUILD_SHARED_LIBRARY)
-
+ifneq ($(call is-board-platform-in-list, msm8916),true)
+ include $(BUILD_SHARED_LIBRARY)
+endif
 
 # ---------------------------------------------------------------------------------
 # 			Make the Shared library (libOmxVdecHevc)

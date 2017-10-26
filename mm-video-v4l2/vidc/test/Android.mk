@@ -12,4 +12,6 @@ LOCAL_CFLAGS                  := -DLOG_TAG=\"MSM-VIDC-TEST\"
 LOCAL_CLANG := false
 LOCAL_MODULE_TAGS             := optional
 LOCAL_32_BIT_ONLY             := true
-include $(BUILD_EXECUTABLE)
+ifneq ($(call is-board-platform-in-list, msm8916),true)
+ include $(BUILD_EXECUTABLE)
+endif

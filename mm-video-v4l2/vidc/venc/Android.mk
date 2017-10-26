@@ -22,7 +22,7 @@ libmm-venc-def += -Wno-error=literal-suffix
 libmm-venc-def += -D_ANDROID_ICS_
 libmm-venc-def += -D_MSM8974_
 
-TARGETS_THAT_USE_FLAG_MSM8226 := msm8226 msm8916 msm8909 msm8952
+TARGETS_THAT_USE_FLAG_MSM8226 := msm8226 msm8909 msm8952
 TARGETS_THAT_NEED_SW_VENC_MPEG4 := msm8909
 TARGETS_THAT_NEED_SW_VENC_HEVC := msm8992 msm8952
 
@@ -94,7 +94,9 @@ LOCAL_SRC_FILES   += src/omx_video_encoder.cpp
 LOCAL_SRC_FILES   += src/video_encoder_device_v4l2.cpp
 LOCAL_SRC_FILES   += src/neon.c
 
-include $(BUILD_SHARED_LIBRARY)
+ifneq ($(call is-board-platform-in-list, msm8916),true)
+ include $(BUILD_SHARED_LIBRARY)
+endif
 
 # SW codec OMX components not built in OSS builds as QCPATH is null in OSS builds.
 ifneq "$(wildcard $(QCPATH) )" ""
@@ -125,7 +127,10 @@ LOCAL_SRC_FILES   := src/omx_video_base.cpp
 LOCAL_SRC_FILES   += src/omx_swvenc_mpeg4.cpp
 LOCAL_CLANG := false
 
-include $(BUILD_SHARED_LIBRARY)
+ifneq ($(call is-board-platform-in-list, msm8916),true)
+ include $(BUILD_SHARED_LIBRARY)
+endif
+
 endif
 
 endif
