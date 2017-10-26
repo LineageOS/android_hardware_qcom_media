@@ -1972,8 +1972,13 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                             input_extradata_info.count = m_sInput_buff_property.actualcount + 1;
 
                         if (!downscalar_enabled) {
-                            m_sVenc_cfg.dvs_height = portDefn->format.video.nFrameHeight;
-                            m_sVenc_cfg.dvs_width = portDefn->format.video.nFrameWidth;
+                            if (m_rotation.rotation == 90 || m_rotation.rotation == 270) {
+                                m_sVenc_cfg.dvs_height = portDefn->format.video.nFrameWidth;
+                                m_sVenc_cfg.dvs_width = portDefn->format.video.nFrameHeight;
+                            } else {
+                                m_sVenc_cfg.dvs_height = portDefn->format.video.nFrameHeight;
+                                m_sVenc_cfg.dvs_width = portDefn->format.video.nFrameWidth;
+                            }
                         }
                         memset(&fmt, 0, sizeof(fmt));
                         fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
