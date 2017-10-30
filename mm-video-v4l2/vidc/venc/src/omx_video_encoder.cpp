@@ -446,6 +446,9 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     OMX_INIT_STRUCT(&m_sParamLowLatency, QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE);
     m_sParamLowLatency.nNumFrames = 0;
 
+    OMX_INIT_STRUCT(&m_sParamColorSpaceConversion , QOMX_ENABLETYPE);
+    m_sParamColorSpaceConversion.bEnable = OMX_FALSE;
+
     m_state                   = OMX_StateLoaded;
     m_sExtraData = 0;
 
@@ -1534,6 +1537,17 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     return OMX_ErrorUnsupportedSetting;
                 }
                 memcpy(&m_sParamLowLatency, paramData, sizeof(QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE));
+                break;
+            }
+        case OMX_QTIIndexParamColorSpaceConversion:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
+                if (!handle->venc_set_param(paramData,
+                            (OMX_INDEXTYPE)OMX_QTIIndexParamColorSpaceConversion)) {
+                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamLowLatencyMode failed");
+                    return OMX_ErrorUnsupportedSetting;
+                }
+                memcpy(&m_sParamColorSpaceConversion, paramData, sizeof(QOMX_ENABLETYPE));
                 break;
             }
         case OMX_IndexParamVideoSliceFMO:
