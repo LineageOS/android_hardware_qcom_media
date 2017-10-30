@@ -2130,7 +2130,7 @@ bool omx_venc::dev_handle_empty_eos_buffer(void)
     SWVENC_IPBUFFER ipbuffer;
     ipbuffer.p_buffer = NULL;
     ipbuffer.filled_length =0;
-    ipbuffer.flags |= SWVENC_FLAG_EOS;
+    ipbuffer.flags = SWVENC_FLAG_EOS;
     Ret = swvenc_emptythisbuffer(m_hSwVenc, &ipbuffer);
     if (Ret != SWVENC_S_SUCCESS)
     {
