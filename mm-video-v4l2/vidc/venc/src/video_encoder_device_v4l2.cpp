@@ -2767,6 +2767,11 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                         DEBUG_PRINT_ERROR("ERROR: Request for setting intra period failed");
                         return false;
                     }
+
+                    if (venc_set_idr_period(intraperiod->nIDRPeriod) == false) {
+                        DEBUG_PRINT_ERROR("ERROR: Setting idr period failed");
+                        return false;
+                    }
                 }
                 client_req_disable_bframe = (intraperiod->nBFrames == 0) ? true : false;
 
@@ -5080,7 +5085,7 @@ bool venc_dev::venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames)
         (codec_profile.profile != V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN)        &&
         (codec_profile.profile != V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10)      &&
         (codec_profile.profile != V4L2_MPEG_VIDEO_H264_PROFILE_HIGH)) {
-        nBFrames=0;
+        nBFrames = 0;
     }
 
     if (temporal_layers_config.nPLayers > 1 && nBFrames) {
