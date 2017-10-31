@@ -3094,7 +3094,7 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                         matrix_coeffs = MSM_VIDC_MATRIX_601_6_525;
                         break;
                     case ColorAspects::MatrixSMPTE240M:
-                        transfer_chars = MSM_VIDC_MATRIX_SMPTE_240M;
+                        matrix_coeffs = MSM_VIDC_MATRIX_SMPTE_240M;
                         break;
                     case ColorAspects::MatrixBT2020:
                         matrix_coeffs = MSM_VIDC_MATRIX_BT_2020;
