@@ -71,6 +71,8 @@ LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 
 LOCAL_HEADER_LIBRARIES  := generated_kernel_headers
 
+LOCAL_HEADER_LIBRARIES  += libnativebase_headers
+
 LOCAL_SHARED_LIBRARIES  := liblog libutils libbinder libcutils libdl
 
 LOCAL_SHARED_LIBRARIES  += libdivxdrmdecrypt
