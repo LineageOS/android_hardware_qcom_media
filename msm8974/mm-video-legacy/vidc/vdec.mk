@@ -78,6 +78,8 @@ LOCAL_SHARED_LIBRARIES  += libdivxdrmdecrypt
 LOCAL_SHARED_LIBRARIES += libqservice
 LOCAL_SHARED_LIBRARIES += libqdMetaData
 
+LOCAL_HEADER_LIBRARIES := libnativebase_headers
+
 LOCAL_SRC_FILES         := vdec/src/frameparser.cpp
 LOCAL_SRC_FILES         += vdec/src/h264_utils.cpp
 LOCAL_SRC_FILES         += vdec/src/ts_parser.cpp
