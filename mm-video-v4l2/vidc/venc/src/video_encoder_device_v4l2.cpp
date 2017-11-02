@@ -88,6 +88,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #undef LOG_TAG
 #define LOG_TAG "OMX-VENC: venc_dev"
+
 //constructor
 venc_dev::venc_dev(class omx_venc *venc_class)
 {
@@ -937,7 +938,7 @@ OMX_ERRORTYPE venc_dev::venc_get_supported_profile_level(OMX_VIDEO_PARAM_PROFILE
                             QOMX_VIDEO_AVCProfileConstrainedHigh,
                             QOMX_VIDEO_AVCProfileHigh };
     int hevc_profiles[2] = { OMX_VIDEO_HEVCProfileMain,
-                             OMX_VIDEO_HEVCProfileMain10 };
+                             OMX_VIDEO_HEVCProfileMain10HDR10 };
 
     if (!profileLevelType)
         return OMX_ErrorBadParameter;
@@ -3965,6 +3966,18 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                             } else {
                                 DEBUG_PRINT_ERROR("ENC_CONFIG: TP10UBWC colorformat not supported for this codec and profile");
                                 return false;
+                            }
+
+                            if(colorData.masteringDisplayInfo.colorVolumeSEIEnabled ||
+                               colorData.contentLightLevel.lightLevelSEIEnabled) {
+                                if (!venc_set_hdr_info(colorData.masteringDisplayInfo, colorData.contentLightLevel)) {
+                                    DEBUG_PRINT_ERROR("HDR10-PQ Info Setting failed");
+                                    return false;
+                                } else {
+                                    DEBUG_PRINT_INFO("Encoding in HDR10-PQ mode");
+                                }
+                            } else {
+                                DEBUG_PRINT_INFO("Encoding in HLG mode");
                             }
                         }
 
@@ -7073,7 +7086,7 @@ bool venc_dev::venc_get_profile_level(OMX_U32 *eProfile,OMX_U32 *eLevel)
                 *eProfile = OMX_VIDEO_HEVCProfileMain;
                 break;
             case V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10:
-                *eProfile = OMX_VIDEO_HEVCProfileMain10;
+                *eProfile = OMX_VIDEO_HEVCProfileMain10HDR10;
                 break;
             default:
                 *eProfile = OMX_VIDEO_HEVCProfileMax;
@@ -7263,6 +7276,67 @@ bool venc_dev::BatchInfo::isPending(int bufferId) {
     return existsId < kMaxBufs;
 }
 
+bool venc_dev::venc_set_hdr_info(const MasteringDisplay& mastering_disp_info,
+                            const ContentLightLevel& content_light_level_info)
+{
+    struct v4l2_ext_control ctrl[13];
+    struct v4l2_ext_controls controls;
+    const unsigned int RGB_PRIMARY_TABLE[] = {
+        V4L2_CID_MPEG_VIDC_VENC_RGB_PRIMARY_00,
+        V4L2_CID_MPEG_VIDC_VENC_RGB_PRIMARY_01,
+        V4L2_CID_MPEG_VIDC_VENC_RGB_PRIMARY_10,
+        V4L2_CID_MPEG_VIDC_VENC_RGB_PRIMARY_11,
+        V4L2_CID_MPEG_VIDC_VENC_RGB_PRIMARY_20,
+        V4L2_CID_MPEG_VIDC_VENC_RGB_PRIMARY_21,
+    };
+
+    memset(&controls, 0, sizeof(controls));
+    memset(ctrl, 0, sizeof(ctrl));
+
+    controls.count = 13;
+    controls.ctrl_class = V4L2_CTRL_CLASS_MPEG;
+    controls.controls = ctrl;
+
+    ctrl[0].id = V4L2_CID_MPEG_VIDC_VENC_HDR_INFO;
+    ctrl[0].value = V4L2_MPEG_VIDC_VENC_HDR_INFO_ENABLED;
+
+    /* ctrl[1] - ctrl[6] */
+    for (int i = 0; i < 3; i++) {
+        int first_idx = 2*i+1;
+        int second_idx = 2*i+2;
+        ctrl[first_idx].id = RGB_PRIMARY_TABLE[first_idx];
+        ctrl[first_idx].value = mastering_disp_info.primaries.rgbPrimaries[i][0];
+
+        ctrl[second_idx].id = RGB_PRIMARY_TABLE[second_idx];
+        ctrl[second_idx].value = mastering_disp_info.primaries.rgbPrimaries[i][1];
+    }
+
+    ctrl[7].id = V4L2_CID_MPEG_VIDC_VENC_WHITEPOINT_X;
+    ctrl[7].value = mastering_disp_info.primaries.whitePoint[0];
+
+    ctrl[8].id = V4L2_CID_MPEG_VIDC_VENC_WHITEPOINT_Y;
+    ctrl[8].value = mastering_disp_info.primaries.whitePoint[1];
+
+    ctrl[9].id = V4L2_CID_MPEG_VIDC_VENC_MAX_DISP_LUM;
+    ctrl[9].value = mastering_disp_info.maxDisplayLuminance;
+
+    ctrl[10].id = V4L2_CID_MPEG_VIDC_VENC_MIN_DISP_LUM;
+    ctrl[10].value = mastering_disp_info.minDisplayLuminance;
+
+    ctrl[11].id = V4L2_CID_MPEG_VIDC_VENC_MAX_CLL;
+    ctrl[11].value = content_light_level_info.maxContentLightLevel;
+
+    ctrl[12].id = V4L2_CID_MPEG_VIDC_VENC_MAX_FLL;
+    ctrl[12].value = content_light_level_info.minPicAverageLightLevel;
+
+    if (ioctl(m_nDriver_fd, VIDIOC_S_EXT_CTRLS, &controls)) {
+        DEBUG_PRINT_ERROR("VIDIOC_S_EXT_CTRLS failed for HDR Info");
+        return false;
+    }
+
+    return true;
+}
+
 #ifdef _VQZIP_
 venc_dev::venc_dev_vqzip::venc_dev_vqzip()
 {
@@ -7346,4 +7420,3 @@ venc_dev::venc_dev_vqzip::~venc_dev_vqzip()
     pthread_mutex_destroy(&lock);
 }
 #endif
-
