@@ -223,8 +223,10 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
             char exType[OMX_MAX_STRINGVALUE_SIZE+1];
             memset (exType,0, (sizeof(char)*OMX_MAX_STRINGVALUE_SIZE));
             if ((OMX_BOOL)(m_sExtraData & VENC_EXTRADATA_LTRINFO)){
-                if((strlcat(exType, getStringForExtradataType(OMX_ExtraDataVideoLTRInfo),
-                                OMX_MAX_STRINGVALUE_SIZE)) >= OMX_MAX_STRINGVALUE_SIZE) {
+                const char *extraDataVideoLTRInfo = getStringForExtradataType(OMX_ExtraDataVideoLTRInfo);
+                if(extraDataVideoLTRInfo != NULL &&
+                        (strlcat(exType, extraDataVideoLTRInfo,
+                                   OMX_MAX_STRINGVALUE_SIZE)) >= OMX_MAX_STRINGVALUE_SIZE) {
                     DEBUG_PRINT_LOW("extradata string size exceeds size %d",OMX_MAX_STRINGVALUE_SIZE );
                 }
             }
@@ -232,8 +234,10 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
                 if (exType[0]!=0) {
                     strlcat(exType,"|", OMX_MAX_STRINGVALUE_SIZE);
                 }
-                if((strlcat(exType, getStringForExtradataType(OMX_ExtraDataVideoEncoderMBInfo),
-                                OMX_MAX_STRINGVALUE_SIZE)) >= OMX_MAX_STRINGVALUE_SIZE) {
+                const char *extraDataVideoEncoderMBInfo = getStringForExtradataType(OMX_ExtraDataVideoEncoderMBInfo);
+                if(extraDataVideoEncoderMBInfo != NULL &&
+                        (strlcat(exType, extraDataVideoEncoderMBInfo,
+                                 OMX_MAX_STRINGVALUE_SIZE)) >= OMX_MAX_STRINGVALUE_SIZE) {
                     DEBUG_PRINT_LOW("extradata string size exceeds size %d",OMX_MAX_STRINGVALUE_SIZE );
                 }
             }
