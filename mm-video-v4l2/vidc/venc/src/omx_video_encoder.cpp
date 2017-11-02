@@ -449,6 +449,8 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     OMX_INIT_STRUCT(&m_sParamColorSpaceConversion , QOMX_ENABLETYPE);
     m_sParamColorSpaceConversion.bEnable = OMX_FALSE;
 
+    OMX_INIT_STRUCT(&m_sBaseLayerID, OMX_SKYPE_VIDEO_CONFIG_BASELAYERPID);
+
     m_state                   = OMX_StateLoaded;
     m_sExtraData = 0;
 
