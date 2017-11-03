@@ -3912,9 +3912,14 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                portDefn = (OMX_PARAM_PORTDEFINITIONTYPE *) paramData;
                                //TODO: Check if any allocate buffer/use buffer/useNativeBuffer has
                                //been called.
-                               DEBUG_PRINT_LOW("set_parameter: OMX_IndexParamPortDefinition H= %d, W = %d",
+                               DEBUG_PRINT_LOW(
+                                       "set_parameter: OMX_IndexParamPortDefinition: dir %d port %d wxh %dx%d count: min %d actual %d size %d",
+                                       (int)portDefn->eDir, (int)portDefn->nPortIndex,
+                                       (int)portDefn->format.video.nFrameWidth,
                                        (int)portDefn->format.video.nFrameHeight,
-                                       (int)portDefn->format.video.nFrameWidth);
+                                       (int)portDefn->nBufferCountMin,
+                                       (int)portDefn->nBufferCountActual,
+                                       (int)portDefn->nBufferSize);
 
                                if (portDefn->nBufferCountActual > MAX_NUM_INPUT_OUTPUT_BUFFERS) {
                                    DEBUG_PRINT_ERROR("ERROR: Buffers requested exceeds max limit %d",
@@ -8776,7 +8781,6 @@ OMX_ERRORTYPE omx_vdec::set_buffer_req(vdec_allocatorproperty *buffer_prop)
     unsigned buf_size = 0;
     struct v4l2_format fmt, c_fmt;
     struct v4l2_requestbuffers bufreq;
-    struct v4l2_control control;
     int ret = 0;
     DEBUG_PRINT_LOW("SetBufReq IN: ActCnt(%d) Size(%u)",
             buffer_prop->actualcount, (unsigned int)buffer_prop->buffer_size);
@@ -8793,23 +8797,25 @@ OMX_ERRORTYPE omx_vdec::set_buffer_req(vdec_allocatorproperty *buffer_prop)
         fmt.fmt.pix_mp.plane_fmt[0].sizeimage = buf_size;
 
         if (buffer_prop->buffer_type == VDEC_BUFFER_TYPE_INPUT) {
-            control.id = V4L2_CID_MIN_BUFFERS_FOR_OUTPUT;
             fmt.type =V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
             fmt.fmt.pix_mp.pixelformat = output_capability;
+            DEBUG_PRINT_LOW("S_FMT: type %d wxh %dx%d size %d format %x",
+                fmt.type, fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height,
+                fmt.fmt.pix_mp.plane_fmt[0].sizeimage, fmt.fmt.pix_mp.pixelformat);
             ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_FMT, &fmt);
         } else if (buffer_prop->buffer_type == VDEC_BUFFER_TYPE_OUTPUT) {
-            control.id = V4L2_CID_MIN_BUFFERS_FOR_CAPTURE;
             c_fmt.type =V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
             c_fmt.fmt.pix_mp.pixelformat = capture_capability;
             ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_FMT, &c_fmt);
             c_fmt.fmt.pix_mp.plane_fmt[0].sizeimage = buf_size;
+            DEBUG_PRINT_LOW("S_FMT: type %d wxh %dx%d size %d format %x",
+                c_fmt.type, c_fmt.fmt.pix_mp.width, c_fmt.fmt.pix_mp.height,
+                c_fmt.fmt.pix_mp.plane_fmt[0].sizeimage, c_fmt.fmt.pix_mp.pixelformat);
             ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_FMT, &c_fmt);
         } else {
             eRet = OMX_ErrorBadParameter;
         }
-
         if (ret) {
-            /*TODO: How to handle this case */
             DEBUG_PRINT_ERROR("Setting buffer requirements (format) failed %d", ret);
             eRet = OMX_ErrorInsufficientResources;
         }
@@ -8824,15 +8830,8 @@ OMX_ERRORTYPE omx_vdec::set_buffer_req(vdec_allocatorproperty *buffer_prop)
             eRet = OMX_ErrorBadParameter;
         }
 
-        control.value = buffer_prop->mincount;
         if (eRet == OMX_ErrorNone) {
-            ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_CTRL, &control);
-            if (ret)
-                eRet = OMX_ErrorUndefined;
-        }
-
-        if (eRet == OMX_ErrorNone &&
-                        buffer_prop->actualcount >= (uint32_t)control.value) {
+            DEBUG_PRINT_LOW("REQBUFS: type %d count %d", bufreq.type, bufreq.count);
             ret = ioctl(drv_ctx.video_driver_fd,VIDIOC_REQBUFS, &bufreq);
         }
 
