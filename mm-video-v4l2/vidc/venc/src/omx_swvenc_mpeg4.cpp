@@ -1955,7 +1955,9 @@ bool omx_venc::dev_fill_buf
     opbuffer.size = bufhdr->nAllocLen;
     opbuffer.filled_length = bufhdr->nFilledLen;
     opbuffer.flags = bufhdr->nFlags;
+    opbuffer.timestamp = bufhdr->nTimeStamp;
     opbuffer.p_client_data = (unsigned char *)bufhdr;
+    opbuffer.frame_type = SWVENC_FRAME_TYPE_I;
 
     DEBUG_PRINT_LOW("FTB: p_buffer (%p) size (%d) filled_len (%d) flags (0x%X) timestamp (%lld) clientData (%p)",
       opbuffer.p_buffer,
@@ -2263,6 +2265,17 @@ int omx_venc::dev_set_format(int color)
 
    RETURN(true);
     //return handle->venc_set_format(color);
+}
+
+bool omx_venc::dev_get_dimensions(OMX_U32 index, OMX_U32 *width, OMX_U32 *height)
+{
+   ENTER_FUNC();
+
+   (void)index;
+   (void)width;
+   (void)height;
+
+   RETURN(true);
 }
 
 bool omx_venc::dev_color_align(OMX_BUFFERHEADERTYPE *buffer,
