@@ -22,6 +22,30 @@
       "revId": "834ba8960136cd155996b17bab1e031328ed04d0",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "8e5a0cae_56a2bc3e",
+        "filename": "mm-video-v4l2/vidc/vdec/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 172,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2017-11-06T13:02:46Z",
+      "side": 1,
+      "message": "Yea, I don\u0027t think anyone is building this module, but it makes sense to apply the change where applicable.",
+      "parentUuid": "cf9d6349_627e1e25",
+      "range": {
+        "startLine": 172,
+        "startChar": 0,
+        "endLine": 172,
+        "endChar": 39
+      },
+      "revId": "834ba8960136cd155996b17bab1e031328ed04d0",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
     }
   ]
 }
