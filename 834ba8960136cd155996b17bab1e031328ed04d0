@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "cf9d6349_627e1e25",
+        "filename": "mm-video-v4l2/vidc/vdec/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 172,
+      "author": {
+        "id": 15173
+      },
+      "writtenOn": "2017-11-06T12:50:25Z",
+      "side": 1,
+      "message": "Note: We shouldn\u0027t be building this, but here for completeness.",
+      "range": {
+        "startLine": 172,
+        "startChar": 0,
+        "endLine": 172,
+        "endChar": 39
+      },
+      "revId": "834ba8960136cd155996b17bab1e031328ed04d0",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
