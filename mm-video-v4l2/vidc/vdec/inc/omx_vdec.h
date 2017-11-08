@@ -1277,6 +1277,7 @@ class omx_vdec: public qc_omx_component
         int log_cc_output_buffers(OMX_BUFFERHEADERTYPE *);
         void send_codec_config();
         OMX_TICKS m_last_rendered_TS;
+        int32_t m_dec_hfr_fps;
         volatile int32_t m_queued_codec_config_count;
         OMX_U32 current_perf_level;
         bool secure_scaling_to_non_secure_opb;

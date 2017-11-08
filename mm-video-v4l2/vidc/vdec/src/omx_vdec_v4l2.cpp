@@ -717,7 +717,8 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_profile(0),
     client_set_fps(false),
     stereo_output_mode(HAL_NO_3D),
-    m_last_rendered_TS(-1),
+    m_last_rendered_TS(0),
+    m_dec_hfr_fps(0),
     m_queued_codec_config_count(0),
     secure_scaling_to_non_secure_opb(false),
     m_force_compressed_for_dpb(true),
@@ -751,6 +752,11 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
             (int32_t *)&m_debug.in_buffer_log, 0);
     Platform::Config::getInt32(Platform::vidc_dec_log_out,
             (int32_t *)&m_debug.out_buffer_log, 0);
+
+    Platform::Config::getInt32(Platform::vidc_dec_hfr_fps,
+            (int32_t *)&m_dec_hfr_fps, 0);
+
+    DEBUG_PRINT_HIGH("HFR fps value = %d", m_dec_hfr_fps);
 
     property_value[0] = '\0';
     property_get("vendor.vidc.dec.log.in", property_value, "0");
@@ -2157,6 +2163,7 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
     struct v4l2_requestbuffers bufreq;
     struct v4l2_control control;
     struct v4l2_frmsizeenum frmsize;
+    struct v4l2_queryctrl query;
     unsigned int   alignment = 0,buffer_size = 0, nBufCount = 0;
     int fds[2];
     int r,ret=0;
@@ -2460,6 +2467,17 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         if (ret < 0)
             DEBUG_PRINT_HIGH("Failed to set OUTPUT Buffer count Err = %d Count = %d",
                 ret, nBufCount);
+
+        if (m_dec_hfr_fps) {
+            memset(&query, 0, sizeof(struct v4l2_queryctrl));
+
+            query.id = V4L2_CID_MPEG_VIDC_VIDEO_FRAME_RATE;
+            ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_QUERYCTRL, &query);
+            if (!ret)
+                m_dec_hfr_fps = MIN(query.maximum, m_dec_hfr_fps);
+
+            DEBUG_PRINT_HIGH("Updated HFR fps value = %d", m_dec_hfr_fps);
+        }
 
 #endif
         m_state = OMX_StateLoaded;
@@ -7951,8 +7969,10 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
         il_buffer = client_buffers.get_il_buf_hdr(buffer);
         OMX_U32 current_framerate = (int)(drv_ctx.frame_rate.fps_numerator / drv_ctx.frame_rate.fps_denominator);
 
-        if (il_buffer && m_last_rendered_TS >= 0) {
+        if (il_buffer && m_dec_hfr_fps > 0) {
             OMX_TICKS ts_delta = (OMX_TICKS)llabs(il_buffer->nTimeStamp - m_last_rendered_TS);
+            // Convert fps into ms value. 1 sec = 1000000 ms.
+            OMX_U64 target_ts_delta = m_dec_hfr_fps ? 1000000 / m_dec_hfr_fps : ts_delta;
 
             // Current frame can be send for rendering if
             // (a) current FPS is <=  60
@@ -7962,8 +7982,8 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
             // (e) its TS is equal to previous frame TS
             // (f) if marked EOS
 
-            if(current_framerate <= 60 || m_last_rendered_TS == 0 ||
-               il_buffer->nTimeStamp == 0 || ts_delta >= 16000 ||
+            if(current_framerate <= (OMX_U32)m_dec_hfr_fps || m_last_rendered_TS == 0 ||
+               il_buffer->nTimeStamp == 0 || ts_delta >= (OMX_TICKS)target_ts_delta||
                ts_delta == 0 || (il_buffer->nFlags & OMX_BUFFERFLAG_EOS)) {
                m_last_rendered_TS = il_buffer->nTimeStamp;
             } else {
@@ -7977,8 +7997,8 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
 
             //above code makes sure that delta b\w two consecutive frames is not
             //greater than 16ms, slow-mo feature, so cap fps to max 60
-            if (current_framerate > 60 ) {
-                current_framerate = 60;
+            if (current_framerate > (OMX_U32)m_dec_hfr_fps ) {
+                current_framerate = m_dec_hfr_fps;
             }
         }
 
@@ -8001,8 +8021,8 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
                     }
                 }
             }
-            if (refresh_rate > 60) {
-                refresh_rate = 60;
+            if (refresh_rate > m_dec_hfr_fps) {
+                refresh_rate = m_dec_hfr_fps;
             }
             DEBUG_PRINT_LOW("frc set refresh_rate %f, frame %d", refresh_rate, proc_frms);
             OMX_U32 buf_index = buffer - m_out_mem_ptr;
