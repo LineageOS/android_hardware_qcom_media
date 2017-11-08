@@ -756,6 +756,11 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
         data->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) +
             sizeof(struct msm_vidc_roi_qp_payload) +
             roi.info.nRoiMBInfoSize - 2 * sizeof(unsigned int), 4);
+        if (data->nSize > input_extradata_info.buffer_size  - consumed_len) {
+           DEBUG_PRINT_ERROR("Buffer size (%lu) is less than ROI extradata size (%u)",
+                             (input_extradata_info.buffer_size - consumed_len) ,data->nSize);
+           return false;
+        }
         data->nVersion.nVersion = OMX_SPEC_VERSION;
         data->nPortIndex = 0;
         data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_ROI_QP;
@@ -769,6 +774,7 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
         DEBUG_PRINT_HIGH("Using ROI QP map: Enable = %d", roiData->b_roi_info);
         memcpy(roiData->data, roi.info.pRoiMBInfo, roi.info.nRoiMBInfoSize);
         data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
+        consumed_len += data->nSize;
     }
 
     if (m_roi_enabled) {
