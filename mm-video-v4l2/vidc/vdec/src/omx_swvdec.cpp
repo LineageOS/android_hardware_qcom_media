@@ -3140,9 +3140,9 @@ OMX_ERRORTYPE omx_swvdec::get_supported_profilelevel(
         if (p_profilelevel->nProfileIndex == 0)
         {
             p_profilelevel->eProfile = OMX_VIDEO_MPEG4ProfileSimple;
-            p_profilelevel->eLevel   = OMX_VIDEO_MPEG4Level5;
+            p_profilelevel->eLevel   = OMX_VIDEO_MPEG4Level6;
 
-            OMX_SWVDEC_LOG_HIGH("MPEG-4 simple profile, level 5");
+            OMX_SWVDEC_LOG_HIGH("MPEG-4 simple profile, level 6");
         }
         else if (p_profilelevel->nProfileIndex == 1)
         {

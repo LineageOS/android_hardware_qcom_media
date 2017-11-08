@@ -892,10 +892,32 @@ OMX_ERRORTYPE  omx_venc::set_parameter
                  __FUNCTION__, Ret);
                RETURN(OMX_ErrorUnsupportedSetting);
             }
+            else
+            {
+                m_sIntraperiod.nPFrames = pParam->nPFrames;
+                m_sIntraperiod.nBFrames = pParam->nBFrames;
+            }
 
-            memcpy(&m_sParamMPEG4,pParam, sizeof(struct OMX_VIDEO_PARAM_MPEG4TYPE));
-            m_sIntraperiod.nPFrames = m_sParamMPEG4.nPFrames;
-            m_sIntraperiod.nBFrames = m_sParamMPEG4.nBFrames;
+            /* set profile/level */
+            if (pParam->eProfile && pParam->eLevel)
+            {
+                DEBUG_PRINT_LOW("pParam->eProfile : %d, pParam->eLevel : %d", pParam->eProfile, pParam->eLevel);
+                Ret = swvenc_set_profile_level(pParam->eProfile, pParam->eLevel);
+                if (Ret != SWVENC_S_SUCCESS)
+                {
+                    DEBUG_PRINT_ERROR("%sm swvenc_set_profile_level failed (%d)",
+                            __FUNCTION__, Ret);
+                    RETURN(OMX_ErrorUnsupportedSetting);
+                }
+                else
+                {
+                    m_sParamProfileLevel.eProfile = pParam->eProfile;
+                    m_sParamProfileLevel.eLevel = pParam->eLevel;
+                }
+            }
+
+            // NOTE: m_sParamMPEG4.eProfile/eLevel may be overwritten to 0 if client didn't set them
+            memcpy(&m_sParamMPEG4, pParam, sizeof(struct OMX_VIDEO_PARAM_MPEG4TYPE));
             break;
         }
 
@@ -913,10 +935,32 @@ OMX_ERRORTYPE  omx_venc::set_parameter
                  __FUNCTION__, Ret);
                RETURN(OMX_ErrorUnsupportedSetting);
             }
+            else
+            {
+                m_sIntraperiod.nPFrames = pParam->nPFrames;
+                m_sIntraperiod.nBFrames = pParam->nBFrames;
+            }
 
+            /* set profile/level */
+            if (pParam->eProfile && pParam->eLevel)
+            {
+                DEBUG_PRINT_LOW("pParam->eProfile : %d, pParam->eLevel : %d", pParam->eProfile, pParam->eLevel);
+                Ret = swvenc_set_profile_level(pParam->eProfile, pParam->eLevel);
+                if (Ret != SWVENC_S_SUCCESS)
+                {
+                    DEBUG_PRINT_ERROR("%sm swvenc_set_profile_level failed (%d)",
+                            __FUNCTION__, Ret);
+                    RETURN(OMX_ErrorUnsupportedSetting);
+                }
+                else
+                {
+                    m_sParamProfileLevel.eProfile = pParam->eProfile;
+                    m_sParamProfileLevel.eLevel = pParam->eLevel;
+                }
+            }
+
+            // NOTE: m_sParamH263.eProfile/eLevel may be overwritten to 0 if client didn't set them
             memcpy(&m_sParamH263,pParam, sizeof(struct OMX_VIDEO_PARAM_H263TYPE));
-            m_sIntraperiod.nPFrames = m_sParamH263.nPFrames;
-            m_sIntraperiod.nBFrames = m_sParamH263.nBFrames;
             break;
         }
 
@@ -2492,9 +2536,9 @@ OMX_ERRORTYPE omx_venc::dev_get_supported_profile_level(OMX_VIDEO_PARAM_PROFILEL
             if (profileLevelType->nProfileIndex == 0)
             {
                 profileLevelType->eProfile = OMX_VIDEO_H263ProfileBaseline;
-                profileLevelType->eLevel   = OMX_VIDEO_H263Level40;
+                profileLevelType->eLevel   = OMX_VIDEO_H263Level70;
 
-                DEBUG_PRINT_HIGH("H.263 baseline profile, level 40");
+                DEBUG_PRINT_HIGH("H.263 baseline profile, level 70");
             }
             else
             {
@@ -2508,9 +2552,9 @@ OMX_ERRORTYPE omx_venc::dev_get_supported_profile_level(OMX_VIDEO_PARAM_PROFILEL
             if (profileLevelType->nProfileIndex == 0)
             {
                 profileLevelType->eProfile = OMX_VIDEO_MPEG4ProfileSimple;
-                profileLevelType->eLevel   = OMX_VIDEO_MPEG4Level5;
+                profileLevelType->eLevel   = OMX_VIDEO_MPEG4Level6;
 
-                DEBUG_PRINT_LOW("MPEG-4 simple profile, level 5");
+                DEBUG_PRINT_LOW("MPEG-4 simple profile, level 6");
             }
             else
             {
@@ -3253,6 +3297,9 @@ SWVENC_STATUS omx_venc::swvenc_set_profile_level
              break;
           case OMX_VIDEO_MPEG4Level5:
              Level.mpeg4 = SWVENC_LEVEL_MPEG4_5;
+             break;
+          case OMX_VIDEO_MPEG4Level6:
+             Level.mpeg4 = SWVENC_LEVEL_MPEG4_6;
              break;
           default:
              DEBUG_PRINT_ERROR("ERROR: UNKNOWN LEVEL");
