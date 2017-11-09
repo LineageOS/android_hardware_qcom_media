@@ -246,6 +246,7 @@ extern "C" {
 #define VDEC_MSG_EVT_MAX_CLIENTS	(VDEC_MSG_BASE + 15)
 #define VDEC_MSG_EVT_HW_UNSUPPORTED	(VDEC_MSG_BASE + 16)
 
+
 //  Define next macro with required values to enable default extradata,
 //    VDEC_EXTRADATA_MB_ERROR_MAP
 //    OMX_INTERLACE_EXTRADATA
@@ -308,7 +309,8 @@ enum vdec_output_format {
 	VDEC_YUV_FORMAT_NV12 = 0x1,
 	VDEC_YUV_FORMAT_TILE_4x2 = 0x2,
 	VDEC_YUV_FORMAT_NV12_UBWC = 0x3,
-	VDEC_YUV_FORMAT_NV12_TP10_UBWC = 0x4
+	VDEC_YUV_FORMAT_NV12_TP10_UBWC = 0x4,
+	VDEC_YUV_FORMAT_P010_VENUS = 0x5,
 };
 
 enum vdec_interlaced_format {
@@ -664,6 +666,8 @@ class omx_vdec: public qc_omx_component
         OMX_ERRORTYPE set_dpb(bool is_split_mode, int dpb_color_format);
         OMX_ERRORTYPE decide_dpb_buffer_mode(bool is_downscalar_enabled);
         int dpb_bit_depth;
+        bool check_supported_flexible_formats(OMX_COLOR_FORMATTYPE required_format);
+        bool is_flexible_format;//To save status if required format is flexible color formats
         bool async_thread_force_stop;
         volatile bool message_thread_stop;
         struct extradata_info m_extradata_info;

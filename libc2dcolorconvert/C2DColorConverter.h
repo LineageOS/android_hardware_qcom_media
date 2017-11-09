@@ -108,6 +108,7 @@ enum ColorConvertFormat {
     NV12_128m,
     NV12_UBWC,
     TP10_UBWC,
+    YCbCr420_VENUS_P010,
     NO_COLOR_FORMAT
 };
 
