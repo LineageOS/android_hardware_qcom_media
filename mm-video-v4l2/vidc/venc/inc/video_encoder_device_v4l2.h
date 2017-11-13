@@ -465,6 +465,7 @@ class venc_dev
         msm_venc_temporal_layers            temporal_layers_config;
         OMX_BOOL                            downscalar_enabled;
         bool client_req_disable_bframe;
+        bool bframe_implicitly_enabled;
         bool client_req_disable_temporal_layers;
         bool client_req_turbo_mode;
 
