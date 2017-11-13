@@ -2010,6 +2010,7 @@ int omx_vdec::log_cc_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
 int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
     int buf_index = 0;
     char *temp = NULL;
+    char *bufaddr = NULL;
 
     if (!(m_debug.out_buffer_log || m_debug.out_meta_buffer_log) || !buffer || !buffer->nFilledLen)
         return 0;
@@ -2043,7 +2044,18 @@ int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
     }
 
     buf_index = buffer - m_out_mem_ptr;
-    temp = (char *)drv_ctx.ptr_outputbuffer[buf_index].bufferaddr;
+    bufaddr = (char *)drv_ctx.ptr_outputbuffer[buf_index].bufferaddr;
+    if (dynamic_buf_mode && !secure_mode) {
+        bufaddr = (char*)mmap(0, drv_ctx.ptr_outputbuffer[buf_index].buffer_len,
+                                 PROT_READ|PROT_WRITE, MAP_SHARED,
+                                 drv_ctx.ptr_outputbuffer[buf_index].pmem_fd, 0);
+        //mmap returns (void *)-1 on failure and sets error code in errno.
+        if (bufaddr == MAP_FAILED) {
+            DEBUG_PRINT_ERROR("mmap failed - errno: %d", errno);
+            return -1;
+        }
+    }
+    temp = bufaddr;
 
     if (drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_UBWC ||
             drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_TP10_UBWC) {
@@ -2075,13 +2087,12 @@ int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
             y_meta_plane = MSM_MEDIA_ALIGN(y_meta_stride * y_meta_scanlines, 4096);
             y_plane = MSM_MEDIA_ALIGN(y_stride * y_sclines, 4096);
 
-            temp = (char *)drv_ctx.ptr_outputbuffer[buf_index].bufferaddr;
             for (i = 0; i < y_meta_scanlines; i++) {
                  bytes_written = fwrite(temp, y_meta_stride, 1, m_debug.out_ymeta_file);
                  temp += y_meta_stride;
             }
 
-            temp = (char *)drv_ctx.ptr_outputbuffer[buf_index].bufferaddr + y_meta_plane + y_plane;
+            temp = bufaddr + y_meta_plane + y_plane;
             for(i = 0; i < uv_meta_scanlines; i++) {
                 bytes_written += fwrite(temp, uv_meta_stride, 1, m_debug.out_uvmeta_file);
                 temp += uv_meta_stride;
@@ -2105,14 +2116,14 @@ int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
              bytes_written = fwrite(temp, drv_ctx.video_resolution.frame_width, 1, m_debug.outfile);
              temp += stride;
         }
-        temp = (char *)drv_ctx.ptr_outputbuffer[buf_index].bufferaddr + stride * scanlines;
+        temp = bufaddr + stride * scanlines;
         int stride_c = stride;
         for(i = 0; i < drv_ctx.video_resolution.frame_height/2; i++) {
             bytes_written += fwrite(temp, drv_ctx.video_resolution.frame_width, 1, m_debug.outfile);
             temp += stride_c;
         }
-    }else if (m_debug.outfile && drv_ctx.output_format == VDEC_YUV_FORMAT_P010_VENUS) {
-    int stride = drv_ctx.video_resolution.stride;
+    } else if (m_debug.outfile && drv_ctx.output_format == VDEC_YUV_FORMAT_P010_VENUS) {
+        int stride = drv_ctx.video_resolution.stride;
         int scanlines = drv_ctx.video_resolution.scan_lines;
         if (m_smoothstreaming_mode) {
             stride = drv_ctx.video_resolution.frame_width * 2;
@@ -2129,7 +2140,7 @@ int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
              bytes_written = fwrite(temp, drv_ctx.video_resolution.frame_width, 2, m_debug.outfile);
              temp += stride;
         }
-        temp = (char *)drv_ctx.ptr_outputbuffer[buf_index].bufferaddr + stride * scanlines;
+        temp = bufaddr + stride * scanlines;
         int stride_c = stride;
         for(i = 0; i < drv_ctx.video_resolution.frame_height/2; i++) {
             bytes_written += fwrite(temp, drv_ctx.video_resolution.frame_width, 2, m_debug.outfile);
@@ -2137,6 +2148,9 @@ int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
         }
     }
 
+    if (dynamic_buf_mode && !secure_mode) {
+        munmap(bufaddr, drv_ctx.ptr_outputbuffer[buf_index].buffer_len);
+    }
     return 0;
 }
 
