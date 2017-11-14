@@ -1087,7 +1087,7 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool is_downscalar_enabled)
         if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10) {
             enable_split = true;
             dpb_color_format = V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_TP10_UBWC;
-            if(is_flexible_format){ // if flexible formats are expected, QCom_P010 is set for 10bit cases here
+            if(is_flexible_format){ // if flexible formats are expected, P010 is set for 10bit cases here
                  drv_ctx.output_format = VDEC_YUV_FORMAT_P010_VENUS;
                  capture_capability = V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010;
                  capability_changed = true;
@@ -1150,8 +1150,8 @@ bool omx_vdec::check_supported_flexible_formats(OMX_COLOR_FORMATTYPE required_fo
 {
     if(required_format == (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m ||
          required_format == (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420SemiPlanarP010Venus) {
-         //for now, the flexible formats should be QCOM_NV12 by default for 8bit cases
-         //it will change to QCOM_P010 after 10bit port-reconfig accordingly
+         //for now, the flexible formats should be NV12 by default for 8bit cases
+         //it will change to P010 after 10bit port-reconfig accordingly
        return TRUE;
     }
     else {
