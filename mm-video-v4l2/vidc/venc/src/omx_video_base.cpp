@@ -1920,7 +1920,9 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 QOMX_EXTRADATA_ENABLE *pParam =
                     (QOMX_EXTRADATA_ENABLE *)paramData;
                 if (pParam->nPortIndex == PORT_INDEX_EXTRADATA_OUT) {
-                    pParam->bEnable = m_sExtraData ? OMX_TRUE : OMX_FALSE;
+                    OMX_U32 output_extradata_mask = VENC_EXTRADATA_SLICEINFO | VENC_EXTRADATA_LTRINFO |
+                                                    VENC_EXTRADATA_MBINFO;
+                    pParam->bEnable = (m_sExtraData & output_extradata_mask) ? OMX_TRUE : OMX_FALSE;
                     eRet = OMX_ErrorNone;
                 } else {
                     DEBUG_PRINT_ERROR("get_parameter: unsupported extradata index (0x%x)",
