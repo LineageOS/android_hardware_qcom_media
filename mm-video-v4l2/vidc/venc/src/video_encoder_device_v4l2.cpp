@@ -7330,10 +7330,10 @@ bool venc_dev::venc_set_hdr_info(const MasteringDisplay& mastering_disp_info,
     for (int i = 0; i < 3; i++) {
         int first_idx = 2*i+1;
         int second_idx = 2*i+2;
-        ctrl[first_idx].id = RGB_PRIMARY_TABLE[first_idx];
+        ctrl[first_idx].id = RGB_PRIMARY_TABLE[first_idx-1];
         ctrl[first_idx].value = mastering_disp_info.primaries.rgbPrimaries[i][0];
 
-        ctrl[second_idx].id = RGB_PRIMARY_TABLE[second_idx];
+        ctrl[second_idx].id = RGB_PRIMARY_TABLE[second_idx-1];
         ctrl[second_idx].value = mastering_disp_info.primaries.rgbPrimaries[i][1];
     }
 
