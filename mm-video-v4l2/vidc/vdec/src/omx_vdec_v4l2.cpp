@@ -1102,6 +1102,9 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool is_downscalar_enabled)
 
             if (dither_enable) {
                 dpb_color_format = V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_TP10_UBWC;
+                capture_capability = m_disable_ubwc_mode ?
+                            V4L2_PIX_FMT_NV12 : V4L2_PIX_FMT_NV12_UBWC;
+                capability_changed = true;
             } else {
                 drv_ctx.output_format = VDEC_YUV_FORMAT_NV12_TP10_UBWC;
                 capture_capability = V4L2_PIX_FMT_NV12_TP10_UBWC;
