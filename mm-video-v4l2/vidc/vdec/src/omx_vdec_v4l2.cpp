@@ -1055,13 +1055,6 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool is_downscalar_enabled)
     bool dither_enable = false;
     bool capability_changed = false;
 
-    // Check the component for its valid current state
-    if (!BITMASK_PRESENT(&m_flags ,OMX_COMPONENT_IDLE_PENDING) &&
-        !BITMASK_PRESENT(&m_flags, OMX_COMPONENT_OUTPUT_ENABLE_PENDING)) {
-        DEBUG_PRINT_LOW("Invalid state to decide on dpb-opb split");
-        return OMX_ErrorNone;
-    }
-
     // Downscalar is not supported
     is_downscalar_enabled = false;
 
@@ -1137,7 +1130,12 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool is_downscalar_enabled)
             return OMX_ErrorUnsupportedSetting;
         }
     }
-
+    // Check the component for its valid current state
+    if (!BITMASK_PRESENT(&m_flags ,OMX_COMPONENT_IDLE_PENDING) &&
+        !BITMASK_PRESENT(&m_flags, OMX_COMPONENT_OUTPUT_ENABLE_PENDING)) {
+        DEBUG_PRINT_LOW("Invalid state to decide on dpb-opb split");
+        return OMX_ErrorNone;
+    }
     eRet = set_dpb(enable_split, dpb_color_format);
     if (eRet) {
         DEBUG_PRINT_HIGH("Failed to set DPB buffer mode: %d", eRet);
