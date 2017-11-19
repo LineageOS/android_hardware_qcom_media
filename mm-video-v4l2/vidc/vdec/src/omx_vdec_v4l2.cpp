@@ -3642,8 +3642,12 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
             } else if (profileLevelType->nProfileIndex == 2) {
                 profileLevelType->eProfile = OMX_VIDEO_AVCProfileHigh;
             } else if (profileLevelType->nProfileIndex == 3) {
-                profileLevelType->eProfile = QOMX_VIDEO_AVCProfileConstrainedBaseline;
+                profileLevelType->eProfile = OMX_VIDEO_AVCProfileConstrainedBaseline;
             } else if (profileLevelType->nProfileIndex == 4) {
+                profileLevelType->eProfile = QOMX_VIDEO_AVCProfileConstrainedBaseline;
+            } else if (profileLevelType->nProfileIndex == 5) {
+                profileLevelType->eProfile = OMX_VIDEO_AVCProfileConstrainedHigh;
+            } else if (profileLevelType->nProfileIndex == 6) {
                 profileLevelType->eProfile = QOMX_VIDEO_AVCProfileConstrainedHigh;
             } else {
                 DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoProfileLevelQuerySupported nProfileIndex ret NoMore %u",
@@ -6610,30 +6614,47 @@ OMX_ERRORTYPE omx_vdec::free_output_buffer(OMX_BUFFERHEADERTYPE *bufferHdr)
 #endif
                 if (drv_ctx.ptr_outputbuffer[index].pmem_fd > 0
                     && !ouput_egl_buffers && !m_use_output_pmem) {
-                    if (drv_ctx.op_buf_map_info[index].free_buffer) {
+                    if (drv_ctx.op_buf_map_info != NULL) {
+                        if (drv_ctx.op_buf_map_info[index].free_buffer) {
+                            if (!secure_mode) {
+                                DEBUG_PRINT_LOW("unmap the output buffer fd = %d",
+                                        drv_ctx.ptr_outputbuffer[0].pmem_fd);
+                                DEBUG_PRINT_LOW("unmap the ouput buffer size=%u  address = %p",
+                                        (unsigned int)drv_ctx.op_buf_map_info[index].map_size,
+                                        drv_ctx.op_buf_map_info[index].base_address);
+                                munmap (drv_ctx.op_buf_map_info[index].base_address,
+                                        drv_ctx.op_buf_map_info[index].map_size);
+                            }
+                            close (drv_ctx.ptr_outputbuffer[index].pmem_fd);
+                            drv_ctx.ptr_outputbuffer[index].pmem_fd = -1;
+#ifdef USE_ION
+                            free_ion_memory(&drv_ctx.op_buf_ion_info[index]);
+#endif
+                        } else {
+                            drv_ctx.op_buf_ion_info[index].ion_device_fd = -1;
+                            drv_ctx.op_buf_ion_info[index].ion_alloc_data.handle = 0;
+                            drv_ctx.op_buf_ion_info[index].fd_ion_data.fd = -1;
+                        }
+                        drv_ctx.op_buf_map_info[index].free_buffer = false;
+                        drv_ctx.op_buf_map_info[index].base_address = NULL;
+                        drv_ctx.op_buf_map_info[index].map_size = 0;
+                        drv_ctx.op_buf_map_info[index].offset = 0;
+                    } else {
                         if (!secure_mode) {
                             DEBUG_PRINT_LOW("unmap the output buffer fd = %d",
-                                    drv_ctx.ptr_outputbuffer[0].pmem_fd);
+                                    drv_ctx.ptr_outputbuffer[index].pmem_fd);
                             DEBUG_PRINT_LOW("unmap the ouput buffer size=%u  address = %p",
-                                    (unsigned int)drv_ctx.op_buf_map_info[index].map_size,
-                                    drv_ctx.op_buf_map_info[index].base_address);
-                            munmap (drv_ctx.op_buf_map_info[index].base_address,
-                                    drv_ctx.op_buf_map_info[index].map_size);
+                                    (unsigned int)drv_ctx.ptr_outputbuffer[index].mmaped_size * drv_ctx.op_buf.actualcount,
+                                    drv_ctx.ptr_outputbuffer[index].bufferaddr);
+                            munmap (drv_ctx.ptr_outputbuffer[index].bufferaddr,
+                                    drv_ctx.ptr_outputbuffer[index].mmaped_size * drv_ctx.op_buf.actualcount);
                         }
                         close (drv_ctx.ptr_outputbuffer[index].pmem_fd);
                         drv_ctx.ptr_outputbuffer[index].pmem_fd = -1;
 #ifdef USE_ION
                         free_ion_memory(&drv_ctx.op_buf_ion_info[index]);
 #endif
-                    } else {
-                        drv_ctx.op_buf_ion_info[index].ion_device_fd = -1;
-                        drv_ctx.op_buf_ion_info[index].ion_alloc_data.handle = 0;
-                        drv_ctx.op_buf_ion_info[index].fd_ion_data.fd = -1;
                     }
-                    drv_ctx.op_buf_map_info[index].free_buffer = false;
-                    drv_ctx.op_buf_map_info[index].base_address = NULL;
-                    drv_ctx.op_buf_map_info[index].map_size = 0;
-                    drv_ctx.op_buf_map_info[index].offset = 0;
                 }
 #ifdef _ANDROID_
             }

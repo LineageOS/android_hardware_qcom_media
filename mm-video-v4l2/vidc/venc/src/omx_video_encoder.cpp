@@ -2020,6 +2020,7 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                     } else {
                         m_sParamAVC.nPFrames = pParam->nPFrames;
                         if ((m_sParamAVC.eProfile != OMX_VIDEO_AVCProfileBaseline) &&
+                            (m_sParamAVC.eProfile != (OMX_VIDEO_AVCPROFILETYPE) OMX_VIDEO_AVCProfileConstrainedBaseline) &&
                             (m_sParamAVC.eProfile != (OMX_VIDEO_AVCPROFILETYPE) QOMX_VIDEO_AVCProfileConstrainedBaseline))
                             m_sParamAVC.nBFrames = pParam->nBFrames;
                         else

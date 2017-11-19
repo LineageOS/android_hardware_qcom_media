@@ -2226,6 +2226,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                         return false;
                     } else {
                         if ((pParam->eProfile != OMX_VIDEO_AVCProfileBaseline) &&
+                            (pParam->eProfile != (OMX_VIDEO_AVCPROFILETYPE) OMX_VIDEO_AVCProfileConstrainedBaseline) &&
                             (pParam->eProfile != (OMX_VIDEO_AVCPROFILETYPE) QOMX_VIDEO_AVCProfileConstrainedBaseline)) {
                             if (pParam->nBFrames) {
                                 bFrames = pParam->nBFrames;
@@ -5306,9 +5307,11 @@ bool venc_dev::venc_set_profile_level(OMX_U32 eProfile,OMX_U32 eLevel)
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264) {
         if (eProfile == OMX_VIDEO_AVCProfileBaseline) {
             requested_profile.profile = V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE;
-        } else if(eProfile == QOMX_VIDEO_AVCProfileConstrainedBaseline) {
+        } else if(eProfile == QOMX_VIDEO_AVCProfileConstrainedBaseline ||
+                  eProfile == OMX_VIDEO_AVCProfileConstrainedBaseline) {
             requested_profile.profile = V4L2_MPEG_VIDEO_H264_PROFILE_CONSTRAINED_BASELINE;
-        } else if(eProfile == QOMX_VIDEO_AVCProfileConstrainedHigh) {
+        } else if(eProfile == QOMX_VIDEO_AVCProfileConstrainedHigh ||
+                  eProfile == OMX_VIDEO_AVCProfileConstrainedHigh) {
             requested_profile.profile = V4L2_MPEG_VIDEO_H264_PROFILE_CONSTRAINED_HIGH;
         } else if (eProfile == OMX_VIDEO_AVCProfileMain) {
             requested_profile.profile = V4L2_MPEG_VIDEO_H264_PROFILE_MAIN;
