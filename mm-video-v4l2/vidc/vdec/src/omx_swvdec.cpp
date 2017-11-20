@@ -4551,7 +4551,19 @@ OMX_ERRORTYPE omx_swvdec::flush(unsigned int port_index)
         {
             m_port_ip.flush_inprogress = OMX_TRUE;
 
-            // no separate SwVdec flush type for input
+            //for VTS test case IP flush , trigger flush all
+            // for IP flush, similar behavior is for hwcodecs
+            m_port_ip.flush_inprogress = OMX_TRUE;
+            m_port_op.flush_inprogress = OMX_TRUE;
+
+            swvdec_flush_type = SWVDEC_FLUSH_TYPE_ALL;
+
+            if ((retval_swvdec = swvdec_flush(m_swvdec_handle,
+                                              swvdec_flush_type)) !=
+                SWVDEC_STATUS_SUCCESS)
+            {
+                retval = retval_swvdec2omx(retval_swvdec);
+            }
         }
         else if (port_index == OMX_CORE_PORT_INDEX_OP)
         {
