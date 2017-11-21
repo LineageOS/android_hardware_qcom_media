@@ -1014,7 +1014,7 @@ OMX_ERRORTYPE omx_vdec::set_dpb(bool is_split_mode, int dpb_color_format)
          capture_capability == V4L2_PIX_FMT_NV12 ? "nv12":
          capture_capability == V4L2_PIX_FMT_NV12_UBWC ? "nv12_ubwc":
          capture_capability == V4L2_PIX_FMT_NV12_TP10_UBWC ? "nv12_10bit_ubwc":
-         capture_capability == V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010 ? "P010":
+         capture_capability == V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010_VENUS ? "P010":
          "unknown");
 
     ctrl[0].id = V4L2_CID_MPEG_VIDC_VIDEO_STREAM_OUTPUT_MODE;
@@ -1089,7 +1089,7 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool is_downscalar_enabled)
             dpb_color_format = V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_TP10_UBWC;
             if(is_flexible_format){ // if flexible formats are expected, QCom_P010 is set for 10bit cases here
                  drv_ctx.output_format = VDEC_YUV_FORMAT_P010_VENUS;
-                 capture_capability = V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010;
+                 capture_capability = V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010_VENUS;
                  capability_changed = true;
             }
         } else  if (m_progressive == MSM_VIDC_PIC_STRUCT_PROGRESSIVE) {
