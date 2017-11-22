@@ -855,6 +855,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_smoothstreaming_width = 0;
     m_smoothstreaming_height = 0;
     m_decode_order_mode = false;
+    m_perf_control.send_hint_to_mpctl(true);
     m_client_req_turbo_mode = false;
     is_q6_platform = false;
     m_input_pass_buffer_fd = false;
@@ -1001,6 +1002,7 @@ omx_vdec::~omx_vdec()
         dec_time.end();
     }
     DEBUG_PRINT_INFO("Exit OMX vdec Destructor: fd=%d",drv_ctx.video_driver_fd);
+    m_perf_control.send_hint_to_mpctl(false);
 }
 
 OMX_ERRORTYPE omx_vdec::set_dpb(bool is_split_mode, int dpb_color_format)
@@ -4179,6 +4181,7 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                            eRet = OMX_ErrorHardware;
                                            break;
                                        }
+                                       m_perf_control.request_cores(frm_int);
                                    }
 
                                    if (drv_ctx.video_resolution.frame_height !=
@@ -9324,6 +9327,7 @@ void omx_vdec::set_frame_rate(OMX_S64 act_timestamp)
                 DEBUG_PRINT_LOW("set_frame_rate: frm_int(%u) fps(%f)",
                         (unsigned int)frm_int, drv_ctx.frame_rate.fps_numerator /
                         (float)drv_ctx.frame_rate.fps_denominator);
+                m_perf_control.request_cores(frm_int);
                 /* We need to report the difference between this FBD and the previous FBD
                  * back to the driver for clock scaling purposes. */
                 struct v4l2_outputparm oparm;
@@ -11616,6 +11620,112 @@ void omx_vdec::send_codec_config() {
         }
         pthread_mutex_unlock(&m_lock);
     }
+}
+
+omx_vdec::perf_control::perf_control()
+{
+    m_perf_lib = NULL;
+    m_perf_handle = 0;
+    m_perf_lock_acquire = NULL;
+    m_perf_lock_release = NULL;
+}
+
+omx_vdec::perf_control::~perf_control()
+{
+    if (m_perf_handle != 0 && m_perf_lock_release) {
+        DEBUG_PRINT_LOW("NOTE2: release perf lock");
+        m_perf_lock_release(m_perf_handle);
+    }
+    if (m_perf_lib) {
+        dlclose(m_perf_lib);
+    }
+}
+
+struct omx_vdec::perf_control::mpctl_stats omx_vdec::perf_control::mpctl_obj = {0, 0, 0};
+
+omx_vdec::perf_lock omx_vdec::perf_control::m_perf_lock;
+
+void omx_vdec::perf_control::send_hint_to_mpctl(bool state)
+{
+    if (load_lib() == false) {
+       return;
+    }
+    m_perf_lock.lock();
+    /* 0x4401 maps to video decode playback hint
+     * in perflock, enum number is 44 and state
+     * being sent on perflock acquire is 01 (true)
+     */
+    int arg = 0x4401;
+
+    if (state == true) {
+        mpctl_obj.vid_inst_count++;
+    } else if (state == false) {
+        mpctl_obj.vid_inst_count--;
+    }
+
+    if (m_perf_lock_acquire && mpctl_obj.vid_inst_count == 1 && mpctl_obj.vid_acquired == false) {
+        mpctl_obj.vid_disp_handle = m_perf_lock_acquire(0, 0, &arg, sizeof(arg) / sizeof(int));
+        mpctl_obj.vid_acquired = true;
+        DEBUG_PRINT_INFO("Video slvp perflock acquired");
+    } else if (m_perf_lock_release && (mpctl_obj.vid_inst_count == 0 || mpctl_obj.vid_inst_count > 1) && mpctl_obj.vid_acquired == true) {
+        m_perf_lock_release(mpctl_obj.vid_disp_handle);
+        mpctl_obj.vid_acquired = false;
+        DEBUG_PRINT_INFO("Video slvp perflock released");
+    }
+    m_perf_lock.unlock();
+}
+
+void omx_vdec::perf_control::request_cores(int frame_duration_us)
+{
+    if (frame_duration_us > MIN_FRAME_DURATION_FOR_PERF_REQUEST_US) {
+        return;
+    }
+    bool retVal = load_lib();
+    if (retVal && m_perf_lock_acquire && m_perf_handle == 0) {
+        int arg[2];
+        arg[0] = 0x41000000;
+        arg[1] = 0x4;
+        m_perf_handle = m_perf_lock_acquire(m_perf_handle, 0, arg, sizeof(arg)/sizeof(int));
+        if (m_perf_handle) {
+            DEBUG_PRINT_HIGH("perf lock acquired");
+        }
+    }
+}
+
+bool omx_vdec::perf_control::load_lib()
+{
+    char perf_lib_path[PROPERTY_VALUE_MAX] = {0};
+    if (m_perf_lib)
+        return true;
+
+    if((property_get("ro.vendor.extension_library", perf_lib_path, NULL) <= 0)) {
+        DEBUG_PRINT_ERROR("vendor library not set in ro.vendor.extension_library");
+        goto handle_err;
+    }
+
+    if ((m_perf_lib = dlopen(perf_lib_path, RTLD_NOW)) == NULL) {
+        DEBUG_PRINT_ERROR("Failed to open %s : %s",perf_lib_path, dlerror());
+        goto handle_err;
+    } else {
+        m_perf_lock_acquire = (perf_lock_acquire_t)dlsym(m_perf_lib, "perf_lock_acq");
+        if (m_perf_lock_acquire == NULL) {
+            DEBUG_PRINT_ERROR("Failed to load symbol: perf_lock_acq");
+            goto handle_err;
+        }
+        m_perf_lock_release = (perf_lock_release_t)dlsym(m_perf_lib, "perf_lock_rel");
+        if (m_perf_lock_release == NULL) {
+            DEBUG_PRINT_ERROR("Failed to load symbol: perf_lock_rel");
+            goto handle_err;
+        }
+    }
+    return true;
+
+handle_err:
+    if (m_perf_lib) {
+        dlclose(m_perf_lib);
+    }
+    m_perf_lib = NULL;
+    return false;
 }
 
 OMX_ERRORTYPE omx_vdec::enable_adaptive_playback(unsigned long nMaxFrameWidth,
