@@ -4146,7 +4146,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
         int extradata_index = venc_get_index_from_fd(input_extradata_info.m_ion_dev,fd);
         if (extradata_index < 0 ) {
                 DEBUG_PRINT_ERROR("Extradata index calculation went wrong for fd = %d", fd);
-                return OMX_ErrorBadParameter;
+                return false;
             }
 
         plane[extra_idx].bytesused = 0;
