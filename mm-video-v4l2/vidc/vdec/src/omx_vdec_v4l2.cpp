@@ -9023,6 +9023,17 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
         portDefn->nBufferCountMin = MIN_NUM_INPUT_OUTPUT_EXTRADATA_BUFFERS;
         portDefn->nBufferCountActual = MIN_NUM_INPUT_OUTPUT_EXTRADATA_BUFFERS;
         portDefn->eDir =  OMX_DirOutput;
+        portDefn->format.video.nFrameHeight =  drv_ctx.video_resolution.frame_height;
+        portDefn->format.video.nFrameWidth  =  drv_ctx.video_resolution.frame_width;
+        portDefn->format.video.nStride  = drv_ctx.video_resolution.stride;
+        portDefn->format.video.nSliceHeight = drv_ctx.video_resolution.scan_lines;
+        portDefn->format.video.eCompressionFormat = OMX_VIDEO_CodingUnused;
+        portDefn->format.video.eColorFormat = OMX_COLOR_FormatUnused;
+        DEBUG_PRINT_LOW(" get_parameter: Port idx %d nBufSize %u nBufCnt %u",
+                (int)portDefn->nPortIndex,
+                (unsigned int)portDefn->nBufferSize,
+                (unsigned int)portDefn->nBufferCountActual);
+        return eRet;
     } else {
         portDefn->eDir = OMX_DirMax;
         DEBUG_PRINT_LOW(" get_parameter: Bad Port idx %d",
