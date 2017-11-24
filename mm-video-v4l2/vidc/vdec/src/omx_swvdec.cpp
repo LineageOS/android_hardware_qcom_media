@@ -2839,14 +2839,23 @@ OMX_ERRORTYPE omx_swvdec::get_port_definition(
         p_port_def->bEnabled           = m_port_ip.enabled;
         p_port_def->bPopulated         = m_port_ip.populated;
 
+        // VTS uses input port dimensions to set OP dimensions
+        if ((retval = get_frame_dimensions_swvdec()) != OMX_ErrorNone)
+        {
+            goto get_port_definition_exit;
+        }
+
+        p_port_def->format.video.nFrameWidth  = m_frame_dimensions.width;
+        p_port_def->format.video.nFrameHeight = m_frame_dimensions.height;
+
         OMX_SWVDEC_LOG_HIGH("port index %d: "
-                            "count actual %d, count min %d, size %d",
+                            "count actual %d, count min %d, size %d, %d x %d",
                             p_port_def->nPortIndex,
                             p_port_def->nBufferCountActual,
                             p_port_def->nBufferCountMin,
-                            p_port_def->nBufferSize);
-
-        // frame dimensions & attributes don't apply to input port
+                            p_port_def->nBufferSize,
+                            p_port_def->format.video.nFrameWidth,
+                            p_port_def->format.video.nFrameHeight);
 
         p_port_def->format.video.eColorFormat       = OMX_COLOR_FormatUnused;
         p_port_def->format.video.eCompressionFormat = m_omx_video_codingtype;
