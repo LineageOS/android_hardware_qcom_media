@@ -6969,6 +6969,13 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
         return OMX_ErrorNone;
     }
 
+    if (m_error_propogated == true) {
+        DEBUG_PRINT_LOW("Return buffer in error state");
+        post_event ((unsigned long)buffer,VDEC_S_SUCCESS,
+                OMX_COMPONENT_GENERATE_EBD);
+        return OMX_ErrorNone;
+    }
+
     auto_lock l(buf_lock);
     temp_buffer = (struct vdec_bufferpayload *)buffer->pInputPortPrivate;
 
@@ -7268,6 +7275,13 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
     /*Return back the output buffer to client*/
     if (m_out_bEnabled != OMX_TRUE || output_flush_progress == true || in_reconfig) {
         DEBUG_PRINT_LOW("Output Buffers return flush/disable condition");
+        buffer->nFilledLen = 0;
+        print_omx_buffer("FBD in FTBProxy", buffer);
+        m_cb.FillBufferDone (hComp,m_app_data,buffer);
+        return OMX_ErrorNone;
+    }
+    if (m_error_propogated == true) {
+        DEBUG_PRINT_LOW("Return buffers in error state");
         buffer->nFilledLen = 0;
         print_omx_buffer("FBD in FTBProxy", buffer);
         m_cb.FillBufferDone (hComp,m_app_data,buffer);
