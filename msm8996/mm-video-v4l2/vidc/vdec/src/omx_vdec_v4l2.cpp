@@ -4747,12 +4747,11 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     if (!rc) {
                         DEBUG_PRINT_HIGH("%s buffer mode",
                            (metabuffer->bStoreMetaData == true)? "Enabled dynamic" : "Disabled dynamic");
-                               dynamic_buf_mode = metabuffer->bStoreMetaData;
                     } else {
                         DEBUG_PRINT_ERROR("Failed to %s buffer mode",
                            (metabuffer->bStoreMetaData == true)? "enable dynamic" : "disable dynamic");
-                        eRet = OMX_ErrorUnsupportedSetting;
                     }
+                    dynamic_buf_mode = metabuffer->bStoreMetaData;
                 } else {
                     DEBUG_PRINT_ERROR(
                        "OMX_QcomIndexParamVideoMetaBufferMode not supported for port: %u",
