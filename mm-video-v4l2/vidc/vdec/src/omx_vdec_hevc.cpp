@@ -850,23 +850,23 @@ void omx_vdec::process_event_cb(void *ctxt, unsigned char id)
                     }
                     break;
                 case OMX_COMPONENT_GENERATE_ETB_ARBITRARY:
-                    if (pThis->empty_this_buffer_proxy_arbitrary((OMX_HANDLETYPE)p1,\
-                                (OMX_BUFFERHEADERTYPE *)p2) != OMX_ErrorNone) {
+                    if (pThis->empty_this_buffer_proxy_arbitrary((OMX_HANDLETYPE)(intptr_t)p1,\
+                                (OMX_BUFFERHEADERTYPE *)(intptr_t)p2) != OMX_ErrorNone) {
                         DEBUG_PRINT_ERROR("empty_this_buffer_proxy_arbitrary failure");
                         pThis->omx_report_error ();
                     }
                     break;
                 case OMX_COMPONENT_GENERATE_ETB:
-                    if (pThis->empty_this_buffer_proxy((OMX_HANDLETYPE)p1,\
-                                (OMX_BUFFERHEADERTYPE *)p2) != OMX_ErrorNone) {
+                    if (pThis->empty_this_buffer_proxy((OMX_HANDLETYPE)(intptr_t)p1,\
+                                (OMX_BUFFERHEADERTYPE *)(intptr_t)p2) != OMX_ErrorNone) {
                         DEBUG_PRINT_ERROR("empty_this_buffer_proxy failure");
                         pThis->omx_report_error ();
                     }
                     break;
 
                 case OMX_COMPONENT_GENERATE_FTB:
-                    if ( pThis->fill_this_buffer_proxy((OMX_HANDLETYPE)p1,\
-                                (OMX_BUFFERHEADERTYPE *)p2) != OMX_ErrorNone) {
+                    if ( pThis->fill_this_buffer_proxy((OMX_HANDLETYPE)(intptr_t)p1,\
+                                (OMX_BUFFERHEADERTYPE *)(intptr_t)p2) != OMX_ErrorNone) {
                         DEBUG_PRINT_ERROR("fill_this_buffer_proxy failure");
                         pThis->omx_report_error ();
                     }
@@ -886,14 +886,14 @@ void omx_vdec::process_event_cb(void *ctxt, unsigned char id)
                         if (p2 == VDEC_S_INPUT_BITSTREAM_ERR && p1) {
                             pThis->m_inp_err_count++;
                             pThis->time_stamp_dts.remove_time_stamp(
-                                    ((OMX_BUFFERHEADERTYPE *)p1)->nTimeStamp,
+                                    ((OMX_BUFFERHEADERTYPE *)(intptr_t)p1)->nTimeStamp,
                                     (pThis->drv_ctx.interlace != VDEC_InterlaceFrameProgressive)
                                     ?true:false);
                         } else {
                             pThis->m_inp_err_count = 0;
                         }
                         if ( pThis->empty_buffer_done(&pThis->m_cmp,
-                                    (OMX_BUFFERHEADERTYPE *)p1) != OMX_ErrorNone) {
+                                    (OMX_BUFFERHEADERTYPE *)(intptr_t)p1) != OMX_ErrorNone) {
                             DEBUG_PRINT_ERROR("empty_buffer_done failure");
                             pThis->omx_report_error ();
                         }
@@ -905,7 +905,7 @@ void omx_vdec::process_event_cb(void *ctxt, unsigned char id)
                     break;
                 case OMX_COMPONENT_GENERATE_INFO_FIELD_DROPPED:
                     {
-                        int64_t *timestamp = (int64_t *)p1;
+                        int64_t *timestamp = (int64_t *)(intptr_t)p1;
                         if (p1) {
                             pThis->time_stamp_dts.remove_time_stamp(*timestamp,
                                     (pThis->drv_ctx.interlace != VDEC_InterlaceFrameProgressive)
@@ -919,7 +919,7 @@ void omx_vdec::process_event_cb(void *ctxt, unsigned char id)
                         DEBUG_PRINT_ERROR("OMX_COMPONENT_GENERATE_FBD failure");
                         pThis->omx_report_error ();
                     } else if ( pThis->fill_buffer_done(&pThis->m_cmp,
-                                (OMX_BUFFERHEADERTYPE *)p1) != OMX_ErrorNone ) {
+                                (OMX_BUFFERHEADERTYPE *)(intptr_t)p1) != OMX_ErrorNone ) {
                         DEBUG_PRINT_ERROR("fill_buffer_done failure");
                         pThis->omx_report_error ();
                     }
@@ -2178,9 +2178,9 @@ bool omx_vdec::execute_output_flush()
         m_ftb_q.pop_entry(&p1,&p2,&ident);
         DEBUG_PRINT_LOW("ID(%x) P1(%x) P2(%x)", ident, p1, p2);
         if (ident == m_fill_output_msg ) {
-            m_cb.FillBufferDone(&m_cmp, m_app_data, (OMX_BUFFERHEADERTYPE *)p2);
+            m_cb.FillBufferDone(&m_cmp, m_app_data, (OMX_BUFFERHEADERTYPE *)(intptr_t)p2);
         } else if (ident == OMX_COMPONENT_GENERATE_FBD) {
-            fill_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p1);
+            fill_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)(intptr_t)p1);
         }
     }
     pthread_mutex_unlock(&m_lock);
@@ -2222,17 +2222,17 @@ bool omx_vdec::execute_input_flush()
         m_etb_q.pop_entry(&p1,&p2,&ident);
 
         if (ident == OMX_COMPONENT_GENERATE_ETB_ARBITRARY) {
-            DEBUG_PRINT_LOW("Flush Input Heap Buffer %p",(OMX_BUFFERHEADERTYPE *)p2);
-            m_cb.EmptyBufferDone(&m_cmp ,m_app_data, (OMX_BUFFERHEADERTYPE *)p2);
+            DEBUG_PRINT_LOW("Flush Input Heap Buffer %p",(OMX_BUFFERHEADERTYPE *)(intptr_t)p2);
+            m_cb.EmptyBufferDone(&m_cmp ,m_app_data, (OMX_BUFFERHEADERTYPE *)(intptr_t)p2);
         } else if (ident == OMX_COMPONENT_GENERATE_ETB) {
             pending_input_buffers++;
             DEBUG_PRINT_LOW("Flush Input OMX_COMPONENT_GENERATE_ETB %p, pending_input_buffers %d",
-                    (OMX_BUFFERHEADERTYPE *)p2, pending_input_buffers);
-            empty_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p2);
+                    (OMX_BUFFERHEADERTYPE *)(intptr_t)p2, pending_input_buffers);
+            empty_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)(intptr_t)p2);
         } else if (ident == OMX_COMPONENT_GENERATE_EBD) {
             DEBUG_PRINT_LOW("Flush Input OMX_COMPONENT_GENERATE_EBD %p",
-                    (OMX_BUFFERHEADERTYPE *)p1);
-            empty_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p1);
+                    (OMX_BUFFERHEADERTYPE *)(intptr_t)p1);
+            empty_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)(intptr_t)p1);
         }
     }
     time_stamp_dts.flush_timestamp();
@@ -2254,7 +2254,7 @@ bool omx_vdec::execute_input_flush()
 
         while (m_input_pending_q.m_size) {
             m_input_pending_q.pop_entry(&p1,&p2,&ident);
-            m_cb.EmptyBufferDone(&m_cmp ,m_app_data, (OMX_BUFFERHEADERTYPE *)p1);
+            m_cb.EmptyBufferDone(&m_cmp ,m_app_data, (OMX_BUFFERHEADERTYPE *)(intptr_t)p1);
         }
 
         if (psource_frame) {
@@ -2264,7 +2264,7 @@ bool omx_vdec::execute_input_flush()
 
         if (pdest_frame) {
             pdest_frame->nFilledLen = 0;
-            m_input_free_q.insert_entry((unsigned) pdest_frame, (unsigned int)NULL,
+            m_input_free_q.insert_entry((uintptr_t) pdest_frame, (unsigned int)NULL,
                     (unsigned int)NULL);
             pdest_frame = NULL;
         }
@@ -3945,7 +3945,7 @@ OMX_ERRORTYPE  omx_vdec::use_input_heap_buffers(
         *bufferHdr = &m_inp_heap_ptr[m_in_alloc_cnt];
         eRet = allocate_input_buffer(hComp, &m_phdr_pmem_ptr[m_in_alloc_cnt], port, appData, bytes);
         DEBUG_PRINT_HIGH("Heap buffer(%p) Pmem buffer(%p)", *bufferHdr, m_phdr_pmem_ptr[m_in_alloc_cnt]);
-        if (!m_input_free_q.insert_entry((unsigned)m_phdr_pmem_ptr[m_in_alloc_cnt],
+        if (!m_input_free_q.insert_entry((uintptr_t)m_phdr_pmem_ptr[m_in_alloc_cnt],
                     (unsigned)NULL, (unsigned)NULL)) {
             DEBUG_PRINT_ERROR("ERROR:Free_q is full");
             return OMX_ErrorInsufficientResources;
@@ -4200,7 +4200,7 @@ OMX_ERRORTYPE omx_vdec::allocate_input_heap_buffer(OMX_HANDLETYPE       hComp,
         eRet = allocate_input_buffer(hComp,&m_phdr_pmem_ptr [i],port,appData,bytes);
         DEBUG_PRINT_LOW("Address of Pmem Buffer %p",m_phdr_pmem_ptr[i]);
         /*Add the Buffers to freeq*/
-        if (!m_input_free_q.insert_entry((unsigned)m_phdr_pmem_ptr[i],
+        if (!m_input_free_q.insert_entry((uintptr_t)m_phdr_pmem_ptr[i],
                     (unsigned)NULL, (unsigned)NULL)) {
             DEBUG_PRINT_ERROR("ERROR:Free_q is full");
             return OMX_ErrorInsufficientResources;
@@ -4381,7 +4381,7 @@ OMX_ERRORTYPE  omx_vdec::allocate_input_buffer(
         BITMASK_SET(&m_inp_bm_count,i);
         DEBUG_PRINT_LOW("Buffer address %p of pmem",*bufferHdr);
         if (secure_mode)
-            input->pBuffer = (OMX_U8 *)drv_ctx.ptr_inputbuffer [i].pmem_fd;
+            input->pBuffer = (OMX_U8 *)(uintptr_t)drv_ctx.ptr_inputbuffer [i].pmem_fd;
         else
             input->pBuffer           = (OMX_U8 *)buf_addr;
         input->nSize             = sizeof(OMX_BUFFERHEADERTYPE);
@@ -5021,12 +5021,12 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
     DEBUG_PRINT_LOW("[ETB] BHdr(%p) pBuf(%p) nTS(%lld) nFL(%lu)",
             buffer, buffer->pBuffer, buffer->nTimeStamp, buffer->nFilledLen);
     if (arbitrary_bytes) {
-        post_event ((unsigned)hComp,(unsigned)buffer,
+        post_event ((uintptr_t)hComp,(uintptr_t)buffer,
                 OMX_COMPONENT_GENERATE_ETB_ARBITRARY);
     } else {
         if (!(client_extradata & OMX_TIMEINFO_EXTRADATA))
             set_frame_rate(buffer->nTimeStamp);
-        post_event ((unsigned)hComp,(unsigned)buffer,OMX_COMPONENT_GENERATE_ETB);
+        post_event ((uintptr_t)hComp,(uintptr_t)buffer,OMX_COMPONENT_GENERATE_ETB);
     }
     return OMX_ErrorNone;
 }
@@ -5078,7 +5078,7 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE         h
     if (!arbitrary_bytes && (buffer->nFilledLen == 0) &&
             ((buffer->nFlags & OMX_BUFFERFLAG_EOS) == 0)) {
         DEBUG_PRINT_HIGH("return zero legth buffer");
-        post_event ((unsigned int)buffer,VDEC_S_SUCCESS,
+        post_event ((uintptr_t)buffer,VDEC_S_SUCCESS,
                 OMX_COMPONENT_GENERATE_EBD);
         return OMX_ErrorNone;
     }
@@ -5108,7 +5108,7 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE         h
 
        ) {
         DEBUG_PRINT_LOW("Flush in progress return buffer ");
-        post_event ((unsigned int)buffer,VDEC_S_SUCCESS,
+        post_event ((uintptr_t)buffer,VDEC_S_SUCCESS,
                 OMX_COMPONENT_GENERATE_EBD);
         return OMX_ErrorNone;
     }
@@ -5255,7 +5255,7 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE         h
             /*TODO: How to handle this case */
             DEBUG_PRINT_ERROR("Failed to call streamon on OUTPUT");
             DEBUG_PRINT_LOW("If Stream on failed no buffer should be queued");
-            post_event ((unsigned int)buffer,VDEC_S_SUCCESS,
+            post_event ((uintptr_t)buffer,VDEC_S_SUCCESS,
                     OMX_COMPONENT_GENERATE_EBD);
             return OMX_ErrorBadParameter;
         }
@@ -5310,7 +5310,7 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer(OMX_IN OMX_HANDLETYPE  hComp,
     }
 
     DEBUG_PRINT_LOW("[FTB] bufhdr = %p, bufhdr->pBuffer = %p", buffer, buffer->pBuffer);
-    post_event((unsigned) hComp, (unsigned)buffer, m_fill_output_msg);
+    post_event((uintptr_t)hComp, (uintptr_t)buffer, m_fill_output_msg);
     return OMX_ErrorNone;
 }
 /* ======================================================================
@@ -5952,7 +5952,7 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
         }
         if (pdest_frame) {
             pdest_frame->nFilledLen = 0;
-            m_input_free_q.insert_entry((unsigned) pdest_frame,(unsigned)NULL,
+            m_input_free_q.insert_entry((uintptr_t)pdest_frame,(unsigned)NULL,
                     (unsigned)NULL);
             pdest_frame = NULL;
         }
@@ -6094,7 +6094,7 @@ OMX_ERRORTYPE omx_vdec::empty_buffer_done(OMX_HANDLETYPE         hComp,
         } else {
             DEBUG_PRINT_LOW("Push buffer into freeq address of Buffer %p",buffer);
             buffer->nFilledLen = 0;
-            if (!m_input_free_q.insert_entry((unsigned)buffer,
+            if (!m_input_free_q.insert_entry((uintptr_t)buffer,
                         (unsigned)NULL, (unsigned)NULL)) {
                 DEBUG_PRINT_ERROR("ERROR:i/p free Queue is FULL Error");
             }
@@ -6174,7 +6174,7 @@ int omx_vdec::async_message_process (void *context, void* message)
                 vdec_msg->status_code = VDEC_S_EFATAL;
             }
 
-            omx->post_event ((unsigned int)omxhdr,vdec_msg->status_code,
+            omx->post_event ((uintptr_t)omxhdr,vdec_msg->status_code,
                     OMX_COMPONENT_GENERATE_EBD);
             break;
         case VDEC_MSG_EVT_INFO_FIELD_DROPPED:
@@ -6182,7 +6182,7 @@ int omx_vdec::async_message_process (void *context, void* message)
             timestamp = (int64_t *) malloc(sizeof(int64_t));
             if (timestamp) {
                 *timestamp = vdec_msg->msgdata.output_frame.time_stamp;
-                omx->post_event ((unsigned int)timestamp, vdec_msg->status_code,
+                omx->post_event ((uintptr_t)timestamp, vdec_msg->status_code,
                         OMX_COMPONENT_GENERATE_INFO_FIELD_DROPPED);
                 DEBUG_PRINT_HIGH("Field dropped time stamp is %lld",
                         vdec_msg->msgdata.output_frame.time_stamp);
@@ -6250,7 +6250,7 @@ int omx_vdec::async_message_process (void *context, void* message)
                                 vdec_msg->msgdata.output_frame.len);
                 } else
                     omxhdr->nFilledLen = 0;
-                omx->post_event ((unsigned int)omxhdr, vdec_msg->status_code,
+                omx->post_event ((uintptr_t)omxhdr, vdec_msg->status_code,
                         OMX_COMPONENT_GENERATE_FBD);
             } else if (vdec_msg->msgdata.output_frame.flags & OMX_BUFFERFLAG_EOS)
                 omx->post_event ((unsigned int)NULL, vdec_msg->status_code,
@@ -6319,7 +6319,7 @@ OMX_ERRORTYPE omx_vdec::empty_this_buffer_proxy_arbitrary (
         push_input_buffer (hComp);
     } else {
         DEBUG_PRINT_LOW("Push the source buffer into pendingq %p",buffer);
-        if (!m_input_pending_q.insert_entry((unsigned)buffer, (unsigned)NULL,
+        if (!m_input_pending_q.insert_entry((uintptr_t)buffer, (unsigned)NULL,
                     (unsigned)NULL)) {
             return OMX_ErrorBadParameter;
         }
@@ -6340,7 +6340,7 @@ OMX_ERRORTYPE omx_vdec::push_input_buffer (OMX_HANDLETYPE hComp)
             DEBUG_PRINT_LOW("Get a Destination buffer from the queue");
             if (m_input_free_q.m_size) {
                 m_input_free_q.pop_entry(&address,&p2,&id);
-                pdest_frame = (OMX_BUFFERHEADERTYPE *)address;
+                pdest_frame = (OMX_BUFFERHEADERTYPE *)(uintptr_t)address;
                 pdest_frame->nFilledLen = 0;
                 pdest_frame->nTimeStamp = LLONG_MAX;
                 DEBUG_PRINT_LOW("Address of Pmem Buffer %p",pdest_frame);
@@ -6352,7 +6352,7 @@ OMX_ERRORTYPE omx_vdec::push_input_buffer (OMX_HANDLETYPE hComp)
             DEBUG_PRINT_LOW("Get a source buffer from the queue");
             if (m_input_pending_q.m_size) {
                 m_input_pending_q.pop_entry(&address,&p2,&id);
-                psource_frame = (OMX_BUFFERHEADERTYPE *)address;
+                psource_frame = (OMX_BUFFERHEADERTYPE *)(uintptr_t)address;
                 DEBUG_PRINT_LOW("Next source Buffer %p time stamp %d",psource_frame,
                         psource_frame->nTimeStamp);
                 DEBUG_PRINT_LOW("Next source Buffer flag %d length %d",
@@ -6437,12 +6437,12 @@ OMX_ERRORTYPE omx_vdec::push_input_sc_codec(OMX_HANDLETYPE hComp)
 
                 if (m_input_free_q.m_size) {
                     m_input_free_q.pop_entry(&address,&p2,&id);
-                    pdest_frame = (OMX_BUFFERHEADERTYPE *) address;
+                    pdest_frame = (OMX_BUFFERHEADERTYPE *)(uintptr_t)address;
                     pdest_frame->nFilledLen = 0;
                 }
             } else if (!(psource_frame->nFlags & OMX_BUFFERFLAG_EOS)) {
                 DEBUG_PRINT_ERROR("Zero len buffer return back to POOL");
-                m_input_free_q.insert_entry((unsigned) pdest_frame, (unsigned)NULL,
+                m_input_free_q.insert_entry((uintptr_t)pdest_frame, (unsigned)NULL,
                         (unsigned)NULL);
                 pdest_frame = NULL;
             }
@@ -6484,7 +6484,7 @@ OMX_ERRORTYPE omx_vdec::push_input_sc_codec(OMX_HANDLETYPE hComp)
             if (m_input_pending_q.m_size) {
                 DEBUG_PRINT_LOW("Pull Next source Buffer %p",psource_frame);
                 m_input_pending_q.pop_entry(&address,&p2,&id);
-                psource_frame = (OMX_BUFFERHEADERTYPE *) address;
+                psource_frame = (OMX_BUFFERHEADERTYPE *) (uintptr_t)address;
                 DEBUG_PRINT_LOW("Next source Buffer %p time stamp %d",psource_frame,
                         psource_frame->nTimeStamp);
                 DEBUG_PRINT_LOW("Next source Buffer flag %d length %d",
@@ -6632,7 +6632,7 @@ OMX_ERRORTYPE omx_vdec::push_input_h264 (OMX_HANDLETYPE hComp)
                     pdest_frame = NULL;
                     if (m_input_free_q.m_size) {
                         m_input_free_q.pop_entry(&address,&p2,&id);
-                        pdest_frame = (OMX_BUFFERHEADERTYPE *) address;
+                        pdest_frame = (OMX_BUFFERHEADERTYPE *)(uintptr_t)address;
                         DEBUG_PRINT_LOW("Pop the next pdest_buffer %p",pdest_frame);
                         pdest_frame->nFilledLen = 0;
                         pdest_frame->nFlags = 0;
@@ -6699,7 +6699,7 @@ OMX_ERRORTYPE omx_vdec::push_input_h264 (OMX_HANDLETYPE hComp)
         if (m_input_pending_q.m_size) {
             DEBUG_PRINT_LOW("Pull Next source Buffer %p",psource_frame);
             m_input_pending_q.pop_entry(&address,&p2,&id);
-            psource_frame = (OMX_BUFFERHEADERTYPE *) address;
+            psource_frame = (OMX_BUFFERHEADERTYPE *) (uintptr_t)address;
             DEBUG_PRINT_LOW("Next source Buffer flag %d src length %d",
                     psource_frame->nFlags,psource_frame->nFilledLen);
         }
@@ -6808,7 +6808,7 @@ OMX_ERRORTYPE omx_vdec::push_input_hevc (OMX_HANDLETYPE hComp)
                     pdest_frame = NULL;
                     if (m_input_free_q.m_size) {
                         m_input_free_q.pop_entry(&address,&p2,&id);
-                        pdest_frame = (OMX_BUFFERHEADERTYPE *) address;
+                        pdest_frame = (OMX_BUFFERHEADERTYPE *)(uintptr_t) address;
                         DEBUG_PRINT_LOW("pop the next pdest_buffer %p",pdest_frame);
                         pdest_frame->nFilledLen = 0;
                         pdest_frame->nFlags = 0;
@@ -6863,7 +6863,7 @@ OMX_ERRORTYPE omx_vdec::push_input_hevc (OMX_HANDLETYPE hComp)
         psource_frame = NULL;
         if (m_input_pending_q.m_size) {
             m_input_pending_q.pop_entry(&address,&p2,&id);
-            psource_frame = (OMX_BUFFERHEADERTYPE *) address;
+            psource_frame = (OMX_BUFFERHEADERTYPE *) (uintptr_t)address;
             DEBUG_PRINT_LOW("Next source Buffer flag %d nFilledLen %d, nTimeStamp %lld",
                     psource_frame->nFlags,psource_frame->nFilledLen, psource_frame->nTimeStamp);
         }
@@ -7561,14 +7561,14 @@ void omx_vdec::complete_pending_buffer_done_cbs()
         pending_bd_q.pop_entry(&p1,&p2,&ident);
         switch (ident) {
             case OMX_COMPONENT_GENERATE_EBD:
-                if (empty_buffer_done(&m_cmp, (OMX_BUFFERHEADERTYPE *)p1) != OMX_ErrorNone) {
+                if (empty_buffer_done(&m_cmp, (OMX_BUFFERHEADERTYPE *)(uintptr_t)p1) != OMX_ErrorNone) {
                     DEBUG_PRINT_ERROR("ERROR: empty_buffer_done() failed!");
                     omx_report_error ();
                 }
                 break;
 
             case OMX_COMPONENT_GENERATE_FBD:
-                if (fill_buffer_done(&m_cmp, (OMX_BUFFERHEADERTYPE *)p1) != OMX_ErrorNone ) {
+                if (fill_buffer_done(&m_cmp, (OMX_BUFFERHEADERTYPE *)(uintptr_t)p1) != OMX_ErrorNone ) {
                     DEBUG_PRINT_ERROR("ERROR: fill_buffer_done() failed!");
                     omx_report_error ();
                 }
@@ -7639,7 +7639,7 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
         return;
     }
     p_extra = (OMX_OTHER_EXTRADATATYPE *)
-        ((unsigned)(pBuffer + p_buf_hdr->nOffset + p_buf_hdr->nFilledLen + 3)&(~3));
+        ((uintptr_t)(pBuffer + p_buf_hdr->nOffset + p_buf_hdr->nFilledLen + 3)&(~3));
     char *p_extradata = drv_ctx.extradata_info.uaddr + buf_index * drv_ctx.extradata_info.buffer_size;
     if ((OMX_U8*)p_extra > (pBuffer + p_buf_hdr->nAllocLen))
         p_extra = NULL;
@@ -8461,7 +8461,7 @@ OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::allocate_buffers_color_conve
             op_buf_ion_info[i].ion_device_fd,buffer_size_req,
             pmem_baseaddress[i],op_buf_ion_info[i].ion_alloc_data.handle,pmem_fd[i]);
 #endif
-    m_pmem_info_client[i].pmem_fd = (OMX_U32)m_heap_ptr[i].video_heap_ptr.get();
+    m_pmem_info_client[i].pmem_fd = (OMX_U32)(uintptr_t)m_heap_ptr[i].video_heap_ptr.get();
     m_pmem_info_client[i].offset = 0;
     m_platform_entry_client[i].entry = (void *)&m_pmem_info_client[i];
     m_platform_entry_client[i].type = OMX_QCOM_PLATFORM_PRIVATE_PMEM;
