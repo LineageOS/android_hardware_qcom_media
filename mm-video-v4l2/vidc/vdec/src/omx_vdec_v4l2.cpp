@@ -717,7 +717,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_profile(0),
     client_set_fps(false),
     stereo_output_mode(HAL_NO_3D),
-    m_last_rendered_TS(0),
+    m_last_rendered_TS(-1),
     m_dec_hfr_fps(0),
     m_queued_codec_config_count(0),
     secure_scaling_to_non_secure_opb(false),
@@ -757,6 +757,10 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
             (int32_t *)&m_dec_hfr_fps, 0);
 
     DEBUG_PRINT_HIGH("HFR fps value = %d", m_dec_hfr_fps);
+
+    if (m_dec_hfr_fps) {
+        m_last_rendered_TS = 0;
+    }
 
     property_value[0] = '\0';
     property_get("vendor.vidc.dec.log.in", property_value, "0");
@@ -8026,7 +8030,7 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
         il_buffer = client_buffers.get_il_buf_hdr(buffer);
         OMX_U32 current_framerate = (int)(drv_ctx.frame_rate.fps_numerator / drv_ctx.frame_rate.fps_denominator);
 
-        if (il_buffer && m_dec_hfr_fps > 0) {
+        if (il_buffer && m_last_rendered_TS >= 0) {
             OMX_TICKS ts_delta = (OMX_TICKS)llabs(il_buffer->nTimeStamp - m_last_rendered_TS);
             // Convert fps into ms value. 1 sec = 1000000 ms.
             OMX_U64 target_ts_delta = m_dec_hfr_fps ? 1000000 / m_dec_hfr_fps : ts_delta;
@@ -8078,8 +8082,9 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
                     }
                 }
             }
-            if (refresh_rate > m_dec_hfr_fps) {
-                refresh_rate = m_dec_hfr_fps;
+            OMX_U32 fps_limit = m_dec_hfr_fps ? (OMX_U32)m_dec_hfr_fps : 60;
+            if (refresh_rate > fps_limit) {
+                refresh_rate = fps_limit;
             }
             DEBUG_PRINT_LOW("frc set refresh_rate %f, frame %d", refresh_rate, proc_frms);
             OMX_U32 buf_index = buffer - m_out_mem_ptr;
