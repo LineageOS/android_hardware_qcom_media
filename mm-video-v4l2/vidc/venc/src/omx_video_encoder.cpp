@@ -2082,11 +2082,15 @@ OMX_ERRORTYPE  omx_venc::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
         DEBUG_PRINT_ERROR("WARNING:Rxd DeInit,OMX not in LOADED state %d",\
                 m_state);
     }
+
+    auto_lock l(m_buf_lock);
     if (m_out_mem_ptr) {
         DEBUG_PRINT_LOW("Freeing the Output Memory");
         for (i=0; i< m_sOutPortDef.nBufferCountActual; i++ ) {
             if (BITMASK_PRESENT(&m_out_bm_count, i)) {
                 BITMASK_CLEAR(&m_out_bm_count, i);
+                if (BITMASK_PRESENT(&m_client_out_bm_count, i))
+                    BITMASK_CLEAR(&m_client_out_bm_count, i);
                 free_output_buffer (&m_out_mem_ptr[i]);
             }
 
@@ -2108,6 +2112,8 @@ OMX_ERRORTYPE  omx_venc::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
         for (i=0; i<m_sInPortDef.nBufferCountActual; i++ ) {
             if (BITMASK_PRESENT(&m_inp_bm_count, i)) {
                 BITMASK_CLEAR(&m_inp_bm_count, i);
+                if (BITMASK_PRESENT(&m_client_in_bm_count, i))
+                    BITMASK_CLEAR(&m_client_in_bm_count, i);
                 free_input_buffer (&m_inp_mem_ptr[i]);
             }
 
@@ -2443,7 +2449,8 @@ int omx_venc::async_message_process (void *context, void* message)
                     omxhdr->nFlags = m_sVenc_msg->buf.flags;
 
                     /*Use buffer case*/
-                    if (omx->output_use_buffer && !omx->m_use_output_pmem && !omx->is_secure_session()) {
+                    if (BITMASK_PRESENT(&(omx->m_client_out_bm_count), bufIndex) &&
+                        omx->output_use_buffer && !omx->m_use_output_pmem && !omx->is_secure_session()) {
                         DEBUG_PRINT_LOW("memcpy() for o/p Heap UseBuffer");
                         memcpy(omxhdr->pBuffer,
                                 (m_sVenc_msg->buf.ptrbuffer),
