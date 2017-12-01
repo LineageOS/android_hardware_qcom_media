@@ -474,6 +474,7 @@ class venc_dev
         bool venc_set_profile(OMX_U32 eProfile);
         bool venc_set_level(OMX_U32 eLevel);
         bool venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames);
+        bool _venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames);
         bool venc_set_target_bitrate(OMX_U32 nTargetBitrate);
         bool venc_set_ratectrl_cfg(OMX_VIDEO_CONTROLRATETYPE eControlRate);
         bool venc_set_session_qp_range(OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE *qp_range);
