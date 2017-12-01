@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2016 - 2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2016 - 2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -442,6 +442,22 @@ omx_core_cb_type core[] =
     "libOmxQcelp13Enc.so",
     {
       "audio_encoder.qcelp13"
+    }
+  },
+  {
+    "OMX.qcom.audio.encoder.mpegh",
+    NULL,   // Create instance function
+    // Unique instance handle
+    {
+      NULL,
+      NULL,
+      NULL,
+      NULL
+    },
+    NULL,   // Shared object library handle
+    "libOmxMpeghEncSw.so",
+    {
+      "audio_encoder.mpegh"
     }
   },
   {
