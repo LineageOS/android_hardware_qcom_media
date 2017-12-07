@@ -307,6 +307,7 @@ class omx_video: public qc_omx_component
         virtual int dev_output_log_buffers(const char *buffer_addr, int buffer_len, uint64_t timestamp) = 0;
         virtual int dev_extradata_log_buffers(char *buffer_addr) = 0;
         virtual bool dev_get_hevc_profile(OMX_U32*) = 0;
+        virtual bool dev_handle_client_input_extradata(void*) = 0;
         OMX_ERRORTYPE component_role_enum(
                 OMX_HANDLETYPE hComp,
                 OMX_U8 *role,
@@ -514,12 +515,15 @@ class omx_video: public qc_omx_component
         bool allocate_done(void);
         bool allocate_input_done(void);
         bool allocate_output_done(void);
+        bool allocate_input_extradata_done(void);
         bool allocate_output_extradata_done(void);
 
         OMX_ERRORTYPE free_input_buffer(OMX_BUFFERHEADERTYPE *bufferHdr);
         OMX_ERRORTYPE free_output_buffer(OMX_BUFFERHEADERTYPE *bufferHdr);
+        void free_input_extradata_buffer_header();
         void free_output_extradata_buffer_header();
 
+        OMX_ERRORTYPE allocate_client_input_extradata_headers();
         OMX_ERRORTYPE allocate_client_output_extradata_headers();
 
         OMX_ERRORTYPE allocate_input_buffer(OMX_HANDLETYPE       hComp,
@@ -546,6 +550,13 @@ class omx_video: public qc_omx_component
                 OMX_U8                *buffer);
 
         OMX_ERRORTYPE use_output_buffer(OMX_HANDLETYPE hComp,
+                OMX_BUFFERHEADERTYPE   **bufferHdr,
+                OMX_U32                port,
+                OMX_PTR                appData,
+                OMX_U32                bytes,
+                OMX_U8                 *buffer);
+
+        OMX_ERRORTYPE use_client_input_extradata_buffer(OMX_HANDLETYPE hComp,
                 OMX_BUFFERHEADERTYPE   **bufferHdr,
                 OMX_U32                port,
                 OMX_PTR                appData,
@@ -583,6 +594,7 @@ class omx_video: public qc_omx_component
 
         bool release_output_done();
         bool release_input_done();
+        bool release_input_extradata_done();
         bool release_output_extradata_done();
 
         OMX_ERRORTYPE send_command_proxy(OMX_HANDLETYPE  hComp,
@@ -622,6 +634,7 @@ class omx_video: public qc_omx_component
         }
 
         client_extradata_info m_client_out_extradata_info;
+        client_extradata_info m_client_in_extradata_info;
 
         void complete_pending_buffer_done_cbs();
         bool is_conv_needed(int, int);
@@ -741,6 +754,7 @@ class omx_video: public qc_omx_component
         // Output memory pointer
         OMX_BUFFERHEADERTYPE *m_out_mem_ptr;
         // Client extradata memory pointer
+        OMX_BUFFERHEADERTYPE  *m_client_input_extradata_mem_ptr;
         OMX_BUFFERHEADERTYPE  *m_client_output_extradata_mem_ptr;
         omx_cmd_queue m_opq_meta_q;
         omx_cmd_queue m_opq_pmem_q;
@@ -761,6 +775,7 @@ class omx_video: public qc_omx_component
         uint64_t m_client_in_bm_count;
         uint64_t m_inp_bm_count;
         // bitmask array size for extradata
+        uint64_t m_in_extradata_bm_count;
         uint64_t m_out_extradata_bm_count;
         uint64_t m_flags;
         uint64_t m_etb_count;

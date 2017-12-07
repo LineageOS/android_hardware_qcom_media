@@ -279,6 +279,17 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
                     DEBUG_PRINT_LOW("extradata string size exceeds size %d",OMX_MAX_STRINGVALUE_SIZE );
                 }
             }
+            if ((OMX_BOOL)(m_sExtraData & VENC_EXTRADATA_ROI)) {
+                if (exType[0]!=0) {
+                    strlcat(exType,"|", OMX_MAX_STRINGVALUE_SIZE);
+                }
+                const char *extraDataVideoEncoderROIInfo = getStringForExtradataType(OMX_ExtraDataInputROIInfo);
+                if(extraDataVideoEncoderROIInfo != NULL &&
+                        (strlcat(exType, extraDataVideoEncoderROIInfo,
+                                 OMX_MAX_STRINGVALUE_SIZE)) >= OMX_MAX_STRINGVALUE_SIZE) {
+                    DEBUG_PRINT_LOW("extradata string size exceeds size %d",OMX_MAX_STRINGVALUE_SIZE );
+                }
+            }
             setStatus &= vExt.setParamString(ext, "types", exType);
             DEBUG_PRINT_LOW("VendorExt: getparam: Extradata %s",exType);
             break;
@@ -730,6 +741,8 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
                 if (extraDataParam.nIndex == (OMX_INDEXTYPE)OMX_ExtraDataVideoLTRInfo ||
                     extraDataParam.nIndex == (OMX_INDEXTYPE)OMX_ExtraDataVideoEncoderMBInfo) {
                     extraDataParam.nPortIndex = (OMX_U32)PORT_INDEX_OUT;
+                } else if (extraDataParam.nIndex == (OMX_INDEXTYPE)OMX_ExtraDataInputROIInfo) {
+                    extraDataParam.nPortIndex = (OMX_U32)PORT_INDEX_IN;
                 }
                 DEBUG_PRINT_HIGH("VENDOR-EXT: set_config: extradata: enable for index = %d",
                                   extraDataParam.nIndex);

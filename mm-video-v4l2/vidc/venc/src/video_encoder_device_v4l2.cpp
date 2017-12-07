@@ -815,6 +815,68 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
     return true;
 }
 
+bool venc_dev::venc_handle_client_input_extradata(void *buffer)
+{
+    OMX_BUFFERHEADERTYPE *p_bufhdr = (OMX_BUFFERHEADERTYPE *)buffer;
+    OMX_OTHER_EXTRADATATYPE *p_extra = (OMX_OTHER_EXTRADATATYPE*)p_bufhdr->pBuffer;
+    while(p_extra->eType != OMX_ExtraDataNone) {
+        switch((int)p_extra->eType) {
+            case OMX_ExtraDataInputROIInfo:
+            {
+                OMX_QTI_VIDEO_CONFIG_ROIINFO* roiInfo = reinterpret_cast<OMX_QTI_VIDEO_CONFIG_ROIINFO*>(p_extra->data);
+                struct roidata roi;
+                if (!m_roi_enabled) {
+                    DEBUG_PRINT_ERROR("ROI info not enabled");
+                    return false;
+                }
+
+                if (!roiInfo) {
+                    DEBUG_PRINT_ERROR("No ROI info present");
+                    return false;
+                }
+                if (m_sVenc_cfg.codectype != V4L2_PIX_FMT_H264 &&
+                m_sVenc_cfg.codectype != V4L2_PIX_FMT_HEVC) {
+                    DEBUG_PRINT_ERROR("OMX_QTIIndexConfigVideoRoiInfo is not supported for %d codec", (OMX_U32) m_sVenc_cfg.codectype);
+                    return false;
+                }
+
+                DEBUG_PRINT_HIGH("ROI QP info received");
+                memset(&roi, 0, sizeof(struct roidata));
+
+                roi.info.nUpperQpOffset = roiInfo->nUpperQpOffset;
+                roi.info.nLowerQpOffset = roiInfo->nLowerQpOffset;
+                roi.info.bUseRoiInfo = roiInfo->bUseRoiInfo;
+                roi.info.nRoiMBInfoSize = roiInfo->nRoiMBInfoSize;
+
+                roi.info.pRoiMBInfo = malloc(roi.info.nRoiMBInfoSize);
+                if (!roi.info.pRoiMBInfo) {
+                    DEBUG_PRINT_ERROR("venc_set_roi_qp_info: malloc failed.");
+                    return false;
+                }
+                memcpy(roi.info.pRoiMBInfo, &roiInfo->pRoiMBInfo, roiInfo->nRoiMBInfoSize);
+                /*
+                * set the timestamp equal to previous etb timestamp + 1
+                * to know this roi data arrived after previous etb
+                */
+                if (venc_handle->m_etb_count)
+                    roi.timestamp = venc_handle->m_etb_timestamp + 1;
+                else
+                    roi.timestamp = 0;
+
+                roi.dirty = true;
+
+                pthread_mutex_lock(&m_roilock);
+                DEBUG_PRINT_LOW("list add roidata with timestamp %lld us.", roi.timestamp);
+                m_roilist.push_back(roi);
+                pthread_mutex_unlock(&m_roilock);
+                break;
+            }
+        }
+        p_extra = (OMX_OTHER_EXTRADATATYPE *)((char *)p_extra + p_extra->nSize);
+    }
+    return true;
+}
+
 bool venc_dev::handle_output_extradata(void *buffer, int index)
 {
     OMX_BUFFERHEADERTYPE *p_bufhdr = (OMX_BUFFERHEADERTYPE *) buffer;
@@ -1899,7 +1961,7 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
         input_extradata_info.buffer_size =  ALIGN(extra_data_size, SZ_4K);
         input_extradata_info.count = MAX_V4L2_BUFS;
         input_extradata_info.size = input_extradata_info.buffer_size * input_extradata_info.count;
-
+        venc_handle->m_client_in_extradata_info.set_extradata_info(extra_data_size,m_sInput_buff_property.actualcount);
     } else {
         unsigned int extra_idx = 0;
         memset(&fmt, 0, sizeof(fmt));
@@ -2692,9 +2754,8 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
         case OMX_QTIIndexParamVideoEnableRoiInfo:
             {
                 struct v4l2_control control;
-                OMX_QTI_VIDEO_PARAM_ENABLE_ROIINFO *pParam =
-                    (OMX_QTI_VIDEO_PARAM_ENABLE_ROIINFO *)paramData;
-                if (pParam->bEnableRoiInfo == OMX_FALSE) {
+                OMX_BOOL extra_data =  *(OMX_BOOL *)(paramData);
+                if (extra_data == OMX_FALSE) {
                     DEBUG_PRINT_INFO("OMX_QTIIndexParamVideoEnableRoiInfo: bEnableRoiInfo is false");
                     break;
                 }
