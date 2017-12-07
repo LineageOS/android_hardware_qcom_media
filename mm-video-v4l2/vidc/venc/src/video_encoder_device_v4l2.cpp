@@ -821,6 +821,9 @@ bool venc_dev::handle_output_extradata(void *buffer, int index)
     OMX_BUFFERHEADERTYPE *p_bufhdr = (OMX_BUFFERHEADERTYPE *) buffer;
     OMX_OTHER_EXTRADATATYPE *p_extra = NULL;
     OMX_OTHER_EXTRADATATYPE *p_clientextra = NULL;
+    OMX_U32 remaining_extradata_size = 0;
+    OMX_U32 remaining_client_extradata_size = 0;
+    OMX_U32 remaining_fw_extradata_size = 0;
 
     if(venc_handle->m_client_output_extradata_mem_ptr && venc_handle->m_sExtraData
         && venc_handle->m_client_out_extradata_info.getSize() >=
@@ -850,12 +853,45 @@ bool venc_dev::handle_output_extradata(void *buffer, int index)
         DEBUG_PRINT_ERROR("Extradata ABI mismatch");
         return false;
     }
+    remaining_extradata_size = p_bufhdr->nAllocLen - ALIGN(p_bufhdr->nOffset +
+                                                           p_bufhdr->nFilledLen, 4);
+    if(p_clientextra){
+       remaining_client_extradata_size = (venc_handle->m_client_output_extradata_mem_ptr +
+                                          index)->nAllocLen;
+    }
+    remaining_fw_extradata_size = output_extradata_info.buffer_size;
 
     struct msm_vidc_extradata_header *p_extradata = NULL;
     do {
+        DEBUG_PRINT_LOW("Remaining size for: extradata= %d client= %d fw= %d ",\
+                        remaining_extradata_size,remaining_client_extradata_size,\
+                        remaining_fw_extradata_size);
+
+        if (remaining_fw_extradata_size < sizeof(OMX_OTHER_EXTRADATATYPE)) {
+           DEBUG_PRINT_ERROR("Insufficient space for extradata");
+           break;
+        }
         p_extradata = (struct msm_vidc_extradata_header *) (p_extradata ?
             ((char *)p_extradata) + p_extradata->size :
             output_extradata_info.uaddr + index * output_extradata_info.buffer_size);
+
+        if ((remaining_fw_extradata_size < p_extradata->size)) {
+           DEBUG_PRINT_ERROR("Corrupt extradata");
+           break;
+        }
+        remaining_fw_extradata_size -= p_extradata->size;
+
+        if (remaining_extradata_size < p_extradata->size){
+           DEBUG_PRINT_ERROR("insufficient size available in extradata port buffer");
+           break;
+        }
+
+        if(p_clientextra){
+           if (remaining_client_extradata_size < p_extradata->size) {
+              DEBUG_PRINT_ERROR("insufficient size available in client buffer");
+              break;
+           }
+        }
 
         switch (p_extradata->type) {
             case MSM_VIDC_EXTRADATA_METADATA_MBI:
@@ -889,6 +925,15 @@ bool venc_dev::handle_output_extradata(void *buffer, int index)
                 continue;
         }
 
+        remaining_extradata_size-= p_extra->nSize;
+        if(p_clientextra) {
+            remaining_client_extradata_size -= p_clientextra->nSize;
+            DEBUG_PRINT_LOW("Client Extradata Size= %u",p_clientextra->nSize);
+        }
+
+        DEBUG_PRINT_LOW("Extradata Size= %u FW= %d",\
+                        p_extra->nSize,p_extradata->size);
+
         p_extra = (OMX_OTHER_EXTRADATATYPE *)(((char *)p_extra) + p_extra->nSize);
         if(p_clientextra) {
             p_clientextra = (OMX_OTHER_EXTRADATATYPE *)(((char *)p_clientextra) + p_clientextra->nSize);
@@ -898,11 +943,21 @@ bool venc_dev::handle_output_extradata(void *buffer, int index)
     /* Just for debugging: Traverse the list of extra datas  and spit it out onto log */
     p_extra = (OMX_OTHER_EXTRADATATYPE *)ALIGN(p_bufhdr->pBuffer +
                 p_bufhdr->nOffset + p_bufhdr->nFilledLen, 4);
+    remaining_extradata_size = p_bufhdr->nAllocLen - ALIGN(p_bufhdr->nOffset +
+                                                           p_bufhdr->nFilledLen, 4);
     while(p_extra->eType != OMX_ExtraDataNone)
     {
+        DEBUG_PRINT_LOW("Remaining size for: extradata= %d",remaining_extradata_size);
+        if (remaining_extradata_size < p_extra->nSize){
+           DEBUG_PRINT_ERROR("insufficient size available in extradata port buffer");
+           break;
+        }
+
         DEBUG_PRINT_LOW("[%p/%u] found extradata type %x of size %u (%u) at %p",
                 p_bufhdr->pBuffer, (unsigned int)p_bufhdr->nFilledLen, p_extra->eType,
                 (unsigned int)p_extra->nSize, (unsigned int)p_extra->nDataSize, p_extra);
+
+        remaining_extradata_size-= p_extra->nSize;
 
         p_extra = (OMX_OTHER_EXTRADATATYPE *) (((OMX_U8 *) p_extra) +
                 p_extra->nSize);
