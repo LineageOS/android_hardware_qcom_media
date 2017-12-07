@@ -698,6 +698,17 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                             eRet = OMX_ErrorBadParameter;
                             break;
                     }
+                } else if (PORT_INDEX_EXTRADATA_IN == portDefn->nPortIndex) {
+                    DEBUG_PRINT_LOW("extradata actual cnt =%u , min cnt =%u ,buffersize requested = %u",
+                        (unsigned int)portDefn->nBufferCountActual,(unsigned int)portDefn->nBufferCountMin,
+                        (unsigned int)portDefn->nBufferSize);
+                    if (portDefn->nBufferCountActual != m_client_in_extradata_info.getBufferCount() ||
+                        portDefn->nBufferSize != m_client_in_extradata_info.getSize()) {
+                            DEBUG_PRINT_ERROR("ERROR: Bad parameeters request for extradata limit %d size - %d",
+                            portDefn->nBufferCountActual, portDefn->nBufferSize);
+                            eRet = OMX_ErrorBadParameter;
+                            break;
+                    }
                 } else if (PORT_INDEX_OUT == portDefn->nPortIndex) {
 
                     if (portDefn->nBufferCountActual > MAX_NUM_OUTPUT_BUFFERS) {
@@ -1301,6 +1312,19 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                         eRet = OMX_ErrorUnsupportedIndex;
                         break;
                     }
+                } else if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QTIIndexParamVideoEnableRoiInfo) {
+                    if (pParam->nPortIndex == PORT_INDEX_IN) {
+                        if (pParam->bEnabled == OMX_TRUE)
+                            mask = VENC_EXTRADATA_ROI;
+
+                        DEBUG_PRINT_HIGH("ROIInfo extradata %s",
+                                ((pParam->bEnabled == OMX_TRUE) ? "enabled" : "disabled"));
+                    } else {
+                        DEBUG_PRINT_ERROR("set_parameter: ROI information is "
+                                "valid for input port only");
+                        eRet = OMX_ErrorUnsupportedIndex;
+                        break;
+                    }
                 } else {
                     DEBUG_PRINT_ERROR("set_parameter: unsupported extrdata index (%x)",
                             pParam->nIndex);
@@ -1329,9 +1353,9 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                             m_sInPortDef.nPortIndex);
                     DEBUG_PRINT_HIGH("updated in_buf_req: buffer cnt=%u, "
                             "count min=%u, buffer size=%u",
-                            (unsigned int)m_sOutPortDef.nBufferCountActual,
-                            (unsigned int)m_sOutPortDef.nBufferCountMin,
-                            (unsigned int)m_sOutPortDef.nBufferSize);
+                            (unsigned int)m_sInPortDef.nBufferCountActual,
+                            (unsigned int)m_sInPortDef.nBufferCountMin,
+                            (unsigned int)m_sInPortDef.nBufferSize);
 
                 } else {
                     m_sOutPortDef.nPortIndex = PORT_INDEX_OUT;
@@ -1360,6 +1384,8 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
 
                 if (pParam->nPortIndex == PORT_INDEX_EXTRADATA_OUT) {
                     m_client_out_extradata_info.enable_client_extradata(pParam->bEnable);
+                } else if (pParam->nPortIndex == PORT_INDEX_EXTRADATA_IN) {
+                    m_client_in_extradata_info.enable_client_extradata(pParam->bEnable);
                 } else {
                     DEBUG_PRINT_ERROR("Incorrect portIndex - %d", pParam->nPortIndex);
                     eRet = OMX_ErrorUnsupportedIndex;
@@ -2617,4 +2643,9 @@ int omx_venc::dev_extradata_log_buffers(char *buffer)
 bool omx_venc::dev_get_hevc_profile(OMX_U32* profile)
 {
     return handle->venc_get_hevc_profile(profile);
+}
+
+bool omx_venc::dev_handle_client_input_extradata(void *buffer)
+{
+    return handle->venc_handle_client_input_extradata(buffer);
 }
