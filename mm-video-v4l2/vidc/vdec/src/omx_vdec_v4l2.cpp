@@ -9497,15 +9497,15 @@ bool omx_vdec::handle_color_space_info(void *data)
                         aspects->mRange = m_client_color_space.sAspects.mRange;
                         break;
                     case MSM_VIDC_CS_SMPTE_170:
-                        aspects->mMatrixCoeffs = ColorAspects::MatrixBT709_5;
+                        aspects->mMatrixCoeffs = ColorAspects::MatrixBT601_6;
                         aspects->mTransfer = ColorAspects::TransferSMPTE170M;
-                        aspects->mPrimaries = m_client_color_space.sAspects.mPrimaries;
+                        aspects->mPrimaries =  ColorAspects::PrimariesBT601_6_525;
                         aspects->mRange = m_client_color_space.sAspects.mRange;
                         break;
                     case MSM_VIDC_CS_SMPTE_240:
-                        aspects->mMatrixCoeffs = m_client_color_space.sAspects.mMatrixCoeffs;
+                        aspects->mMatrixCoeffs = ColorAspects::MatrixSMPTE240M;
                         aspects->mTransfer = ColorAspects::TransferSMPTE240M;
-                        aspects->mPrimaries = m_client_color_space.sAspects.mPrimaries;
+                        aspects->mPrimaries =  ColorAspects::PrimariesBT601_6_525;
                         aspects->mRange = m_client_color_space.sAspects.mRange;
                         break;
                     case MSM_VIDC_CS_BT_2020:
