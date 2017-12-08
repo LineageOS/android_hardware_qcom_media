@@ -310,6 +310,10 @@ IvfFileHeader:: IvfFileHeader() :
     version(),
     size(32),
     fourCC{'V','P','8','0'},
+    width(0),
+    height(0),
+    rate(0),
+    scale(0),
     frameCount(0),
     unused()
 {
