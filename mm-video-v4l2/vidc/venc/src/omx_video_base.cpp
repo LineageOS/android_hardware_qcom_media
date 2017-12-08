@@ -5238,6 +5238,7 @@ OMX_ERRORTYPE omx_video::push_input_buffer(OMX_HANDLETYPE hComp)
             bool is_venus_supported_format = (handle->format == HAL_PIXEL_FORMAT_NV12_ENCODEABLE ||
                 handle->format == QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m ||
                 handle->format == QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed ||
+                handle->format == QOMX_COLOR_FORMATYUV420SemiPlanarP010Venus ||
                 handle->format == QOMX_COLOR_Format32bitRGBA8888Compressed ||
                 handle->format == HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC);
 

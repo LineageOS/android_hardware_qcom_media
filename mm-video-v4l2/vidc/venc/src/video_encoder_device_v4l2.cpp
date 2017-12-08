@@ -922,6 +922,8 @@ int venc_dev::venc_set_format(int format)
             return venc_set_color_format((OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m);
         case NV12_UBWC:
             return venc_set_color_format((OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed);
+        case YCbCr420_VENUS_P010:
+            return venc_set_color_format((OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420SemiPlanarP010Venus);
         default:
             return false;
         }
@@ -1056,10 +1058,11 @@ bool venc_dev::venc_get_supported_color_format(unsigned index, OMX_U32 *colorFor
         [1] = QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m,
         [2] = QOMX_COLOR_FormatYVU420SemiPlanar,
         [3] = QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed,
-        [4] = QOMX_COLOR_Format32bitRGBA8888Compressed,
-        [5] = QOMX_COLOR_Format32bitRGBA8888,
-        [6] = QOMX_COLOR_FormatAndroidOpaque,
-        [7] = OMX_COLOR_FormatYUV420SemiPlanar,
+        [4] = QOMX_COLOR_FORMATYUV420SemiPlanarP010Venus,
+        [5] = QOMX_COLOR_Format32bitRGBA8888Compressed,
+        [6] = QOMX_COLOR_Format32bitRGBA8888,
+        [7] = QOMX_COLOR_FormatAndroidOpaque,
+        [8] = OMX_COLOR_FormatYUV420SemiPlanar,
     };
 #else
     //we support two formats
@@ -1293,6 +1296,9 @@ int venc_dev::venc_input_log_buffers(OMX_BUFFERHEADERTYPE *pbuffer, int fd, int 
             case V4L2_PIX_FMT_RGBA8888_UBWC:
                 color_format = COLOR_FMT_RGBA8888_UBWC;
                 break;
+            case V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010_VENUS:
+                color_format = COLOR_FMT_P010;
+                break;
             default:
                 color_format = COLOR_FMT_NV12;
                 DEBUG_PRINT_LOW("Default format NV12 is set for logging [%lu]", inputformat);
@@ -1343,6 +1349,23 @@ int venc_dev::venc_input_log_buffers(OMX_BUFFERHEADERTYPE *pbuffer, int fd, int 
                 msize -= 2 * extra_size;
             }
             fwrite(ptemp, msize, 1, m_debug.infile);
+        } else if(color_format == COLOR_FMT_P010) {
+            stride = VENUS_Y_STRIDE(color_format, m_sVenc_cfg.input_width);
+            scanlines = VENUS_Y_SCANLINES(color_format, m_sVenc_cfg.input_height);
+
+            for (i = 0; i < m_sVenc_cfg.input_height; i++) {
+                fwrite(ptemp, m_sVenc_cfg.input_width*2, 1, m_debug.infile);
+                ptemp += stride;
+            }
+            if (metadatamode == 1) {
+                ptemp = pvirt + (stride * scanlines);
+            } else {
+                ptemp = (unsigned char *)pbuffer->pBuffer + (stride * scanlines);
+            }
+            for (i = 0; i < m_sVenc_cfg.input_height/2; i++) {
+                fwrite(ptemp, m_sVenc_cfg.input_width*2, 1, m_debug.infile);
+                ptemp += stride;
+            }
         }
 
         if (metadatamode == 1 && pvirt) {
@@ -5615,6 +5638,9 @@ unsigned long venc_dev::venc_get_color_format(OMX_COLOR_FORMATTYPE eColorFormat)
     case QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed:
         format = V4L2_PIX_FMT_NV12_TP10_UBWC;
         break;
+    case QOMX_COLOR_FORMATYUV420SemiPlanarP010Venus:
+        format = V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010_VENUS;
+        break;
     default:
         DEBUG_PRINT_ERROR("Unsupported eColorFormat %#x", eColorFormat);
         format = V4L2_DEFAULT_OUTPUT_COLOR_FMT;
@@ -5652,6 +5678,9 @@ bool venc_dev::venc_set_color_format(OMX_COLOR_FORMATTYPE color_format)
             break;
         case QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed:
             m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV12_TP10_UBWC;
+            break;
+        case QOMX_COLOR_FORMATYUV420SemiPlanarP010Venus:
+            m_sVenc_cfg.inputformat = V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010_VENUS;
             break;
         default:
             DEBUG_PRINT_HIGH("WARNING: Unsupported Color format [%d]", color_format);
