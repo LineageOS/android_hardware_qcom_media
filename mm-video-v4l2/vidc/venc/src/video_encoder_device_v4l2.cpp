@@ -7352,7 +7352,7 @@ bool venc_dev::venc_set_hdr_info(const MasteringDisplay& mastering_disp_info,
     memset(&controls, 0, sizeof(controls));
     memset(ctrl, 0, sizeof(ctrl));
 
-    controls.count = 13;
+    controls.count = 11;
     controls.ctrl_class = V4L2_CTRL_CLASS_MPEG;
     controls.controls = ctrl;
 
@@ -7382,14 +7382,29 @@ bool venc_dev::venc_set_hdr_info(const MasteringDisplay& mastering_disp_info,
     ctrl[10].id = V4L2_CID_MPEG_VIDC_VENC_MIN_DISP_LUM;
     ctrl[10].value = mastering_disp_info.minDisplayLuminance;
 
-    ctrl[11].id = V4L2_CID_MPEG_VIDC_VENC_MAX_CLL;
-    ctrl[11].value = content_light_level_info.maxContentLightLevel;
+    if (ioctl(m_nDriver_fd, VIDIOC_S_EXT_CTRLS, &controls)) {
+        DEBUG_PRINT_ERROR("VIDIOC_S_EXT_CTRLS failed for HDR Info : Disp SEI");
+        return false;
+    }
 
-    ctrl[12].id = V4L2_CID_MPEG_VIDC_VENC_MAX_FLL;
-    ctrl[12].value = content_light_level_info.minPicAverageLightLevel;
+    memset(&controls, 0, sizeof(controls));
+    memset(ctrl, 0, sizeof(ctrl));
+
+    controls.count = 3;
+    controls.ctrl_class = V4L2_CTRL_CLASS_MPEG;
+    controls.controls = ctrl;
+
+    ctrl[0].id = V4L2_CID_MPEG_VIDC_VENC_HDR_INFO;
+    ctrl[0].value = V4L2_MPEG_VIDC_VENC_HDR_INFO_ENABLED;
+
+    ctrl[1].id = V4L2_CID_MPEG_VIDC_VENC_MAX_CLL;
+    ctrl[1].value = content_light_level_info.maxContentLightLevel;
+
+    ctrl[2].id = V4L2_CID_MPEG_VIDC_VENC_MAX_FLL;
+    ctrl[2].value = content_light_level_info.minPicAverageLightLevel;
 
     if (ioctl(m_nDriver_fd, VIDIOC_S_EXT_CTRLS, &controls)) {
-        DEBUG_PRINT_ERROR("VIDIOC_S_EXT_CTRLS failed for HDR Info");
+        DEBUG_PRINT_ERROR("VIDIOC_S_EXT_CTRLS failed for HDR Info : CLL SEI");
         return false;
     }
 
