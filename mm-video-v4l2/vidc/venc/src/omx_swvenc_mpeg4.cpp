@@ -138,7 +138,6 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     SWVENC_CALLBACK callBackInfo;
     OMX_VIDEO_CODINGTYPE codec_type;
     SWVENC_PROPERTY Prop;
-    int fds[2];
 
     strlcpy((char *)m_nkind,role,OMX_MAX_STRINGNAME_SIZE);
     secure_session = false;
@@ -456,28 +455,6 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
 
     if (eRet == OMX_ErrorNone)
     {
-        if (pipe(fds))
-        {
-            DEBUG_PRINT_ERROR("ERROR: pipe creation failed");
-            eRet = OMX_ErrorInsufficientResources;
-        }
-        else
-        {
-            if ((fds[0] == 0) || (fds[1] == 0))
-            {
-                if (pipe(fds))
-                {
-                    DEBUG_PRINT_ERROR("ERROR: pipe creation failed");
-                    eRet = OMX_ErrorInsufficientResources;
-                }
-            }
-            if (eRet == OMX_ErrorNone)
-            {
-                m_pipe_in = fds[0];
-                m_pipe_out = fds[1];
-            }
-        }
-
         if (pthread_create(&msg_thread_id,0, message_thread_enc, this) < 0)
         {
             eRet = OMX_ErrorInsufficientResources;
