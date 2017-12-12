@@ -27,6 +27,14 @@ OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --------------------------------------------------------------------------*/
 
+enum {
+    BLUR_STRENGTH_NONE     = 0,
+    BLUR_STRENGTH_MAX1080  = 25,
+    BLUR_STRENGTH_MAX720   = 50,
+    BLUR_STRENGTH_MAX480   = 75,
+    BLUR_STRENGTH_MAX240   = 100,
+};
+
 void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
 
     //TODO: add extensions based on Codec, m_platform and/or other capability queries
@@ -111,6 +119,25 @@ void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
 
     ADD_EXTENSION("qti-ext-enc-colorspace-conversion", OMX_QTIIndexParamColorSpaceConversion, OMX_DirInput)
     ADD_PARAM_END("enable", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-enc-initial-qp", QOMX_IndexParamVideoInitialQp, OMX_DirOutput)
+    ADD_PARAM    ("qp-i", OMX_AndroidVendorValueInt32)
+    ADD_PARAM    ("qp-i-enable", OMX_AndroidVendorValueInt32)
+    ADD_PARAM    ("qp-p", OMX_AndroidVendorValueInt32)
+    ADD_PARAM    ("qp-p-enable", OMX_AndroidVendorValueInt32)
+    ADD_PARAM    ("qp-b", OMX_AndroidVendorValueInt32)
+    ADD_PARAM_END("qp-b-enable", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-enc-blurfilter", OMX_QTIIndexConfigVideoBlurResolution, OMX_DirInput)
+    ADD_PARAM_END("strength", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-enc-qp-range", OMX_QcomIndexParamVideoIPBQPRange, OMX_DirOutput)
+    ADD_PARAM    ("qp-i-min", OMX_AndroidVendorValueInt32)
+    ADD_PARAM    ("qp-i-max", OMX_AndroidVendorValueInt32)
+    ADD_PARAM    ("qp-p-min", OMX_AndroidVendorValueInt32)
+    ADD_PARAM    ("qp-p-max", OMX_AndroidVendorValueInt32)
+    ADD_PARAM    ("qp-b-min", OMX_AndroidVendorValueInt32)
+    ADD_PARAM_END("qp-b-max", OMX_AndroidVendorValueInt32)
 }
 
 OMX_ERRORTYPE omx_video::get_vendor_extension_config(
@@ -292,6 +319,30 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
         case OMX_QTIIndexParamColorSpaceConversion:
         {
             setStatus &= vExt.setParamInt32(ext, "enable", m_sParamColorSpaceConversion.bEnable);
+            break;
+        }
+        case QOMX_IndexParamVideoInitialQp:
+        {
+            setStatus &= vExt.setParamInt32(ext, "qp-i", m_sSessionQuantization.nQpI);
+            setStatus &= vExt.setParamInt32(ext, "qp-p", m_sSessionQuantization.nQpP);
+            setStatus &= vExt.setParamInt32(ext, "qp-b", m_sSessionQuantization.nQpB);
+            setStatus &= vExt.setParamInt32(ext, "qp-i-enable", (m_QPSet & 0x1));
+            setStatus &= vExt.setParamInt32(ext, "qp-p-enable", ((m_QPSet >> 0x1) & 0x1));
+            setStatus &= vExt.setParamInt32(ext, "qp-b-enable", ((m_QPSet >> 0x2) & 0x1));
+            break;
+        }
+        case OMX_QTIIndexConfigVideoBlurResolution:
+        {
+            break;
+        }
+        case OMX_QcomIndexParamVideoIPBQPRange:
+        {
+            setStatus &= vExt.setParamInt32(ext, "qp-i-min", m_sSessionQPRange.minIQP);
+            setStatus &= vExt.setParamInt32(ext, "qp-i-max", m_sSessionQPRange.maxIQP);
+            setStatus &= vExt.setParamInt32(ext, "qp-p-min", m_sSessionQPRange.minPQP);
+            setStatus &= vExt.setParamInt32(ext, "qp-p-max", m_sSessionQPRange.maxPQP);
+            setStatus &= vExt.setParamInt32(ext, "qp-b-min", m_sSessionQPRange.minBQP);
+            setStatus &= vExt.setParamInt32(ext, "qp-b-max", m_sSessionQPRange.maxBQP);
             break;
         }
         default:
@@ -715,6 +766,98 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
         case OMX_QTIIndexParamCapabilitiesRotationSupport:
         case OMX_QTIIndexParamCapabilitiesMaxTemporalLayers:
         {
+            break;
+        }
+        case QOMX_IndexParamVideoInitialQp:
+        {
+            QOMX_EXTNINDEX_VIDEO_INITIALQP initQP;
+            OMX_INIT_STRUCT(&initQP, QOMX_EXTNINDEX_VIDEO_INITIALQP);
+            initQP.nPortIndex = (OMX_U32)PORT_INDEX_OUT;
+            OMX_S32 enableIQp = (m_QPSet & 0x1);
+            OMX_S32 enablePQp = ((m_QPSet >> 0x1) & 0x1);
+            OMX_S32 enableBQp = ((m_QPSet >> 0x2) & 0x1);
+            initQP.nQpI = m_sSessionQuantization.nQpI;
+            initQP.nQpP = m_sSessionQuantization.nQpP;
+            initQP.nQpB = m_sSessionQuantization.nQpB;
+            initQP.bEnableInitQp = m_QPSet;
+            valueSet |= vExt.readParamInt32(ext, "qp-i", (OMX_S32 *)&(initQP.nQpI));
+            valueSet |= vExt.readParamInt32(ext, "qp-b", (OMX_S32 *)&(initQP.nQpB));
+            valueSet |= vExt.readParamInt32(ext, "qp-p", (OMX_S32 *)&(initQP.nQpP));
+            valueSet |= vExt.readParamInt32(ext, "qp-i-enable", (OMX_S32 *)&enableIQp);
+            valueSet |= vExt.readParamInt32(ext, "qp-p-enable", (OMX_S32 *)&enablePQp);
+            valueSet |= vExt.readParamInt32(ext, "qp-b-enable", (OMX_S32 *)&enableBQp);
+            initQP.bEnableInitQp = (((enableIQp == 0x1) << 0x0 ) | ((enablePQp == 0x1) << 0x1 ) | ((enableBQp == 0x1) << 0x2 ));
+            if (!valueSet) {
+                break;
+            }
+
+            DEBUG_PRINT_HIGH("VENDOR-EXT: set_param: QOMX_IndexParamVideoInitialQp I/B/P value: %d %d %d",
+                initQP.nQpI,initQP.nQpB,initQP.nQpP);
+
+            err = set_parameter(
+                    NULL, (OMX_INDEXTYPE)QOMX_IndexParamVideoInitialQp, &initQP);
+            if (err != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("set_param: QOMX_IndexParamVideoInitialQp failed !");
+            }
+            break;
+        }
+        case OMX_QTIIndexConfigVideoBlurResolution:
+        {
+            OMX_QTI_VIDEO_CONFIG_BLURINFO blurInfo;
+            memcpy(&blurInfo, &m_blurInfo, sizeof(OMX_QTI_VIDEO_CONFIG_BLURINFO));
+            OMX_S32 targetStrength = 0;
+            valueSet |= vExt.readParamInt32(ext, "strength", (OMX_S32 *)&(targetStrength));
+            if (!valueSet) {
+                break;
+            }
+            if (targetStrength <= BLUR_STRENGTH_NONE && targetStrength > BLUR_STRENGTH_MAX240) {
+                blurInfo.eTargetResol = BLUR_RESOL_DISABLED;
+            }
+            else if (targetStrength > BLUR_STRENGTH_NONE && targetStrength <= BLUR_STRENGTH_MAX1080) {
+                blurInfo.eTargetResol = BLUR_RESOL_1080;
+            }
+            else if (targetStrength >= BLUR_STRENGTH_MAX1080 && targetStrength <= BLUR_STRENGTH_MAX720) {
+                blurInfo.eTargetResol = BLUR_RESOL_720;
+            }
+            else if (targetStrength >= BLUR_STRENGTH_MAX720 && targetStrength <= BLUR_STRENGTH_MAX480 ) {
+                blurInfo.eTargetResol = BLUR_RESOL_480;
+            }
+            else if (targetStrength >= BLUR_STRENGTH_MAX480 && targetStrength <= BLUR_STRENGTH_MAX240) {
+                blurInfo.eTargetResol = BLUR_RESOL_240;
+            }
+
+            DEBUG_PRINT_HIGH("VENDOR-EXT: set_config: OMX_QTIIndexConfigVideoBlurResolution : %d",
+                    targetStrength);
+
+            err = set_config(
+                    NULL, (OMX_INDEXTYPE)OMX_QTIIndexConfigVideoBlurResolution, &blurInfo);
+            if (err != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("set_config: OMX_QTIIndexConfigVideoBlurResolution failed !");
+            }
+            break;
+        }
+        case OMX_QcomIndexParamVideoIPBQPRange:
+        {
+            OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE qpRange;
+            memcpy(&qpRange, &m_sSessionQPRange, sizeof(OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE));
+            valueSet |= vExt.readParamInt32(ext, "qp-i-min", (OMX_S32 *)&(qpRange.minIQP));
+            valueSet |= vExt.readParamInt32(ext, "qp-i-max", (OMX_S32 *)&(qpRange.maxIQP));
+            valueSet |= vExt.readParamInt32(ext, "qp-p-min", (OMX_S32 *)&(qpRange.minPQP));
+            valueSet |= vExt.readParamInt32(ext, "qp-p-max", (OMX_S32 *)&(qpRange.maxPQP));
+            valueSet |= vExt.readParamInt32(ext, "qp-b-min", (OMX_S32 *)&(qpRange.minBQP));
+            valueSet |= vExt.readParamInt32(ext, "qp-b-max", (OMX_S32 *)&(qpRange.maxBQP));
+            if (!valueSet) {
+                break;
+            }
+
+            DEBUG_PRINT_HIGH("VENDOR-EXT: set_param: OMX_QcomIndexParamVideoIPBQPRange for min/max value for I/P/B: %d-%d / %d-%d / %d-%d"
+                ,qpRange.minIQP,qpRange.maxIQP,qpRange.minPQP,qpRange.maxPQP,qpRange.minBQP,qpRange.maxBQP);
+
+            err = set_parameter(
+                    NULL, (OMX_INDEXTYPE)OMX_QcomIndexParamVideoIPBQPRange, &qpRange);
+            if (err != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("set_param: OMX_QcomIndexParamVideoIPBQPRange failed !");
+            }
             break;
         }
         default:
