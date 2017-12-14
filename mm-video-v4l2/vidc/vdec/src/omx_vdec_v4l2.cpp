@@ -8518,6 +8518,11 @@ int omx_vdec::async_message_process (void *context, void* message)
                                            OMX_IndexConfigCommonOutputCrop,
                                            OMX_COMPONENT_GENERATE_PORT_RECONFIG);
                            reconfig_event_sent = true;
+                       } else {
+                           /* Update C2D with new resolution */
+                           if (!omx->client_buffers.update_buffer_req()) {
+                               DEBUG_PRINT_ERROR("Setting C2D buffer requirements failed");
+                           }
                        }
                    }
 
