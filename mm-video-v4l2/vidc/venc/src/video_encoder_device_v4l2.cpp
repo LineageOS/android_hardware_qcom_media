@@ -4171,6 +4171,12 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         }
                     }
 
+                    uint32_t encodePerfMode = 0;
+                    if (getMetaData(handle, GET_VIDEO_PERF_MODE, &encodePerfMode) == 0) {
+                        if (encodePerfMode == OMX_TRUE) {
+                            buf.flags |= V4L2_QCOM_BUF_FLAG_PERF_MODE;
+                        }
+                    }
                     fd = handle->fd;
                     plane[0].data_offset = 0;
                     plane[0].length = handle->size;
