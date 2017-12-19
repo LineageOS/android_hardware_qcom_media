@@ -76,6 +76,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <qdMetaData.h>
 #include <gralloc_priv.h>
+#include <nativebase/nativebase.h>
 
 #ifdef ANDROID_JELLYBEAN_MR2
 #include "QComOMXMetadata.h"
