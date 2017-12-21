@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -85,6 +85,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define VENC_BFRAME_MAX_FPS         60
 #define VENC_BFRAME_MAX_WIDTH       1920
 #define VENC_BFRAME_MAX_HEIGHT      1088
+#define VENC_INFINITE_GOP 0xFFFFFFF
 
 #undef LOG_TAG
 #define LOG_TAG "OMX-VENC: venc_dev"
@@ -5757,6 +5758,14 @@ bool venc_dev::venc_calibrate_gop()
             /*
             * No special handling needed for single layer
             */
+       DEBUG_PRINT_LOW("Clip num of P and B frames, nPframes: %d nBframes: %d",
+                       nPframes,nBframes);
+       if ((unsigned int)nPframes > VENC_INFINITE_GOP) {
+          nPframes =  VENC_INFINITE_GOP;
+       }
+       if ((unsigned int)nBframes > VENC_INFINITE_GOP) {
+          nBframes =  VENC_INFINITE_GOP;
+       }
     }
 
     DEBUG_PRINT_LOW("P/B Frames changed from: %ld/%ld to %d/%d",
