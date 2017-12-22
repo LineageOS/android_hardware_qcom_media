@@ -64,6 +64,11 @@ libmm-venc-inc      += hardware/qcom/media/libplatformconfig
 libmm-venc-inc      += $(TARGET_OUT_HEADERS)/qcom/display
 libmm-venc-inc      += $(TARGET_OUT_HEADERS)/adreno
 libmm-venc-inc      += frameworks/native/include/media/hardware
+ifeq ($(call is-platform-sdk-version-at-least,27),true) #O_MR1
+libmm-venc-inc      += frameworks/native/libs/nativewindow/include
+libmm-venc-inc      += frameworks/native/libs/arect/include
+libmm-venc-inc      += frameworks/native/libs/nativebase/include
+endif
 libmm-venc-inc      += frameworks/native/include/media/openmax
 libmm-venc-inc      += hardware/qcom/media/libc2dcolorconvert
 libmm-venc-inc      += $(TARGET_OUT_HEADERS)/libvqzip
