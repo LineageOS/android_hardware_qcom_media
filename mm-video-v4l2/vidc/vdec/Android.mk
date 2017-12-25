@@ -161,6 +161,8 @@ LOCAL_SRC_FILES         += src/hevc_utils.cpp
 
 LOCAL_STATIC_LIBRARIES  := libOmxVidcCommon
 
+LOCAL_CFLAGS            += -Wno-error
+
 include $(BUILD_SHARED_LIBRARY)
 
 endif
