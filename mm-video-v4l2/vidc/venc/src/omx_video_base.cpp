@@ -2805,7 +2805,8 @@ OMX_ERRORTYPE  omx_video::use_output_buffer(
                 m_pOutput_ion[i].ion_device_fd = alloc_map_ion_memory(align_size,
                         &m_pOutput_ion[i].ion_alloc_data,
                         &m_pOutput_ion[i].fd_ion_data,
-                        secure_session ? SECURE_FLAGS_OUTPUT_BUFFER : 0);
+                        secure_session ? ((m_sOutPortFormat.eCompressionFormat == (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingTME) ?
+                        SECURE_FLAGS_INPUT_BUFFER : SECURE_FLAGS_OUTPUT_BUFFER) : 0);
                 if (m_pOutput_ion[i].ion_device_fd < 0) {
                     DEBUG_PRINT_ERROR("ERROR:ION device open() Failed");
                     return OMX_ErrorInsufficientResources;
@@ -3474,7 +3475,8 @@ OMX_ERRORTYPE  omx_video::allocate_output_buffer(
             m_pOutput_ion[i].ion_device_fd = alloc_map_ion_memory(align_size,
                     &m_pOutput_ion[i].ion_alloc_data,
                     &m_pOutput_ion[i].fd_ion_data,
-                    secure_session ? SECURE_FLAGS_OUTPUT_BUFFER : ION_FLAG_CACHED);
+                    secure_session ? ((m_sOutPortFormat.eCompressionFormat == (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingTME) ?
+                    SECURE_FLAGS_INPUT_BUFFER : SECURE_FLAGS_OUTPUT_BUFFER) : ION_FLAG_CACHED);
             if (m_pOutput_ion[i].ion_device_fd < 0) {
                 DEBUG_PRINT_ERROR("ERROR:ION device open() Failed");
                 return OMX_ErrorInsufficientResources;
