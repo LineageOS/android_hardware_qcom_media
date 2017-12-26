@@ -133,6 +133,11 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_encoder.tme", OMX_MAX_STRINGNAME_SIZE);
         codec_type = (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingTME;
+    }  else if (!strncmp((char *)m_nkind, "OMX.qcom.video.encoder.tme.secure",    \
+                OMX_MAX_STRINGNAME_SIZE)) {
+        strlcpy((char *)m_cRole, "video_encoder.tme", OMX_MAX_STRINGNAME_SIZE);
+        codec_type = (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingTME;
+        secure_session = true;
     } else {
         DEBUG_PRINT_ERROR("ERROR: Unknown Component");
         eRet = OMX_ErrorInvalidComponentName;
@@ -902,6 +907,14 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     }
                 }
                 else if (!strncmp((char*)m_nkind, "OMX.qcom.video.encoder.tme", OMX_MAX_STRINGNAME_SIZE)) {
+                    if (!strncmp((const char*)comp_role->cRole,"video_encoder.tme",OMX_MAX_STRINGNAME_SIZE)) {
+                        strlcpy((char*)m_cRole,"video_encoder.tme",OMX_MAX_STRINGNAME_SIZE);
+                    } else {
+                        DEBUG_PRINT_ERROR("ERROR: Setparameter: unknown Index %s", comp_role->cRole);
+                        eRet = OMX_ErrorUnsupportedSetting;
+                    }
+                }
+                else if (!strncmp((char*)m_nkind, "OMX.qcom.video.encoder.tme.secure", OMX_MAX_STRINGNAME_SIZE)) {
                     if (!strncmp((const char*)comp_role->cRole,"video_encoder.tme",OMX_MAX_STRINGNAME_SIZE)) {
                         strlcpy((char*)m_cRole,"video_encoder.tme",OMX_MAX_STRINGNAME_SIZE);
                     } else {
