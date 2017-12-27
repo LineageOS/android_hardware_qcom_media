@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -405,6 +405,7 @@ class venc_dev
 #endif
         };
 
+        int nPframes_cache;
         int stopped;
         int resume_in_stopped;
         bool m_max_allowed_bitrate_check;
