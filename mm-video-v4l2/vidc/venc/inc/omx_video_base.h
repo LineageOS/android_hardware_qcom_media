@@ -237,6 +237,7 @@ class omx_video: public qc_omx_component
         virtual OMX_U32 dev_resume(void) = 0;
         virtual OMX_U32 dev_start_done(void) = 0;
         virtual OMX_U32 dev_set_message_thread_id(pthread_t) = 0;
+        virtual bool dev_handle_empty_eos_buffer(void) = 0;
         virtual bool dev_use_buf(void *,unsigned,unsigned) = 0;
         virtual bool dev_free_buf(void *,unsigned) = 0;
         virtual bool dev_empty_buf(void *, void *,unsigned,unsigned) = 0;
