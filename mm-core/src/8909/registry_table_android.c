@@ -236,19 +236,6 @@ omx_core_cb_type core[] =
     }
   },
   {
-    "AIV.play",
-    NULL, // Create instance function
-    // Unique instance handle
-    {
-      NULL
-    },
-    NULL,  // Shared object library handle
-    "libAivPlay.so",
-    {
-      "AIV.play.101"
-    }
-  },
-  {
     "OMX.qcom.audio.decoder.multiaac",
     NULL,   // Create instance function
     // Unique instance handle
@@ -288,6 +275,19 @@ omx_core_cb_type core[] =
     "libOmxMux.so",
     {
       "container_muxer.mp2"
+    }
+  },
+  {
+    "AIV.play",
+    NULL, // Create instance function
+    // Unique instance handle
+    {
+      NULL
+    },
+    NULL,  // Shared object library handle
+    "libAivPlay.so",
+    {
+      "AIV.play.101"
     }
   },
   {
