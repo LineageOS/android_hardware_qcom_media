@@ -112,6 +112,7 @@ libmm-vdec-inc      += frameworks/av/include/media/stagefright
 
 
 LOCAL_MODULE                    := libOmxVdec
+LOCAL_PROPRIETARY_MODULE        := true
 LOCAL_MODULE_TAGS               := optional
 LOCAL_CFLAGS                    := $(libOmxVdec-def)
 LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
@@ -156,6 +157,7 @@ LOCAL_PATH:= $(ROOT_DIR)
 ifneq ($(filter msm8974 msm8610 msm8084 msm8952 msm8992 msm8994,$(TARGET_BOARD_PLATFORM)),)
 
 LOCAL_MODULE                    := libOmxVdecHevc
+LOCAL_PROPRIETARY_MODULE        := true
 LOCAL_MODULE_TAGS               := optional
 LOCAL_CFLAGS                    := $(libOmxVdec-def)
 LOCAL_C_INCLUDES                += $(libmm-vdec-inc)

@@ -20,6 +20,7 @@ LOCAL_C_INCLUDES:= \
 
 
 LOCAL_MODULE:= libdivxdrmdecrypt
+LOCAL_PROPRIETARY_MODULE := true
 LOCAL_MODULE_TAGS := optional
 
 LOCAL_SHARED_LIBRARIES	:= liblog libdl
