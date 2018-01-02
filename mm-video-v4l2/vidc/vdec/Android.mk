@@ -149,6 +149,7 @@ LOCAL_MODULE                    := libOmxVdec
 LOCAL_MODULE_TAGS               := optional
 LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libOmxVdec-def)
+LOCAL_CFLAGS                    += -Wno-error
 LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 
 LOCAL_PRELINK_MODULE    := false
