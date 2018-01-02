@@ -59,6 +59,7 @@ LOCAL_MODULE                    := libOmxVdpp
 LOCAL_MODULE_TAGS               := optional
 LOCAL_VENDOR_MODULE        := true
 LOCAL_CFLAGS                    := $(libOmxVdpp-def)
+LOCAL_CFLAGS                    += -Wno-error
 LOCAL_C_INCLUDES                += $(libmm-vidpp-inc)
 
 LOCAL_PRELINK_MODULE    := false
