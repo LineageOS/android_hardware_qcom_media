@@ -102,6 +102,8 @@ LOCAL_CLANG_CFLAGS      += -Wno-pointer-bool-conversion
 
 LOCAL_ADDITIONAL_DEPENDENCIES  := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
+LOCAL_CFLAGS            += -Wno-error
+
 include $(BUILD_SHARED_LIBRARY)
 
 # ---------------------------------------------------------------------------------
