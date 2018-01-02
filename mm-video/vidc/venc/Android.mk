@@ -83,6 +83,8 @@ endif
 
 LOCAL_SRC_FILES   += ../common/src/extra_data_handler.cpp
 
+LOCAL_CFLAGS      += -Wno-error
+
 include $(BUILD_SHARED_LIBRARY)
 
 # -----------------------------------------------------------------------------
