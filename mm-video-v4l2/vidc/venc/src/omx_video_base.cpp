@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2017, Linux Foundation. All rights reserved.
+Copyright (c) 2010-2018, Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -5219,7 +5219,8 @@ OMX_ERRORTYPE omx_video::push_input_buffer(OMX_HANDLETYPE hComp)
                 handle->format == QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed ||
                 handle->format == QOMX_COLOR_FORMATYUV420SemiPlanarP010Venus ||
                 handle->format == QOMX_COLOR_Format32bitRGBA8888Compressed ||
-                handle->format == HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC);
+                handle->format == HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC ||
+                handle->format == HAL_PIXEL_FORMAT_NV21_ZSL);
 
             Input_pmem_info.buffer = media_buffer;
             Input_pmem_info.fd = handle->fd;
