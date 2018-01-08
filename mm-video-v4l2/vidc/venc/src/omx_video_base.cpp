@@ -3953,6 +3953,19 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
         }
     }
 
+    if (meta_mode_enable && !mUsesColorConversion) {
+        VideoGrallocMetadata *media_buffer = (VideoGrallocMetadata *)meta_buffer_hdr[nBufIndex].pBuffer;
+        if (buffer->nFilledLen == 0 && (buffer->nFlags & OMX_BUFFERFLAG_EOS) && !media_buffer->pHandle) {
+            DEBUG_PRINT_LOW("Zero length EOS buffer");
+            if(!dev_handle_empty_eos_buffer())
+                return OMX_ErrorHardware;
+            else {
+                post_event((unsigned long)buffer, 0, OMX_COMPONENT_GENERATE_EBD);
+                return OMX_ErrorNone;
+            }
+        }
+    }
+
     pending_input_buffers++;
     VIDC_TRACE_INT_LOW("ETB-pending", pending_input_buffers);
     if (input_flush_progress == true) {
