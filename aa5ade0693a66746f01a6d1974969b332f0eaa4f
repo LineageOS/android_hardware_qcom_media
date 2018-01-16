@@ -1,0 +1,96 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "54b686ae_8762a5a0",
+        "filename": "mm-video-v4l2/vidc/vdec/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 66,
+      "author": {
+        "id": 18566
+      },
+      "writtenOn": "2018-01-16T19:43:29Z",
+      "side": 1,
+      "message": "Remove for consistency",
+      "range": {
+        "startLine": 66,
+        "startChar": 77,
+        "endLine": 66,
+        "endChar": 78
+      },
+      "revId": "aa5ade0693a66746f01a6d1974969b332f0eaa4f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d1e5688a_88d90bb5",
+        "filename": "mm-video-v4l2/vidc/vdec/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 67,
+      "author": {
+        "id": 18566
+      },
+      "writtenOn": "2018-01-16T19:43:29Z",
+      "side": 1,
+      "message": "Remove for consistency",
+      "range": {
+        "startLine": 67,
+        "startChar": 70,
+        "endLine": 67,
+        "endChar": 71
+      },
+      "revId": "aa5ade0693a66746f01a6d1974969b332f0eaa4f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "d2858b2d_835761ea",
+        "filename": "mm-video-v4l2/vidc/venc/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 74,
+      "author": {
+        "id": 18566
+      },
+      "writtenOn": "2018-01-16T19:43:29Z",
+      "side": 1,
+      "message": "Remove for consistency",
+      "range": {
+        "startLine": 74,
+        "startChar": 66,
+        "endLine": 74,
+        "endChar": 67
+      },
+      "revId": "aa5ade0693a66746f01a6d1974969b332f0eaa4f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7e9e1403_ac54aa64",
+        "filename": "mm-video-v4l2/vidc/venc/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 75,
+      "author": {
+        "id": 18566
+      },
+      "writtenOn": "2018-01-16T19:43:29Z",
+      "side": 1,
+      "message": "Remove for consistency",
+      "range": {
+        "startLine": 75,
+        "startChar": 59,
+        "endLine": 75,
+        "endChar": 60
+      },
+      "revId": "aa5ade0693a66746f01a6d1974969b332f0eaa4f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
