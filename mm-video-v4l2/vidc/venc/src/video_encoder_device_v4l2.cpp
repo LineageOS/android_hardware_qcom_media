@@ -4106,6 +4106,9 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                             } else {
                                 DEBUG_PRINT_INFO("Encoding in HLG mode");
                             }
+                        } else if (handle->format == QOMX_COLOR_FormatYVU420SemiPlanar) {
+                           m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV21;
+                           DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = NV21 Linear");
                         }
 
                         DEBUG_PRINT_INFO("color_space.primaries %d colorData.colorPrimaries %d, is_csc_custom_matrix_enabled=%d",
