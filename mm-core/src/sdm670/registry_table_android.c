@@ -238,7 +238,7 @@ omx_core_cb_type core[] =
     NULL,   // Shared object library handle
     "libOmxSwVdec.so",
     {
-      "video_decoder.divx"
+      "video_decoder.divx4"
     }
   },
   {
