@@ -1,7 +1,7 @@
 /**
  * @copyright
  *
- *   Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+ *   Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
  *
  *   Redistribution and use in source and binary forms, with or without
  *   modification, are permitted provided that the following conditions are met:
@@ -401,7 +401,6 @@ OMX_ERRORTYPE omx_swvdec::get_component_version(OMX_HANDLETYPE   cmp_handle,
         p_spec_version->nVersion = OMX_SPEC_VERSION;
     }
 
-get_component_version_exit:
     return retval;
 }
 
@@ -757,9 +756,9 @@ OMX_ERRORTYPE omx_swvdec::get_parameter(OMX_HANDLETYPE cmp_handle,
 
             if (p_buffer_usage->nPortIndex == OMX_CORE_PORT_INDEX_OP)
             {
-                p_buffer_usage->nUsage = (GRALLOC_USAGE_PRIVATE_IOMMU_HEAP |
+                p_buffer_usage->nUsage = (static_cast<uint32_t>(GRALLOC_USAGE_PRIVATE_IOMMU_HEAP |
                                           GRALLOC_USAGE_SW_READ_OFTEN |
-                                          GRALLOC_USAGE_SW_WRITE_OFTEN);
+                                          GRALLOC_USAGE_SW_WRITE_OFTEN));
             }
             else
             {
@@ -2716,7 +2715,6 @@ OMX_ERRORTYPE omx_swvdec::set_adaptive_playback(unsigned int max_width,
         retval = set_frame_attributes(m_omx_color_formattype);
     }
 
-set_adaptive_playback_exit:
     return retval;
 }
 
@@ -2827,7 +2825,6 @@ OMX_ERRORTYPE omx_swvdec::set_video_port_format(
         retval = OMX_ErrorBadPortIndex;
     }
 
-set_video_port_format_exit:
     return retval;
 }
 
@@ -5020,42 +5017,39 @@ OMX_ERRORTYPE omx_swvdec::retval_swvdec2omx(SWVDEC_STATUS retval_swvdec)
 {
     OMX_ERRORTYPE retval_omx;
 
-    switch (retval_swvdec)
-    {
+    switch (retval_swvdec) {
+        case SWVDEC_STATUS_SUCCESS:
+            retval_omx = OMX_ErrorNone;
+            break;
 
-    SWVDEC_STATUS_SUCCESS:
-        retval_omx = OMX_ErrorNone;
-        break;
+        case SWVDEC_STATUS_FAILURE:
+            retval_omx = OMX_ErrorUndefined;
+            break;
 
-    SWVDEC_STATUS_FAILURE:
-        retval_omx = OMX_ErrorUndefined;
-        break;
+        case SWVDEC_STATUS_NULL_POINTER:
+        case SWVDEC_STATUS_INVALID_PARAMETERS:
+            retval_omx = OMX_ErrorBadParameter;
+            break;
 
-    SWVDEC_STATUS_NULL_POINTER:
-    SWVDEC_STATUS_INVALID_PARAMETERS:
-        retval_omx = OMX_ErrorBadParameter;
-        break;
+        case SWVDEC_STATUS_INVALID_STATE:
+            retval_omx = OMX_ErrorInvalidState;
+            break;
 
-    SWVDEC_STATUS_INVALID_STATE:
-        retval_omx = OMX_ErrorInvalidState;
-        break;
+        case SWVDEC_STATUS_INSUFFICIENT_RESOURCES:
+            retval_omx = OMX_ErrorInsufficientResources;
+            break;
 
-    SWVDEC_STATUS_INSUFFICIENT_RESOURCES:
-        retval_omx = OMX_ErrorInsufficientResources;
-        break;
+        case SWVDEC_STATUS_UNSUPPORTED:
+            retval_omx = OMX_ErrorUnsupportedSetting;
+            break;
 
-    SWVDEC_STATUS_UNSUPPORTED:
-        retval_omx = OMX_ErrorUnsupportedSetting;
-        break;
+        case SWVDEC_STATUS_NOT_IMPLEMENTED:
+            retval_omx = OMX_ErrorNotImplemented;
+            break;
 
-    SWVDEC_STATUS_NOT_IMPLEMENTED:
-        retval_omx = OMX_ErrorNotImplemented;
-        break;
-
-    default:
-        retval_omx = OMX_ErrorUndefined;
-        break;
-
+        default:
+            retval_omx = OMX_ErrorUndefined;
+            break;
     }
 
     return retval_omx;
@@ -5405,8 +5399,6 @@ OMX_ERRORTYPE omx_swvdec::async_process_event_cmd(OMX_COMMANDTYPE cmd,
     OMX_ERRORTYPE retval = OMX_ErrorNone;
 
     bool cmd_ack = false;
-
-    SWVDEC_STATUS retval_swvdec;
 
     switch (cmd)
     {
@@ -6336,7 +6328,6 @@ OMX_ERRORTYPE omx_swvdec::async_process_event_fbd(
         retval = OMX_ErrorBadParameter;
     }
 
-async_process_event_fbd_exit:
     return retval;
 }
 
