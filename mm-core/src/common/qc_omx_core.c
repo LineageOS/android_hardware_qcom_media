@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2009, The Linux Foundation. All rights reserved.
+Copyright (c) 2009, 2015, 2018 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -410,8 +410,6 @@ OMX_GetHandle(OMX_OUT OMX_HANDLETYPE*     handle,
   pthread_mutex_lock(&lock_core);
   if(handle)
   {
-    struct stat sd;
-
     *handle = NULL;
 
     cmp_index = get_cmp_index(componentName);
