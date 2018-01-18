@@ -62,6 +62,10 @@ ifeq ($(TARGET_PRODUCT),msm8937_32go)
 OMXCORE_CFLAGS += -DMSM8937_32GO_PLATFORM
 endif
 
+ifeq ($(call is-platform-sdk-version-at-least,27),true) # O-MR1
+OMXCORE_CFLAGS += -D_ANDROID_O_MR1_DIVX_CHANGES
+endif
+
 #===============================================================================
 #             Deploy the headers that can be exposed
 #===============================================================================
