@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -238,7 +238,11 @@ omx_core_cb_type core[] =
     NULL,   // Shared object library handle
     "libOmxSwVdec.so",
     {
-      "video_decoder.divx"
+#ifdef _ANDROID_O_MR1_DIVX_CHANGES
+     "video_decoder.divx4"
+#else
+     "video_decoder.divx"
+#endif
     }
   },
   {
