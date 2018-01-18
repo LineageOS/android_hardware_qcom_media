@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2009, The Linux Foundation. All rights reserved.
+Copyright (c) 2009, 2015, 2018 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -289,42 +289,6 @@ static int check_lib_unload(int index)
   }
   return rc;
 }
-/* ======================================================================
-FUNCTION
-  is_cmp_already_exists
-
-DESCRIPTION
-  Check if the component already exists or not. Used in the
-  management of component handles.
-
-PARAMETERS
-  None
-
-RETURN VALUE
-  Error None.
-========================================================================== */
-static int is_cmp_already_exists(char *cmp_name)
-{
-  unsigned i    =0,j=0;
-  int rc = -1;
-  for(i=0; i< SIZE_OF_CORE; i++)
-  {
-    if(!strcmp(cmp_name, core[i].name))
-    {
-      for(j=0; j< OMX_COMP_MAX_INST; j++)
-      {
-        if(core[i].inst[j])
-        {
-          rc = i;
-          DEBUG_PRINT("Component exists %d\n", rc);
-          return rc;
-        }
-      }
-      break;
-    }
-  }
-  return rc;
-}
 
 /* ======================================================================
 FUNCTION
@@ -411,8 +375,6 @@ OMX_GetHandle(OMX_OUT OMX_HANDLETYPE*     handle,
   pthread_mutex_lock(&lock_core);
   if(handle)
   {
-    struct stat sd;
-
     *handle = NULL;
 
     cmp_index = get_cmp_index(componentName);
