@@ -47,6 +47,79 @@ void *get_omx_component_factory_fn(void)
     return(new omx_venc);
 }
 
+omx_venc::perf_control::perf_control()
+{
+    m_perf_lib = NULL;
+    m_perf_lock_acquire = NULL;
+    m_perf_lock_release = NULL;
+    m_perf_handle = 0;
+}
+
+omx_venc::perf_control::~perf_control()
+{
+    if (m_perf_handle != 0 && m_perf_lock_release) {
+        m_perf_lock_release(m_perf_handle);
+    }
+    if (m_perf_lib) {
+        dlclose(m_perf_lib);
+    }
+}
+
+void omx_venc::perf_control::send_hint_to_mpctl(bool state)
+{
+    if (load_lib() == false) {
+        return;
+    }
+    /* 0x4601 maps to video encode callback in
+     * perflock, 46 is the enum number, 01 is
+     * the state being sent when perflock
+     * acquire succeeds
+     */
+    int arg = 0x4601;
+
+    if (m_perf_lock_acquire && state == true) {
+        m_perf_handle = m_perf_lock_acquire(0, 0, &arg, sizeof(arg) / sizeof(int));
+        DEBUG_PRINT_INFO("Video encode perflock acquired,handle=%d",m_perf_handle);
+    } else if (m_perf_lock_release && state == false) {
+        m_perf_lock_release(m_perf_handle);
+        DEBUG_PRINT_INFO("Video encode perflock released");
+    }
+}
+
+bool omx_venc::perf_control::load_lib()
+{
+    char perf_lib_path[PROPERTY_VALUE_MAX] = {0};
+    if (m_perf_lib)
+        return true;
+
+    if ((property_get("ro.vendor.extension_library", perf_lib_path, NULL) <= 0)) {
+        DEBUG_PRINT_ERROR("vendor library not set in ro.vendor.extension_library");
+        goto handle_err;
+    }
+    if ((m_perf_lib = dlopen(perf_lib_path, RTLD_NOW)) == NULL) {
+        DEBUG_PRINT_ERROR("Failed to open %s : %s",perf_lib_path, dlerror());
+        goto handle_err;
+    } else {
+        m_perf_lock_acquire = (perf_lock_acquire_t)dlsym(m_perf_lib, "perf_lock_acq");
+        if (m_perf_lock_acquire == NULL) {
+            DEBUG_PRINT_ERROR("Failed to load symbol: perf_lock_acq");
+            goto handle_err;
+        }
+        m_perf_lock_release = (perf_lock_release_t)dlsym(m_perf_lib, "perf_lock_rel");
+        if (m_perf_lock_release == NULL) {
+            DEBUG_PRINT_ERROR("Failed to load symbol: perf_lock_rel");
+            goto handle_err;
+        }
+    }
+    return true;
+
+handle_err:
+    if(m_perf_lib != NULL) {
+        dlclose(m_perf_lib);
+    }
+    return false;
+}
+
 //constructor
 
 omx_venc::omx_venc()
@@ -64,11 +137,13 @@ omx_venc::omx_venc()
     debug_level = strtoul(property_value, NULL, 16);
     property_value[0] = '\0';
     handle = NULL;
+    m_perf_control.send_hint_to_mpctl(true);
 }
 
 omx_venc::~omx_venc()
 {
     get_syntaxhdr_enable = false;
+    m_perf_control.send_hint_to_mpctl(false);
     //nothing to do
 }
 

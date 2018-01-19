@@ -98,6 +98,21 @@ class omx_venc: public omx_video
                                    int buffer_len, uint64_t timestamp);
         int dev_extradata_log_buffers(char *buffer);
         bool dev_get_hevc_profile(OMX_U32* profile);
+        class perf_control {
+            typedef int (*perf_lock_acquire_t)(int, int, int*, int);
+            typedef int (*perf_lock_release_t)(int);
+            public:
+                perf_control();
+                ~perf_control();
+                void send_hint_to_mpctl(bool state);
+            private:
+                int m_perf_handle;
+                void *m_perf_lib;
+                bool load_lib();
+                perf_lock_acquire_t m_perf_lock_acquire;
+                perf_lock_release_t m_perf_lock_release;
+        };
+        perf_control m_perf_control;
 };
 
 #ifdef _UBWC_
