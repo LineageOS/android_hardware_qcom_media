@@ -58,6 +58,10 @@ else
 MM_CORE_TARGET = default
 endif
 
+ifeq ($(TARGET_PRODUCT),msm8937_32go)
+OMXCORE_CFLAGS += -DMSM8937_32GO_PLATFORM
+endif
+
 #===============================================================================
 #             Deploy the headers that can be exposed
 #===============================================================================
