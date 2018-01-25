@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2009, The Linux Foundation. All rights reserved.
+Copyright (c) 2009, 2018 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -78,9 +78,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         #define DEBUG_DETAIL      printf
     #endif // _ANDROID_
 #else
-    #define DEBUG_PRINT_ERROR
-    #define DEBUG_PRINT
-    #define DEBUG_DETAIL
+    #ifdef _ANDROID_
+        #include <utils/Log.h>
+        #define DEBUG_PRINT_ERROR ALOGV
+        #define DEBUG_PRINT ALOGV
+        #define DEBUG_DETAIL ALOGV
+    #endif // _ANDROID_
 #endif // _ENABLE_QC_MSG_LOG_
 
 #endif // _QC_OMX_MSG_H_
