@@ -731,7 +731,8 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     secure_scaling_to_non_secure_opb(false),
     m_force_compressed_for_dpb(true),
     m_is_display_session(false),
-    m_is_split_mode(false)
+    m_is_split_mode(false),
+    m_buffer_error(false)
 {
     m_poll_efd = -1;
     memset(&drv_ctx, 0, sizeof(drv_ctx));
@@ -5615,6 +5616,7 @@ OMX_ERRORTYPE  omx_vdec::use_output_buffer(
         }
         if (eRet == OMX_ErrorNone)
             eRet = allocate_extradata();
+        output_use_buffer = true;
     }
 
     OMX_BUFFERHEADERTYPE  **omx_base_address =
@@ -6058,7 +6060,6 @@ OMX_ERRORTYPE omx_vdec::free_input_buffer(OMX_BUFFERHEADERTYPE *bufferHdr)
     index = bufferHdr - m_inp_mem_ptr;
     DEBUG_PRINT_LOW("Free Input Buffer index = %d",index);
 
-    auto_lock l(buf_lock);
     bufferHdr->pInputPortPrivate = NULL;
 
     if (index < drv_ctx.ip_buf.actualcount && drv_ctx.ptr_inputbuffer) {
@@ -6204,6 +6205,7 @@ OMX_ERRORTYPE  omx_vdec::allocate_input_buffer(
     unsigned   i = 0;
     unsigned char *buf_addr = NULL;
     int pmem_fd = -1, ret = 0;
+    unsigned int align_size = 0;
 
     (void) hComp;
     (void) port;
@@ -6282,9 +6284,11 @@ OMX_ERRORTYPE  omx_vdec::allocate_input_buffer(
         int rc;
         DEBUG_PRINT_LOW("Allocate input Buffer");
 #ifdef USE_ION
+        align_size = drv_ctx.ip_buf.buffer_size + 512;
+        align_size = (align_size + drv_ctx.ip_buf.alignment - 1)&(~(drv_ctx.ip_buf.alignment - 1));
         // Input buffers are cached to make parsing faster
         bool status = alloc_map_ion_memory(
-                drv_ctx.ip_buf.buffer_size, &drv_ctx.ip_buf_ion_info[i],
+                align_size, &drv_ctx.ip_buf_ion_info[i],
                 secure_mode ? SECURE_FLAGS_INPUT_BUFFER : ION_FLAG_CACHED);
         if (status == false) {
             return OMX_ErrorInsufficientResources;
@@ -6670,6 +6674,10 @@ OMX_ERRORTYPE  omx_vdec::allocate_buffer(OMX_IN OMX_HANDLETYPE                hC
         }
         eRet = allocate_input_buffer(hComp,bufferHdr,port,appData,bytes);
     } else if (port == OMX_CORE_OUTPUT_PORT_INDEX) {
+        if (output_use_buffer) {
+            DEBUG_PRINT_ERROR("Allocate output buffer not allowed after use buffer");
+            return OMX_ErrorBadParameter;
+        }
         eRet = allocate_output_buffer(hComp, bufferHdr, port, appData, bytes);
     } else {
         DEBUG_PRINT_ERROR("Error: Invalid Port Index received %d",(int)port);
@@ -6727,6 +6735,7 @@ OMX_ERRORTYPE  omx_vdec::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
     unsigned int nPortIndex;
     (void) hComp;
 
+    auto_lock l(buf_lock);
     if (m_state == OMX_StateIdle &&
             (BITMASK_PRESENT(&m_flags ,OMX_COMPONENT_LOADING_PENDING))) {
         DEBUG_PRINT_LOW(" free buffer while Component in Loading pending");
@@ -6743,7 +6752,7 @@ OMX_ERRORTYPE  omx_vdec::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
         post_event(OMX_EventError,
                 OMX_ErrorPortUnpopulated,
                 OMX_COMPONENT_GENERATE_EVENT);
-
+        m_buffer_error = true;
         return OMX_ErrorIncorrectStateOperation;
     } else if (m_state != OMX_StateInvalid) {
         DEBUG_PRINT_ERROR("Invalid state to free buffer,port lost Buffers");
@@ -6854,6 +6863,7 @@ OMX_ERRORTYPE  omx_vdec::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
             BITMASK_CLEAR((&m_flags),OMX_COMPONENT_LOADING_PENDING);
             post_event(OMX_CommandStateSet, OMX_StateLoaded,
                     OMX_COMPONENT_GENERATE_EVENT);
+            m_buffer_error = false;
         }
     }
     return eRet;
@@ -7021,6 +7031,11 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
     temp_buffer = (struct vdec_bufferpayload *)buffer->pInputPortPrivate;
 
     if (!temp_buffer || (temp_buffer -  drv_ctx.ptr_inputbuffer) > (int)drv_ctx.ip_buf.actualcount) {
+        return OMX_ErrorBadParameter;
+    }
+
+    if (BITMASK_ABSENT(&m_inp_bm_count, nPortIndex) || m_buffer_error) {
+        DEBUG_PRINT_ERROR("ETBProxy: ERROR: invalid buffer, nPortIndex %u", nPortIndex);
         return OMX_ErrorBadParameter;
     }
 
@@ -7309,6 +7324,7 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
     struct vdec_bufferpayload     *ptr_outputbuffer = NULL;
     struct vdec_output_frameinfo  *ptr_respbuffer = NULL;
 
+    auto_lock l(buf_lock);
     OMX_BUFFERHEADERTYPE  *omx_base_address =
         client_buffers.is_color_conversion_enabled()?
                            m_intermediate_out_mem_ptr:m_out_mem_ptr;
@@ -7320,6 +7336,11 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
     if (bufferAdd == NULL || nPortIndex >= drv_ctx.op_buf.actualcount) {
         DEBUG_PRINT_ERROR("FTBProxy: ERROR: invalid buffer index, nPortIndex %u bufCount %u",
             nPortIndex, drv_ctx.op_buf.actualcount);
+        return OMX_ErrorBadParameter;
+    }
+
+    if (BITMASK_ABSENT(&m_out_bm_count, nPortIndex) || m_buffer_error) {
+        DEBUG_PRINT_ERROR("FTBProxy: ERROR: invalid buffer, nPortIndex %u", nPortIndex);
         return OMX_ErrorBadParameter;
     }
 
@@ -8587,7 +8608,7 @@ int omx_vdec::async_message_process (void *context, void* message)
                    if (omxhdr->nFilledLen)
                        omx->prev_n_filled_len = omxhdr->nFilledLen;
 
-                   if (omx->output_use_buffer && omxhdr->pBuffer &&
+                   if (!omx->m_enable_android_native_buffers && omx->output_use_buffer && omxhdr->pBuffer &&
                        vdec_msg->msgdata.output_frame.bufferaddr)
                        memcpy ( omxhdr->pBuffer, (void *)
                                ((unsigned long)vdec_msg->msgdata.output_frame.bufferaddr +
