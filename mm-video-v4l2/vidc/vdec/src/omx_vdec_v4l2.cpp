@@ -313,6 +313,12 @@ void* async_message_thread (void *input)
                      }
                  }
 
+                 if (!omx->is_down_scalar_enabled && omx->m_is_split_mode &&
+                        (omx->drv_ctx.video_resolution.frame_height != ptr[0] ||
+                        omx->drv_ctx.video_resolution.frame_width != ptr[1])) {
+                     event_fields_changed = true;
+                 }
+
                  if (event_fields_changed) {
                     DEBUG_PRINT_HIGH("VIDC Port Reconfig Old Resolution(H,W) = (%d,%d) New Resolution(H,W) = (%d,%d))",
                                      omx->drv_ctx.video_resolution.frame_height,
@@ -722,7 +728,8 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_queued_codec_config_count(0),
     secure_scaling_to_non_secure_opb(false),
     m_force_compressed_for_dpb(true),
-    m_is_display_session(false)
+    m_is_display_session(false),
+    m_is_split_mode(false)
 {
     m_poll_efd = -1;
     drv_ctx.video_driver_fd = -1;
@@ -1036,6 +1043,7 @@ OMX_ERRORTYPE omx_vdec::set_dpb(bool is_split_mode, int dpb_color_format)
         DEBUG_PRINT_ERROR("Failed to set ext ctrls for opb_dpb: %d\n", rc);
         return OMX_ErrorUnsupportedSetting;
     }
+    m_is_split_mode = is_split_mode;
     return OMX_ErrorNone;
 }
 
