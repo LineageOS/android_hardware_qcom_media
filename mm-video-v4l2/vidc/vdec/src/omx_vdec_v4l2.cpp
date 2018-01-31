@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010 - 2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2010 - 2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -311,6 +311,12 @@ void* async_message_thread (void *input)
                                                   ((tmp_profile != (int)omx->mClientSetProfile) ||
                                                    (tmp_level > (int)omx->mClientSetLevel)));
                      }
+                 }
+
+                 if (!omx->is_down_scalar_enabled && omx->m_is_split_mode &&
+                        (omx->drv_ctx.video_resolution.frame_height != ptr[0] ||
+                        omx->drv_ctx.video_resolution.frame_width != ptr[1])) {
+                     event_fields_changed = true;
                  }
 
                  if (event_fields_changed) {
@@ -722,7 +728,8 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_queued_codec_config_count(0),
     secure_scaling_to_non_secure_opb(false),
     m_force_compressed_for_dpb(true),
-    m_is_display_session(false)
+    m_is_display_session(false),
+    m_is_split_mode(false)
 {
     m_poll_efd = -1;
     drv_ctx.video_driver_fd = -1;
@@ -1042,6 +1049,7 @@ OMX_ERRORTYPE omx_vdec::set_dpb(bool is_split_mode, int dpb_color_format)
         DEBUG_PRINT_ERROR("Failed to set ext ctrls for opb_dpb: %d\n", rc);
         return OMX_ErrorUnsupportedSetting;
     }
+    m_is_split_mode = is_split_mode;
     return OMX_ErrorNone;
 }
 
