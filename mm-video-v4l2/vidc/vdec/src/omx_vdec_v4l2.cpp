@@ -11073,7 +11073,7 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
 
     bool resolution_upgrade = (height > m_c2d_height ||
             width > m_c2d_width);
-    bool is_interlaced = omx->drv_ctx.interlace != VDEC_InterlaceFrameProgressive;
+    bool is_interlaced = omx->m_progressive != MSM_VIDC_PIC_STRUCT_PROGRESSIVE;
     if (resolution_upgrade) {
         // resolution upgraded ? ensure we are yet to allocate;
         // failing which, c2d buffers will never be reallocated and bad things will happen
@@ -11102,14 +11102,14 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
 
             DEBUG_PRINT_INFO("C2D: Set Resolution, Interlace(%s) Conversion(%#X -> %#X)"
                              " src(%dX%d) dest(%dX%d)",
-                             (omx->drv_ctx.interlace != VDEC_InterlaceFrameProgressive) ? "true": "false",
+                             (omx->m_progressive != MSM_VIDC_PIC_STRUCT_PROGRESSIVE) ? "true": "false",
                              src_format, dest_format, width,
-                             omx->drv_ctx.interlace !=
-                                  VDEC_InterlaceFrameProgressive?(height+1)/2 : height,
+                             omx->m_progressive !=
+                                  MSM_VIDC_PIC_STRUCT_PROGRESSIVE?(height+1)/2 : height,
                              width, height);
             status = c2dcc.setResolution(width,
-                                         omx->drv_ctx.interlace !=
-                                         VDEC_InterlaceFrameProgressive?
+                                         omx->m_progressive !=
+                                         MSM_VIDC_PIC_STRUCT_PROGRESSIVE?
                                          (height+1)/2 : height,
                                          width, height,
                                          src_format, dest_format,
