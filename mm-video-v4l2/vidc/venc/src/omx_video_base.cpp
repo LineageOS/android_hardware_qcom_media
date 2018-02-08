@@ -5232,7 +5232,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
         ColorMapping::const_iterator found =
              mMapPixelFormat2Converter.find(handle->format);
 
-        if (found != mMapPixelFormat2Converter.end()) {
+        if (found != mMapPixelFormat2Converter.end() && is_conv_needed(handle)) {
             c2dSrcFmt = (ColorConvertFormat)found->second;
             c2dcc.setConversionNeeded(true);
         } else {
