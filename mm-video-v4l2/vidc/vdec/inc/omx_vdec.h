@@ -1285,8 +1285,58 @@ class omx_vdec: public qc_omx_component
         volatile int32_t m_queued_codec_config_count;
         OMX_U32 current_perf_level;
         bool secure_scaling_to_non_secure_opb;
-	bool m_force_compressed_for_dpb;
+        bool m_force_compressed_for_dpb;
         bool m_is_display_session;
+
+        class perf_lock {
+            private:
+                pthread_mutex_t mlock;
+
+            public:
+                perf_lock() {
+                    pthread_mutex_init(&mlock, NULL);
+                }
+
+                ~perf_lock() {
+                    pthread_mutex_destroy(&mlock);
+                }
+
+                void lock() {
+                    pthread_mutex_lock(&mlock);
+                }
+
+                void unlock() {
+                    pthread_mutex_unlock(&mlock);
+                }
+        };
+
+        class perf_control {
+            // 2 cores will be requested if framerate is beyond 45 fps
+            static const int MIN_FRAME_DURATION_FOR_PERF_REQUEST_US = (1e6 / 45);
+            typedef int (*perf_lock_acquire_t)(int, int, int*, int);
+            typedef int (*perf_lock_release_t)(int);
+
+            private:
+                void *m_perf_lib;
+                int m_perf_handle;
+                perf_lock_acquire_t m_perf_lock_acquire;
+                perf_lock_release_t m_perf_lock_release;
+                bool load_lib();
+                struct mpctl_stats {
+                  int vid_inst_count;
+                  bool vid_acquired;
+                  int vid_disp_handle;
+                };
+                static struct mpctl_stats mpctl_obj;
+                static perf_lock m_perf_lock;
+
+            public:
+                perf_control();
+                ~perf_control();
+                void request_cores(int frame_duration_us);
+                void send_hint_to_mpctl(bool state);
+        };
+        perf_control m_perf_control;
 
         static OMX_COLOR_FORMATTYPE getPreferredColorFormatNonSurfaceMode(OMX_U32 index) {
             //On Android, we default to standard YUV formats for non-surface use-cases

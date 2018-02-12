@@ -41,6 +41,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define __STDC_FORMAT_MACROS //enables the format specifiers in inttypes.h
 #include <inttypes.h>
 #include <string.h>
+#include <qdMetaData.h>
 #include "omx_video_base.h"
 #include <stdlib.h>
 #include <errno.h>
@@ -284,6 +285,7 @@ omx_video::omx_video():
 
     mMapPixelFormat2Converter.insert({
             {HAL_PIXEL_FORMAT_RGBA_8888, RGBA8888},
+            {HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC, NV12_UBWC},
                 });
 
     pthread_mutex_init(&m_lock, NULL);
@@ -4913,22 +4915,36 @@ void omx_video::omx_release_meta_buffer(OMX_BUFFERHEADERTYPE *buffer)
 }
 #endif
 
-bool omx_video::is_conv_needed(int hal_fmt, int hal_flags)
+bool is_ubwc_interlaced(private_handle_t *handle) {
+    int interlace_flag = 0;
+
+    if (getMetaData(const_cast<private_handle_t *>(handle),
+                  GET_PP_PARAM_INTERLACED, &interlace_flag)) {
+        interlace_flag = 0;
+    }
+    return (handle->format == HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC) &&
+                !!interlace_flag;
+}
+
+bool omx_video::is_conv_needed(private_handle_t *handle)
 {
     bool bRet = false;
+    bool interlaced = is_ubwc_interlaced(handle);
 
     if (!strncmp(m_platform, "msm8996", 7)) {
-        bRet = hal_fmt == HAL_PIXEL_FORMAT_RGBA_8888 &&
-            !(hal_flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED);
+        bRet = handle->format == HAL_PIXEL_FORMAT_RGBA_8888 &&
+            !(handle->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED);
     } else {
-        bRet = hal_fmt == HAL_PIXEL_FORMAT_RGBA_8888;
+        bRet = handle->format == HAL_PIXEL_FORMAT_RGBA_8888;
     }
 
 #ifdef _HW_RGBA
     bRet = false;
 #endif
-    DEBUG_PRINT_LOW("RGBA conversion %s. Format %d Flag %d",
-                                bRet ? "Needed":"Not-Needed", hal_fmt, hal_flags);
+    bRet |= interlaced;
+    DEBUG_PRINT_LOW("RGBA conversion %s. Format %d Flag %d interlace_flag = %d",
+                                bRet ? "Needed":"Not-Needed", handle->format,
+                                handle->flags, interlaced);
     return bRet;
 }
 
@@ -5009,10 +5025,12 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
             c2dcc.setConversionNeeded(false);
         }
 
-        mUsesColorConversion = is_conv_needed(handle->format, handle->flags);
+        mUsesColorConversion = is_conv_needed(handle);
+        bool interlaced = is_ubwc_interlaced(handle);
 
         if (c2dcc.getConversionNeeded() &&
             c2dcc.isPropChanged(m_sInPortDef.format.video.nFrameWidth,
+                                interlaced ? ((m_sInPortDef.format.video.nFrameHeight + 1) / 2) :
                                 m_sInPortDef.format.video.nFrameHeight,
                                 m_sInPortDef.format.video.nFrameWidth,
                                 m_sInPortDef.format.video.nFrameHeight,
@@ -5024,6 +5042,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
                              m_sInPortDef.format.video.nFrameWidth,
                              handle->width);
             if (!c2dcc.setResolution(m_sInPortDef.format.video.nFrameWidth,
+                                     interlaced ? ((m_sInPortDef.format.video.nFrameHeight + 1) / 2) :
                                      m_sInPortDef.format.video.nFrameHeight,
                                      m_sInPortDef.format.video.nFrameWidth,
                                      m_sInPortDef.format.video.nFrameHeight,
@@ -5242,14 +5261,15 @@ OMX_ERRORTYPE omx_video::push_input_buffer(OMX_HANDLETYPE hComp)
                 handle->format == QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed ||
                 handle->format == QOMX_COLOR_FORMATYUV420SemiPlanarP010Venus ||
                 handle->format == QOMX_COLOR_Format32bitRGBA8888Compressed ||
-                handle->format == HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC);
+                handle->format == HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC ||
+                handle->format == QOMX_COLOR_FormatYVU420SemiPlanar);
 
             Input_pmem_info.buffer = media_buffer;
             Input_pmem_info.fd = handle->fd;
             Input_pmem_info.offset = 0;
             Input_pmem_info.size = handle->size;
             m_graphicbuffer_size = Input_pmem_info.size;
-            if (is_conv_needed(handle->format, handle->flags))
+            if (is_conv_needed(handle))
                 ret = convert_queue_buffer(hComp,Input_pmem_info,index);
             else if (is_venus_supported_format)
                 ret = queue_meta_buffer(hComp);

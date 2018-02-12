@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2009, 2015, The Linux Foundation. All rights reserved.
+Copyright (c) 2009, 2015, 2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -76,7 +76,11 @@ omx_core_load_cmp_library(char *libname, void **handle_ptr)
   if(handle_ptr)
   {
     DEBUG_PRINT("Dynamically Loading the library : %s\n",libname);
-    *handle_ptr = dlopen(libname,RTLD_NOW);
+    if (!strcmp(libname, "libOmxVpp.so"))
+        *handle_ptr = dlopen(libname, RTLD_NOW|RTLD_GLOBAL);
+    else
+        *handle_ptr = dlopen(libname, RTLD_NOW);
+
     if(*handle_ptr)
     {
       fn_ptr = dlsym(*handle_ptr, "get_omx_component_factory_fn");

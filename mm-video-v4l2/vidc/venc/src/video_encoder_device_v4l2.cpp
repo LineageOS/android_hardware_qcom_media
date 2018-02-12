@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -4019,6 +4019,9 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                             } else {
                                 DEBUG_PRINT_INFO("Encoding in HLG mode");
                             }
+                        } else if (handle->format == QOMX_COLOR_FormatYVU420SemiPlanar) {
+                           m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV21;
+                           DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = NV21 Linear");
                         }
 
                         DEBUG_PRINT_INFO("color_space.primaries %d colorData.colorPrimaries %d, is_csc_custom_matrix_enabled=%d",
@@ -4161,6 +4164,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
          m_sVenc_cfg.inputformat != V4L2_PIX_FMT_NV12_UBWC)) {
         if (bframe_implicitly_enabled) {
             DEBUG_PRINT_HIGH("Disabling implicitly enabled B-frames");
+            intra_period.num_pframes = nPframes_cache;
             if (!_venc_set_intra_period(intra_period.num_pframes, 0)) {
                 DEBUG_PRINT_ERROR("Failed to set nPframes/nBframes");
                 return OMX_ErrorUndefined;
@@ -5077,6 +5081,7 @@ bool venc_dev::venc_reconfigure_intra_period()
 
     if (enableBframes && intra_period.num_bframes == 0) {
         intra_period.num_bframes = VENC_BFRAME_MAX_COUNT;
+        nPframes_cache = intra_period.num_pframes;
         intra_period.num_pframes = intra_period.num_pframes / (1 + intra_period.num_bframes);
         bframe_implicitly_enabled = true;
     } else if (!enableBframes && intra_period.num_bframes > 0) {
