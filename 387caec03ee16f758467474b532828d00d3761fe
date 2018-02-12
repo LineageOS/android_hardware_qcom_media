@@ -1,0 +1,44 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "2cb5729a_b07ef938",
+        "filename": "libstagefrighthw/QComOMXMetadata.h",
+        "patchSetId": 1
+      },
+      "lineNbr": 21,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-02-12T01:44:29Z",
+      "side": 1,
+      "message": "Arne, did you see this being needed anywhere else?",
+      "range": {
+        "startLine": 21,
+        "startChar": 17,
+        "endLine": 21,
+        "endChar": 30
+      },
+      "revId": "387caec03ee16f758467474b532828d00d3761fe",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "876f6b9b_a63ac285",
+        "filename": "mm-video/vidc/venc/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 73,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-02-12T01:44:29Z",
+      "side": 1,
+      "message": "unnecessary whitespace change",
+      "revId": "387caec03ee16f758467474b532828d00d3761fe",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
