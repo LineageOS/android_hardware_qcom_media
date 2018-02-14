@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -650,9 +650,9 @@ class omx_video: public qc_omx_component
         const VendorExtensionStore mVendorExtensionStore;
 
 #ifdef USE_ION
-        int alloc_map_ion_memory(int size,
+        bool alloc_map_ion_memory(int size,
                                  struct ion_allocation_data *alloc_data,
-                                 struct ion_fd_data *fd_data,int flag);
+                                 int flag);
         void free_ion_memory(struct venc_ion *buf_ion_info);
 #endif
 

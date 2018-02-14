@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -36,8 +36,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdio.h>
 #ifdef USE_ION
 #include <linux/msm_ion.h>
+#include <linux/ion.h>
 #endif
-
 #ifdef _ANDROID_
 #include <cutils/properties.h>
 #else
@@ -101,8 +101,6 @@ struct venc_debug_cap {
 };
 #ifdef USE_ION
 struct venc_ion {
-    int ion_device_fd;
-    struct ion_fd_data fd_ion_data;
     struct ion_allocation_data ion_alloc_data;
 };
 

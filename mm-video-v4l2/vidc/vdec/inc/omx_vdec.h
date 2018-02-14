@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010 - 2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2010 - 2018, The Linux Foundation. All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -56,6 +56,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <unordered_map>
 #include <media/msm_media_info.h>
 
+#include <linux/ion.h>
+
 #include "C2DColorConverter.h"
 
 static ptrdiff_t x;
@@ -102,7 +104,7 @@ extern "C" {
 #include "OMX_VideoExt.h"
 #include "OMX_IndexExt.h"
 #include "qc_omx_component.h"
-#include <media/msm_vidc.h>
+#include "media/msm_vidc_utils.h"
 #include "extra_data_handler.h"
 #include "ts_parser.h"
 #include "vidc_debug.h"
@@ -431,8 +433,6 @@ struct vdec_framerate {
 
 #ifdef USE_ION
 struct vdec_ion {
-    int ion_device_fd;
-    struct ion_fd_data fd_ion_data;
     struct ion_allocation_data ion_alloc_data;
 };
 #endif
@@ -663,8 +663,8 @@ class omx_vdec: public qc_omx_component
         pthread_t async_thread_id;
         bool is_component_secure();
         OMX_BUFFERHEADERTYPE* get_omx_output_buffer_header(int index);
-        OMX_ERRORTYPE set_dpb(bool is_split_mode, int dpb_color_format);
-        OMX_ERRORTYPE decide_dpb_buffer_mode(bool is_downscalar_enabled);
+        OMX_ERRORTYPE set_dpb(bool is_split_mode);
+        OMX_ERRORTYPE decide_dpb_buffer_mode();
         int dpb_bit_depth;
         bool check_supported_flexible_formats(OMX_COLOR_FORMATTYPE required_format);
         bool is_flexible_format;//To save status if required format is flexible color formats
@@ -944,9 +944,8 @@ class omx_vdec: public qc_omx_component
         bool align_pmem_buffers(int pmem_fd, OMX_U32 buffer_size,
                 OMX_U32 alignment);
 #ifdef USE_ION
-        int alloc_map_ion_memory(OMX_U32 buffer_size,
-                OMX_U32 alignment, struct ion_allocation_data *alloc_data,
-                struct ion_fd_data *fd_data,int flag);
+        bool alloc_map_ion_memory(OMX_U32 buffer_size,
+                struct ion_allocation_data *alloc_data, int flag);
         void free_ion_memory(struct vdec_ion *buf_ion_info);
 #endif
 
@@ -1265,12 +1264,12 @@ class omx_vdec: public qc_omx_component
 #endif
                 unsigned char *pmem_baseaddress[MAX_COUNT];
                 int pmem_fd[MAX_COUNT];
-                OMX_ERRORTYPE cache_ops(unsigned int index, unsigned int cmd);
+                OMX_ERRORTYPE cache_ops(unsigned int index);
                 inline OMX_ERRORTYPE cache_clean_buffer(unsigned int index) {
-                    return cache_ops(index, ION_IOC_CLEAN_CACHES);
+                    return cache_ops(index);
                 }
                 OMX_ERRORTYPE cache_clean_invalidate_buffer(unsigned int index) {
-                    return cache_ops(index, ION_IOC_CLEAN_INV_CACHES);
+                    return cache_ops(index);
                 }
         };
         allocate_color_convert_buf client_buffers;

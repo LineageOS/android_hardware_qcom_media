@@ -44,7 +44,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "omx_video_encoder.h"
 #include "vidc_common.h"
 #include <linux/videodev2.h>
-#include <media/msm_vidc.h>
+#include "media/msm_vidc_utils.h"
 #include <poll.h>
 #include <list>
 #include "color_metadata.h"
@@ -401,7 +401,6 @@ class venc_dev
 #ifdef USE_ION
             int ion_device_fd;
             struct ion_allocation_data alloc_data;
-            struct ion_fd_data ion_alloc_fd;
 #endif
         };
 
@@ -513,7 +512,7 @@ class venc_dev
         bool venc_set_batch_size(OMX_U32 size);
         bool venc_calibrate_gop();
         bool venc_set_vqzip_defaults();
-        int venc_get_index_from_fd(OMX_U32 ion_fd, OMX_U32 buffer_fd);
+        int venc_get_index_from_fd(OMX_U32 buffer_fd);
         bool venc_set_hierp_layers(OMX_U32 hierp_layers);
         bool venc_set_baselayerid(OMX_U32 baseid);
         bool venc_set_qp(OMX_U32 i_frame_qp, OMX_U32 p_frame_qp,OMX_U32 b_frame_qp, OMX_U32 enable);
@@ -540,6 +539,7 @@ class venc_dev
             x = x | x >> 1;
             x = x | x >> 2;
             x = x | x >> 4;
+            x = x | x >> 8;
             x = x | x >> 16;
             x = x + 1;
             return x;

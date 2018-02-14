@@ -6,8 +6,10 @@ LOCAL_SRC_FILES := \
         C2DColorConverter.cpp
 
 LOCAL_C_INCLUDES := \
-    $(TARGET_OUT_HEADERS)/adreno
+    $(TOP)/vendor/qcom/proprietary/gles/adreno200/include/private/C2D
+
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/qcom/display
+
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 
 LOCAL_SHARED_LIBRARIES := liblog libdl

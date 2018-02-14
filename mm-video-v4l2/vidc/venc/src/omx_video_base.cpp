@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2017, Linux Foundation. All rights reserved.
+Copyright (c) 2010-2018, Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -102,8 +102,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define MEM_HEAP_ID ION_CP_MM_HEAP_ID
 #define SECURE_ALIGN SZ_1M
-#define SECURE_FLAGS_INPUT_BUFFER ION_SECURE
-#define SECURE_FLAGS_OUTPUT_BUFFER ION_SECURE
+#define SECURE_FLAGS_INPUT_BUFFER ION_FLAG_SECURE
+#define SECURE_FLAGS_OUTPUT_BUFFER ION_FLAG_SECURE
 
 #endif
 
@@ -2601,9 +2601,7 @@ OMX_ERRORTYPE  omx_video::use_input_buffer(
         for (i=0; i< m_sInPortDef.nBufferCountActual; i++) {
             m_pInput_pmem[i].fd = -1;
 #ifdef USE_ION
-            m_pInput_ion[i].ion_device_fd =-1;
-            m_pInput_ion[i].fd_ion_data.fd =-1;
-            m_pInput_ion[i].ion_alloc_data.handle = 0;
+            m_pInput_ion[i].ion_alloc_data.fd =-1;
 #endif
         }
 
@@ -2630,15 +2628,14 @@ OMX_ERRORTYPE  omx_video::use_input_buffer(
 
         if (!m_use_input_pmem) {
 #ifdef USE_ION
-            m_pInput_ion[i].ion_device_fd = alloc_map_ion_memory(m_sInPortDef.nBufferSize,
+            bool status = alloc_map_ion_memory(m_sInPortDef.nBufferSize,
                     &m_pInput_ion[i].ion_alloc_data,
-                    &m_pInput_ion[i].fd_ion_data,
                     secure_session ? SECURE_FLAGS_INPUT_BUFFER : 0);
-            if (m_pInput_ion[i].ion_device_fd < 0) {
+            if (status == false || (int)m_pInput_ion[i].ion_alloc_data.fd < 0) {
                 DEBUG_PRINT_ERROR("ERROR:ION device open() Failed");
                 return OMX_ErrorInsufficientResources;
             }
-            m_pInput_pmem[i].fd = m_pInput_ion[i].fd_ion_data.fd;
+            m_pInput_pmem[i].fd = m_pInput_ion[i].ion_alloc_data.fd;
 #else
             m_pInput_pmem[i].fd = open (MEM_DEVICE,O_RDWR);
             if (m_pInput_pmem[i].fd == 0) {
@@ -2787,9 +2784,7 @@ OMX_ERRORTYPE  omx_video::use_output_buffer(
                 bufHdr++;
                 m_pOutput_pmem[i].fd = -1;
 #ifdef USE_ION
-                m_pOutput_ion[i].ion_device_fd =-1;
-                m_pOutput_ion[i].fd_ion_data.fd=-1;
-                m_pOutput_ion[i].ion_alloc_data.handle = 0;
+                m_pOutput_ion[i].ion_alloc_data.fd =-1;
 #endif
             }
         } else {
@@ -2813,15 +2808,14 @@ OMX_ERRORTYPE  omx_video::use_output_buffer(
             if (!m_use_output_pmem) {
 #ifdef USE_ION
                 align_size = (m_sOutPortDef.nBufferSize + (SZ_4K - 1)) & ~(SZ_4K - 1);
-                m_pOutput_ion[i].ion_device_fd = alloc_map_ion_memory(align_size,
+                bool status = alloc_map_ion_memory(align_size,
                         &m_pOutput_ion[i].ion_alloc_data,
-                        &m_pOutput_ion[i].fd_ion_data,
                         secure_session ? SECURE_FLAGS_OUTPUT_BUFFER : 0);
-                if (m_pOutput_ion[i].ion_device_fd < 0) {
+                if (status == false || (int)m_pOutput_ion[i].ion_alloc_data.fd < 0) {
                     DEBUG_PRINT_ERROR("ERROR:ION device open() Failed");
                     return OMX_ErrorInsufficientResources;
                 }
-                m_pOutput_pmem[i].fd = m_pOutput_ion[i].fd_ion_data.fd;
+                m_pOutput_pmem[i].fd = m_pOutput_ion[i].ion_alloc_data.fd;
 #else
                 m_pOutput_pmem[i].fd = open (MEM_DEVICE,O_RDWR);
 
@@ -3386,9 +3380,7 @@ OMX_ERRORTYPE  omx_video::allocate_input_buffer(
         for (i=0; i< m_sInPortDef.nBufferCountActual; i++) {
             m_pInput_pmem[i].fd = -1;
 #ifdef USE_ION
-            m_pInput_ion[i].ion_device_fd =-1;
-            m_pInput_ion[i].fd_ion_data.fd =-1;
-            m_pInput_ion[i].ion_alloc_data.handle = 0;
+            m_pInput_ion[i].ion_alloc_data.fd = -1;
 #endif
         }
     }
@@ -3410,16 +3402,14 @@ OMX_ERRORTYPE  omx_video::allocate_input_buffer(
         (*bufferHdr)->pInputPortPrivate = (OMX_PTR)&m_pInput_pmem[i];
 
 #ifdef USE_ION
-        m_pInput_ion[i].ion_device_fd = alloc_map_ion_memory(m_sInPortDef.nBufferSize,
+        bool status = alloc_map_ion_memory(m_sInPortDef.nBufferSize,
                 &m_pInput_ion[i].ion_alloc_data,
-                &m_pInput_ion[i].fd_ion_data,
                 secure_session ? SECURE_FLAGS_INPUT_BUFFER : 0);
-        if (m_pInput_ion[i].ion_device_fd < 0) {
+        if (status == false || (int)m_pInput_ion[i].ion_alloc_data.fd < 0) {
             DEBUG_PRINT_ERROR("ERROR:ION device open() Failed");
             return OMX_ErrorInsufficientResources;
         }
-
-        m_pInput_pmem[i].fd = m_pInput_ion[i].fd_ion_data.fd;
+        m_pInput_pmem[i].fd = m_pInput_ion[i].ion_alloc_data.fd;
 #else
         m_pInput_pmem[i].fd = open (MEM_DEVICE,O_RDWR);
 
@@ -3550,9 +3540,7 @@ OMX_ERRORTYPE  omx_video::allocate_output_buffer(
                 bufHdr++;
                 m_pOutput_pmem[i].fd = -1;
 #ifdef USE_ION
-                m_pOutput_ion[i].ion_device_fd =-1;
-                m_pOutput_ion[i].fd_ion_data.fd=-1;
-                m_pOutput_ion[i].ion_alloc_data.handle = 0;
+                m_pOutput_ion[i].ion_alloc_data.fd = -1;
 #endif
             }
         } else {
@@ -3572,16 +3560,15 @@ OMX_ERRORTYPE  omx_video::allocate_output_buffer(
         if (i < m_sOutPortDef.nBufferCountActual) {
 #ifdef USE_ION
             align_size = ALIGN(m_sOutPortDef.nBufferSize, 4096);
-            m_pOutput_ion[i].ion_device_fd = alloc_map_ion_memory(align_size,
+            bool status = alloc_map_ion_memory(align_size,
                     &m_pOutput_ion[i].ion_alloc_data,
-                    &m_pOutput_ion[i].fd_ion_data,
                     secure_session ? SECURE_FLAGS_OUTPUT_BUFFER : ION_FLAG_CACHED);
-            if (m_pOutput_ion[i].ion_device_fd < 0) {
+            if (status == false || (int)m_pOutput_ion[i].ion_alloc_data.fd < 0) {
                 DEBUG_PRINT_ERROR("ERROR:ION device open() Failed");
                 return OMX_ErrorInsufficientResources;
             }
 
-            m_pOutput_pmem[i].fd = m_pOutput_ion[i].fd_ion_data.fd;
+            m_pOutput_pmem[i].fd = m_pOutput_ion[i].ion_alloc_data.fd;
 #else
             m_pOutput_pmem[i].fd = open (MEM_DEVICE,O_RDWR);
             if (m_pOutput_pmem[i].fd == 0) {
@@ -4945,38 +4932,37 @@ void omx_video::complete_pending_buffer_done_cbs()
 }
 
 #ifdef USE_ION
-int omx_video::alloc_map_ion_memory(int size,
-        struct ion_allocation_data *alloc_data,
-        struct ion_fd_data *fd_data,int flag)
+bool omx_video::alloc_map_ion_memory(int size,
+        struct ion_allocation_data *alloc_data, int flag)
 {
     struct venc_ion buf_ion_info;
-    int ion_device_fd =-1,rc=0,ion_dev_flags = 0;
-    if (size <=0 || !alloc_data || !fd_data) {
+    int rc=0,ion_dev_flags = 0;
+
+    if (size <=0 || !alloc_data) {
         DEBUG_PRINT_ERROR("Invalid input to alloc_map_ion_memory");
-        return -EINVAL;
+        return false;
     }
 
+    alloc_data->fd = -1;
     ion_dev_flags = O_RDONLY;
-    ion_device_fd = open (MEM_DEVICE,ion_dev_flags);
-    if (ion_device_fd < 0) {
+    alloc_data->fd = open (MEM_DEVICE,ion_dev_flags);
+    if ((int) alloc_data->fd < 0) {
         DEBUG_PRINT_ERROR("ERROR: ION Device open() Failed");
-        return ion_device_fd;
+        return false;
     }
 
     if(secure_session) {
         alloc_data->len = (size + (SECURE_ALIGN - 1)) & ~(SECURE_ALIGN - 1);
-        alloc_data->align = SECURE_ALIGN;
         alloc_data->flags = flag;
         alloc_data->heap_id_mask = ION_HEAP(MEM_HEAP_ID);
         if (alloc_data->flags & ION_FLAG_CP_BITSTREAM) {
             alloc_data->heap_id_mask |= ION_HEAP(ION_SECURE_DISPLAY_HEAP_ID);
         }
-        DEBUG_PRINT_HIGH("ION ALLOC sec buf: size %u align %u flags %x",
-                (unsigned int)alloc_data->len, (unsigned int)alloc_data->align,
+        DEBUG_PRINT_HIGH("ION ALLOC sec buf: size %u flags %x",
+                (unsigned int)alloc_data->len,
                 alloc_data->flags);
     } else {
         alloc_data->len = (size + (SZ_4K - 1)) & ~(SZ_4K - 1);
-        alloc_data->align = SZ_4K;
         alloc_data->flags = (flag & ION_FLAG_CACHED);
 
         /* If color format is Vanilla NV12, we will need to use caching for optimal
@@ -4989,32 +4975,21 @@ int omx_video::alloc_map_ion_memory(int size,
             alloc_data->flags = ION_FLAG_CACHED;
         }
         alloc_data->heap_id_mask = (ION_HEAP(MEM_HEAP_ID) |
-                                 ION_HEAP(ION_IOMMU_HEAP_ID));
-        DEBUG_PRINT_HIGH("ION ALLOC unsec buf: size %u align %u flags %x",
-                (unsigned int)alloc_data->len, (unsigned int)alloc_data->align,
+                                    ION_HEAP(ION_SYSTEM_HEAP_ID));
+        DEBUG_PRINT_HIGH("ION ALLOC unsec buf: size %u flags %x",
+                (unsigned int)alloc_data->len,
                 alloc_data->flags);
     }
 
-    rc = ioctl(ion_device_fd,ION_IOC_ALLOC,alloc_data);
-    if (rc || !alloc_data->handle) {
-        DEBUG_PRINT_ERROR("ION ALLOC memory failed 0x%x", rc);
-        alloc_data->handle = 0;
-        close(ion_device_fd);
-        ion_device_fd = -1;
-        return ion_device_fd;
-    }
-    fd_data->handle = alloc_data->handle;
-    rc = ioctl(ion_device_fd,ION_IOC_MAP,fd_data);
+    rc = ioctl(alloc_data->fd,ION_IOC_ALLOC,alloc_data);
     if (rc) {
-        DEBUG_PRINT_ERROR("ION MAP failed ");
-        buf_ion_info.ion_alloc_data = *alloc_data;
-        buf_ion_info.ion_device_fd = ion_device_fd;
-        buf_ion_info.fd_ion_data = *fd_data;
-        free_ion_memory(&buf_ion_info);
-        fd_data->fd =-1;
-        ion_device_fd =-1;
+        DEBUG_PRINT_ERROR("ION ALLOC memory failed 0x%x", rc);
+        close(alloc_data->fd);
+        alloc_data->fd = -1;
+        return false;
     }
-    return ion_device_fd;
+
+    return true;
 }
 
 void omx_video::free_ion_memory(struct venc_ion *buf_ion_info)
@@ -5023,15 +4998,8 @@ void omx_video::free_ion_memory(struct venc_ion *buf_ion_info)
         DEBUG_PRINT_ERROR("Invalid input to free_ion_memory");
         return;
     }
-    if (ioctl(buf_ion_info->ion_device_fd,ION_IOC_FREE,
-                &buf_ion_info->ion_alloc_data.handle)) {
-        DEBUG_PRINT_ERROR("ION free failed ");
-        return;
-    }
-    close(buf_ion_info->ion_device_fd);
-    buf_ion_info->ion_alloc_data.handle = 0;
-    buf_ion_info->ion_device_fd = -1;
-    buf_ion_info->fd_ion_data.fd = -1;
+    close(buf_ion_info->ion_alloc_data.fd);
+    buf_ion_info->ion_alloc_data.fd = -1;
 }
 #endif
 
