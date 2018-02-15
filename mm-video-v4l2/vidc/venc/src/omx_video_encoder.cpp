@@ -2164,6 +2164,25 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
 
                 return set_vendor_extension_config(ext);
             }
+        case OMX_IndexConfigVideoNalSize:
+            {
+                VALIDATE_OMX_PARAM_DATA(configData, OMX_VIDEO_CONFIG_NALSIZE);
+
+                OMX_VIDEO_CONFIG_NALSIZE* pParam =
+                    reinterpret_cast<OMX_VIDEO_CONFIG_NALSIZE*>(configData);
+                DEBUG_PRINT_HIGH("set_config(): OMX_IndexConfigVideoNalSize (%u)", (unsigned int)pParam->nNaluBytes);
+
+                if (pParam->nPortIndex == PORT_INDEX_OUT) {
+                    if (handle->venc_set_config(configData, OMX_IndexConfigVideoNalSize) != true) {
+                        DEBUG_PRINT_LOW("Setting OMX_IndexConfigVideoBitrate failed");
+                        return OMX_ErrorUnsupportedSetting;
+                    }
+                } else {
+                    DEBUG_PRINT_ERROR("ERROR: Unsupported port index: %u", (unsigned int)pParam->nPortIndex);
+                    return OMX_ErrorBadPortIndex;
+                }
+                break;
+            }
 
         default:
             DEBUG_PRINT_ERROR("ERROR: unsupported index %d", (int) configIndex);

@@ -531,6 +531,7 @@ class venc_dev
         bool venc_set_iframesize_type(QOMX_VIDEO_IFRAMESIZE_TYPE type);
         unsigned long venc_get_color_format(OMX_COLOR_FORMATTYPE eColorFormat);
         unsigned long venc_get_codectype(OMX_VIDEO_CODINGTYPE eCompressionFormat);
+        bool venc_set_nal_size (OMX_VIDEO_CONFIG_NALSIZE *nalSizeInfo);
 
         OMX_U32 pmem_free();
         OMX_U32 pmem_allocate(OMX_U32 size, OMX_U32 alignment, OMX_U32 count);
