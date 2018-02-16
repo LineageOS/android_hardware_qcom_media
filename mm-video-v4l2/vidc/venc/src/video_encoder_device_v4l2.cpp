@@ -1210,35 +1210,31 @@ OMX_ERRORTYPE venc_dev::allocate_extradata(struct extradata_buffer_info *extrada
 #ifdef USE_ION
 
     if (extradata_info->buffer_size) {
-        munmap((void *)extradata_info->uaddr, extradata_info->size);
-        close(extradata_info->ion.ion_alloc_data.fd);
+        venc_handle->ion_unmap(extradata_info->ion.data_fd, (void *)extradata_info->uaddr, extradata_info->size);
         venc_handle->free_ion_memory(&extradata_info->ion);
         extradata_info->size = (extradata_info->size + 4095) & (~4095);
 
         // ION_IOC_MAP defined @ bionic/libc/kernel/uapi/linux/ion.h not in kernel,
         // and this ioctl uses "struct ion_fd_data" with handle member
         // Refer alloc_map_ion_memory definition @omx_video_base.cpp
-        extradata_info->ion.ion_alloc_data.fd = venc_handle->alloc_map_ion_memory(
-                extradata_info->size,
-                &extradata_info->ion.ion_alloc_data, flags);
+        bool status = venc_handle->alloc_map_ion_memory(
+                extradata_info->size, &extradata_info->ion, flags);
 
-        if ((int) extradata_info->ion.ion_alloc_data.fd < 0) {
+        if (status == false) {
             DEBUG_PRINT_ERROR("Failed to alloc extradata memory\n");
             return OMX_ErrorInsufficientResources;
         }
 
         extradata_info->uaddr = (char *)mmap(NULL,
-                extradata_info->size,
-                PROT_READ|PROT_WRITE, MAP_SHARED,
-        extradata_info->ion.ion_alloc_data.fd , 0);
+                                             extradata_info->size,
+                                             PROT_READ|PROT_WRITE, MAP_SHARED,
+                                             extradata_info->ion.data_fd , 0);
 
         if (extradata_info->uaddr == MAP_FAILED) {
             DEBUG_PRINT_ERROR("Failed to map extradata memory\n");
-            close(extradata_info->ion.ion_alloc_data.fd);
             venc_handle->free_ion_memory(&extradata_info->ion);
             return OMX_ErrorInsufficientResources;
         }
-        extradata_info->m_ion_dev = open("/dev/ion", O_RDONLY);
     }
 
 #endif
@@ -1255,17 +1251,13 @@ void venc_dev::free_extradata(struct extradata_buffer_info *extradata_info)
     }
 
     if (extradata_info->uaddr) {
-        munmap((void *)extradata_info->uaddr, extradata_info->size);
+        venc_handle->ion_unmap(extradata_info->ion.data_fd, (void *)extradata_info->uaddr, extradata_info->size);
         extradata_info->uaddr = NULL;
-        close(extradata_info->ion.ion_alloc_data.fd);
         venc_handle->free_ion_memory(&extradata_info->ion);
     }
 
-    if (extradata_info->m_ion_dev)
-        close(extradata_info->m_ion_dev);
-
     memset(extradata_info, 0, sizeof(*extradata_info));
-    extradata_info->ion.ion_alloc_data.fd = -1;
+    extradata_info->ion.data_fd = -1;
     extradata_info->allocated = OMX_FALSE;
 
 #endif // USE_ION
@@ -4274,7 +4266,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
         plane[extra_idx].length = input_extradata_info.size;
         plane[extra_idx].m.userptr = (unsigned long) (input_extradata_info.uaddr + extradata_index * input_extradata_info.buffer_size);
 #ifdef USE_ION
-        plane[extra_idx].reserved[0] = input_extradata_info.ion.ion_alloc_data.fd;
+        plane[extra_idx].reserved[0] = input_extradata_info.ion.data_fd;
 #endif
         plane[extra_idx].reserved[1] = input_extradata_info.buffer_size * extradata_index;
         plane[extra_idx].reserved[2] = input_extradata_info.size;
@@ -4460,7 +4452,7 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
                 plane[extra_idx].bytesused = 0;
                 plane[extra_idx].length = input_extradata_info.size;
                 plane[extra_idx].m.userptr = (unsigned long) (input_extradata_info.uaddr + extradata_index * input_extradata_info.buffer_size);
-                plane[extra_idx].reserved[0] = input_extradata_info.ion.ion_alloc_data.fd;
+                plane[extra_idx].reserved[0] = input_extradata_info.ion.data_fd;
                 plane[extra_idx].reserved[1] = input_extradata_info.buffer_size * extradata_index;
                 plane[extra_idx].reserved[2] = input_extradata_info.size;
                 plane[extra_idx].data_offset = 0;
@@ -4608,7 +4600,7 @@ bool venc_dev::venc_fill_buf(void *buffer, void *pmem_data_buf,unsigned index,un
         plane[extra_idx].length = output_extradata_info.buffer_size;
         plane[extra_idx].m.userptr = (unsigned long) (output_extradata_info.uaddr + index * output_extradata_info.buffer_size);
 #ifdef USE_ION
-        plane[extra_idx].reserved[0] = output_extradata_info.ion.ion_alloc_data.fd;
+        plane[extra_idx].reserved[0] = output_extradata_info.ion.data_fd;
 #endif
         plane[extra_idx].reserved[1] = output_extradata_info.buffer_size * index;
         plane[extra_idx].data_offset = 0;

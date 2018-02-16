@@ -56,7 +56,13 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <unordered_map>
 #include <media/msm_media_info.h>
 
+#include <linux/msm_ion.h>
+#if TARGET_ION_ABI_VERSION >= 2
+#include <ion/ion.h>
+#include <linux/dma-buf.h>
+#else
 #include <linux/ion.h>
+#endif
 
 #include "C2DColorConverter.h"
 
@@ -433,7 +439,9 @@ struct vdec_framerate {
 
 #ifdef USE_ION
 struct vdec_ion {
-    struct ion_allocation_data ion_alloc_data;
+    int dev_fd;
+    struct ion_allocation_data alloc_data;
+    int data_fd;
 };
 #endif
 
@@ -655,6 +663,8 @@ class omx_vdec: public qc_omx_component
         void complete_pending_buffer_done_cbs();
         struct video_driver_context drv_ctx;
         int m_poll_efd;
+        char *ion_map(int fd, int len);
+        OMX_ERRORTYPE ion_unmap(int fd, void *bufaddr, int len);
         OMX_ERRORTYPE allocate_extradata();
         void free_extradata();
         int update_resolution(int width, int height, int stride, int scan_lines);
@@ -944,8 +954,7 @@ class omx_vdec: public qc_omx_component
         bool align_pmem_buffers(int pmem_fd, OMX_U32 buffer_size,
                 OMX_U32 alignment);
 #ifdef USE_ION
-        bool alloc_map_ion_memory(OMX_U32 buffer_size,
-                struct ion_allocation_data *alloc_data, int flag);
+        bool alloc_map_ion_memory(OMX_U32 buffer_size, vdec_ion *ion_info, int flag);
         void free_ion_memory(struct vdec_ion *buf_ion_info);
 #endif
 
