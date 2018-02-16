@@ -1,7 +1,7 @@
 /**
  * @copyright
  *
- *   Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
+ *   Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
  *
  *   Redistribution and use in source and binary forms, with or without
  *   modification, are permitted provided that the following conditions are met:
@@ -191,6 +191,25 @@ OMX_ERRORTYPE omx_swvdec::component_init(OMX_STRING cmp_name)
         m_swvdec_codec         = SWVDEC_CODEC_H263;
         m_omx_video_codingtype = OMX_VIDEO_CodingH263;
     }
+#ifdef _ANDROID_O_MR1_DIVX_CHANGES
+   else if (!strncmp(cmp_name,"OMX.qti.video.decoder.divxsw",OMX_MAX_STRINGNAME_SIZE)){
+        OMX_SWVDEC_LOG_LOW("video_decoder.divx");
+
+        strlcpy(m_cmp_name,              cmp_name, OMX_MAX_STRINGNAME_SIZE);
+        strlcpy(m_role_name, "video_decoder.divx", OMX_MAX_STRINGNAME_SIZE);
+
+        m_swvdec_codec         = SWVDEC_CODEC_MPEG4;
+        m_omx_video_codingtype = ((OMX_VIDEO_CODINGTYPE) QOMX_VIDEO_CodingDivx);
+   }else if (!strncmp(cmp_name,"OMX.qti.video.decoder.divx4sw",OMX_MAX_STRINGNAME_SIZE)){
+         OMX_SWVDEC_LOG_LOW("video_decoder.divx4");
+
+        strlcpy(m_cmp_name,              cmp_name, OMX_MAX_STRINGNAME_SIZE);
+        strlcpy(m_role_name, "video_decoder.divx4", OMX_MAX_STRINGNAME_SIZE);
+
+        m_swvdec_codec         = SWVDEC_CODEC_MPEG4;
+        m_omx_video_codingtype = ((OMX_VIDEO_CODINGTYPE) QOMX_VIDEO_CodingDivx);
+   }
+#else
     else if (((!strncmp(cmp_name,
                         "OMX.qti.video.decoder.divxsw",
                         OMX_MAX_STRINGNAME_SIZE))) ||
@@ -206,6 +225,7 @@ OMX_ERRORTYPE omx_swvdec::component_init(OMX_STRING cmp_name)
         m_swvdec_codec         = SWVDEC_CODEC_MPEG4;
         m_omx_video_codingtype = ((OMX_VIDEO_CODINGTYPE) QOMX_VIDEO_CodingDivx);
     }
+#endif
     else
     {
         OMX_SWVDEC_LOG_ERROR("'%s': invalid component name", cmp_name);
