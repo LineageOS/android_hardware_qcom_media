@@ -68,6 +68,9 @@ libmm-venc-inc      += frameworks/native/include/media/openmax
 libmm-venc-inc      += hardware/qcom/media/libc2dcolorconvert
 libmm-venc-inc      += $(TARGET_OUT_HEADERS)/libvqzip
 libmm-venc-inc      += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+libmm-venc-inc      += $(TOP)/frameworks/native/libs/nativewindow/include
+libmm-venc-inc      += $(TOP)/frameworks/native/libs/nativebase/include
+libmm-venc-inc      += $(TOP)/frameworks/native/libs/arect/include
 
 ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_SW_VENC_ROTATION)),true)
 libmm-venc-inc      += hardware/libhardware/include/hardware
