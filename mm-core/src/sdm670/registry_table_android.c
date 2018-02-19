@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2016-2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -650,7 +650,7 @@ omx_core_cb_type core[] =
     }
   },
   {
-    "AIV.play.generic",
+    "OMX.qti.vdec.vpp",
     NULL, // Create instance function
     // Unique instance handle
     {
@@ -659,10 +659,10 @@ omx_core_cb_type core[] =
       NULL,
       NULL
     },
-    NULL,  // Shared object library handle
-    "libAivPlay.so",
+    NULL,   // Shared object library handle
+    "libOmxVpp.so",
     {
-      "AIV.play.role.generic"
+      "iv_processor.yuv"
     }
   },
   {
@@ -743,22 +743,6 @@ omx_core_cb_type core[] =
     "libOmxVenc.so",
     {
       "video_encoder.hevc"
-    }
-  },
-  {
-    "OMX.qti.vdec.vpp",
-    NULL, // Create instance function
-    // Unique instance handle
-    {
-      NULL,
-      NULL,
-      NULL,
-      NULL
-    },
-    NULL,   // Shared object library handle
-    "libOmxVpp.so",
-    {
-      "video_decoder.vpp"
     }
   }
 };
