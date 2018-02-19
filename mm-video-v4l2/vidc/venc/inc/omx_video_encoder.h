@@ -113,6 +113,7 @@ class omx_venc: public omx_video
                 perf_lock_release_t m_perf_lock_release;
         };
         perf_control m_perf_control;
+        bool dev_handle_client_input_extradata(void* buffer);
 };
 
 #ifdef _UBWC_
