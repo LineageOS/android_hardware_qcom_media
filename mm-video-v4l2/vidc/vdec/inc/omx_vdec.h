@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010 - 2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2010 - 2018, The Linux Foundation. All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -1168,7 +1168,6 @@ class omx_vdec: public qc_omx_component
         OMX_FRAMESIZETYPE framesize;
         OMX_CONFIG_RECTTYPE rectangle;
         OMX_U32 prev_n_filled_len;
-        bool is_down_scalar_enabled;
         bool m_force_down_scalar;
         struct custom_buffersize {
             OMX_U32 input_buffersize;
@@ -1407,6 +1406,9 @@ class omx_vdec: public qc_omx_component
         void get_preferred_color_aspects(ColorAspects& preferredColorAspects);
         void get_preferred_hdr_info(HDRStaticInfo& preferredHDRInfo);
         bool vdec_query_cap(struct v4l2_queryctrl &cap);
+public:
+        bool is_down_scalar_enabled;
+        bool m_is_split_mode;
 };
 
 enum instance_state {
