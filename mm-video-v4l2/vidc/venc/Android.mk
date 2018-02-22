@@ -57,6 +57,8 @@ libmm-venc-def += -DUSE_CAMERA_METABUFFER_UTILS
 
 # Common Includes
 libmm-venc-inc      := $(LOCAL_PATH)/inc
+libmm-venc-inc      += $(TOP)/system/core/libion/include
+libmm-venc-inc      += $(TOP)/system/core/libion/kernel-headers
 libmm-venc-inc      += $(TOP)/hardware/qcom/media/mm-video-v4l2/vidc/common/inc
 libmm-venc-inc      += hardware/qcom/media/mm-core/inc
 libmm-venc-inc      += hardware/qcom/media/libstagefrighthw
@@ -93,7 +95,7 @@ LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 
 LOCAL_PRELINK_MODULE      := false
-LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl libplatformconfig
+LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl libplatformconfig libion
 
 # ifeq ($(BOARD_USES_ADRENO), true)
 LOCAL_SHARED_LIBRARIES    += libc2dcolorconvert
@@ -125,7 +127,7 @@ LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 
 LOCAL_PRELINK_MODULE      := false
-LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl libplatformconfig
+LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl libplatformconfig libion
 LOCAL_SHARED_LIBRARIES    += libMpeg4SwEncoder
 LOCAL_SHARED_LIBRARIES    += libqdMetaData
 

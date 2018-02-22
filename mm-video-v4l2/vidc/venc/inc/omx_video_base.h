@@ -68,6 +68,14 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include "vidc_vendor_extensions.h"
 
+#include <linux/msm_ion.h>
+#if TARGET_ION_ABI_VERSION >= 2
+#include <ion/ion.h>
+#include <linux/dma-buf.h>
+#else
+#include <linux/ion.h>
+#endif
+
 #undef LOG_TAG
 #define LOG_TAG "OMX-VENC"
 
@@ -649,9 +657,10 @@ class omx_video: public qc_omx_component
         //  extensions once added !)
         const VendorExtensionStore mVendorExtensionStore;
 
+        char *ion_map(int fd, int len);
+        OMX_ERRORTYPE ion_unmap(int fd, void *bufaddr, int len);
 #ifdef USE_ION
-        bool alloc_map_ion_memory(int size,
-                                 struct ion_allocation_data *alloc_data,
+        bool alloc_map_ion_memory(int size, venc_ion *ion_info,
                                  int flag);
         void free_ion_memory(struct venc_ion *buf_ion_info);
 #endif
