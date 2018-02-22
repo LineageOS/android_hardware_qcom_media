@@ -1300,6 +1300,9 @@ int venc_dev::venc_output_log_buffers(const char *buffer_addr, int buffer_len, u
         } else if(m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8) {
            size = snprintf(m_debug.outfile_name, PROPERTY_VALUE_MAX, "%s/output_enc_%lu_%lu_%p.ivf",
                            m_debug.log_loc, m_sVenc_cfg.input_width, m_sVenc_cfg.input_height, this);
+        } else if(m_sVenc_cfg.codectype == V4L2_PIX_FMT_TME) {
+           size = snprintf(m_debug.outfile_name, PROPERTY_VALUE_MAX, "%s/output_enc_%lu_%lu_%p.tme",
+                           m_debug.log_loc, m_sVenc_cfg.input_width, m_sVenc_cfg.input_height, this);
         }
         if ((size > PROPERTY_VALUE_MAX) && (size < 0)) {
              DEBUG_PRINT_ERROR("Failed to open output file: %s for logging size:%d",
