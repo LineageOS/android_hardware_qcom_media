@@ -54,7 +54,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifdef _ANDROID_
 #include <cutils/properties.h>
     extern "C"{
-        #include<utils/Log.h>
+        #include <log/log.h>
     }
 
 #endif

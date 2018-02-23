@@ -36,7 +36,7 @@ Copyright (c) 2012 The Linux Foundation. All rights reserved.
 #include <fcntl.h>
 #include <linux/msm_kgsl.h>
 #include <sys/ioctl.h>
-#include <utils/Log.h>
+#include <log/log.h>
 #include <dlfcn.h>
 
 #undef LOG_TAG

@@ -21,7 +21,7 @@
 
 #define LOG_TAG "DashPlayer"
 #define SRMax 30
-#include <utils/Log.h>
+#include <log/log.h>
 #include <dlfcn.h>  // for dlopen/dlclose
 #include "DashPlayer.h"
 #ifdef QCOM_WFD_SINK

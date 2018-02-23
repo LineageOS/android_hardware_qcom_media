@@ -78,7 +78,7 @@ REFERENCES
 #define CHK(result) if (result != OMX_ErrorNone) { E("*************** error *************"); exit(0); }
 #define TEST_LOG
 #ifdef VENC_SYSLOG
-#include "cutils/log.h"
+#include <log/log.h>
 /// Debug message macro
 #define D(fmt, ...) LOGE("venc_test Debug %s::%d " fmt "\n",            \
                          __FUNCTION__, __LINE__,                        \

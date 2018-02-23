@@ -63,7 +63,7 @@ static ptrdiff_t x;
 #include <binder/MemoryHeapBase.h>
 #include <ui/ANativeObjectBase.h>
 extern "C"{
-#include<utils/Log.h>
+#include <log/log.h>
 }
 #include <linux/videodev2.h>
 #include <poll.h>
