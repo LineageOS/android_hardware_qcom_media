@@ -39,7 +39,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifdef _ENABLE_QC_MSG_LOG_
     #ifdef _ANDROID_
-        #include <utils/Log.h>
+        #include <log/log.h>
         #define DEBUG_PRINT_ERROR LOGE
         #define DEBUG_PRINT       LOGI
         #define DEBUG_DETAIL      LOGV

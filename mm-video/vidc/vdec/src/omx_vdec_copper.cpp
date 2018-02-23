@@ -114,7 +114,7 @@ char ouputextradatafilename [] = "/data/extradata";
 
 #ifdef _ANDROID_
     extern "C"{
-        #include<utils/Log.h>
+        #include <log/log.h>
     }
 #endif//_ANDROID_
 

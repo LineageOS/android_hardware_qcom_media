@@ -20,7 +20,7 @@
 //#define LOG_NDEBUG 0
 #define LOG_TAG "DASHFactory"
 #include <media/IMediaPlayer.h>
-#include <utils/Log.h>
+#include <log/log.h>
 #include "DashPlayerDriver.h"
 #include "MediaPlayerFactory.h"
 

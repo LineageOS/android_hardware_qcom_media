@@ -74,7 +74,7 @@ public:
   virtual ~VideoHeap() {}
 };
 
-#include <utils/Log.h>
+#include <log/log.h>
 
 #endif // _ANDROID_
 

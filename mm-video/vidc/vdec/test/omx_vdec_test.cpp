@@ -51,7 +51,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <binder/MemoryHeapBase.h>
 
 extern "C"{
-#include<utils/Log.h>
+#include <log/log.h>
 }
 #define LOG_TAG "OMX-VDEC-TEST"
 #define DEBUG_PRINT

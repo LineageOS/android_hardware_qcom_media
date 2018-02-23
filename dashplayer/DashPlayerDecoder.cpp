@@ -16,7 +16,7 @@
 
 //#define LOG_NDEBUG 0
 #define LOG_TAG "DashPlayerDecoder"
-#include <utils/Log.h>
+#include <log/log.h>
 
 #include "DashPlayerDecoder.h"
 #include "DashCodec.h"
