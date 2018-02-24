@@ -51,6 +51,10 @@ ifeq ($(call is-board-platform-in-list, $(MASTER_SIDE_CP_TARGET_LIST)),true)
 libmm-vdec-def += -DMASTER_SIDE_CP
 endif
 
+ifeq ($(call is-platform-sdk-version-at-least,27),true) # O-MR1
+libmm-vdec-def += -D_ANDROID_O_MR1_DIVX_CHANGES
+endif
+
 include $(CLEAR_VARS)
 
 # Common Includes
