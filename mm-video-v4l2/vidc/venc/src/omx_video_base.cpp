@@ -271,7 +271,11 @@ omx_video::omx_video():
     m_event_port_settings_sent(false),
     hw_overload(false),
     m_graphicbuffer_size(0),
-    m_buffer_freed(0)
+    m_buffer_freed(0),
+    profile_mode(false),
+    profile_frame_count(0),
+    profile_start_time(0),
+    profile_last_time(0)
 {
     DEBUG_PRINT_HIGH("omx_video(): Inside Constructor()");
     memset(&m_cmp,0,sizeof(m_cmp));
@@ -297,9 +301,11 @@ omx_video::omx_video():
 
     memset(m_platform, 0, sizeof(m_platform));
 #ifdef _ANDROID_
-    char platform_name[PROPERTY_VALUE_MAX] = {0};
-    property_get("ro.board.platform", platform_name, "0");
-    strlcpy(m_platform, platform_name, sizeof(m_platform));
+    char property_value[PROPERTY_VALUE_MAX] = {0};
+    property_get("ro.board.platform", property_value, "0");
+    strlcpy(m_platform, property_value, sizeof(m_platform));
+    property_get("vendor.vidc.enc.profile.in", property_value, "0");
+    profile_mode = !!atoi(property_value);
 #endif
 
     pthread_mutex_init(&m_buf_lock, NULL);
@@ -338,6 +344,10 @@ omx_video::~omx_video()
             m_fbd_count);
 
     pthread_mutex_destroy(&m_buf_lock);
+    if (profile_mode && (profile_start_time < profile_last_time)) {
+        DEBUG_PRINT_HIGH("Input frame rate = %f",
+            ((profile_frame_count - 1) * 1e6) / (profile_last_time - profile_start_time));
+    }
     DEBUG_PRINT_HIGH("omx_video: Destructor exit");
     DEBUG_PRINT_HIGH("Exiting OMX Video Encoder ...");
 }
@@ -1597,6 +1607,14 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     DEBUG_PRINT_LOW("extradata port: size = %u, min cnt = %u, actual cnt = %u",
                             (unsigned int)portDefn->nBufferSize, (unsigned int)portDefn->nBufferCountMin,
                             (unsigned int)portDefn->nBufferCountActual);
+                } else if (portDefn->nPortIndex == (OMX_U32) PORT_INDEX_EXTRADATA_IN) {
+                    portDefn->nBufferSize = m_client_in_extradata_info.getSize();
+                    portDefn->nBufferCountMin= m_sInPortDef.nBufferCountMin;
+                    portDefn->nBufferCountActual = m_client_in_extradata_info.getBufferCount();
+                    portDefn->eDir =  OMX_DirInput;
+                    DEBUG_PRINT_LOW("extradata port: size = %u, min cnt = %u, actual cnt = %u",
+                            (unsigned int)portDefn->nBufferSize, (unsigned int)portDefn->nBufferCountMin,
+                            (unsigned int)portDefn->nBufferCountActual);
                 } else {
                     DEBUG_PRINT_ERROR("ERROR: GetParameter called on Bad Port Index");
                     eRet = OMX_ErrorBadPortIndex;
@@ -1931,6 +1949,10 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     OMX_U32 output_extradata_mask = VENC_EXTRADATA_SLICEINFO | VENC_EXTRADATA_LTRINFO |
                                                     VENC_EXTRADATA_MBINFO;
                     pParam->bEnable = (m_sExtraData & output_extradata_mask) ? OMX_TRUE : OMX_FALSE;
+                    eRet = OMX_ErrorNone;
+                } else if (pParam->nPortIndex == PORT_INDEX_EXTRADATA_IN) {
+                    OMX_U32 input_extradata_mask = VENC_EXTRADATA_ROI;
+                    pParam->bEnable = (m_sExtraData & input_extradata_mask) ? OMX_TRUE : OMX_FALSE;
                     eRet = OMX_ErrorNone;
                 } else {
                     DEBUG_PRINT_ERROR("get_parameter: unsupported extradata index (0x%x)",
@@ -2915,6 +2937,8 @@ OMX_ERRORTYPE  omx_video::use_buffer(
         eRet = use_output_buffer(hComp,bufferHdr,port,appData,bytes,buffer);
     } else if (port == PORT_INDEX_EXTRADATA_OUT) {
         eRet = use_client_output_extradata_buffer(hComp,bufferHdr,port,appData,bytes,buffer);
+    } else if (port == PORT_INDEX_EXTRADATA_IN) {
+        eRet = use_client_input_extradata_buffer(hComp,bufferHdr,port,appData,bytes,buffer);
     } else {
         DEBUG_PRINT_ERROR("ERROR: Invalid Port Index received %d",(int)port);
         eRet = OMX_ErrorBadPortIndex;
@@ -2984,6 +3008,43 @@ OMX_ERRORTYPE omx_video::allocate_client_output_extradata_headers() {
     }
     return eRet;
 }
+
+OMX_ERRORTYPE omx_video::allocate_client_input_extradata_headers() {
+    OMX_ERRORTYPE eRet = OMX_ErrorNone;
+    OMX_BUFFERHEADERTYPE *bufHdr = NULL;
+    int i = 0;
+
+    if (!m_client_input_extradata_mem_ptr) {
+        int nBufferCount       = 0;
+
+        nBufferCount = m_client_in_extradata_info.getBufferCount();
+        DEBUG_PRINT_HIGH("allocate_client_input_extradata_headers buffer_count - %d", nBufferCount);
+
+        m_client_input_extradata_mem_ptr = (OMX_BUFFERHEADERTYPE  *)calloc(nBufferCount, sizeof(OMX_BUFFERHEADERTYPE));
+
+        if (m_client_input_extradata_mem_ptr) {
+            bufHdr          =  m_client_input_extradata_mem_ptr;
+            for (i=0; i < nBufferCount; i++) {
+                bufHdr->nSize              = sizeof(OMX_BUFFERHEADERTYPE);
+                bufHdr->nVersion.nVersion  = OMX_SPEC_VERSION;
+                // Set the values when we determine the right HxW param
+                bufHdr->nAllocLen          = 0;
+                bufHdr->nFilledLen         = 0;
+                bufHdr->pAppPrivate        = NULL;
+                bufHdr->nInputPortIndex    = PORT_INDEX_EXTRADATA_IN;
+                bufHdr->pBuffer            = NULL;
+                bufHdr->pOutputPortPrivate = NULL;
+                bufHdr++;
+            }
+        } else {
+             DEBUG_PRINT_ERROR("Extradata header buf mem alloc failed[0x%p]",\
+                    m_client_input_extradata_mem_ptr);
+              eRet =  OMX_ErrorInsufficientResources;
+        }
+    }
+    return eRet;
+}
+
 OMX_ERRORTYPE  omx_video::use_client_output_extradata_buffer(
         OMX_IN OMX_HANDLETYPE            hComp,
         OMX_INOUT OMX_BUFFERHEADERTYPE** bufferHdr,
@@ -3027,6 +3088,57 @@ OMX_ERRORTYPE  omx_video::use_client_output_extradata_buffer(
     if (eRet == OMX_ErrorNone) {
         BITMASK_SET(&m_out_extradata_bm_count,i);
         *bufferHdr = (m_client_output_extradata_mem_ptr + i );
+        (*bufferHdr)->pAppPrivate = appData;
+        (*bufferHdr)->pBuffer = buffer;
+        (*bufferHdr)->nAllocLen = bytes;
+    }
+
+    return eRet;
+}
+
+OMX_ERRORTYPE  omx_video::use_client_input_extradata_buffer(
+        OMX_IN OMX_HANDLETYPE            hComp,
+        OMX_INOUT OMX_BUFFERHEADERTYPE** bufferHdr,
+        OMX_IN OMX_U32                   port,
+        OMX_IN OMX_PTR                   appData,
+        OMX_IN OMX_U32                   bytes,
+        OMX_IN OMX_U8*                   buffer)
+{
+    OMX_ERRORTYPE eRet = OMX_ErrorNone;
+    unsigned i = 0; // Temporary counter
+    unsigned buffer_count = m_client_in_extradata_info.getBufferCount();
+    OMX_U32 buffer_size = m_client_in_extradata_info.getSize();
+    (void) hComp;
+
+    if (port != PORT_INDEX_EXTRADATA_IN ||
+            !m_sExtraData || bytes != buffer_size|| bufferHdr == NULL) {
+        DEBUG_PRINT_ERROR("Bad Parameters PortIndex is - %d expected is- %d,"
+            "client_extradata - %d, bytes = %d expected is %d bufferHdr - %p", port,
+            PORT_INDEX_EXTRADATA_IN, m_sExtraData, bytes, buffer_size, bufferHdr);
+        eRet = OMX_ErrorBadParameter;
+        return eRet;
+    }
+
+    if (!m_client_input_extradata_mem_ptr) {
+        eRet = allocate_client_input_extradata_headers();
+    }
+
+    if (eRet == OMX_ErrorNone) {
+        for (i = 0; i < buffer_count; i++) {
+            if (BITMASK_ABSENT(&m_in_extradata_bm_count,i)) {
+                break;
+            }
+        }
+    }
+
+    if (i >= buffer_count) {
+        DEBUG_PRINT_ERROR("invalid buffer index");
+        eRet = OMX_ErrorInsufficientResources;
+    }
+
+    if (eRet == OMX_ErrorNone) {
+        BITMASK_SET(&m_in_extradata_bm_count,i);
+        *bufferHdr = (m_client_input_extradata_mem_ptr + i );
         (*bufferHdr)->pAppPrivate = appData;
         (*bufferHdr)->pBuffer = buffer;
         (*bufferHdr)->nAllocLen = bytes;
@@ -3808,6 +3920,15 @@ OMX_ERRORTYPE  omx_video::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
         if (release_output_extradata_done()) {
             free_output_extradata_buffer_header();
         }
+    } else if (port == PORT_INDEX_EXTRADATA_IN) {
+        nPortIndex = buffer - m_client_input_extradata_mem_ptr;
+        DEBUG_PRINT_LOW("free_buffer on extradata input port - Port idx %d", nPortIndex);
+
+        BITMASK_CLEAR(&m_in_extradata_bm_count,nPortIndex);
+
+        if (release_input_extradata_done()) {
+            free_input_extradata_buffer_header();
+        }
     } else {
         eRet = OMX_ErrorBadPortIndex;
     }
@@ -3843,6 +3964,15 @@ void omx_video::free_output_extradata_buffer_header() {
     }
 }
 
+void omx_video::free_input_extradata_buffer_header() {
+    m_sExtraData = false;
+    if (m_client_input_extradata_mem_ptr) {
+        DEBUG_PRINT_LOW("Free extradata pmem Pointer area");
+        free(m_client_input_extradata_mem_ptr);
+        m_client_input_extradata_mem_ptr = NULL;
+    }
+}
+
 /* ======================================================================
    FUNCTION
    omx_video::EmptyThisBuffer
@@ -3861,6 +3991,13 @@ void omx_video::free_output_extradata_buffer_header() {
 OMX_ERRORTYPE  omx_video::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
         OMX_IN OMX_BUFFERHEADERTYPE* buffer)
 {
+    if(buffer != NULL && buffer->nInputPortIndex == PORT_INDEX_EXTRADATA_IN) {
+        if(!dev_handle_client_input_extradata(buffer)) {
+            DEBUG_PRINT_ERROR("ERROR: omx_video::etb--> handling client extradata failed");
+            return OMX_ErrorMax;
+        }
+        return OMX_ErrorNone;
+    }
     OMX_ERRORTYPE ret1 = OMX_ErrorNone;
     unsigned int nBufferIndex ;
 
@@ -3904,6 +4041,22 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
     post_event ((unsigned long)hComp,(unsigned long)buffer,m_input_msg_id);
     return OMX_ErrorNone;
 }
+
+bool omx_video::profile_etb() {
+    if (profile_mode) {
+        struct timeval act_time = {0, 0};
+        gettimeofday(&act_time, NULL);
+        if (profile_start_time == 0) {
+            profile_start_time = (act_time.tv_usec + act_time.tv_sec * 1e6);
+        } else {
+            profile_last_time = (act_time.tv_usec + act_time.tv_sec * 1e6);
+        }
+        profile_frame_count++;
+        return true;
+    }
+    return false;
+}
+
 /* ======================================================================
    FUNCTION
    omx_video::empty_this_buffer_proxy
@@ -3936,6 +4089,11 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
     if (buffer == NULL) {
         DEBUG_PRINT_ERROR("ERROR: ETBProxy: Invalid buffer[%p]", buffer);
         return OMX_ErrorBadParameter;
+    }
+
+    if (profile_etb()) {
+        m_pCallbacks.EmptyBufferDone(hComp,m_app_data,buffer);
+        return OMX_ErrorNone;
     }
 
     // Buffer sanity checks
@@ -4383,12 +4541,14 @@ bool omx_video::allocate_done(void)
     bool bRet_In = false;
     bool bRet_Out = false;
     bool bRet_Out_Extra = false;
+    bool bRet_In_Extra = false;
 
     bRet_In = allocate_input_done();
     bRet_Out = allocate_output_done();
+    bRet_In_Extra =  allocate_input_extradata_done();
     bRet_Out_Extra = allocate_output_extradata_done();
 
-    if (bRet_In && bRet_Out && bRet_Out_Extra) {
+    if (bRet_In && bRet_Out && bRet_Out_Extra && bRet_In_Extra) {
         bRet = true;
     }
 
@@ -4493,6 +4653,33 @@ bool omx_video::allocate_output_extradata_done(void) {
         if (j == nBufferCount) {
             bRet = true;
             DEBUG_PRINT_HIGH("Allocate done for all extradata o/p buffers");
+        }
+    }
+
+    return bRet;
+}
+
+bool omx_video::allocate_input_extradata_done(void) {
+    bool bRet = false;
+    unsigned j=0;
+    unsigned nBufferCount = 0;
+
+    nBufferCount = m_client_in_extradata_info.getBufferCount();
+
+    if (!m_client_in_extradata_info.is_client_extradata_enabled()) {
+        return true;
+    }
+
+    if (m_client_input_extradata_mem_ptr) {
+        for (; j < nBufferCount; j++) {
+            if (BITMASK_ABSENT(&m_in_extradata_bm_count,j)) {
+                break;
+            }
+        }
+
+        if (j == nBufferCount) {
+            bRet = true;
+            DEBUG_PRINT_HIGH("Allocate done for all extradata i/p buffers");
         }
     }
 
@@ -4608,6 +4795,29 @@ bool omx_video::release_output_extradata_done(void) {
     if (m_client_output_extradata_mem_ptr) {
         for (; j<buffer_count; j++) {
             if ( BITMASK_PRESENT(&m_out_extradata_bm_count,j)) {
+                break;
+            }
+        }
+        if (j == buffer_count) {
+            bRet = true;
+        }
+    } else {
+        bRet = true;
+    }
+    return bRet;
+}
+
+bool omx_video::release_input_extradata_done(void) {
+    bool bRet = false;
+    unsigned i=0,j=0, buffer_count=0;
+
+    buffer_count = m_client_in_extradata_info.getBufferCount();
+    DEBUG_PRINT_LOW("Value of m_client_output_extradata_mem_ptr %p buffer_count - %d",
+            m_client_input_extradata_mem_ptr, buffer_count);
+
+    if (m_client_input_extradata_mem_ptr) {
+        for (; j<buffer_count; j++) {
+            if ( BITMASK_PRESENT(&m_in_extradata_bm_count,j)) {
                 break;
             }
         }
@@ -4966,6 +5176,11 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
     if (buffer == NULL) {
         DEBUG_PRINT_ERROR("ERROR: ETBProxyA: Invalid buffer[%p]",buffer);
         return OMX_ErrorBadParameter;
+    }
+
+    if (profile_etb()) {
+        m_pCallbacks.EmptyBufferDone(hComp,m_app_data,buffer);
+        return OMX_ErrorNone;
     }
 
     if (!dev_buffer_ready_to_queue(buffer)) {

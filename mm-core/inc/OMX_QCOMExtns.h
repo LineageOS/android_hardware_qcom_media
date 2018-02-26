@@ -1430,6 +1430,7 @@ typedef enum OMX_QCOM_EXTRADATATYPE
     OMX_ExtraDataDisplayColourSEI =        0x7F000011,
     OMX_ExtraDataLightLevelSEI =           0x7F000012,
     OMX_ExtraDataOutputCropInfo =          0x7F000014,
+    OMX_ExtraDataInputROIInfo =            0x7F000058,
 } OMX_QCOM_EXTRADATATYPE;
 
 struct ExtraDataMap {
@@ -1440,6 +1441,7 @@ static const struct ExtraDataMap kExtradataMap[] = {
         { "ltrinfo", OMX_ExtraDataVideoLTRInfo },
         { "mbinfo", OMX_ExtraDataVideoEncoderMBInfo },
         { "outputcropinfo", OMX_ExtraDataOutputCropInfo },
+        { "roiinfo", OMX_ExtraDataInputROIInfo },
 };
 
 static inline OMX_S32 getIndexForExtradataType(char * type) {

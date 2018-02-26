@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -195,6 +195,7 @@ class omx_venc: public omx_video
         );
         int swvenc_input_log_buffers(const char *buffer, int bufferlen);
         bool dev_get_hevc_profile(OMX_U32*) { return false; }
+        bool dev_handle_client_input_extradata(void*) { return false; }
 
 };
 

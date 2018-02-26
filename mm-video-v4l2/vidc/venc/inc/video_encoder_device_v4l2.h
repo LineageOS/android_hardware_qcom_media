@@ -422,6 +422,7 @@ class venc_dev
         void append_extradata_none(OMX_OTHER_EXTRADATATYPE *);
         bool handle_output_extradata(void *, int);
         bool handle_input_extradata(struct v4l2_buffer);
+        bool venc_handle_client_input_extradata(void *);
         int venc_set_format(int);
         bool deinterlace_enabled;
         bool hw_overload;
