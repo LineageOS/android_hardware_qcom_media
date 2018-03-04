@@ -53,7 +53,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <limits.h>
 #include <stdlib.h>
 #include <media/hardware/HardwareAPI.h>
-#include <media/msm_media_info.h>
 
 #ifndef _ANDROID_
 #include <sys/ioctl.h>
@@ -537,6 +536,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_app_data(NULL),
     m_inp_mem_ptr(NULL),
     m_out_mem_ptr(NULL),
+    m_client_output_extradata_mem_ptr(NULL),
     input_flush_progress (false),
     output_flush_progress (false),
     input_use_buffer (false),
@@ -549,6 +549,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     pending_output_buffers(0),
     m_out_bm_count(0),
     m_inp_bm_count(0),
+    m_out_extradata_bm_count(0),
     m_inp_bPopulated(OMX_FALSE),
     m_out_bPopulated(OMX_FALSE),
     m_flags(0),
@@ -3427,13 +3428,16 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
         }
         case OMX_QTIIndexParamVideoClientExtradata:
         {
-            VALIDATE_OMX_PARAM_DATA(paramData, QOMX_VIDEO_CLIENT_EXTRADATATYPE);
+            VALIDATE_OMX_PARAM_DATA(paramData, QOMX_EXTRADATA_ENABLE);
             DEBUG_PRINT_LOW("get_parameter: OMX_QTIIndexParamVideoClientExtradata");
-            QOMX_VIDEO_CLIENT_EXTRADATATYPE *pParam =
-                (QOMX_VIDEO_CLIENT_EXTRADATATYPE *)paramData;
-            pParam->nExtradataSize = VENUS_EXTRADATA_SIZE(4096, 2160);
-            pParam->nExtradataAllocSize = pParam->nExtradataSize * MAX_NUM_INPUT_OUTPUT_BUFFERS;
-            eRet = OMX_ErrorNone;
+            QOMX_EXTRADATA_ENABLE *pParam =
+                (QOMX_EXTRADATA_ENABLE *)paramData;
+            if (pParam->nPortIndex == OMX_CORE_OUTPUT_EXTRADATA_INDEX) {
+                pParam->bEnable = client_extradata ? OMX_TRUE : OMX_FALSE;
+                eRet = OMX_ErrorNone;
+            } else {
+                eRet = OMX_ErrorUnsupportedIndex;
+            }
             break;
         }
         default: {
@@ -3556,6 +3560,19 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                    eRet = OMX_ErrorBadParameter;
                                    break;
                                }
+                               if (OMX_CORE_OUTPUT_EXTRADATA_INDEX == portDefn->nPortIndex) {
+                                   if (portDefn->nBufferCountActual < MIN_NUM_INPUT_OUTPUT_EXTRADATA_BUFFERS ||
+                                        portDefn->nBufferSize != m_client_out_extradata_info.getSize()) {
+                                        DEBUG_PRINT_ERROR("ERROR: Bad parameeters request for extradata limit %d size - %d",
+                                                          portDefn->nBufferCountActual, portDefn->nBufferSize);
+                                        eRet = OMX_ErrorBadParameter;
+                                        break;
+                                   }
+                                    m_client_out_extradata_info.set_extradata_info(portDefn->nBufferSize,
+                                            portDefn->nBufferCountActual);
+                                    break;
+                               }
+
                                if (OMX_DirOutput == portDefn->eDir) {
                                    DEBUG_PRINT_LOW("set_parameter: OMX_IndexParamPortDefinition OP port");
                                    bool port_format_changed = false;
@@ -3919,6 +3936,25 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                         }
                         break;
 
+        case OMX_QTIIndexParamVideoClientExtradata: {
+                                  VALIDATE_OMX_PARAM_DATA(paramData, QOMX_EXTRADATA_ENABLE);
+                                  DEBUG_PRINT_LOW("set_parameter: OMX_QTIIndexParamVideoClientExtradata");
+                                  QOMX_EXTRADATA_ENABLE *pParam =
+                                      (QOMX_EXTRADATA_ENABLE *)paramData;
+
+                                  if (m_state != OMX_StateLoaded) {
+                                      DEBUG_PRINT_ERROR("Set Parameter called in Invalid state");
+                                      return OMX_ErrorIncorrectStateOperation;
+                                  }
+
+                                  if (pParam->nPortIndex == OMX_CORE_OUTPUT_EXTRADATA_INDEX) {
+                                      m_client_out_extradata_info.enable_client_extradata(pParam->bEnable);
+                                  } else {
+                                      DEBUG_PRINT_ERROR("Incorrect portIndex - %d", pParam->nPortIndex);
+                                      eRet = OMX_ErrorUnsupportedIndex;
+                                  }
+                                  break;
+                              }
         case OMX_IndexParamStandardComponentRole: {
                                   VALIDATE_OMX_PARAM_DATA(paramData, OMX_PARAM_COMPONENTROLETYPE);
                                   OMX_PARAM_COMPONENTROLETYPE *comp_role;
@@ -4450,28 +4486,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             } else {
                 DEBUG_PRINT_ERROR("ERROR: Custom buffer size in not supported on output port");
                 eRet = OMX_ErrorBadParameter;
-            }
-            break;
-        }
-        case OMX_QTIIndexParamVideoClientExtradata:
-        {
-            VALIDATE_OMX_PARAM_DATA(paramData, QOMX_VIDEO_CLIENT_EXTRADATATYPE);
-            DEBUG_PRINT_LOW("set_parameter: OMX_QTIIndexParamVideoClientExtradata");
-            QOMX_VIDEO_CLIENT_EXTRADATATYPE *pParam =
-                (QOMX_VIDEO_CLIENT_EXTRADATATYPE *)paramData;
-            OMX_U32 extradata_size = VENUS_EXTRADATA_SIZE(4096, 2160);
-            if (pParam->nExtradataSize < extradata_size ||
-                pParam->nExtradataAllocSize < (extradata_size * MAX_NUM_INPUT_OUTPUT_BUFFERS) ||
-                pParam->nExtradataAllocSize < (pParam->nExtradataSize * MAX_NUM_INPUT_OUTPUT_BUFFERS)) {
-                DEBUG_PRINT_ERROR("set_parameter: Incorrect buffer size for client extradata");
-                eRet = OMX_ErrorBadParameter;
-                break;
-            }
-            if (!m_client_extradata_info.set_extradata_info(dup(pParam->nFd),
-                pParam->nExtradataAllocSize, pParam->nExtradataSize)) {
-                DEBUG_PRINT_ERROR("set_parameter: Setting client extradata failed.");
-                eRet = OMX_ErrorBadParameter;
-                break;
             }
             break;
         }
@@ -5310,6 +5324,91 @@ OMX_ERRORTYPE  omx_vdec::use_output_buffer(
     return eRet;
 }
 
+OMX_ERRORTYPE omx_vdec::allocate_client_output_extradata_headers() {
+    OMX_ERRORTYPE eRet = OMX_ErrorNone;
+    OMX_BUFFERHEADERTYPE *bufHdr = NULL;
+    int i = 0;
+
+    if (!m_client_output_extradata_mem_ptr) {
+        int nBufferCount       = 0;
+
+        nBufferCount = m_client_out_extradata_info.getBufferCount();
+        DEBUG_PRINT_HIGH("allocate_client_output_extradata_headers buffer_count - %d", nBufferCount);
+
+        m_client_output_extradata_mem_ptr = (OMX_BUFFERHEADERTYPE  *)calloc(nBufferCount, sizeof(OMX_BUFFERHEADERTYPE));
+
+        if (m_client_output_extradata_mem_ptr) {
+            bufHdr          =  m_client_output_extradata_mem_ptr;
+            for (i=0; i < nBufferCount; i++) {
+                bufHdr->nSize              = sizeof(OMX_BUFFERHEADERTYPE);
+                bufHdr->nVersion.nVersion  = OMX_SPEC_VERSION;
+                // Set the values when we determine the right HxW param
+                bufHdr->nAllocLen          = 0;
+                bufHdr->nFilledLen         = 0;
+                bufHdr->pAppPrivate        = NULL;
+                bufHdr->nOutputPortIndex   = OMX_CORE_OUTPUT_EXTRADATA_INDEX;
+                bufHdr->pBuffer            = NULL;
+                bufHdr->pOutputPortPrivate = NULL;
+                bufHdr++;
+            }
+        } else {
+             DEBUG_PRINT_ERROR("Extradata header buf mem alloc failed[0x%p]",\
+                    m_client_output_extradata_mem_ptr);
+              eRet =  OMX_ErrorInsufficientResources;
+        }
+    }
+    return eRet;
+}
+OMX_ERRORTYPE  omx_vdec::use_client_output_extradata_buffer(
+        OMX_IN OMX_HANDLETYPE            hComp,
+        OMX_INOUT OMX_BUFFERHEADERTYPE** bufferHdr,
+        OMX_IN OMX_U32                   port,
+        OMX_IN OMX_PTR                   appData,
+        OMX_IN OMX_U32                   bytes,
+        OMX_IN OMX_U8*                   buffer)
+{
+    OMX_ERRORTYPE eRet = OMX_ErrorNone;
+    unsigned i = 0; // Temporary counter
+    unsigned buffer_count = m_client_out_extradata_info.getBufferCount();;
+    OMX_U32 buffer_size = m_client_out_extradata_info.getSize();
+    (void) hComp;
+
+    if (port != OMX_CORE_OUTPUT_EXTRADATA_INDEX ||
+            !client_extradata || bytes != buffer_size|| bufferHdr == NULL) {
+        DEBUG_PRINT_ERROR("Bad Parameters PortIndex is - %d expected is- %d,"
+            "client_extradata - %d, bytes = %d expected is %d bufferHdr - %p", port,
+            OMX_CORE_OUTPUT_EXTRADATA_INDEX, client_extradata, bytes, buffer_size, bufferHdr);
+        eRet = OMX_ErrorBadParameter;
+        return eRet;
+    }
+
+    if (!m_client_output_extradata_mem_ptr) {
+        eRet = allocate_client_output_extradata_headers();
+    }
+
+    if (eRet == OMX_ErrorNone) {
+        for (i = 0; i < buffer_count; i++) {
+            if (BITMASK_ABSENT(&m_out_extradata_bm_count,i)) {
+                break;
+            }
+        }
+    }
+
+    if (i >= buffer_count) {
+        DEBUG_PRINT_ERROR("Already using %d Extradata o/p buffers", buffer_count);
+        eRet = OMX_ErrorInsufficientResources;
+    }
+
+    if (eRet == OMX_ErrorNone) {
+        BITMASK_SET(&m_out_extradata_bm_count,i);
+        *bufferHdr = (m_client_output_extradata_mem_ptr + i );
+        (*bufferHdr)->pAppPrivate = appData;
+        (*bufferHdr)->pBuffer = buffer;
+        (*bufferHdr)->nAllocLen = bytes;
+    }
+
+    return eRet;
+}
 /* ======================================================================
    FUNCTION
    omx_vdec::use_input_heap_buffers
@@ -5417,9 +5516,11 @@ OMX_ERRORTYPE  omx_vdec::use_buffer(
             return OMX_ErrorUndefined;
         }
         error = use_input_heap_buffers(hComp, bufferHdr, port, appData, bytes, buffer);
-    } else if (port == OMX_CORE_OUTPUT_PORT_INDEX)
+    } else if (port == OMX_CORE_OUTPUT_PORT_INDEX) {
         error = use_output_buffer(hComp,bufferHdr,port,appData,bytes,buffer); //not tested
-    else {
+    } else if (port == OMX_CORE_OUTPUT_EXTRADATA_INDEX) {
+        error = use_client_output_extradata_buffer(hComp,bufferHdr,port,appData,bytes,buffer);
+    } else {
         DEBUG_PRINT_ERROR("Error: Invalid Port Index received %d",(int)port);
         error = OMX_ErrorBadPortIndex;
     }
@@ -5509,7 +5610,6 @@ OMX_ERRORTYPE omx_vdec::free_input_buffer(OMX_BUFFERHEADERTYPE *bufferHdr)
 #ifdef USE_ION
             free_ion_memory(&drv_ctx.ip_buf_ion_info[index]);
 #endif
-            m_in_alloc_cnt--;
         }
     }
 
@@ -6410,6 +6510,15 @@ OMX_ERRORTYPE  omx_vdec::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
                     OMX_CORE_OUTPUT_PORT_INDEX,
                     OMX_COMPONENT_GENERATE_EVENT);
         }
+    } else if (port == OMX_CORE_OUTPUT_EXTRADATA_INDEX) {
+        nPortIndex = buffer - m_client_output_extradata_mem_ptr;
+        DEBUG_PRINT_LOW("free_buffer on extradata output port - Port idx %d", nPortIndex);
+
+        BITMASK_CLEAR(&m_out_extradata_bm_count,nPortIndex);
+
+        if (release_output_extradata_done()) {
+            free_output_extradata_buffer_header();
+        }
     } else {
         eRet = OMX_ErrorBadPortIndex;
     }
@@ -6790,6 +6899,11 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer(OMX_IN OMX_HANDLETYPE  hComp,
         return OMX_ErrorInvalidState;
     }
 
+    if (buffer->nOutputPortIndex != OMX_CORE_OUTPUT_PORT_INDEX) {
+        DEBUG_PRINT_ERROR("ERROR:FTB invalid port in header %u", (unsigned int)buffer->nOutputPortIndex);
+        return OMX_ErrorBadPortIndex;
+    }
+
     if (!m_out_bEnabled) {
         DEBUG_PRINT_ERROR("ERROR:FTB incorrect state operation, output port is disabled.");
         return OMX_ErrorIncorrectStateOperation;
@@ -6845,11 +6959,6 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer(OMX_IN OMX_HANDLETYPE  hComp,
         DEBUG_PRINT_ERROR("FTB: ERROR: invalid buffer index, nPortIndex %u bufCount %u",
             nPortIndex, drv_ctx.op_buf.actualcount);
         return OMX_ErrorBadParameter;
-    }
-
-    if (buffer->nOutputPortIndex != OMX_CORE_OUTPUT_PORT_INDEX) {
-        DEBUG_PRINT_ERROR("ERROR:FTB invalid port in header %u", (unsigned int)buffer->nOutputPortIndex);
-        return OMX_ErrorBadPortIndex;
     }
 
     DEBUG_PRINT_LOW("[FTB] bufhdr = %p, bufhdr->pBuffer = %p", buffer, buffer->pBuffer);
@@ -7347,11 +7456,13 @@ bool omx_vdec::allocate_done(void)
     bool bRet = false;
     bool bRet_In = false;
     bool bRet_Out = false;
+    bool bRet_Out_Extra = false;
 
     bRet_In = allocate_input_done();
     bRet_Out = allocate_output_done();
+    bRet_Out_Extra = allocate_output_extradata_done();
 
-    if (bRet_In && bRet_Out) {
+    if (bRet_In && bRet_Out && bRet_Out_Extra) {
         bRet = true;
     }
 
@@ -7436,6 +7547,32 @@ bool omx_vdec::allocate_output_done(void)
     return bRet;
 }
 
+bool omx_vdec::allocate_output_extradata_done(void) {
+    bool bRet = false;
+    unsigned j=0;
+    unsigned nBufferCount = 0;
+
+    nBufferCount = m_client_out_extradata_info.getBufferCount();
+
+    if (!m_client_out_extradata_info.is_client_extradata_enabled()) {
+        return true;
+    }
+
+    if (m_client_output_extradata_mem_ptr) {
+        for (; j < nBufferCount; j++) {
+            if (BITMASK_ABSENT(&m_out_extradata_bm_count,j)) {
+                break;
+            }
+        }
+
+        if (j == nBufferCount) {
+            bRet = true;
+            DEBUG_PRINT_HIGH("Allocate done for all extradata o/p buffers");
+        }
+    }
+
+    return bRet;
+}
 /* ======================================================================
    FUNCTION
    omx_vdec::ReleaseDone
@@ -7456,7 +7593,9 @@ bool omx_vdec::release_done(void)
 
     if (release_input_done()) {
         if (release_output_done()) {
-            bRet = true;
+            if (release_output_extradata_done()) {
+                bRet = true;
+            }
         }
     }
     return bRet;
@@ -7526,6 +7665,29 @@ bool omx_vdec::release_input_done(void)
             }
         }
         if (j==drv_ctx.ip_buf.actualcount) {
+            bRet = true;
+        }
+    } else {
+        bRet = true;
+    }
+    return bRet;
+}
+
+bool omx_vdec::release_output_extradata_done(void) {
+    bool bRet = false;
+    unsigned i=0,j=0, buffer_count=0;
+
+    buffer_count = m_client_out_extradata_info.getBufferCount();
+    DEBUG_PRINT_LOW("Value of m_client_output_extradata_mem_ptr %p buffer_count - %d",
+            m_client_output_extradata_mem_ptr, buffer_count);
+
+    if (m_client_output_extradata_mem_ptr) {
+        for (; j<buffer_count; j++) {
+            if ( BITMASK_PRESENT(&m_out_extradata_bm_count,j)) {
+                break;
+            }
+        }
+        if (j == buffer_count) {
             bRet = true;
         }
     } else {
@@ -9014,6 +9176,15 @@ void omx_vdec::unmap_dynamic_buffer(OMX_BUFFERHEADERTYPE *buffer) {
     }
 }
 
+void omx_vdec::free_output_extradata_buffer_header() {
+    client_extradata = false;
+    if (m_client_output_extradata_mem_ptr) {
+        DEBUG_PRINT_LOW("Free extradata pmem Pointer area");
+        free(m_client_output_extradata_mem_ptr);
+        m_client_output_extradata_mem_ptr = NULL;
+    }
+}
+
 int omx_vdec::stream_off(OMX_U32 port)
 {
     enum v4l2_buf_type btype;
@@ -9292,6 +9463,11 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
         }
         fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
         fmt.fmt.pix_mp.pixelformat = capture_capability;
+    } else if (OMX_CORE_OUTPUT_EXTRADATA_INDEX == portDefn->nPortIndex) {
+        portDefn->nBufferSize = m_client_out_extradata_info.getSize();
+        portDefn->nBufferCountMin = MIN_NUM_INPUT_OUTPUT_EXTRADATA_BUFFERS;
+        portDefn->nBufferCountActual = MIN_NUM_INPUT_OUTPUT_EXTRADATA_BUFFERS;
+        portDefn->eDir =  OMX_DirOutput;
     } else {
         portDefn->eDir = OMX_DirMax;
         DEBUG_PRINT_LOW(" get_parameter: Bad Port idx %d",
@@ -9343,7 +9519,7 @@ OMX_ERRORTYPE omx_vdec::allocate_output_headers()
 {
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
     OMX_BUFFERHEADERTYPE *bufHdr = NULL;
-    unsigned i= 0;
+    unsigned i = 0;
 
     if (!m_out_mem_ptr) {
         DEBUG_PRINT_HIGH("Use o/p buffer case - Header List allocation");
@@ -9951,10 +10127,9 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
     else
         p_extra = m_other_extradata;
 
-    if (m_client_extradata_info.getBase() &&
-        m_client_extradata_info.getSize() >= drv_ctx.extradata_info.buffer_size) {
-        p_client_extra = (OMX_OTHER_EXTRADATATYPE *) (m_client_extradata_info.getBase() +
-                            buf_index * m_client_extradata_info.getSize());
+    if (m_client_output_extradata_mem_ptr &&
+        m_client_out_extradata_info.getSize() >= drv_ctx.extradata_info.buffer_size) {
+        p_client_extra = (OMX_OTHER_EXTRADATATYPE *)((m_client_output_extradata_mem_ptr + buf_index)->pBuffer);
     }
 
     char *p_extradata = drv_ctx.extradata_info.uaddr + buf_index * drv_ctx.extradata_info.buffer_size;
@@ -10884,8 +11059,6 @@ omx_vdec::allocate_color_convert_buf::allocate_color_convert_buf()
     init_members();
     ColorFormat = OMX_COLOR_FormatMax;
     dest_format = YCbCr420P;
-    m_c2d_output_format = 0;
-    m_c2d_init_success = false;
 }
 
 void omx_vdec::allocate_color_convert_buf::set_vdec_client(void *client)
@@ -10898,7 +11071,6 @@ void omx_vdec::allocate_color_convert_buf::init_members()
     allocated_count = 0;
     buffer_size_req = 0;
     buffer_alignment_req = 0;
-    m_c2d_output_format = 0;
     memset(m_platform_list_client,0,sizeof(m_platform_list_client));
     memset(m_platform_entry_client,0,sizeof(m_platform_entry_client));
     memset(m_pmem_info_client,0,sizeof(m_pmem_info_client));
@@ -10908,16 +11080,6 @@ void omx_vdec::allocate_color_convert_buf::init_members()
 #endif
     for (int i = 0; i < MAX_COUNT; i++)
         pmem_fd[i] = -1;
-
-    if (m_c2d_init_success)
-        return;
-
-    if (!c2d.init()) {
-        DEBUG_PRINT_ERROR("c2d init failed");
-    } else {
-        DEBUG_PRINT_HIGH("c2d init success ");
-        m_c2d_init_success = true;
-    }
 }
 
 omx_vdec::allocate_color_convert_buf::~allocate_color_convert_buf()
@@ -10938,15 +11100,6 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
         DEBUG_PRINT_HIGH("No color conversion required");
         return status;
     }
-/*
-    bool skip_get_buffersize = (omx->drv_ctx.video_resolution.frame_height == m_c2d_height &&
-               omx->drv_ctx.video_resolution.frame_width == m_c2d_width && m_c2d_output_format == dest_format);
-
-    if (skip_get_buffersize) {
-        DEBUG_PRINT_HIGH("Skip querying c2d buffer size as resolution and format not changed");
-        return status;
-    }
-*/
     pthread_mutex_lock(&omx->c_lock);
     if (omx->drv_ctx.output_format != VDEC_YUV_FORMAT_NV12 &&
             ColorFormat != OMX_COLOR_FormatYUV420Planar) {
@@ -10979,7 +11132,6 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
                 buffer_size_req = omx->drv_ctx.op_buf.buffer_size;
             if (buffer_alignment_req < omx->drv_ctx.op_buf.alignment)
                 buffer_alignment_req = omx->drv_ctx.op_buf.alignment;
-            m_c2d_output_format = dest_format;
         }
     }
 fail_update_buf_req:
@@ -10995,10 +11147,6 @@ bool omx_vdec::allocate_color_convert_buf::set_color_format(
     if (!omx) {
         DEBUG_PRINT_ERROR("Invalid client in color convert");
         return false;
-    }
-    if (!m_c2d_init_success) {
-        DEBUG_PRINT_HIGH("c2d is not initialized");
-        return status;
     }
     pthread_mutex_lock(&omx->c_lock);
     if (omx->drv_ctx.output_format == VDEC_YUV_FORMAT_NV12)
@@ -11025,18 +11173,18 @@ bool omx_vdec::allocate_color_convert_buf::set_color_format(
             ColorFormat = dest_color_format;
             dest_format = (dest_color_format == OMX_COLOR_FormatYUV420Planar) ?
                     YCbCr420P : YCbCr420SP;
-            c2d.close();
-            status = c2d.open(omx->drv_ctx.video_resolution.frame_height,
-                       omx->drv_ctx.video_resolution.frame_width,
-                       NV12_128m,dest_format);
-            if (status)
+            if (enabled)
+                c2d.destroy();
+            enabled = false;
+            if (!c2d.init()) {
+                DEBUG_PRINT_ERROR("open failed for c2d");
+                status = false;
+            } else
                 enabled = true;
-            else
-                DEBUG_PRINT_ERROR("C2D open failed ");
         }
     } else {
         if (enabled)
-            c2d.close();
+            c2d.destroy();
         enabled = false;
     }
     pthread_mutex_unlock(&omx->c_lock);
