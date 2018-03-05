@@ -2388,6 +2388,7 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         dpb_bit_depth = MSM_VIDC_BIT_DEPTH_8;
         m_progressive = MSM_VIDC_PIC_STRUCT_PROGRESSIVE;
         is_flexible_format = FALSE;
+        is_mbaff = FALSE;
 
         if (m_disable_ubwc_mode) {
             capture_capability = V4L2_PIX_FMT_NV12;
@@ -8052,7 +8053,7 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
 
         if (buffer->nFilledLen > 0) {
             time_stamp_dts.get_next_timestamp(buffer,
-                    is_interlaced && is_duplicate_ts_valid);
+                    is_interlaced && is_duplicate_ts_valid && !is_mbaff);
         }
     }
     VIDC_TRACE_INT_LOW("FBD-TS", buffer->nTimeStamp / 1000);
@@ -9940,6 +9941,7 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                     if (payload) {
                         DEBUG_PRINT_LOW("Interlace format %#x", payload->format);
                         enable = OMX_InterlaceFrameProgressive;
+                        is_mbaff = payload->format & MSM_VIDC_INTERLACE_FRAME_MBAFF;
                         switch (payload->format & 0x1F) {
                             case MSM_VIDC_INTERLACE_FRAME_PROGRESSIVE:
                                 drv_ctx.interlace = VDEC_InterlaceFrameProgressive;
