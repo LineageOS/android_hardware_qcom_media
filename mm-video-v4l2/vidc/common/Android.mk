@@ -38,6 +38,9 @@ LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl
 
 LOCAL_SRC_FILES   := src/extra_data_handler.cpp
 LOCAL_SRC_FILES   += src/vidc_color_converter.cpp
+LOCAL_HEADER_LIBRARIES := \
+        libutils_headers
+
 LOCAL_SRC_FILES   += src/vidc_vendor_extensions.cpp
 
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
