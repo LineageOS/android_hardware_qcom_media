@@ -65,8 +65,6 @@ libmm-venc-inc      += hardware/qcom/media/libstagefrighthw
 libmm-venc-inc      += hardware/qcom/media/libplatformconfig
 libmm-venc-inc      += $(TARGET_OUT_HEADERS)/qcom/display
 libmm-venc-inc      += $(TARGET_OUT_HEADERS)/adreno
-libmm-venc-inc      += frameworks/native/include/media/hardware
-libmm-venc-inc      += frameworks/native/include/media/openmax
 libmm-venc-inc      += hardware/qcom/media/libc2dcolorconvert
 libmm-venc-inc      += $(TARGET_OUT_HEADERS)/libvqzip
 libmm-venc-inc      += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
@@ -91,6 +89,14 @@ LOCAL_MODULE                    := libOmxVenc
 LOCAL_MODULE_TAGS               := optional
 LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libmm-venc-def)
+
+LOCAL_HEADER_LIBRARIES := \
+        media_plugin_headers \
+        libnativebase_headers \
+        libcutils_headers \
+        libutils_headers \
+        libhardware_headers \
+
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 
@@ -123,6 +129,13 @@ LOCAL_MODULE                    := libOmxSwVencMpeg4
 LOCAL_MODULE_TAGS               := optional
 LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libmm-venc-def)
+
+LOCAL_HEADER_LIBRARIES := \
+        media_plugin_headers \
+        libnativebase_headers \
+        libutils_headers \
+        libhardware_headers \
+
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 

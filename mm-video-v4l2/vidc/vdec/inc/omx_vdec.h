@@ -51,8 +51,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <qdMetaData.h>
 #include <color_metadata.h>
 #define STRINGIFY_ENUMS
-#include "VideoAPI.h"
-#include "HardwareAPI.h"
+#include "media/hardware/VideoAPI.h"
+#include "media/hardware/HardwareAPI.h"
 #include <unordered_map>
 #include <media/msm_media_info.h>
 
@@ -81,7 +81,7 @@ extern "C" {
 //#include <binder/MemoryHeapIon.h>
 //#else
 #endif
-#include <ui/ANativeObjectBase.h>
+#include <nativebase/nativebase.h>
 #include <linux/videodev2.h>
 #define VALID_TS(ts)      ((ts < LLONG_MAX)? true : false)
 #include <poll.h>
