@@ -66,7 +66,7 @@ static ptrdiff_t x;
 //#else
 #endif
 #include <binder/MemoryHeapBase.h>
-#include <ui/ANativeObjectBase.h>
+#include <nativebase/nativebase.h>
 extern "C" {
 #include <utils/Log.h>
 }

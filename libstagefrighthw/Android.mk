@@ -30,9 +30,7 @@ ifeq ($(TARGET_USES_MEDIA_EXTENSIONS),true)
 LOCAL_CFLAGS += -DUSE_NATIVE_HANDLE_SOURCE
 endif
 
-LOCAL_C_INCLUDES:= \
-        frameworks/native/include/media/openmax \
-        frameworks/native/include/media/hardware
+LOCAL_C_INCLUDES := $(TARGET_OUT_HEADERS)/mm-core/omxcore/
 
 LOCAL_SHARED_LIBRARIES :=       \
         libbinder               \
@@ -42,7 +40,9 @@ LOCAL_SHARED_LIBRARIES :=       \
         libui                   \
 
 LOCAL_HEADER_LIBRARIES := \
-        media_plugin_headers
+        media_plugin_headers \
+        libcutils_headers \
+        libutils_headers
 
 LOCAL_MODULE := libstagefrighthw
 
