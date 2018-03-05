@@ -63,11 +63,6 @@ libmm-vdec-inc          := $(LOCAL_PATH)/inc
 libmm-vdec-inc          += $(OMX_VIDEO_PATH)/vidc/common/inc
 libmm-vdec-inc          += $(call project-path-for,qcom-media)/mm-core/inc
 libmm-vdec-inc          += $(call project-path-for,qcom-display)/libgralloc
-libmm-vdec-inc          += frameworks/native/include/media/openmax
-libmm-vdec-inc          += frameworks/native/include/media/hardware
-libmm-vdec-inc          += frameworks/native/libs/nativewindow/include
-libmm-vdec-inc          += frameworks/native/libs/arect/include
-libmm-vdec-inc          += frameworks/native/libs/nativebase/include
 libmm-vdec-inc          += $(call project-path-for,qcom-media)/libc2dcolorconvert
 libmm-vdec-inc          += $(call project-path-for,qcom-display)/libcopybit
 libmm-vdec-inc          += frameworks/av/include/media/stagefright
@@ -76,7 +71,12 @@ libmm-vdec-inc          += frameworks/av/media/libmediaplayerservice
 libmm-vdec-inc          += frameworks/native/include/binder
 libmm-vdec-inc          += $(call project-path-for,qcom-display)/libqdutils
 
-LOCAL_HEADER_LIBRARIES := generated_kernel_headers
+LOCAL_HEADER_LIBRARIES := \
+        generated_kernel_headers \
+        media_plugin_headers \
+        libnativebase_headers \
+        libutils_headers \
+        libhardware_headers
 
 LOCAL_MODULE                    := libOmxVdec
 LOCAL_MODULE_TAGS               := optional
@@ -86,7 +86,7 @@ LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 
 LOCAL_SHARED_LIBRARIES  := liblog libutils libui libbinder libcutils libdl
 
-LOCAL_SHARED_LIBRARIES += libqservice
+LOCAL_SHARED_LIBRARIES  += libqservice
 LOCAL_SHARED_LIBRARIES  += libqdMetaData
 
 LOCAL_SRC_FILES         := src/frameparser.cpp

@@ -61,7 +61,7 @@ static ptrdiff_t x;
 #include <linux/msm_ion.h>
 #endif
 #include <binder/MemoryHeapBase.h>
-#include <ui/ANativeObjectBase.h>
+#include <nativebase/nativebase.h>
 extern "C"{
 #include <log/log.h>
 }

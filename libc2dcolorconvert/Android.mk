@@ -11,7 +11,10 @@ LOCAL_C_INCLUDES := \
     $(TOP)/$(call project-path-for,qcom-display)/libcopybit
 LOCAL_SHARED_LIBRARIES := liblog libdl
 
-LOCAL_HEADER_LIBRARIES := generated_kernel_headers
+LOCAL_HEADER_LIBRARIES := \
+        generated_kernel_headers \
+        libutils_headers \
+        libhardware_headers
 
 LOCAL_MODULE_TAGS := optional
 

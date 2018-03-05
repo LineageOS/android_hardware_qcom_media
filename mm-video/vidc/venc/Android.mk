@@ -50,17 +50,17 @@ libmm-venc-inc      += $(OMX_VIDEO_PATH)/vidc/common/inc
 libmm-venc-inc      += $(call project-path-for,qcom-media)/mm-core/inc
 libmm-venc-inc      += $(call project-path-for,qcom-media)/libstagefrighthw
 libmm-venc-inc      += $(call project-path-for,qcom-display)/libgralloc
-libmm-venc-inc      += hardware/libhardware/include/hardware/
-libmm-venc-inc      += frameworks/native/include/media/hardware
-libmm-venc-inc      += frameworks/native/include/media/openmax
-libmm-venc-inc      += frameworks/native/libs/nativewindow/include
-libmm-venc-inc      += frameworks/native/libs/arect/include
-libmm-venc-inc      += frameworks/native/libs/nativebase/include
 libmm-venc-inc      += $(call project-path-for,qcom-media)/libc2dcolorconvert
 libmm-venc-inc      += $(call project-path-for,qcom-display)/libcopybit
 libmm-venc-inc      += frameworks/av/include/media/stagefright
 
-LOCAL_HEADER_LIBRARIES := generated_kernel_headers
+LOCAL_HEADER_LIBRARIES := \
+        generated_kernel_headers \
+        media_plugin_headers \
+        libnativebase_headers \
+        libcutils_headers \
+        libutils_headers \
+        libhardware_headers
 
 LOCAL_MODULE                    := libOmxVenc
 LOCAL_MODULE_TAGS               := optional

@@ -33,6 +33,7 @@ Copyright (c) 2012 The Linux Foundation. All rights reserved.
 #ifndef C2D_ColorConverter_H_
 #define C2D_ColorConverter_H_
 
+#include <pthread.h>
 #include <c2d2.h>
 #include <ColorConverter.h>
 #include <sys/types.h>
