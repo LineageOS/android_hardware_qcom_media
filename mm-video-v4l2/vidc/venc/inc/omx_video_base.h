@@ -645,7 +645,7 @@ class omx_video: public qc_omx_component
         client_extradata_info m_client_in_extradata_info;
 
         void complete_pending_buffer_done_cbs();
-        bool is_conv_needed(int, int);
+        bool is_conv_needed(private_handle_t *handle);
         void print_debug_color_aspects(ColorAspects *aspects, const char *prefix);
 
         OMX_ERRORTYPE get_vendor_extension_config(
