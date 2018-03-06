@@ -103,6 +103,8 @@ extern "C" {
 #include "OMX_IndexExt.h"
 #include "qc_omx_component.h"
 #include <media/msm_vidc.h>
+#include "frameparser.h"
+#include "mp4_utils.h"
 #include "extra_data_handler.h"
 #include "ts_parser.h"
 #include "vidc_debug.h"
@@ -265,26 +267,6 @@ enum port_indexes {
 };
 
 
-class perf_metrics
-{
-    public:
-        perf_metrics() :
-            start_time(0),
-            proc_time(0),
-            active(false) {
-            };
-        ~perf_metrics() {};
-        void start();
-        void stop();
-        void end(OMX_U32 units_cntr = 0);
-        void reset();
-        OMX_U64 processing_time_us();
-    private:
-        inline OMX_U64 get_act_time();
-        OMX_U64 start_time;
-        OMX_U64 proc_time;
-        bool active;
-};
 
 enum vdec_codec {
 	VDEC_CODECTYPE_H264 = 0x1,
@@ -830,6 +812,13 @@ class omx_vdec: public qc_omx_component
         void free_input_buffer_header();
         void free_output_extradata_buffer_header();
 
+        OMX_ERRORTYPE allocate_input_heap_buffer(OMX_HANDLETYPE       hComp,
+                OMX_BUFFERHEADERTYPE **bufferHdr,
+                OMX_U32              port,
+                OMX_PTR              appData,
+                OMX_U32              bytes);
+
+
         OMX_ERRORTYPE allocate_input_buffer(OMX_HANDLETYPE       hComp,
                 OMX_BUFFERHEADERTYPE **bufferHdr,
                 OMX_U32              port,
@@ -869,6 +858,15 @@ class omx_vdec: public qc_omx_component
         OMX_ERRORTYPE empty_this_buffer_proxy(OMX_HANDLETYPE       hComp,
                 OMX_BUFFERHEADERTYPE *buffer);
 
+        OMX_ERRORTYPE empty_this_buffer_proxy_arbitrary(OMX_HANDLETYPE hComp,
+                OMX_BUFFERHEADERTYPE *buffer
+                );
+
+        OMX_ERRORTYPE push_input_buffer (OMX_HANDLETYPE hComp);
+        OMX_ERRORTYPE push_input_sc_codec (OMX_HANDLETYPE hComp);
+        OMX_ERRORTYPE push_input_h264 (OMX_HANDLETYPE hComp);
+        OMX_ERRORTYPE push_input_hevc (OMX_HANDLETYPE hComp);
+
         OMX_ERRORTYPE fill_this_buffer_proxy(OMX_HANDLETYPE       hComp,
                 OMX_BUFFERHEADERTYPE *buffer);
         bool release_done();
@@ -881,6 +879,7 @@ class omx_vdec: public qc_omx_component
         OMX_ERRORTYPE start_port_reconfig();
         OMX_ERRORTYPE update_picture_resolution();
         int stream_off(OMX_U32 port);
+        void adjust_timestamp(OMX_S64 &act_timestamp);
         void set_frame_rate(OMX_S64 act_timestamp);
         bool handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr);
         void convert_color_space_info(OMX_U32 primaries, OMX_U32 range,
@@ -1087,23 +1086,34 @@ class omx_vdec: public qc_omx_component
         // SPS+PPS sent as part of set_config
         OMX_VENDOR_EXTRADATATYPE            m_vendor_config;
 
+        /*Variables for arbitrary Byte parsing support*/
+        frame_parse m_frame_parser;
+        h264_stream_parser *h264_parser;
+        HEVC_Utils m_hevc_utils;
+
         omx_cmd_queue m_input_pending_q;
         omx_cmd_queue m_input_free_q;
+        bool arbitrary_bytes;
+        OMX_BUFFERHEADERTYPE  h264_scratch;
         OMX_BUFFERHEADERTYPE  *psource_frame;
         OMX_BUFFERHEADERTYPE  *pdest_frame;
         OMX_BUFFERHEADERTYPE  *m_inp_heap_ptr;
         OMX_BUFFERHEADERTYPE  **m_phdr_pmem_ptr;
         unsigned int m_heap_inp_bm_count;
+        codec_type codec_type_parse;
         bool first_frame_meta;
         unsigned frame_count;
         unsigned nal_count;
         unsigned nal_length;
+        bool look_ahead_nal;
         int first_frame;
         unsigned char *first_buffer;
         int first_frame_size;
         unsigned char m_hwdevice_name[80];
         FILE *m_device_file_ptr;
         enum vc1_profile_type m_vc1_profile;
+        OMX_S64 h264_last_au_ts;
+        OMX_U32 h264_last_au_flags;
         OMX_U32 m_demux_offsets[8192];
         OMX_U32 m_demux_entries;
         OMX_U32 m_disp_hor_size;
@@ -1180,7 +1190,6 @@ class omx_vdec: public qc_omx_component
         bool async_thread_created;
 
         OMX_VIDEO_PARAM_PROFILELEVELTYPE m_profile_lvl;
-        OMX_U32 m_profile;
         QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE m_sParamLowLatency;
 
         //variables to handle dynamic buffer mode
