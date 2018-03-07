@@ -9997,15 +9997,15 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                             m_extradata_info.output_height = output_crop_payload->height;
                             m_extradata_info.output_crop_updated = OMX_TRUE;
                             DEBUG_PRINT_HIGH("MISR0: %x %x %x %x\n",
-                                output_crop_payload->misr_info[0].misr_dpb_luma,
-                                output_crop_payload->misr_info[0].misr_dpb_chroma,
-                                output_crop_payload->misr_info[0].misr_opb_luma,
-                                output_crop_payload->misr_info[0].misr_opb_chroma);
+                                output_crop_payload->misr_info[0].misr_dpb_luma[0],
+                                output_crop_payload->misr_info[0].misr_dpb_chroma[0],
+                                output_crop_payload->misr_info[0].misr_opb_luma[0],
+                                output_crop_payload->misr_info[0].misr_opb_chroma[0]);
                             DEBUG_PRINT_HIGH("MISR1: %x %x %x %x\n",
-                                output_crop_payload->misr_info[1].misr_dpb_luma,
-                                output_crop_payload->misr_info[1].misr_dpb_chroma,
-                                output_crop_payload->misr_info[1].misr_opb_luma,
-                                output_crop_payload->misr_info[1].misr_opb_chroma);
+                                output_crop_payload->misr_info[1].misr_dpb_luma[0],
+                                output_crop_payload->misr_info[1].misr_dpb_chroma[0],
+                                output_crop_payload->misr_info[1].misr_opb_luma[0],
+                                output_crop_payload->misr_info[1].misr_opb_chroma[0]);
                             memcpy(m_extradata_info.misr_info, output_crop_payload->misr_info, 2 * sizeof(msm_vidc_misr_info));
                             if (client_extradata & OMX_OUTPUTCROP_EXTRADATA) {
                                 append_outputcrop_extradata(p_extra, output_crop_payload);
