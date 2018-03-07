@@ -46,10 +46,6 @@ libmm-venc-def += -DUSE_ION
 endif
 
 ifeq ($(TARGET_USES_MEDIA_EXTENSIONS),true)
-libmm-venc-def += -DUSE_NATIVE_HANDLE_SOURCE
-endif
-
-ifeq ($(TARGET_USES_MEDIA_EXTENSIONS),true)
 libmm-venc-def += -DSUPPORT_CONFIG_INTRA_REFRESH
 endif
 

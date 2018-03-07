@@ -131,14 +131,6 @@ static const char* MEM_DEVICE = "/dev/pmem_smipool";
 
 void* enc_message_thread(void *);
 
-#ifdef USE_NATIVE_HANDLE_SOURCE
-#define LEGACY_CAM_SOURCE kMetadataBufferTypeNativeHandleSource
-#define LEGACY_CAM_METADATA_TYPE encoder_nativehandle_buffer_type
-#else
-#define LEGACY_CAM_SOURCE kMetadataBufferTypeCameraSource
-#define LEGACY_CAM_METADATA_TYPE encoder_media_buffer_type
-#endif
-
 struct output_metabuffer {
     OMX_U32 type;
     native_handle_t *nh;
@@ -151,7 +143,7 @@ class omx_video: public qc_omx_component
 #ifdef _ANDROID_ICS_
         bool meta_mode_enable;
         bool c2d_opened;
-        LEGACY_CAM_METADATA_TYPE meta_buffers[MAX_NUM_INPUT_BUFFERS];
+        encoder_media_buffer_type meta_buffers[MAX_NUM_INPUT_BUFFERS];
         OMX_BUFFERHEADERTYPE *opaque_buffer_hdr[MAX_NUM_INPUT_BUFFERS];
         bool get_syntaxhdr_enable;
         OMX_BUFFERHEADERTYPE  *psource_frame;
