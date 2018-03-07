@@ -3989,7 +3989,6 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
     OMX_ERRORTYPE ret1 = OMX_ErrorNone;
     unsigned int nBufferIndex ;
 
-    DEBUG_PRINT_LOW("ETB: buffer = %p, buffer->pBuffer[%p]", buffer, buffer->pBuffer);
     if (m_state != OMX_StateExecuting &&
             m_state != OMX_StatePause &&
             m_state != OMX_StateIdle) {
@@ -4007,6 +4006,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
         return OMX_ErrorVersionMismatch;
     }
 
+    DEBUG_PRINT_LOW("ETB: buffer = %p, buffer->pBuffer[%p]", buffer, buffer->pBuffer);
     if (buffer->nInputPortIndex != (OMX_U32)PORT_INDEX_IN) {
         DEBUG_PRINT_ERROR("ERROR: Bad port index to call empty_this_buffer");
         return OMX_ErrorBadPortIndex;
