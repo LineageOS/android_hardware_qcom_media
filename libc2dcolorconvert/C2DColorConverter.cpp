@@ -461,11 +461,10 @@ uint32_t C2DColorConverter::getC2DFormat(ColorConvertFormat format)
         case RGB565:
             return C2D_COLOR_FORMAT_565_RGB;
         case RGBA8888:
-            return C2D_COLOR_FORMAT_8888_RGBA | C2D_FORMAT_SWAP_ENDIANNESS | C2D_FORMAT_PREMULTIPLIED;
+            return C2D_COLOR_FORMAT_8888_RGBA | C2D_FORMAT_SWAP_ENDIANNESS;
         case RGBA8888_UBWC:
             return C2D_COLOR_FORMAT_8888_RGBA |
                    C2D_FORMAT_SWAP_ENDIANNESS |
-                   C2D_FORMAT_PREMULTIPLIED   |
                    C2D_FORMAT_UBWC_COMPRESSED;
         case YCbCr420Tile:
             return (C2D_COLOR_FORMAT_420_NV12 | C2D_FORMAT_MACROTILED);
