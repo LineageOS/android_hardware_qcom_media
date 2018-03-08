@@ -316,7 +316,7 @@ void* venc_dev::async_venc_message_thread (void *input)
                 if (v4l2_buf.flags & V4L2_QCOM_BUF_FLAG_CODECCONFIG)
                     venc_msg.buf.flags |= OMX_BUFFERFLAG_CODECCONFIG;
 
-                if (v4l2_buf.flags & V4L2_BUF_FLAG_LAST)
+                if (v4l2_buf.flags & V4L2_QCOM_BUF_FLAG_EOS)
                     venc_msg.buf.flags |= OMX_BUFFERFLAG_EOS;
 
                 if (omx->handle->num_output_planes > 1 && v4l2_buf.m.planes->bytesused)
@@ -4302,10 +4302,10 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
     VIDC_TRACE_INT_LOW("ETB-TS", bufhdr->nTimeStamp / 1000);
 
     if (bufhdr->nFlags & OMX_BUFFERFLAG_EOS)
-        buf.flags |= V4L2_BUF_FLAG_LAST;
+        buf.flags |= V4L2_QCOM_BUF_FLAG_EOS;
 
     if (!plane[0].bytesused) {
-        if (buf.flags & V4L2_BUF_FLAG_LAST) {
+        if (buf.flags & V4L2_QCOM_BUF_FLAG_EOS) {
             DEBUG_PRINT_ERROR("venc_empty_buf: Zero length EOS buffers are not valid");
             DEBUG_PRINT_ERROR("Use this function instead : venc_handle_empty_eos_buffer");
             return false;
@@ -4471,7 +4471,7 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
             }
 
             if (bufhdr->nFlags & OMX_BUFFERFLAG_EOS)
-                buf.flags |= V4L2_BUF_FLAG_LAST;
+                buf.flags |= V4L2_QCOM_BUF_FLAG_EOS;
 #if NEED_TO_REVISIT
             if (i != numBufs - 1) {
                 buf.flags |= V4L2_MSM_BUF_FLAG_DEFER;

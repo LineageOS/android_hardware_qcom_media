@@ -7083,7 +7083,7 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
 
     if (buffer->nFlags & OMX_BUFFERFLAG_EOS) {
         DEBUG_PRINT_HIGH("Input EOS reached") ;
-        buf.flags = V4L2_BUF_FLAG_LAST;
+        buf.flags = V4L2_QCOM_BUF_FLAG_EOS;
     }
 
 
@@ -8378,7 +8378,7 @@ int omx_vdec::async_message_process (void *context, void* message)
                    omxhdr->nTimeStamp = vdec_msg->msgdata.output_frame.time_stamp;
                    omxhdr->nFlags = 0;
 
-                   if (v4l2_buf_ptr->flags & V4L2_BUF_FLAG_LAST) {
+                   if (v4l2_buf_ptr->flags & V4L2_QCOM_BUF_FLAG_EOS) {
                         omxhdr->nFlags |= OMX_BUFFERFLAG_EOS;
                         //rc = -1;
                    }
@@ -8391,9 +8391,6 @@ int omx_vdec::async_message_process (void *context, void* message)
                        omxhdr->nFlags &= ~OMX_BUFFERFLAG_SYNCFRAME;
                    }
 #if NEED_TO_REVISIT
-                   if (v4l2_buf_ptr->flags & V4L2_QCOM_BUF_FLAG_EOSEQ) {
-                       omxhdr->nFlags |= QOMX_VIDEO_BUFFERFLAG_EOSEQ;
-                   }
                    if (v4l2_buf_ptr->flags & V4L2_QCOM_BUF_FLAG_DECODEONLY) {
                        omxhdr->nFlags |= OMX_BUFFERFLAG_DECODEONLY;
                    }
