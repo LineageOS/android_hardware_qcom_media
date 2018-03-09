@@ -1,29 +1,29 @@
 /**
- * Copyright (c) 2008 The Khronos Group Inc. 
- * 
+ * Copyright (c) 2008, 2018 The Khronos Group Inc.
+ *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
  * without limitation the rights to use, copy, modify, merge, publish,
  * distribute, sublicense, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject
- * to the following conditions: 
+ * to the following conditions:
  * The above copyright notice and this permission notice shall be included
- * in all copies or substantial portions of the Software. 
- * 
+ * in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
  * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
  * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. 
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  */
 
-/** 
+/**
  *  @file OMX_Video.h - OpenMax IL version 1.1.2
- *  The structures is needed by Video components to exchange parameters 
+ *  The structures is needed by Video components to exchange parameters
  *  and configuration data with OMX components.
  */
 #ifndef OMX_Video_h
@@ -222,6 +222,7 @@ typedef enum OMX_VIDEO_CONTROLRATETYPE {
     OMX_Video_ControlRateConstant,
     OMX_Video_ControlRateVariableSkipFrames,
     OMX_Video_ControlRateConstantSkipFrames,
+    OMX_Video_ControlRateConstantQuality,
     OMX_Video_ControlRateKhronosExtensions = 0x6F000000, /**< Reserved region for introducing Khronos Standard Extensions */ 
     OMX_Video_ControlRateVendorStartUnused = 0x7F000000, /**< Reserved region for introducing Vendor Extensions */
     OMX_Video_ControlRateMax = 0x7FFFFFFF
@@ -239,11 +240,14 @@ typedef enum OMX_VIDEO_CONTROLRATETYPE {
  *  nTargetBitrate : Target bitrate to encode with
  */
 typedef struct OMX_VIDEO_PARAM_BITRATETYPE {
-    OMX_U32 nSize;                          
-    OMX_VERSIONTYPE nVersion;               
-    OMX_U32 nPortIndex;                     
-    OMX_VIDEO_CONTROLRATETYPE eControlRate; 
-    OMX_U32 nTargetBitrate;                 
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    OMX_VIDEO_CONTROLRATETYPE eControlRate;
+    union {
+        OMX_U32 nTargetBitrate;
+        OMX_U32 nQualityFactor;
+    };
 } OMX_VIDEO_PARAM_BITRATETYPE;
 
 
