@@ -5209,7 +5209,7 @@ bool venc_dev::venc_reconfigure_intra_period()
                      enableBframes, isValidResolution, isValidFps, isValidOpRate,
                      isValidLayerCount, isValidLtrSetting, isValidRcMode, isValidCodec, client_req_disable_bframe);
 
-    if (enableBframes && intra_period.num_bframes == 0) {
+    if (enableBframes && intra_period.num_bframes == 0 && intra_period.num_pframes > VENC_BFRAME_MAX_COUNT) {
         intra_period.num_bframes = VENC_BFRAME_MAX_COUNT;
         nPframes_cache = intra_period.num_pframes;
         intra_period.num_pframes = intra_period.num_pframes / (1 + intra_period.num_bframes);
@@ -6958,8 +6958,8 @@ bool venc_dev::venc_validate_temporal_settings() {
         return false;
     }
 
-    if (intra_period.num_bframes > 0) {
-        DEBUG_PRINT_HIGH("TemporalLayer: Invalid B-frame settings for Hier layers");
+    if (intra_period.num_bframes > 0 || intra_period.num_pframes == 0) {
+        DEBUG_PRINT_HIGH("TemporalLayer: Invalid P-frame/B-frame settings for Hier layers");
         return false;
     }
 
