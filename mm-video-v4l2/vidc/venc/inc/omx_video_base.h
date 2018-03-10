@@ -88,8 +88,6 @@ using namespace android;
 #ifdef USE_ION
 static const char* MEM_DEVICE = "/dev/ion";
 #define MEM_HEAP_ID ION_IOMMU_HEAP_ID
-#else
-#error MEM_DEVICE cannot be determined.
 #endif
 
 //////////////////////////////////////////////////////////////////////////////

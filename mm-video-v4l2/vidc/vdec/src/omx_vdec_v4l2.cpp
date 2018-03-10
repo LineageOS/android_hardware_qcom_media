@@ -5687,32 +5687,6 @@ OMX_ERRORTYPE  omx_vdec::use_output_buffer(
                 }
                 drv_ctx.ptr_outputbuffer[i].pmem_fd = \
                                      drv_ctx.op_buf_ion_info[i].data_fd;
-#else
-                drv_ctx.ptr_outputbuffer[i].pmem_fd = \
-                                      open (MEM_DEVICE,O_RDWR);
-
-                if (drv_ctx.ptr_outputbuffer[i].pmem_fd < 0) {
-                    DEBUG_PRINT_ERROR("ION/pmem buffer fd is bad %d", drv_ctx.ptr_outputbuffer[i].pmem_fd);
-                    return OMX_ErrorInsufficientResources;
-                }
-
-                /* FIXME: why is this code even here? We already open MEM_DEVICE a few lines above */
-                if (drv_ctx.ptr_outputbuffer[i].pmem_fd == 0) {
-                    drv_ctx.ptr_outputbuffer[i].pmem_fd = \
-                                          open (MEM_DEVICE,O_RDWR);
-                    if (drv_ctx.ptr_outputbuffer[i].pmem_fd < 0) {
-                        DEBUG_PRINT_ERROR("ION/pmem buffer fd is bad %d", drv_ctx.ptr_outputbuffer[i].pmem_fd);
-                        return OMX_ErrorInsufficientResources;
-                    }
-                }
-
-                if (!align_pmem_buffers(drv_ctx.ptr_outputbuffer[i].pmem_fd,
-                            drv_ctx.op_buf.buffer_size,
-                            drv_ctx.op_buf.alignment)) {
-                    DEBUG_PRINT_ERROR("align_pmem_buffers() failed");
-                    close(drv_ctx.ptr_outputbuffer[i].pmem_fd);
-                    return OMX_ErrorInsufficientResources;
-                }
 #endif
                 if (!secure_mode) {
                     drv_ctx.ptr_outputbuffer[i].bufferaddr =
@@ -6254,37 +6228,12 @@ OMX_ERRORTYPE  omx_vdec::allocate_input_buffer(
             return OMX_ErrorInsufficientResources;
         }
         pmem_fd = drv_ctx.ip_buf_ion_info[i].data_fd;
-#else
-        pmem_fd = open (MEM_DEVICE,O_RDWR);
-
-        if (pmem_fd < 0) {
-            DEBUG_PRINT_ERROR("open failed for pmem/adsp for input buffer");
-            return OMX_ErrorInsufficientResources;
-        }
-
-        if (pmem_fd == 0) {
-            pmem_fd = open (MEM_DEVICE,O_RDWR);
-
-            if (pmem_fd < 0) {
-                DEBUG_PRINT_ERROR("open failed for pmem/adsp for input buffer");
-                return OMX_ErrorInsufficientResources;
-            }
-        }
-
-        if (!align_pmem_buffers(pmem_fd, drv_ctx.ip_buf.buffer_size,
-                    drv_ctx.ip_buf.alignment)) {
-            DEBUG_PRINT_ERROR("align_pmem_buffers() failed");
-            close(pmem_fd);
-            return OMX_ErrorInsufficientResources;
-        }
 #endif
         if (!secure_mode) {
             buf_addr = (unsigned char *)ion_map(pmem_fd, drv_ctx.ip_buf.buffer_size);
             if (buf_addr == MAP_FAILED) {
 #ifdef USE_ION
                 free_ion_memory(&drv_ctx.ip_buf_ion_info[i]);
-#else
-                close(pmem_fd);
 #endif
                 DEBUG_PRINT_ERROR("Map Failed to allocate input buffer");
                 return OMX_ErrorInsufficientResources;
@@ -6524,19 +6473,6 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
                 return OMX_ErrorInsufficientResources;
             }
             pmem_fd = drv_ctx.op_buf_ion_info[i].data_fd;
-#else
-            pmem_fd = open (MEM_DEVICE,O_RDWR);
-            if (pmem_fd < 0) {
-                DEBUG_PRINT_ERROR("ERROR:pmem fd for output buffer %d",
-                        drv_ctx.op_buf.buffer_size);
-                return OMX_ErrorInsufficientResources;
-            }
-            if (!align_pmem_buffers(pmem_fd, drv_ctx.op_buf.buffer_size,
-                        drv_ctx.op_buf.alignment)) {
-                DEBUG_PRINT_ERROR("align_pmem_buffers() failed");
-                close(pmem_fd);
-                return OMX_ErrorInsufficientResources;
-            }
 #endif
             if (!secure_mode) {
                 pmem_baseaddress = (unsigned char *)ion_map(pmem_fd, drv_ctx.op_buf.buffer_size);
@@ -6545,8 +6481,6 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
                             (unsigned int)drv_ctx.op_buf.buffer_size);
 #ifdef USE_ION
                     free_ion_memory(&drv_ctx.op_buf_ion_info[i]);
-#else
-                    close(pmem_fd);
 #endif
                     return OMX_ErrorInsufficientResources;
                 }
@@ -6567,8 +6501,6 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
 #ifdef USE_ION
                 drv_ctx.ptr_outputbuffer[i].bufferaddr =
                     (OMX_U8 *)(intptr_t)drv_ctx.op_buf_ion_info[i].data_fd;
-#else
-                drv_ctx.ptr_outputbuffer[i].bufferaddr = *bufferHdr;
 #endif
             }
             if (i == (drv_ctx.op_buf.actualcount -1 ) && !streaming[CAPTURE_PORT]) {
