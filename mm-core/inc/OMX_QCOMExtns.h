@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2009-2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2009-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -1430,6 +1430,7 @@ typedef enum OMX_QCOM_EXTRADATATYPE
     OMX_ExtraDataDisplayColourSEI =        0x7F000011,
     OMX_ExtraDataLightLevelSEI =           0x7F000012,
     OMX_ExtraDataOutputCropInfo =          0x7F000014,
+    OMX_ExtraDataEncoderFrameQp =          0x7F000015,
     OMX_ExtraDataInputROIInfo =            0x7F000058,
 } OMX_QCOM_EXTRADATATYPE;
 
