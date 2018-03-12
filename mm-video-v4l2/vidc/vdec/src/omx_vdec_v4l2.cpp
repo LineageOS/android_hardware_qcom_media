@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010 - 2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2010 - 2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -11143,7 +11143,8 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
 
     if (status != false) {
         if (omx->drv_ctx.output_format != VDEC_YUV_FORMAT_NV12 &&
-            ColorFormat != OMX_COLOR_FormatYUV420Planar) {
+            (ColorFormat != OMX_COLOR_FormatYUV420Planar &&
+             ColorFormat != OMX_COLOR_FormatYUV420SemiPlanar)) {
             DEBUG_PRINT_ERROR("update_buffer_req: Unsupported color conversion");
             status = false;
         } else {
