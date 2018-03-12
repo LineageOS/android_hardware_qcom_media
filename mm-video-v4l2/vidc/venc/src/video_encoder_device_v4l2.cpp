@@ -4218,6 +4218,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
          m_sVenc_cfg.inputformat != V4L2_PIX_FMT_NV12_UBWC)) {
         if (bframe_implicitly_enabled) {
             DEBUG_PRINT_HIGH("Disabling implicitly enabled B-frames");
+            intra_period.num_pframes = nPframes_cache;
             if (!venc_set_intra_period(intra_period.num_pframes, 0)) {
                 DEBUG_PRINT_ERROR("Failed to set nPframes/nBframes");
                 return OMX_ErrorUndefined;
@@ -5134,6 +5135,7 @@ bool venc_dev::venc_reconfigure_intra_period()
 
     if (enableBframes && intra_period.num_bframes == 0) {
         intra_period.num_bframes = VENC_BFRAME_MAX_COUNT;
+        nPframes_cache = intra_period.num_pframes;
         intra_period.num_pframes = intra_period.num_pframes / (1 + intra_period.num_bframes);
         bframe_implicitly_enabled = true;
     } else if (!enableBframes && intra_period.num_bframes > 0) {
