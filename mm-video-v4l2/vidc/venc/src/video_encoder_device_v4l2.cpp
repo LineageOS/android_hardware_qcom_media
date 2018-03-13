@@ -2787,7 +2787,8 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
             {
                 QOMX_VIDEO_IFRAMESIZE* pParam =
                     (QOMX_VIDEO_IFRAMESIZE *)paramData;
-                isCBR = rate_ctrl.rcmode == V4L2_MPEG_VIDEO_BITRATE_MODE_CBR;
+                isCBR = rate_ctrl.rcmode == V4L2_MPEG_VIDEO_BITRATE_MODE_CBR_VFR ||
+                        rate_ctrl.rcmode == V4L2_MPEG_VIDEO_BITRATE_MODE_CBR;
                 if (!isCBR) {
                     DEBUG_PRINT_ERROR("venc_set_param: OMX_QTIIndexParamIframeSizeType not allowed for this configuration isCBR(%d)",
                         isCBR);
@@ -5097,7 +5098,8 @@ bool venc_dev::venc_reconfigure_intra_period()
     }
 
     if ((rate_ctrl.rcmode == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR) ||
-        (rate_ctrl.rcmode == V4L2_MPEG_VIDEO_BITRATE_MODE_MBR)) {
+        (rate_ctrl.rcmode == V4L2_MPEG_VIDEO_BITRATE_MODE_MBR) ||
+        (rate_ctrl.rcmode == V4L2_MPEG_VIDEO_BITRATE_MODE_MBR_VFR)) {
             isValidRcMode = true;
     }
 
@@ -6108,7 +6110,7 @@ bool venc_dev::venc_set_ratectrl_cfg(OMX_VIDEO_CONTROLRATETYPE eControlRate)
             break;
         case OMX_Video_ControlRateConstantSkipFrames:
             (supported_rc_modes & RC_CBR_VFR) ?
-                control.value = V4L2_MPEG_VIDEO_BITRATE_MODE_CBR :
+                control.value = V4L2_MPEG_VIDEO_BITRATE_MODE_CBR_VFR :
                 status = false;
             break;
         case OMX_Video_ControlRateConstant:
@@ -6123,7 +6125,7 @@ bool venc_dev::venc_set_ratectrl_cfg(OMX_VIDEO_CONTROLRATETYPE eControlRate)
             break;
         case QOMX_Video_ControlRateMaxBitrateSkipFrames:
             (supported_rc_modes & RC_MBR_VFR) ?
-                control.value = V4L2_MPEG_VIDEO_BITRATE_MODE_MBR:
+                control.value = V4L2_MPEG_VIDEO_BITRATE_MODE_MBR_VFR:
                 status = false;
             break;
         default:
