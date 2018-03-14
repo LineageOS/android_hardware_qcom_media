@@ -24,7 +24,7 @@ libmm-vdec-def += -D_ANDROID_ICS_
 libmm-vdec-def += -DPROCESS_EXTRADATA_IN_OUTPUT_PORT
 
 TARGETS_THAT_HAVE_VENUS_HEVC := apq8084 msm8994 msm8996
-TARGETS_THAT_NEED_SW_VDEC := msm8937 sdm845 msmpeafowl sdm670 qcs605
+TARGETS_THAT_NEED_SW_VDEC := msm8937 sdm845 msmpeafowl sdm670 qcs605 msmnile
 
 ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_HAVE_VENUS_HEVC)),true)
 libmm-vdec-def += -DVENUS_HEVC
