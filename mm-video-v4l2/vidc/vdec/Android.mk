@@ -238,6 +238,7 @@ LOCAL_C_INCLUDES                := $(mm-vdec-test-inc)
 
 LOCAL_PRELINK_MODULE      := false
 LOCAL_SHARED_LIBRARIES    := libutils libOmxCore libOmxVdec libbinder libcutils
+LOCAL_LDLIBS 			  := -llog
 
 LOCAL_SRC_FILES           := src/queue.c
 LOCAL_SRC_FILES           += test/omx_vdec_test.cpp
