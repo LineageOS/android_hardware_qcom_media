@@ -52,6 +52,10 @@ ifneq (1,$(filter 1,$(shell echo "$$(( $(PLATFORM_SDK_VERSION) >= 18 ))" )))
 libmm-vdec-def += -DANDROID_JELLYBEAN_MR1=1
 endif
 
+ifeq ($(call is-platform-sdk-version-at-least,27),true) # O-MR1
+libmm-vdec-def += -D_ANDROID_O_MR1_DIVX_CHANGES
+endif
+
 include $(CLEAR_VARS)
 
 # Common Includes
