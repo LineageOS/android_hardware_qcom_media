@@ -910,6 +910,7 @@ class omx_vdec: public qc_omx_component
         void print_debug_color_aspects(ColorAspects *aspects, const char *prefix);
         void print_debug_hdr_color_info(HDRStaticInfo *hdr_info, const char *prefix);
         void print_debug_hdr_color_info_mdata(ColorMetaData* color_mdata);
+        void print_debug_hdr10plus_metadata(ColorMetaData& color_mdata);
         bool handle_content_light_level_info(void* data);
         bool handle_mastering_display_color_info(void* data);
         void print_debug_extradata(OMX_OTHER_EXTRADATATYPE *extra);
