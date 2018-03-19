@@ -672,6 +672,7 @@ class omx_vdec: public qc_omx_component
         volatile bool message_thread_stop;
         struct extradata_info m_extradata_info;
         int m_progressive;
+        bool is_mbaff;
 
         enum dither_type {
             DITHER_DISABLE = 0,
@@ -1409,6 +1410,7 @@ class omx_vdec: public qc_omx_component
 public:
         bool is_down_scalar_enabled;
         bool m_is_split_mode;
+        bool m_buffer_error;
 };
 
 enum instance_state {
