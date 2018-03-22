@@ -6660,16 +6660,29 @@ OMX_ERRORTYPE venc_dev::venc_set_hhp(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYP
 
 OMX_ERRORTYPE venc_dev::venc_disable_hhp() {
 
+    if (m_sVenc_cfg.codectype != V4L2_PIX_FMT_H264) {
+        return OMX_ErrorNone;
+    }
+
     struct v4l2_control control;
 
     control.id      = V4L2_CID_MPEG_VIDC_VIDEO_HYBRID_HIERP_MODE;
     control.value   = 0;
 
-    DEBUG_PRINT_LOW("TemporalLayer: Disabling HybridHP");
-
-    if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
-        DEBUG_PRINT_ERROR("TemporalLayer: Failed to disable hybrid HP");
+    if (ioctl(m_nDriver_fd, VIDIOC_G_CTRL, &control)) {
+        DEBUG_PRINT_ERROR("TemporalLayer: Failed to get hybrid HP");
         return OMX_ErrorUnsupportedSetting;
+    }
+
+    if (control.value != 0) {
+        control.value = 0;
+
+        DEBUG_PRINT_LOW("TemporalLayer: Disabling HybridHP");
+
+        if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
+            DEBUG_PRINT_ERROR("TemporalLayer: Failed to disable hybrid HP");
+            return OMX_ErrorUnsupportedSetting;
+        }
     }
 
     return OMX_ErrorNone;
