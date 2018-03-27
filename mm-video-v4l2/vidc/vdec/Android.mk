@@ -24,7 +24,6 @@ libmm-vdec-def += -D_ANDROID_ICS_
 libmm-vdec-def += -DPROCESS_EXTRADATA_IN_OUTPUT_PORT
 
 TARGETS_THAT_HAVE_VENUS_HEVC := apq8084 msm8994 msm8996
-TARGETS_THAT_SUPPORT_UBWC := msm8996 msm8953 msm8998 sdm660 sdm845 msmpeafowl sdm670 qcs605 msmnile
 TARGETS_THAT_NEED_SW_VDEC := msm8937 sdm845 msmpeafowl sdm670 qcs605
 
 ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_HAVE_VENUS_HEVC)),true)
@@ -35,9 +34,7 @@ ifeq ($(TARGET_BOARD_PLATFORM),msm8610)
 libmm-vdec-def += -DSMOOTH_STREAMING_DISABLED
 endif
 
-ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_UBWC)),true)
 libmm-vdec-def += -D_UBWC_
-endif
 
 ifeq ($(TARGET_USES_ION),true)
 libmm-vdec-def += -DUSE_ION
