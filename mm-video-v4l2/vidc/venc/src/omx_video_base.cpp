@@ -41,6 +41,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define __STDC_FORMAT_MACROS //enables the format specifiers in inttypes.h
 #include <inttypes.h>
 #include <string.h>
+#include <qdMetaData.h>
 #include "omx_video_base.h"
 #include <stdlib.h>
 #include <errno.h>
@@ -270,7 +271,11 @@ omx_video::omx_video():
     m_event_port_settings_sent(false),
     hw_overload(false),
     m_graphicbuffer_size(0),
-    m_buffer_freed(0)
+    m_buffer_freed(0),
+    profile_mode(false),
+    profile_frame_count(0),
+    profile_start_time(0),
+    profile_last_time(0)
 {
     DEBUG_PRINT_HIGH("omx_video(): Inside Constructor()");
     memset(&m_cmp,0,sizeof(m_cmp));
@@ -284,6 +289,7 @@ omx_video::omx_video():
 
     mMapPixelFormat2Converter.insert({
             {HAL_PIXEL_FORMAT_RGBA_8888, RGBA8888},
+            {HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC, NV12_UBWC},
                 });
 
     pthread_mutex_init(&m_lock, NULL);
@@ -295,9 +301,11 @@ omx_video::omx_video():
 
     memset(m_platform, 0, sizeof(m_platform));
 #ifdef _ANDROID_
-    char platform_name[PROPERTY_VALUE_MAX] = {0};
-    property_get("ro.board.platform", platform_name, "0");
-    strlcpy(m_platform, platform_name, sizeof(m_platform));
+    char property_value[PROPERTY_VALUE_MAX] = {0};
+    property_get("ro.board.platform", property_value, "0");
+    strlcpy(m_platform, property_value, sizeof(m_platform));
+    property_get("vendor.vidc.enc.profile.in", property_value, "0");
+    profile_mode = !!atoi(property_value);
 #endif
 
     pthread_mutex_init(&m_buf_lock, NULL);
@@ -336,6 +344,10 @@ omx_video::~omx_video()
             m_fbd_count);
 
     pthread_mutex_destroy(&m_buf_lock);
+    if (profile_mode && (profile_start_time < profile_last_time)) {
+        DEBUG_PRINT_HIGH("Input frame rate = %f",
+            ((profile_frame_count - 1) * 1e6) / (profile_last_time - profile_start_time));
+    }
     DEBUG_PRINT_HIGH("omx_video: Destructor exit");
     DEBUG_PRINT_HIGH("Exiting OMX Video Encoder ...");
 }
@@ -3900,6 +3912,22 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
     post_event ((unsigned long)hComp,(unsigned long)buffer,m_input_msg_id);
     return OMX_ErrorNone;
 }
+
+bool omx_video::profile_etb() {
+    if (profile_mode) {
+        struct timeval act_time = {0, 0};
+        gettimeofday(&act_time, NULL);
+        if (profile_start_time == 0) {
+            profile_start_time = (act_time.tv_usec + act_time.tv_sec * 1e6);
+        } else {
+            profile_last_time = (act_time.tv_usec + act_time.tv_sec * 1e6);
+        }
+        profile_frame_count++;
+        return true;
+    }
+    return false;
+}
+
 /* ======================================================================
    FUNCTION
    omx_video::empty_this_buffer_proxy
@@ -3932,6 +3960,11 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
     if (buffer == NULL) {
         DEBUG_PRINT_ERROR("ERROR: ETBProxy: Invalid buffer[%p]", buffer);
         return OMX_ErrorBadParameter;
+    }
+
+    if (profile_etb()) {
+        m_pCallbacks.EmptyBufferDone(hComp,m_app_data,buffer);
+        return OMX_ErrorNone;
     }
 
     // Buffer sanity checks
@@ -4911,22 +4944,36 @@ void omx_video::omx_release_meta_buffer(OMX_BUFFERHEADERTYPE *buffer)
 }
 #endif
 
-bool omx_video::is_conv_needed(int hal_fmt, int hal_flags)
+bool is_ubwc_interlaced(private_handle_t *handle) {
+    int interlace_flag = 0;
+
+    if (getMetaData(const_cast<private_handle_t *>(handle),
+                  GET_PP_PARAM_INTERLACED, &interlace_flag)) {
+        interlace_flag = 0;
+    }
+    return (handle->format == HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC) &&
+                !!interlace_flag;
+}
+
+bool omx_video::is_conv_needed(private_handle_t *handle)
 {
     bool bRet = false;
+    bool interlaced = is_ubwc_interlaced(handle);
 
     if (!strncmp(m_platform, "msm8996", 7)) {
-        bRet = hal_fmt == HAL_PIXEL_FORMAT_RGBA_8888 &&
-            !(hal_flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED);
+        bRet = handle->format == HAL_PIXEL_FORMAT_RGBA_8888 &&
+            !(handle->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED);
     } else {
-        bRet = hal_fmt == HAL_PIXEL_FORMAT_RGBA_8888;
+        bRet = handle->format == HAL_PIXEL_FORMAT_RGBA_8888;
     }
 
 #ifdef _HW_RGBA
     bRet = false;
 #endif
-    DEBUG_PRINT_LOW("RGBA conversion %s. Format %d Flag %d",
-                                bRet ? "Needed":"Not-Needed", hal_fmt, hal_flags);
+    bRet |= interlaced;
+    DEBUG_PRINT_LOW("RGBA conversion %s. Format %d Flag %d interlace_flag = %d",
+                                bRet ? "Needed":"Not-Needed", handle->format,
+                                handle->flags, interlaced);
     return bRet;
 }
 
@@ -4948,6 +4995,11 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
     if (buffer == NULL) {
         DEBUG_PRINT_ERROR("ERROR: ETBProxyA: Invalid buffer[%p]",buffer);
         return OMX_ErrorBadParameter;
+    }
+
+    if (profile_etb()) {
+        m_pCallbacks.EmptyBufferDone(hComp,m_app_data,buffer);
+        return OMX_ErrorNone;
     }
 
     if (!dev_buffer_ready_to_queue(buffer)) {
@@ -5007,10 +5059,12 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
             c2dcc.setConversionNeeded(false);
         }
 
-        mUsesColorConversion = is_conv_needed(handle->format, handle->flags);
+        mUsesColorConversion = is_conv_needed(handle);
+        bool interlaced = is_ubwc_interlaced(handle);
 
         if (c2dcc.getConversionNeeded() &&
             c2dcc.isPropChanged(m_sInPortDef.format.video.nFrameWidth,
+                                interlaced ? ((m_sInPortDef.format.video.nFrameHeight + 1) / 2) :
                                 m_sInPortDef.format.video.nFrameHeight,
                                 m_sInPortDef.format.video.nFrameWidth,
                                 m_sInPortDef.format.video.nFrameHeight,
@@ -5022,6 +5076,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
                              m_sInPortDef.format.video.nFrameWidth,
                              handle->width);
             if (!c2dcc.setResolution(m_sInPortDef.format.video.nFrameWidth,
+                                     interlaced ? ((m_sInPortDef.format.video.nFrameHeight + 1) / 2) :
                                      m_sInPortDef.format.video.nFrameHeight,
                                      m_sInPortDef.format.video.nFrameWidth,
                                      m_sInPortDef.format.video.nFrameHeight,
@@ -5247,7 +5302,7 @@ OMX_ERRORTYPE omx_video::push_input_buffer(OMX_HANDLETYPE hComp)
             Input_pmem_info.offset = 0;
             Input_pmem_info.size = handle->size;
             m_graphicbuffer_size = Input_pmem_info.size;
-            if (is_conv_needed(handle->format, handle->flags))
+            if (is_conv_needed(handle))
                 ret = convert_queue_buffer(hComp,Input_pmem_info,index);
             else if (is_venus_supported_format)
                 ret = queue_meta_buffer(hComp);
