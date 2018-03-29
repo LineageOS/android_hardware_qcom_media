@@ -492,7 +492,7 @@ OMX_ERRORTYPE  omx_venc::set_parameter
     SWVENC_STATUS Ret  = SWVENC_S_SUCCESS;
     SWVENC_PROPERTY Prop;
     bool bResult;
-    unsigned int stride, scanlines;
+    unsigned int y_stride, y_scanlines;
 
     (void)hComp;
 
@@ -576,21 +576,26 @@ OMX_ERRORTYPE  omx_venc::set_parameter
                 }
 
                 /* set the frame attributes */
-                stride = VENUS_Y_STRIDE(COLOR_FMT_NV12, portDefn->format.video.nFrameWidth);
+                /*Align stide and scanline to worst case*/
+                /*------------------------------------------------------------------------------------------
+                *           [Color Format]                   [Stride Alignment]        [Scanline Alignment]
+                * QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m       128                         32
+                * OMX_COLOR_FormatYUV420SemiPlanar                 16                          16
+                * QOMX_COLOR_FormatYVU420SemiPlanar                16                          16
+                * HAL_PIXEL_FORMAT_NV21_ZSL                        64                          64
+                *------------------------------------------------------------------------------------------*/
+                y_stride = ALIGN(portDefn->format.video.nFrameWidth,128);
                 //Slice height doesn't get updated so chroma offset calculation becomes incorrect .
                 //Using FrameHeight Instead , just for omx-test-app .
-                //scanlines = VENUS_Y_SCANLINES(COLOR_FMT_NV12, portDefn->format.video.nSliceHeight);
-                scanlines = VENUS_Y_SCANLINES(COLOR_FMT_NV12, portDefn->format.video.nFrameHeight);
+                y_scanlines = ALIGN(portDefn->format.video.nFrameHeight,64);
                 Prop.id = SWVENC_PROPERTY_ID_FRAME_ATTRIBUTES;
-                Prop.info.frame_attributes.stride_luma = stride;
-                Prop.info.frame_attributes.stride_chroma = stride;
+                Prop.info.frame_attributes.stride_luma = y_stride;
+                Prop.info.frame_attributes.stride_chroma = y_stride;
                 Prop.info.frame_attributes.offset_luma = 0;
-                Prop.info.frame_attributes.offset_chroma = scanlines * stride;
-                Prop.info.frame_attributes.size =
-                  VENUS_BUFFER_SIZE(COLOR_FMT_NV12,
-                     portDefn->format.video.nFrameWidth,
-                     portDefn->format.video.nFrameHeight);
-
+                Prop.info.frame_attributes.offset_chroma = y_scanlines * y_stride;
+                Prop.info.frame_attributes.size = SWVENC_BUFFER_SIZE(COLOR_FMT_NV12_ZSL,
+                                                                     portDefn->format.video.nFrameWidth,
+                                                                     portDefn->format.video.nFrameHeight);
                 Ret = swvenc_setproperty(m_hSwVenc, &Prop);
                 if (Ret != SWVENC_S_SUCCESS)
                 {
@@ -1824,15 +1829,15 @@ OMX_ERRORTYPE omx_venc::swvenc_do_flip_inport() {
 
     // update attributes, here dimensions are flipped, so use inHeight for calculating
     // stride, inWidth for scanlines, and swapp parameters in venus size calculation
-    int stride = VENUS_Y_STRIDE(COLOR_FMT_NV12, inHeight);
-    int scanlines = VENUS_Y_SCANLINES(COLOR_FMT_NV12, inWidth);
+    int stride = SWVENC_Y_STRIDE(COLOR_FMT_NV12, inHeight);
+    int scanlines = SWVENC_Y_SCANLINES(COLOR_FMT_NV12, inWidth);
     Prop.id = SWVENC_PROPERTY_ID_FRAME_ATTRIBUTES;
     Prop.info.frame_attributes.stride_luma = stride;
     Prop.info.frame_attributes.stride_chroma = stride;
     Prop.info.frame_attributes.offset_luma = 0;
     Prop.info.frame_attributes.offset_chroma = scanlines * stride;
     Prop.info.frame_attributes.size =
-        VENUS_BUFFER_SIZE(COLOR_FMT_NV12, inHeight, inWidth);
+        SWVENC_BUFFER_SIZE(COLOR_FMT_NV12_ZSL, inHeight, inWidth);
 
     Ret = swvenc_setproperty(m_hSwVenc, &Prop);
     if (Ret != SWVENC_S_SUCCESS) {
@@ -1902,10 +1907,10 @@ bool omx_venc::swvenc_do_rotate(int fd, SWVENC_IPBUFFER & ipbuffer, OMX_U32 inde
         GraphicBuffer::USAGE_HW_RENDER | GraphicBuffer::USAGE_SW_READ_OFTEN |
         GraphicBuffer::USAGE_SW_WRITE_OFTEN;
 
-    int src_stride = VENUS_Y_STRIDE(COLOR_FMT_NV12, s_width);
-    int src_scanlines = VENUS_Y_SCANLINES(COLOR_FMT_NV12, s_height);
-    int src_size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12, s_width, s_height);
-    int dst_size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12, d_width, d_height);
+    int src_stride = SWVENC_Y_STRIDE(COLOR_FMT_NV12, s_width);
+    int src_scanlines = SWVENC_Y_SCANLINES(COLOR_FMT_NV12, s_height);
+    int src_size = SWVENC_BUFFER_SIZE(COLOR_FMT_NV12_ZSL, s_width, s_height);
+    int dst_size = SWVENC_BUFFER_SIZE(COLOR_FMT_NV12_ZSL, d_width, d_height);
 
     uint32_t format = HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS;
 
@@ -2260,12 +2265,12 @@ bool omx_venc::dev_empty_buf
                         }
                         else if(handle->format == HAL_PIXEL_FORMAT_NV21_ZSL)
                         {
-                            /* HAL_PIXEL_FORMAT_NV21_ZSL format is same as NV21 format,
-                               this format support is added to address OEM test app issue which is
-                               trigerring this input format, this format is not extensively verified */
+                            /* HAL_PIXEL_FORMAT_NV21_ZSL format is NV21 format with 64,64 alignment,
+                               this format support is added to address a CTS issue and OEM test app issue
+                               which is trigerring this input format*/
                             DEBUG_PRINT_LOW("HAL_PIXEL_FORMAT_NV21_ZSL ");
                             m_sInPortFormat.eColorFormat = (OMX_COLOR_FORMATTYPE)
-                                QOMX_COLOR_FormatYVU420SemiPlanar;
+                                HAL_PIXEL_FORMAT_NV21_ZSL;
                         }
                         else
                         {
@@ -2848,8 +2853,8 @@ int omx_venc::swvenc_input_log_buffers(const char *buffer, int bufferlen)
 {
    int width = m_sInPortDef.format.video.nFrameWidth;
    int height = m_sInPortDef.format.video.nFrameHeight;
-   int stride = VENUS_Y_STRIDE(COLOR_FMT_NV12, width);
-   int scanlines = VENUS_Y_SCANLINES(COLOR_FMT_NV12, height);
+   int stride = SWVENC_Y_STRIDE(COLOR_FMT_NV12, width);
+   int scanlines = SWVENC_Y_SCANLINES(COLOR_FMT_NV12, height);
    char *temp = (char*)buffer;
 
    if (!m_debug.infile)
@@ -3496,19 +3501,18 @@ SWVENC_STATUS omx_venc::swvenc_set_intra_period
 bool omx_venc::swvenc_color_align(OMX_BUFFERHEADERTYPE *buffer, OMX_U32 width,
                         OMX_U32 height)
 {
-     OMX_U32 y_stride = VENUS_Y_STRIDE(COLOR_FMT_NV12, width),
-            y_scanlines = VENUS_Y_SCANLINES(COLOR_FMT_NV12, height),
-            uv_stride = VENUS_UV_STRIDE(COLOR_FMT_NV12, width),
-            uv_scanlines = VENUS_UV_SCANLINES(COLOR_FMT_NV12, height),
-            src_chroma_offset = width * height;
-
-    if (buffer->nAllocLen >= VENUS_BUFFER_SIZE(COLOR_FMT_NV12, width, height)) {
+    OMX_U32 y_stride,y_scanlines,uv_scanlines,plane_size_y,plane_size_uv,src_chroma_offset;
+    y_stride = ALIGN(width,128);
+    y_scanlines = ALIGN(height,64);
+    src_chroma_offset = width * height;
+    OMX_U32 buffersize = SWVENC_BUFFER_SIZE(COLOR_FMT_NV12_ZSL,width,height);
+    if (buffer->nAllocLen >= buffersize) {
         OMX_U8* src_buf = buffer->pBuffer, *dst_buf = buffer->pBuffer;
         //Do chroma first, so that we can convert it in-place
         src_buf += width * height;
         dst_buf += y_stride * y_scanlines;
         for (int line = height / 2 - 1; line >= 0; --line) {
-            memmove(dst_buf + line * uv_stride,
+            memmove(dst_buf + line * y_stride,
                     src_buf + line * width,
                     width);
         }
@@ -3524,7 +3528,7 @@ bool omx_venc::swvenc_color_align(OMX_BUFFERHEADERTYPE *buffer, OMX_U32 width,
         DEBUG_PRINT_ERROR("Failed to align Chroma. from %u to %u : \
                 Insufficient bufferLen=%u v/s Required=%u",
                 (unsigned int)(width*height), (unsigned int)src_chroma_offset, (unsigned int)buffer->nAllocLen,
-                VENUS_BUFFER_SIZE(COLOR_FMT_NV12, width, height));
+                buffersize);
         return false;
     }
 
@@ -3540,14 +3544,71 @@ SWVENC_STATUS omx_venc::swvenc_set_color_format
     SWVENC_STATUS Ret = SWVENC_S_SUCCESS;
     SWVENC_COLOR_FORMAT swvenc_color_format;
     SWVENC_PROPERTY Prop;
-    if ((color_format == OMX_COLOR_FormatYUV420SemiPlanar) ||
-         (color_format == ((OMX_COLOR_FORMATTYPE) QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m)))
+    if (color_format == ((OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m))
+    {
+        DEBUG_PRINT_ERROR("QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m");
+        swvenc_color_format = SWVENC_COLOR_FORMAT_NV12;
+        Prop.id = SWVENC_PROPERTY_ID_FRAME_ATTRIBUTES;
+        Prop.info.frame_attributes.stride_luma = ALIGN(m_sOutPortDef.format.video.nFrameWidth,128);
+        Prop.info.frame_attributes.stride_chroma = ALIGN(m_sOutPortDef.format.video.nFrameWidth,128);
+        Prop.info.frame_attributes.offset_luma = 0;
+        Prop.info.frame_attributes.offset_chroma = ((ALIGN(m_sOutPortDef.format.video.nFrameWidth,128)) * (ALIGN(m_sOutPortDef.format.video.nFrameHeight,32)));
+        Ret = swvenc_setproperty(m_hSwVenc, &Prop);
+        if (Ret != SWVENC_S_SUCCESS)
+        {
+            DEBUG_PRINT_ERROR("%s, swvenc_setproperty failed (%d)",
+                __FUNCTION__, Ret);
+            Ret = SWVENC_S_FAILURE;
+        }
+    }
+    else if(color_format == OMX_COLOR_FormatYUV420SemiPlanar)
     {
         swvenc_color_format = SWVENC_COLOR_FORMAT_NV12;
+        Prop.id = SWVENC_PROPERTY_ID_FRAME_ATTRIBUTES;
+        Prop.info.frame_attributes.stride_luma = ALIGN(m_sInPortDef.format.video.nFrameWidth,16);
+        Prop.info.frame_attributes.stride_chroma = ALIGN(m_sInPortDef.format.video.nFrameWidth,16);
+        Prop.info.frame_attributes.offset_luma = 0;
+        Prop.info.frame_attributes.offset_chroma = ((ALIGN(m_sInPortDef.format.video.nFrameWidth,16)) * (ALIGN(m_sInPortDef.format.video.nFrameHeight,16)));
+        Ret = swvenc_setproperty(m_hSwVenc, &Prop);
+        if (Ret != SWVENC_S_SUCCESS)
+        {
+            DEBUG_PRINT_ERROR("%s, swvenc_setproperty failed (%d)",
+                __FUNCTION__, Ret);
+            Ret = SWVENC_S_FAILURE;
+        }
     }
-    else if (color_format == ((OMX_COLOR_FORMATTYPE) QOMX_COLOR_FormatYVU420SemiPlanar))
+    else if (color_format == ((OMX_COLOR_FORMATTYPE)QOMX_COLOR_FormatYVU420SemiPlanar))
     {
         swvenc_color_format = SWVENC_COLOR_FORMAT_NV21;
+        Prop.id = SWVENC_PROPERTY_ID_FRAME_ATTRIBUTES;
+        Prop.info.frame_attributes.stride_luma = ALIGN(m_sInPortDef.format.video.nFrameWidth,16);
+        Prop.info.frame_attributes.stride_chroma = ALIGN(m_sInPortDef.format.video.nFrameWidth,16);
+        Prop.info.frame_attributes.offset_luma = 0;
+        Prop.info.frame_attributes.offset_chroma = ((ALIGN(m_sInPortDef.format.video.nFrameWidth,16)) * (ALIGN(m_sInPortDef.format.video.nFrameHeight,16)));
+        Ret = swvenc_setproperty(m_hSwVenc, &Prop);
+        if (Ret != SWVENC_S_SUCCESS)
+        {
+            DEBUG_PRINT_ERROR("%s, swvenc_setproperty failed (%d)",
+                __FUNCTION__, Ret);
+            Ret = SWVENC_S_FAILURE;
+        }
+    }
+    else if (color_format == ((OMX_COLOR_FORMATTYPE) HAL_PIXEL_FORMAT_NV21_ZSL))
+    {
+        DEBUG_PRINT_ERROR("HAL_PIXEL_FORMAT_NV21_ZSL");
+        swvenc_color_format = SWVENC_COLOR_FORMAT_NV21;
+        Prop.id = SWVENC_PROPERTY_ID_FRAME_ATTRIBUTES;
+        Prop.info.frame_attributes.stride_luma = ALIGN(m_sInPortDef.format.video.nFrameWidth,64);
+        Prop.info.frame_attributes.stride_chroma = ALIGN(m_sInPortDef.format.video.nFrameWidth,64);
+        Prop.info.frame_attributes.offset_luma = 0;
+        Prop.info.frame_attributes.offset_chroma = ((ALIGN(m_sInPortDef.format.video.nFrameWidth,64)) * (ALIGN(m_sInPortDef.format.video.nFrameHeight,64)));
+        Ret = swvenc_setproperty(m_hSwVenc, &Prop);
+        if (Ret != SWVENC_S_SUCCESS)
+        {
+            DEBUG_PRINT_ERROR("%s, swvenc_setproperty failed (%d)",
+                __FUNCTION__, Ret);
+            Ret = SWVENC_S_FAILURE;
+        }
     }
     else
     {
@@ -3577,3 +3638,4 @@ void omx_venc::init_sw_vendor_extensions(VendorExtensionStore &store) {
             OMX_DirOutput)
     ADD_PARAM_END("enable", OMX_AndroidVendorValueInt32)
 }
+
