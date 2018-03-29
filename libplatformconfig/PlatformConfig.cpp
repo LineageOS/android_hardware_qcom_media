@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017 - 2018, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,7 +30,7 @@
 #define LOG_TAG "PlatformConfig"
 
 #include <errno.h>
-#include <cutils/log.h>
+#include <utils/Log.h>
 #include <sys/mman.h>
 #include "vidc_debug.h"
 #include "PlatformConfig.h"
