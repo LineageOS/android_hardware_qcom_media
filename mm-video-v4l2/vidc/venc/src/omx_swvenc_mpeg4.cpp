@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -138,7 +138,6 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     SWVENC_CALLBACK callBackInfo;
     OMX_VIDEO_CODINGTYPE codec_type;
     SWVENC_PROPERTY Prop;
-    int fds[2];
 
     strlcpy((char *)m_nkind,role,OMX_MAX_STRINGNAME_SIZE);
     secure_session = false;
@@ -456,28 +455,6 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
 
     if (eRet == OMX_ErrorNone)
     {
-        if (pipe(fds))
-        {
-            DEBUG_PRINT_ERROR("ERROR: pipe creation failed");
-            eRet = OMX_ErrorInsufficientResources;
-        }
-        else
-        {
-            if ((fds[0] == 0) || (fds[1] == 0))
-            {
-                if (pipe(fds))
-                {
-                    DEBUG_PRINT_ERROR("ERROR: pipe creation failed");
-                    eRet = OMX_ErrorInsufficientResources;
-                }
-            }
-            if (eRet == OMX_ErrorNone)
-            {
-                m_pipe_in = fds[0];
-                m_pipe_out = fds[1];
-            }
-        }
-
         if (pthread_create(&msg_thread_id,0, message_thread_enc, this) < 0)
         {
             eRet = OMX_ErrorInsufficientResources;
@@ -2277,8 +2254,18 @@ bool omx_venc::dev_empty_buf
                     {
                         if(handle->format == HAL_PIXEL_FORMAT_NV12_ENCODEABLE)
                         {
+                            DEBUG_PRINT_LOW("HAL_PIXEL_FORMAT_NV12_ENCODEABLE ");
                             m_sInPortFormat.eColorFormat = (OMX_COLOR_FORMATTYPE)
                                 QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
+                        }
+                        else if(handle->format == HAL_PIXEL_FORMAT_NV21_ZSL)
+                        {
+                            /* HAL_PIXEL_FORMAT_NV21_ZSL format is same as NV21 format,
+                               this format support is added to address OEM test app issue which is
+                               trigerring this input format, this format is not extensively verified */
+                            DEBUG_PRINT_LOW("HAL_PIXEL_FORMAT_NV21_ZSL ");
+                            m_sInPortFormat.eColorFormat = (OMX_COLOR_FORMATTYPE)
+                                QOMX_COLOR_FormatYVU420SemiPlanar;
                         }
                         else
                         {
