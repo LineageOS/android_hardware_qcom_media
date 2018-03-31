@@ -437,7 +437,7 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
 
     m_state                   = OMX_StateLoaded;
     m_sExtraData = 0;
-    m_sParamConsumerUsage     |= (OMX_U32)GRALLOC_USAGE_SW_READ_OFTEN;
+    //m_sParamConsumerUsage     |= (OMX_U32)GRALLOC_USAGE_SW_READ_OFTEN;
 
     if (codec_type == OMX_VIDEO_CodingMPEG4)
     {
