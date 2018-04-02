@@ -2217,12 +2217,7 @@ OMX_ERRORTYPE omx_swvdec::fill_this_buffer(OMX_HANDLETYPE        cmp_handle,
         {
             unsigned char *bufferaddr;
 
-            bufferaddr = (unsigned char *) mmap(NULL,
-                                                m_port_op.def.nBufferSize,
-                                                PROT_READ | PROT_WRITE,
-                                                MAP_SHARED,
-                                                p_private_handle->fd,
-                                                0);
+            bufferaddr = ion_map(p_private_handle->fd,m_port_op.def.nBufferSize);
 
             if (bufferaddr == MAP_FAILED)
             {
@@ -3637,26 +3632,19 @@ OMX_ERRORTYPE omx_swvdec::buffer_allocate_ip(
                             ii,
                             size);
 
-        m_buffer_array_ip[ii].ion_info.ion_fd_device =
-            ion_memory_alloc_map(&m_buffer_array_ip[ii].ion_info.ion_alloc_data,
-                                 &m_buffer_array_ip[ii].ion_info.ion_fd_data,
-                                 size,
-                                 m_port_ip.def.nBufferAlignment);
+        m_buffer_array_ip[ii].ion_info.dev_fd=
+            ion_memory_alloc_map(&m_buffer_array_ip[ii].ion_info,size,
+                                  m_port_ip.def.nBufferAlignment);
 
-        if (m_buffer_array_ip[ii].ion_info.ion_fd_device < 0)
+        if (m_buffer_array_ip[ii].ion_info.dev_fd< 0)
         {
             retval = OMX_ErrorInsufficientResources;
             goto buffer_allocate_ip_exit;
         }
 
-        pmem_fd = m_buffer_array_ip[ii].ion_info.ion_fd_data.fd;
+        pmem_fd = m_buffer_array_ip[ii].ion_info.data_fd;
 
-        bufferaddr = (unsigned char *) mmap(NULL,
-                                            size,
-                                            PROT_READ | PROT_WRITE,
-                                            MAP_SHARED,
-                                            pmem_fd,
-                                            0);
+        bufferaddr = ion_map(size,pmem_fd);
 
         if (bufferaddr == MAP_FAILED)
         {
@@ -3777,26 +3765,19 @@ OMX_ERRORTYPE omx_swvdec::buffer_allocate_op(
                             ii,
                             size);
 
-        m_buffer_array_op[ii].ion_info.ion_fd_device =
-            ion_memory_alloc_map(&m_buffer_array_op[ii].ion_info.ion_alloc_data,
-                                 &m_buffer_array_op[ii].ion_info.ion_fd_data,
-                                 size,
+        m_buffer_array_op[ii].ion_info.dev_fd=
+            ion_memory_alloc_map(&m_buffer_array_op[ii].ion_info,size,
                                  m_port_op.def.nBufferAlignment);
 
-        if (m_buffer_array_op[ii].ion_info.ion_fd_device < 0)
+        if (m_buffer_array_op[ii].ion_info.dev_fd < 0)
         {
             retval = OMX_ErrorInsufficientResources;
             goto buffer_allocate_op_exit;
         }
 
-        pmem_fd = m_buffer_array_op[ii].ion_info.ion_fd_data.fd;
+        pmem_fd = m_buffer_array_op[ii].ion_info.data_fd;
 
-        bufferaddr = (unsigned char *) mmap(NULL,
-                                            size,
-                                            PROT_READ | PROT_WRITE,
-                                            MAP_SHARED,
-                                            pmem_fd,
-                                            0);
+        bufferaddr = ion_map(size,pmem_fd);
 
         if (bufferaddr == MAP_FAILED)
         {
@@ -3916,7 +3897,7 @@ OMX_ERRORTYPE omx_swvdec::buffer_allocate_ip_info_array()
         // reset file descriptors
 
         m_buffer_array_ip[ii].buffer_payload.pmem_fd = -1;
-        m_buffer_array_ip[ii].ion_info.ion_fd_device = -1;
+        m_buffer_array_ip[ii].ion_info.dev_fd= -1;
 
         m_buffer_array_ip[ii].buffer_swvdec.p_client_data =
             (void *) ((unsigned long) ii);
@@ -3979,7 +3960,7 @@ OMX_ERRORTYPE omx_swvdec::buffer_allocate_op_info_array()
         // reset file descriptors
 
         m_buffer_array_op[ii].buffer_payload.pmem_fd = -1;
-        m_buffer_array_op[ii].ion_info.ion_fd_device = -1;
+        m_buffer_array_op[ii].ion_info.dev_fd = -1;
 
         m_buffer_array_op[ii].buffer_swvdec.p_client_data =
             (void *) ((unsigned long) ii);
@@ -4102,12 +4083,7 @@ OMX_ERRORTYPE omx_swvdec::buffer_use_op(
 
             m_port_op.def.nBufferSize = p_handle->size;
 
-            p_buffer_mapped = (OMX_U8 *) mmap(NULL,
-                                              p_handle->size,
-                                              PROT_READ | PROT_WRITE,
-                                              MAP_SHARED,
-                                              p_handle->fd,
-                                              0);
+            p_buffer_mapped = ion_map(p_handle->size,p_handle->fd);
 
             if (p_buffer_mapped == MAP_FAILED)
             {
@@ -4149,7 +4125,7 @@ OMX_ERRORTYPE omx_swvdec::buffer_use_op(
             (*pp_buffer_hdr)->pAppPrivate = p_app_data;
             (*pp_buffer_hdr)->nAllocLen   = m_port_op.def.nBufferSize;
 
-            m_buffer_array_op[ii].ion_info.ion_fd_data.fd = p_handle->fd;
+            m_buffer_array_op[ii].ion_info.data_fd = p_handle->fd;
 
             OMX_SWVDEC_LOG_HIGH("op buffer %d: %p",
                                 ii,
@@ -4226,8 +4202,9 @@ OMX_ERRORTYPE omx_swvdec::buffer_deallocate_ip(
 
             m_port_ip.populated = OMX_FALSE;
 
-            munmap(m_buffer_array_ip[ii].buffer_payload.bufferaddr,
-                   m_buffer_array_ip[ii].buffer_payload.mmaped_size);
+            ion_unmap(m_buffer_array_ip[ii].buffer_payload.pmem_fd,
+                      m_buffer_array_ip[ii].buffer_payload.bufferaddr,
+                      m_buffer_array_ip[ii].buffer_payload.mmaped_size);
 
             close(m_buffer_array_ip[ii].buffer_payload.pmem_fd);
             m_buffer_array_ip[ii].buffer_payload.pmem_fd = -1;
@@ -4329,8 +4306,9 @@ OMX_ERRORTYPE omx_swvdec::buffer_deallocate_op(
                     goto buffer_deallocate_op_exit;
                 }
             }
-            munmap(m_buffer_array_op[ii].buffer_payload.bufferaddr,
-                   m_buffer_array_op[ii].buffer_payload.mmaped_size);
+            ion_unmap(m_buffer_array_op[ii].buffer_payload.pmem_fd ,
+                      m_buffer_array_op[ii].buffer_payload.bufferaddr,
+                      m_buffer_array_op[ii].buffer_payload.mmaped_size);
 
             m_buffer_array_op[ii].buffer_payload.pmem_fd = -1;
         }
@@ -4349,8 +4327,9 @@ OMX_ERRORTYPE omx_swvdec::buffer_deallocate_op(
                     goto buffer_deallocate_op_exit;
                 }
             }
-            munmap(m_buffer_array_op[ii].buffer_payload.bufferaddr,
-                   m_buffer_array_op[ii].buffer_payload.mmaped_size);
+            ion_unmap(m_buffer_array_op[ii].buffer_payload.pmem_fd,
+                      m_buffer_array_op[ii].buffer_payload.bufferaddr,
+                      m_buffer_array_op[ii].buffer_payload.mmaped_size);
 
             close(m_buffer_array_op[ii].buffer_payload.pmem_fd);
 
@@ -4496,11 +4475,11 @@ void omx_swvdec::meta_buffer_ref_remove(unsigned int index)
 
     if (m_meta_buffer_array[index].ref_count == 0)
     {
+        ion_unmap(m_meta_buffer_array[index].fd,
+                  m_buffer_array_op[index].buffer_payload.bufferaddr,
+                  m_buffer_array_op[index].buffer_payload.mmaped_size);
+
         m_meta_buffer_array[index].fd = -1;
-
-        munmap(m_buffer_array_op[index].buffer_payload.bufferaddr,
-               m_buffer_array_op[index].buffer_payload.mmaped_size);
-
         m_buffer_array_op[index].buffer_payload.bufferaddr  = NULL;
         m_buffer_array_op[index].buffer_payload.offset      = 0;
         m_buffer_array_op[index].buffer_payload.mmaped_size = 0;
@@ -4712,72 +4691,53 @@ OMX_ERRORTYPE omx_swvdec::flush(unsigned int port_index)
 /**
  * @brief Allocate & map ION memory.
  */
-int omx_swvdec::ion_memory_alloc_map(struct ion_allocation_data *p_alloc_data,
-                                     struct ion_fd_data         *p_fd_data,
-                                     OMX_U32                     size,
-                                     OMX_U32                     alignment)
+int omx_swvdec::ion_memory_alloc_map(vdec_ion *p_ion_info, OMX_U32 size, OMX_U32 alignment)
 {
-    int fd = -EINVAL;
+    p_ion_info->dev_fd = -EINVAL;
     int rc = -EINVAL;
 
-    if ((p_alloc_data == NULL) || (p_fd_data == NULL) || (size == 0))
+    if((!p_ion_info) || (size == 0))
     {
         OMX_SWVDEC_LOG_ERROR("invalid arguments");
         goto ion_memory_alloc_map_exit;
     }
 
-    if ((fd = open("/dev/ion", O_RDONLY)) < 0)
+    if ((p_ion_info->dev_fd = ion_open()) < 0)
     {
-        OMX_SWVDEC_LOG_ERROR("failed to open ion device; fd = %d", fd);
+        OMX_SWVDEC_LOG_ERROR("failed to open ion device; fd = %d", p_ion_info->dev_fd);
         goto ion_memory_alloc_map_exit;
     }
 
-    p_alloc_data->len          = size;
-    p_alloc_data->align        = (alignment < 4096) ? 4096 : alignment;
-    p_alloc_data->heap_id_mask = ION_HEAP(ION_IOMMU_HEAP_ID);
-    p_alloc_data->flags        = 0;
+    p_ion_info->alloc_data.len = size;
+    p_ion_info->alloc_data.heap_id_mask = ION_HEAP(ION_SYSTEM_HEAP_ID);
+    p_ion_info->alloc_data.flags        = 0;//check if ION_FLAG_CACHED need to be set;
+    alignment = ALIGN(alignment,4096);
 
-    OMX_SWVDEC_LOG_LOW("heap_id_mask 0x%08x, len %zu, align %zu",
-                       p_alloc_data->heap_id_mask,
-                       p_alloc_data->len,
-                       p_alloc_data->align);
+    OMX_SWVDEC_LOG_LOW("heap_id_mask 0x%08x, len %zu",
+                       p_ion_info->alloc_data.heap_id_mask,
+                       p_ion_info->alloc_data.len);
 
-    rc = ioctl(fd, ION_IOC_ALLOC, p_alloc_data);
+    rc = ion_alloc_fd(p_ion_info->dev_fd, p_ion_info->alloc_data.len, alignment,
+                      p_ion_info->alloc_data.heap_id_mask, p_ion_info->alloc_data.flags,
+                      &p_ion_info->data_fd);
 
-    if (rc || (p_alloc_data->handle == 0))
+    if (rc || p_ion_info->data_fd == 0)
     {
-        OMX_SWVDEC_LOG_ERROR("ioctl() for allocation failed");
-
-        close(fd);
-        fd = -ENOMEM;
-
+        OMX_SWVDEC_LOG_ERROR("ion_alloc_fd() for allocation failed");
+        ion_close(p_ion_info->dev_fd);
+        p_ion_info->data_fd = -1;
+        p_ion_info->dev_fd = -1;
         goto ion_memory_alloc_map_exit;
     }
 
-    p_fd_data->handle = p_alloc_data->handle;
 
-    if (ioctl(fd, ION_IOC_MAP, p_fd_data))
-    {
-        struct vdec_ion ion_buf_info;
-
-        OMX_SWVDEC_LOG_ERROR("ioctl() for mapping failed");
-
-        ion_buf_info.ion_alloc_data = *p_alloc_data;
-        ion_buf_info.ion_fd_device  = fd;
-        ion_buf_info.ion_fd_data    = *p_fd_data;
-
-        ion_memory_free(&ion_buf_info);
-
-        p_fd_data->fd = -1;
-
-        close(fd);
-        fd = -ENOMEM;
-
-        goto ion_memory_alloc_map_exit;
-    }
+    OMX_SWVDEC_LOG_HIGH("Alloc ion memory: fd (dev:%d data:%d) len %d flags %#x mask %#x",
+                        p_ion_info->dev_fd, p_ion_info->data_fd, (unsigned int)p_ion_info->alloc_data.len,
+                     (unsigned int)p_ion_info->alloc_data.flags,
+                     (unsigned int)p_ion_info->alloc_data.heap_id_mask);
 
 ion_memory_alloc_map_exit:
-    return fd;
+    return p_ion_info->dev_fd;
 }
 
 /**
@@ -4791,18 +4751,21 @@ void omx_swvdec::ion_memory_free(struct vdec_ion *p_ion_buf_info)
         goto ion_memory_free_exit;
     }
 
-    if (ioctl(p_ion_buf_info->ion_fd_device,
-              ION_IOC_FREE,
-              &p_ion_buf_info->ion_alloc_data.handle))
-    {
-        OMX_SWVDEC_LOG_ERROR("ioctl() for freeing failed");
+    OMX_SWVDEC_LOG_HIGH("Free ion memory: map fd %d ion_dev fd %d len %d flags %#x mask %#x",
+        p_ion_buf_info->data_fd, p_ion_buf_info->dev_fd,
+        (unsigned int)p_ion_buf_info->alloc_data.len,
+        (unsigned int)p_ion_buf_info->alloc_data.flags,
+        (unsigned int)p_ion_buf_info->alloc_data.heap_id_mask);
+
+    if (p_ion_buf_info->data_fd >= 0) {
+        close(p_ion_buf_info->data_fd);
+        p_ion_buf_info->data_fd = -1;
     }
 
-    close(p_ion_buf_info->ion_fd_device);
-
-    p_ion_buf_info->ion_fd_device         = -1;
-    p_ion_buf_info->ion_alloc_data.handle =  0;
-    p_ion_buf_info->ion_fd_data.fd        = -1;
+    if (p_ion_buf_info->dev_fd >= 0) {
+        ion_close(p_ion_buf_info->dev_fd);
+        p_ion_buf_info->dev_fd = -1;
+    }
 
 ion_memory_free_exit:
     return;
@@ -4817,64 +4780,24 @@ void omx_swvdec::ion_flush_op(unsigned int index)
 {
     if (index < m_port_op.def.nBufferCountActual)
     {
-        int fd = -EINVAL;
-        int rc = -EINVAL;
+#ifdef USE_ION
+        struct dma_buf_sync dma_buf_sync_data[2];
+        dma_buf_sync_data[0].flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_WRITE;
+        dma_buf_sync_data[1].flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_WRITE;
 
-        struct vdec_bufferpayload *p_buffer_payload =
-            &m_buffer_array_op[index].buffer_payload;
-
-        struct ion_fd_data     fd_data;
-        struct ion_flush_data  flush_data;
-        struct ion_custom_data custom_data;
-
-        memset(&fd_data,     0, sizeof(fd_data));
-        memset(&flush_data,  0, sizeof(flush_data));
-        memset(&custom_data, 0, sizeof(custom_data));
-
-        if ((fd = open("/dev/ion", O_RDONLY)) < 0)
+        for (unsigned int i=0; i<2; i++)
         {
-            OMX_SWVDEC_LOG_ERROR("failed to open /dev/ion, error %s",
-                                 strerror(errno));
-
-            goto ion_flush_op_exit;
-        }
-
-        fd_data.fd = p_buffer_payload->pmem_fd;
-
-        rc = ioctl(fd, ION_IOC_IMPORT, &fd_data);
-
-        if (rc)
-        {
-            OMX_SWVDEC_LOG_ERROR("ioctl() for import failed; fd %d",
-                                 fd_data.fd);
-
-            close(fd);
-            goto ion_flush_op_exit;
-        }
-
-        flush_data.handle = fd_data.handle;
-
-        flush_data.fd     = p_buffer_payload->pmem_fd;
-        flush_data.vaddr  = p_buffer_payload->bufferaddr;
-        flush_data.length = p_buffer_payload->buffer_len;
-
-        custom_data.cmd = ION_IOC_CLEAN_CACHES;
-        custom_data.arg = (unsigned long) &flush_data;
-
-        OMX_SWVDEC_LOG_LOW("handle %d, fd %d, vaddr %p, length %d",
-                           flush_data.handle,
-                           flush_data.fd,
-                           flush_data.vaddr,
-                           flush_data.length);
-
-        rc = ioctl(fd, ION_IOC_CUSTOM, &custom_data);
-
-        if (rc < 0)
-        {
-            OMX_SWVDEC_LOG_ERROR("ioctl() for clean cache failed");
-        }
-
-        close(fd);
+            int ret = ioctl(m_buffer_array_op[index].ion_info.data_fd,
+                      DMA_BUF_IOCTL_SYNC, &dma_buf_sync_data[i]);
+            if (ret < 0)
+            {
+                OMX_SWVDEC_LOG_ERROR("Cache %s failed: %s\n",
+                                  (i==0) ? "START" : "END",
+                                  strerror(errno));
+                goto ion_flush_op_exit;
+            }
+       }
+#endif
     }
     else
     {
@@ -6579,3 +6502,52 @@ OMX_ERRORTYPE omx_swvdec::async_process_event_dimensions_updated()
 
     return retval;
 }
+
+/**
+ * @brief Map the memory and run the ioctl SYNC operations
+ *.on ION fd with DMA_BUF_IOCTL_SYNC
+ *.@param[in] fd: ION header.
+ * @param[in] len:Lenth of the memory.
+ * @retval mapped memory pointer
+ */
+unsigned char *omx_swvdec::ion_map(int fd, int len)
+{
+    unsigned char *bufaddr = (unsigned char*)mmap(NULL, len, PROT_READ|PROT_WRITE,
+                                MAP_SHARED, fd, 0);
+    if (bufaddr != MAP_FAILED) {
+#ifdef USE_ION
+        struct dma_buf_sync buf_sync;
+        buf_sync.flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_RW;
+        int rc = ioctl(fd, DMA_BUF_IOCTL_SYNC, &buf_sync);
+        if (rc) {
+            OMX_SWVDEC_LOG_ERROR("Failed DMA_BUF_IOCTL_SYNC");
+        }
+#endif
+    }
+    return bufaddr;
+}
+
+/**
+ * @brief Unmap the memory
+ *.@param[in] fd: ION header.
+ .*.@param[in].bufaddr : buffer address
+ * @param[in] len:Lenth of the memory.
+ * @retval OMX_ERRORTYPE
+ */
+OMX_ERRORTYPE omx_swvdec::ion_unmap(int fd, void *bufaddr, int len)
+{
+#ifdef USE_ION
+    struct dma_buf_sync buf_sync;
+    buf_sync.flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_RW;
+    int rc = ioctl(fd, DMA_BUF_IOCTL_SYNC, &buf_sync);
+    if (rc) {
+        OMX_SWVDEC_LOG_ERROR("Failed DMA_BUF_IOCTL_SYNC");
+    }
+#endif
+    if (-1 == munmap(bufaddr, len)) {
+        OMX_SWVDEC_LOG_ERROR("munmap failed.");
+        return OMX_ErrorInsufficientResources;
+    }
+    return OMX_ErrorNone;
+}
+
