@@ -3533,7 +3533,7 @@ OMX_ERRORTYPE  omx_video::allocate_output_buffer(
             align_size = ALIGN(m_sOutPortDef.nBufferSize, 4096);
             bool status = alloc_map_ion_memory(align_size,
                     &m_pOutput_ion[i],
-                    secure_session ? SECURE_FLAGS_OUTPUT_BUFFER : ION_FLAG_CACHED);
+                    secure_session ? SECURE_FLAGS_OUTPUT_BUFFER : 0);
             if (status == false) {
                 DEBUG_PRINT_ERROR("ERROR:ION device open() Failed");
                 return OMX_ErrorInsufficientResources;
@@ -4954,7 +4954,7 @@ bool omx_video::alloc_map_ion_memory(int size, venc_ion *ion_info, int flag)
                 ion_info->alloc_data.flags);
     } else {
         ion_info->alloc_data.len = (size + (SZ_4K - 1)) & ~(SZ_4K - 1);
-        ion_info->alloc_data.flags = (flag & ION_FLAG_CACHED);
+        ion_info->alloc_data.flags = 0;
 
         /* If color format is Vanilla NV12, we will need to use caching for optimal
            color alignment performance.
@@ -4963,7 +4963,7 @@ bool omx_video::alloc_map_ion_memory(int size, venc_ion *ion_info, int flag)
         if (m_sInPortDef.format.video.eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar)
         {
             DEBUG_PRINT_HIGH("Enabling cacheing for this buffer");
-            ion_info->alloc_data.flags = ION_FLAG_CACHED;
+            ion_info->alloc_data.flags = 0;
         }
         ion_info->alloc_data.heap_id_mask = (ION_HEAP(MEM_HEAP_ID) |
                                     ION_HEAP(ION_SYSTEM_HEAP_ID));
