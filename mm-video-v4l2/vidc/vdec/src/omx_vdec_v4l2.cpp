@@ -734,6 +734,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_is_split_mode(false)
 {
     m_poll_efd = -1;
+    memset(&drv_ctx, 0, sizeof(drv_ctx));
     drv_ctx.video_driver_fd = -1;
     drv_ctx.extradata_info.ion.data_fd = -1;
     drv_ctx.extradata_info.ion.dev_fd = -1;
@@ -815,7 +816,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
 #endif
     memset(&m_cmp,0,sizeof(m_cmp));
     memset(&m_cb,0,sizeof(m_cb));
-    memset (&drv_ctx,0,sizeof(drv_ctx));
     memset (m_hwdevice_name,0,sizeof(m_hwdevice_name));
     memset(m_demux_offsets, 0, ( sizeof(OMX_U32) * 8192) );
     memset(&m_custom_buffersize, 0, sizeof(m_custom_buffersize));
@@ -833,7 +833,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
 #ifdef _ANDROID_ICS_
     memset(&native_buffer, 0 ,(sizeof(struct nativebuffer) * MAX_NUM_INPUT_OUTPUT_BUFFERS));
 #endif
-    memset(&drv_ctx.extradata_info, 0, sizeof(drv_ctx.extradata_info));
 
     /* invalidate m_frame_pack_arrangement */
     memset(&m_frame_pack_arrangement, 0, sizeof(OMX_QCOM_FRAME_PACK_ARRANGEMENT));
