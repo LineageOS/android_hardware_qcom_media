@@ -688,9 +688,9 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                         (unsigned int)portDefn->nBufferSize);
                     if (portDefn->nBufferCountActual != m_client_out_extradata_info.getBufferCount() ||
                         portDefn->nBufferSize != m_client_out_extradata_info.getSize()) {
-                            DEBUG_PRINT_ERROR("ERROR: Bad parameeters request for extradata limit %d size - %d",
+                            DEBUG_PRINT_HIGH("ERROR: Bad parameeters request for extradata limit %d size - %d",
                             portDefn->nBufferCountActual, portDefn->nBufferSize);
-                            eRet = OMX_ErrorBadParameter;
+                            eRet = OMX_ErrorNone;
                             break;
                     }
                 } else if (PORT_INDEX_EXTRADATA_IN == portDefn->nPortIndex) {
