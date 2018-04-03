@@ -53,21 +53,6 @@ omx_core_cb_type core[] =
       "video_decoder.avc"
     }
   },
-#ifndef MSM8937_32GO_PLATFORM
-  {
-    "OMX.qcom.video.decoder.avc.secure",
-    NULL, // Create instance function
-    // Unique instance handle
-    {
-      NULL
-    },
-    NULL,   // Shared object library handle
-    "libOmxVdec.so",
-    {
-      "video_decoder.avc"
-    }
-  },
-#endif
   {
     "OMX.qcom.video.decoder.hevc",
     NULL,   // Create instance function
@@ -107,21 +92,6 @@ omx_core_cb_type core[] =
       "video_encoder.avc"
     }
   },
-#ifndef MSM8937_32GO_PLATFORM
-  {
-    "OMX.qcom.video.encoder.avc.secure",
-    NULL, // Create instance function
-    // Unique instance handle
-    {
-      NULL
-    },
-    NULL,   // Shared object library handle
-    "libOmxVenc.so",
-    {
-      "video_encoder.avc"
-    }
-  },
-#endif
   {
     "OMX.qti.video.decoder.mpeg4sw",
     NULL, // Create instance function

@@ -10651,6 +10651,13 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
         return OMX_ErrorBadParameter;
     }
     DEBUG_PRINT_LOW("omx_vdec::update_portdef");
+    if (drv_ctx.frame_rate.fps_denominator > 0)
+	    portDefn->format.video.xFramerate = (drv_ctx.frame_rate.fps_numerator /
+	               drv_ctx.frame_rate.fps_denominator) << 16; //Q16 format
+	else {
+	    DEBUG_PRINT_ERROR("Error: Divide by zero");
+	    return OMX_ErrorBadParameter;
+    }
     portDefn->nVersion.nVersion = OMX_SPEC_VERSION;
     portDefn->nSize = sizeof(OMX_PARAM_PORTDEFINITIONTYPE);
     portDefn->eDomain    = OMX_PortDomainVideo;
@@ -10662,9 +10669,6 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
         portDefn->nBufferSize        = drv_ctx.ip_buf.buffer_size;
         portDefn->format.video.eColorFormat = OMX_COLOR_FormatUnused;
         portDefn->format.video.eCompressionFormat = eCompressionFormat;
-        //for input port, always report the fps value set by client,
-        //to distinguish whether client got valid fps from parser.
-        portDefn->format.video.xFramerate = m_fps_received;
         portDefn->bEnabled   = m_inp_bEnabled;
         portDefn->bPopulated = m_inp_bPopulated;
 
@@ -10704,13 +10708,6 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
         portDefn->nBufferCountActual = drv_ctx.op_buf.actualcount;
         portDefn->nBufferCountMin    = drv_ctx.op_buf.mincount;
         portDefn->format.video.eCompressionFormat = OMX_VIDEO_CodingUnused;
-        if (drv_ctx.frame_rate.fps_denominator > 0)
-            portDefn->format.video.xFramerate = (drv_ctx.frame_rate.fps_numerator /
-                drv_ctx.frame_rate.fps_denominator) << 16; //Q16 format
-        else {
-            DEBUG_PRINT_ERROR("Error: Divide by zero");
-            return OMX_ErrorBadParameter;
-        }
         portDefn->bEnabled   = m_out_bEnabled;
         portDefn->bPopulated = m_out_bPopulated;
         if (!client_buffers.get_color_format(portDefn->format.video.eColorFormat)) {
