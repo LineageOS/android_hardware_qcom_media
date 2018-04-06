@@ -2882,11 +2882,12 @@ int omx_venc::swvenc_input_log_buffers(const char *buffer, int bufferlen)
    RETURN(0);
 }
 
-int omx_venc::dev_extradata_log_buffers(char *buffer)
+int omx_venc::dev_extradata_log_buffers(char *buffer, bool input)
 {
    ENTER_FUNC();
 
    (void)buffer;
+   (void)input;
 
    RETURN(true);
     //return handle->venc_extradata_log_buffers(buffer);

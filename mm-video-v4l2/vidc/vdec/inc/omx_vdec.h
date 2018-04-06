@@ -956,6 +956,8 @@ class omx_vdec: public qc_omx_component
 #ifdef USE_ION
         bool alloc_map_ion_memory(OMX_U32 buffer_size, vdec_ion *ion_info, int flag);
         void free_ion_memory(struct vdec_ion *buf_ion_info);
+        void start_buffer_access(int fd);
+        void end_buffer_access(int fd);
 #endif
 
 
@@ -1283,7 +1285,7 @@ class omx_vdec: public qc_omx_component
         allocate_color_convert_buf client_buffers;
         struct video_decoder_capability m_decoder_capability;
         struct debug_cap m_debug;
-        int log_input_buffers(const char *, int, uint64_t);
+        int log_input_buffers(const char *, int, uint64_t, int);
         int log_output_buffers(OMX_BUFFERHEADERTYPE *);
         int log_cc_output_buffers(OMX_BUFFERHEADERTYPE *);
         void send_codec_config();

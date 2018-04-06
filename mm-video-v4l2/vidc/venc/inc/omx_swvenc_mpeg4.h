@@ -163,7 +163,7 @@ class omx_venc: public omx_video
                         OMX_U32 height);
         bool dev_get_output_log_flag();
         int dev_output_log_buffers(const char *buffer_addr, int buffer_len, uint64_t timestamp);
-        int dev_extradata_log_buffers(char *buffer);
+        int dev_extradata_log_buffers(char *buffer, bool input);
         bool swvenc_color_align(OMX_BUFFERHEADERTYPE *buffer, OMX_U32 width,
                                 OMX_U32 height);
         OMX_ERRORTYPE swvenc_do_flip_inport();

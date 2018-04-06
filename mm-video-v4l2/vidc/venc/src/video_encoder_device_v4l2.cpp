@@ -117,7 +117,9 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     pthread_mutex_init(&pause_resume_mlock, NULL);
     pthread_cond_init(&pause_resume_cond, NULL);
     memset(&input_extradata_info, 0, sizeof(input_extradata_info));
+    input_extradata_info.ion.data_fd = -1;
     memset(&output_extradata_info, 0, sizeof(output_extradata_info));
+    output_extradata_info.ion.data_fd = -1;
     memset(&idrperiod, 0, sizeof(idrperiod));
     memset(&multislice, 0, sizeof(multislice));
     memset (&slice_mode, 0 , sizeof(slice_mode));
@@ -635,6 +637,10 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
     OMX_TICKS nTimeStamp = buf.timestamp.tv_sec * 1000000 + buf.timestamp.tv_usec;
     int fd = buf.m.planes[0].reserved[0];
     bool vqzip_sei_found = false;
+    char *p_extradata = NULL;
+    OMX_OTHER_EXTRADATATYPE *data = NULL;
+    struct roidata roi;
+    bool status = true;
 
     if (!EXTRADATA_IDX(num_input_planes)) {
         DEBUG_PRINT_LOW("Input extradata not enabled");
@@ -647,21 +653,24 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
     }
 
     DEBUG_PRINT_HIGH("Processing Extradata for Buffer = %lld", nTimeStamp); // Useful for debugging
-
+#ifdef USE_ION
+    venc_handle->venc_start_buffer_access(input_extradata_info.ion.data_fd);
+#endif
     if (m_sVenc_cfg.inputformat == V4L2_PIX_FMT_NV12 || m_sVenc_cfg.inputformat == V4L2_PIX_FMT_NV21) {
         size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12, width, height);
         yuv_size = get_yuv_size(COLOR_FMT_NV12, width, height);
         pVirt = (unsigned char *)mmap(NULL, size, PROT_READ|PROT_WRITE,MAP_SHARED, fd, 0);
         if (pVirt == MAP_FAILED) {
             DEBUG_PRINT_ERROR("%s Failed to mmap",__func__);
-            return false;
+            status = false;
+            goto bailout;
         }
         p_extra = (OMX_OTHER_EXTRADATATYPE *) ((unsigned long)(pVirt + yuv_size + 3)&(~3));
     }
 
     index = venc_get_index_from_fd(fd);
-    char *p_extradata = input_extradata_info.uaddr + index * input_extradata_info.buffer_size;
-    OMX_OTHER_EXTRADATATYPE *data = (struct OMX_OTHER_EXTRADATATYPE *)p_extradata;
+    p_extradata = input_extradata_info.uaddr + index * input_extradata_info.buffer_size;
+    data = (struct OMX_OTHER_EXTRADATATYPE *)p_extradata;
     memset((void *)(data), 0, (input_extradata_info.buffer_size)); // clear stale data in current buffer
 
     while (p_extra && (consumed_len + sizeof(OMX_OTHER_EXTRADATATYPE)) <= (size - yuv_size)
@@ -746,7 +755,6 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
        *     By this time if client sets next ROI, then we shouldn't process new ROI here.
        */
 
-    struct roidata roi;
     memset(&roi, 0, sizeof(struct roidata));
     roi.dirty = false;
     if (m_roi_enabled) {
@@ -760,7 +768,8 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
         if (data->nSize > input_extradata_info.buffer_size  - consumed_len) {
            DEBUG_PRINT_ERROR("Buffer size (%lu) is less than ROI extradata size (%u)",
                              (input_extradata_info.buffer_size - consumed_len) ,data->nSize);
-           return false;
+           status = false;
+           goto bailout;
         }
         data->nVersion.nVersion = OMX_SPEC_VERSION;
         data->nPortIndex = 0;
@@ -791,7 +800,8 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
         DEBUG_PRINT_ERROR("VQZIP is enabled, But no VQZIP SEI found. Rejecting the session");
         if (pVirt)
             munmap(pVirt, size);
-        return false; //This should be treated as fatal error
+        status = false;
+        goto bailout; //This should be treated as fatal error
     }
     if (vqzip_sei_info.enabled && pVirt) {
         data->nSize = (sizeof(OMX_OTHER_EXTRADATATYPE) +  sizeof(struct VQZipStats) + 3)&(~3);
@@ -812,7 +822,11 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
     if (pVirt)
         munmap(pVirt, size);
 
-    return true;
+bailout:
+#ifdef USE_ION
+    venc_handle->venc_end_buffer_access(input_extradata_info.ion.data_fd);
+#endif
+    return status;
 }
 
 bool venc_dev::venc_handle_client_input_extradata(void *buffer)
@@ -1210,8 +1224,10 @@ OMX_ERRORTYPE venc_dev::allocate_extradata(struct extradata_buffer_info *extrada
 #ifdef USE_ION
 
     if (extradata_info->buffer_size) {
-        venc_handle->ion_unmap(extradata_info->ion.data_fd, (void *)extradata_info->uaddr, extradata_info->size);
-        venc_handle->free_ion_memory(&extradata_info->ion);
+        if (extradata_info->ion.data_fd != -1) {
+            venc_handle->ion_unmap(extradata_info->ion.data_fd, (void *)extradata_info->uaddr, extradata_info->size);
+            venc_handle->free_ion_memory(&extradata_info->ion);
+        }
         extradata_info->size = (extradata_info->size + 4095) & (~4095);
 
         // ION_IOC_MAP defined @ bionic/libc/kernel/uapi/linux/ion.h not in kernel,
@@ -1236,7 +1252,8 @@ OMX_ERRORTYPE venc_dev::allocate_extradata(struct extradata_buffer_info *extrada
             return OMX_ErrorInsufficientResources;
         }
     }
-
+#else
+    (void)flags;
 #endif
     extradata_info->allocated = OMX_TRUE;
     return OMX_ErrorNone;
@@ -1259,7 +1276,8 @@ void venc_dev::free_extradata(struct extradata_buffer_info *extradata_info)
     memset(extradata_info, 0, sizeof(*extradata_info));
     extradata_info->ion.data_fd = -1;
     extradata_info->allocated = OMX_FALSE;
-
+#else
+    (void)extradata_info;
 #endif // USE_ION
 }
 
@@ -1325,10 +1343,21 @@ int venc_dev::venc_output_log_buffers(const char *buffer_addr, int buffer_len, u
     return 0;
 }
 
-int venc_dev::venc_extradata_log_buffers(char *buffer_addr)
+int venc_dev::venc_extradata_log_buffers(char *buffer_addr, bool input)
 {
+    int fd;
+
+    if (input)
+        fd = input_extradata_info.ion.data_fd;
+    else
+        fd = output_extradata_info.ion.data_fd;
+
+#ifdef USE_ION
+    venc_handle->venc_start_buffer_access(fd);
+#endif
     if (!m_debug.extradatafile && m_debug.extradata_log) {
         int size = 0;
+
         if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264) {
            size = snprintf(m_debug.extradatafile_name, PROPERTY_VALUE_MAX, "%s/extradata_enc_%lu_%lu_%p.bin",
                            m_debug.log_loc, m_sVenc_cfg.input_width, m_sVenc_cfg.input_height, this);
@@ -1349,6 +1378,9 @@ int venc_dev::venc_extradata_log_buffers(char *buffer_addr)
             DEBUG_PRINT_ERROR("Failed to open extradata file: %s for logging errno:%d",
                                m_debug.extradatafile_name, errno);
             m_debug.extradatafile_name[0] = '\0';
+#ifdef USE_ION
+            venc_handle->venc_end_buffer_access(fd);
+#endif
             return -1;
         }
     }
@@ -1361,16 +1393,23 @@ int venc_dev::venc_extradata_log_buffers(char *buffer_addr)
             fwrite(p_extra, p_extra->nSize, 1, m_debug.extradatafile);
         } while (p_extra->eType != OMX_ExtraDataNone);
     }
+#ifdef USE_ION
+    venc_handle->venc_end_buffer_access(fd);
+#endif
     return 0;
 }
 
 int venc_dev::venc_input_log_buffers(OMX_BUFFERHEADERTYPE *pbuffer, int fd, int plane_offset,
         unsigned long inputformat) {
+    int status = 0;
     if (venc_handle->is_secure_session()) {
         DEBUG_PRINT_ERROR("logging secure input buffers is not allowed!");
         return -1;
     }
 
+#ifdef USE_ION
+    venc_handle->venc_start_buffer_access(fd);
+#endif
     if (!m_debug.infile) {
         int size = snprintf(m_debug.infile_name, PROPERTY_VALUE_MAX, "%s/input_enc_%lu_%lu_%p.yuv",
                             m_debug.log_loc, m_sVenc_cfg.input_width, m_sVenc_cfg.input_height, this);
@@ -1382,7 +1421,8 @@ int venc_dev::venc_input_log_buffers(OMX_BUFFERHEADERTYPE *pbuffer, int fd, int 
         if (!m_debug.infile) {
             DEBUG_PRINT_HIGH("Failed to open input file: %s for logging", m_debug.infile_name);
             m_debug.infile_name[0] = '\0';
-            return -1;
+            status = -1;
+            goto bailout;
         }
     }
 
@@ -1425,7 +1465,8 @@ int venc_dev::venc_input_log_buffers(OMX_BUFFERHEADERTYPE *pbuffer, int fd, int 
             pvirt= (unsigned char *)mmap(NULL, msize, PROT_READ|PROT_WRITE,MAP_SHARED, fd, plane_offset);
             if (pvirt == MAP_FAILED) {
                 DEBUG_PRINT_ERROR("%s mmap failed", __func__);
-                return -1;
+                status = -1;
+                goto bailout;
             }
             ptemp = pvirt;
         } else {
@@ -1485,8 +1526,11 @@ int venc_dev::venc_input_log_buffers(OMX_BUFFERHEADERTYPE *pbuffer, int fd, int 
             munmap(pvirt, msize);
         }
     }
-
-    return 0;
+bailout:
+#ifdef USE_ION
+    venc_handle->venc_end_buffer_access(fd);
+#endif
+    return status;
 }
 
 bool venc_dev::venc_open(OMX_U32 codec)
@@ -3736,6 +3780,7 @@ bool venc_dev::allocate_extradata(unsigned port)
         int flag;
     }port_info[2] = {
         {
+            // Inout extradata is cached to improve ROI performance
             .num_planes = num_input_planes,
             .extradata_info = &input_extradata_info,
             .flag = ION_FLAG_CACHED
@@ -4323,7 +4368,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
     }
     if (m_debug.extradata_log && extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
         DEBUG_PRINT_ERROR("Extradata Addr 0x%llx, Buffer Addr = 0x%x", (OMX_U64)input_extradata_info.uaddr, (unsigned int)plane[extra_idx].m.userptr);
-        venc_extradata_log_buffers((char *)plane[extra_idx].m.userptr);
+        venc_extradata_log_buffers((char *)plane[extra_idx].m.userptr, true);
     }
     rc = ioctl(m_nDriver_fd, VIDIOC_QBUF, &buf);
 
