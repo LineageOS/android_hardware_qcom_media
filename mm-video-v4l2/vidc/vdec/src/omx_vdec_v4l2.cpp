@@ -1761,6 +1761,7 @@ void omx_vdec::process_event_cb(void *ctxt)
                                         if (p2 == OMX_IndexParamPortDefinition) {
                                             DEBUG_PRINT_HIGH("Rxd PORT_RECONFIG: OMX_IndexParamPortDefinition");
                                             pThis->in_reconfig = true;
+                                            pThis->prev_n_filled_len = 0;
                                         }  else if (p2 == OMX_IndexConfigCommonOutputCrop) {
                                             DEBUG_PRINT_HIGH("Rxd PORT_RECONFIG: OMX_IndexConfigCommonOutputCrop");
 
