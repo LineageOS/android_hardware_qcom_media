@@ -1041,6 +1041,7 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool split_opb_dpb_with_same_colo
     bool cpu_access = (capture_capability != V4L2_PIX_FMT_NV12_UBWC) &&
         capture_capability != V4L2_PIX_FMT_NV12_TP10_UBWC;
     bool tp10_enable = !drv_ctx.idr_only_decoding &&
+        !client_buffers.is_color_conversion_enabled() &&
         dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10;
     bool dither_enable = true;
 
