@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -310,6 +310,10 @@ IvfFileHeader:: IvfFileHeader() :
     version(),
     size(32),
     fourCC{'V','P','8','0'},
+    width(0),
+    height(0),
+    rate(0),
+    scale(0),
     frameCount(0),
     unused()
 {
