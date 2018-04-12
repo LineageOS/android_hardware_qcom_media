@@ -529,6 +529,14 @@ struct extradata_info {
     OMX_QCOM_MISR_INFO misr_info[2];
 };
 
+struct reconfig_client_data {
+    OMX_U32 width;
+    OMX_U32 height;
+    OMX_U32 dpb_bit_depth;
+    OMX_U32 m_progressive;
+    bool isPortReconfigInsufficient;
+};
+
 typedef std::unordered_map <int, int> ColorSubMapping;
 typedef std::unordered_map <int, ColorSubMapping> DecColorMapping;
 typedef std::unordered_map <enum ColorAspects::Primaries, ColorPrimaries> PrimariesMap;
@@ -702,6 +710,7 @@ class omx_vdec: public qc_omx_component
          * via OMX_QTIIndexParamClientConfiguredMaxProfileLevelForSufficiency
          */
         bool mClientSessionForSufficiency;
+        bool isPortReconfigInsufficient;
         OMX_U32 mClientSetProfile;
         OMX_U32 mClientSetLevel;
         inline int get_session_codec_type();
