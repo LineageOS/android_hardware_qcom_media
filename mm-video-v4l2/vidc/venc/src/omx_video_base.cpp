@@ -290,13 +290,15 @@ omx_video::omx_video():
     allocate_native_handle(false),
     m_out_bm_count(0),
     m_client_out_bm_count(0),
+    m_client_in_bm_count(0),
     m_inp_bm_count(0),
     m_flags(0),
     m_etb_count(0),
     m_fbd_count(0),
     m_event_port_settings_sent(false),
     hw_overload(false),
-    m_graphicbuffer_size(0)
+    m_graphicbuffer_size(0),
+    m_buffer_freed(0)
 {
     DEBUG_PRINT_HIGH("omx_video(): Inside Constructor()");
     memset(&m_cmp,0,sizeof(m_cmp));
@@ -439,6 +441,9 @@ void omx_video::process_event_cb(void *ctxt, unsigned char id)
                             case OMX_CommandStateSet:
                                 pThis->m_state = (OMX_STATETYPE) p2;
                                 DEBUG_PRINT_LOW("Process -> state set to %d", pThis->m_state);
+                                if (pThis->m_state == OMX_StateLoaded) {
+                                    m_buffer_freed = false;
+                                }
                                 pThis->m_pCallbacks.EventHandler(&pThis->m_cmp, pThis->m_app_data,
                                         OMX_EventCmdComplete, p1, p2, NULL);
                                 break;
@@ -2645,6 +2650,7 @@ OMX_ERRORTYPE  omx_video::use_input_buffer(
 
         *bufferHdr = (m_inp_mem_ptr + i);
         BITMASK_SET(&m_inp_bm_count,i);
+        BITMASK_SET(&m_client_in_bm_count,i);
 
         (*bufferHdr)->pBuffer           = (OMX_U8 *)buffer;
         (*bufferHdr)->nSize             = sizeof(OMX_BUFFERHEADERTYPE);
@@ -3661,6 +3667,10 @@ OMX_ERRORTYPE  omx_video::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
         nPortIndex = buffer - (OMX_BUFFERHEADERTYPE*)m_out_mem_ptr;
         if(BITMASK_PRESENT(&m_client_out_bm_count, nPortIndex))
             BITMASK_CLEAR(&m_client_out_bm_count,nPortIndex);
+    } else if (port == PORT_INDEX_IN) {
+        nPortIndex = buffer - (meta_mode_enable?meta_buffer_hdr:m_inp_mem_ptr);
+        if(BITMASK_PRESENT(&m_client_in_bm_count, nPortIndex))
+            BITMASK_CLEAR(&m_client_in_bm_count,nPortIndex);
     }
     if (m_state == OMX_StateIdle &&
             (BITMASK_PRESENT(&m_flags ,OMX_COMPONENT_LOADING_PENDING))) {
@@ -3670,12 +3680,14 @@ OMX_ERRORTYPE  omx_video::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
         DEBUG_PRINT_LOW("Free Buffer while port %u disabled", (unsigned int)port);
     } else if (m_state == OMX_StateExecuting || m_state == OMX_StatePause) {
         DEBUG_PRINT_ERROR("ERROR: Invalid state to free buffer,ports need to be disabled");
+        m_buffer_freed = true;
         post_event(OMX_EventError,
                 OMX_ErrorPortUnpopulated,
                 OMX_COMPONENT_GENERATE_EVENT);
         return eRet;
     } else {
         DEBUG_PRINT_ERROR("ERROR: Invalid state to free buffer,port lost Buffers");
+        m_buffer_freed = true;
         post_event(OMX_EventError,
                 OMX_ErrorPortUnpopulated,
                 OMX_COMPONENT_GENERATE_EVENT);
@@ -3796,6 +3808,9 @@ OMX_ERRORTYPE  omx_video::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
             DEBUG_PRINT_HIGH("in free buffer, release not done, need to free more buffers output %" PRIx64" input %" PRIx64,
                     m_out_bm_count, m_inp_bm_count);
         }
+    }
+    if (eRet != OMX_ErrorNone) {
+        m_buffer_freed = true;
     }
 
     return eRet;
@@ -4032,7 +4047,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
 
         auto_lock l(m_buf_lock);
         pmem_data_buf = (OMX_U8 *)m_pInput_pmem[nBufIndex].buffer;
-        if (pmem_data_buf && BITMASK_PRESENT(&m_inp_bm_count, nBufIndex)) {
+        if (pmem_data_buf && BITMASK_PRESENT(&m_client_in_bm_count, nBufIndex)) {
             memcpy (pmem_data_buf, (buffer->pBuffer + buffer->nOffset),
                     buffer->nFilledLen);
         }
@@ -4149,8 +4164,15 @@ OMX_ERRORTYPE  omx_video::fill_this_buffer_proxy(
     (void)hComp;
     OMX_U8 *pmem_data_buf = NULL;
     OMX_ERRORTYPE nRet = OMX_ErrorNone;
+    auto_lock l(m_buf_lock);
+    if (m_buffer_freed == true) {
+        DEBUG_PRINT_ERROR("ERROR: FTBProxy: Invalid call. Called after freebuffer");
+        return OMX_ErrorBadParameter;
+    }
 
-    DEBUG_PRINT_LOW("FTBProxy: bufferAdd->pBuffer[%p]", bufferAdd->pBuffer);
+    if (bufferAdd != NULL) {
+        DEBUG_PRINT_LOW("FTBProxy: bufferAdd->pBuffer[%p]", bufferAdd->pBuffer);
+    }
 
     if (bufferAdd == NULL || ((bufferAdd - m_out_mem_ptr) >= (int)m_sOutPortDef.nBufferCountActual) ) {
         DEBUG_PRINT_ERROR("ERROR: FTBProxy: Invalid i/p params");

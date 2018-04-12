@@ -141,7 +141,11 @@ omx_core_cb_type core[] =
     NULL,   // Shared object library handle
     "libOmxSwVdec.so",
     {
+#ifdef _ANDROID_O_MR1_DIVX_CHANGES
+      "video_decoder.divx4"
+#else
       "video_decoder.divx"
+#endif
     }
   },
   {
@@ -236,19 +240,6 @@ omx_core_cb_type core[] =
     }
   },
   {
-    "AIV.play",
-    NULL, // Create instance function
-    // Unique instance handle
-    {
-      NULL
-    },
-    NULL,  // Shared object library handle
-    "libAivPlay.so",
-    {
-      "AIV.play.101"
-    }
-  },
-  {
     "OMX.qcom.audio.decoder.multiaac",
     NULL,   // Create instance function
     // Unique instance handle
@@ -288,6 +279,19 @@ omx_core_cb_type core[] =
     "libOmxMux.so",
     {
       "container_muxer.mp2"
+    }
+  },
+  {
+    "AIV.play",
+    NULL, // Create instance function
+    // Unique instance handle
+    {
+      NULL
+    },
+    NULL,  // Shared object library handle
+    "libAivPlay.so",
+    {
+      "AIV.play.101"
     }
   },
   {
