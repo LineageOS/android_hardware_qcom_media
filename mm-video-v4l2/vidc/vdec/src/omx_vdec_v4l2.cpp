@@ -2368,6 +2368,8 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         eRet = OMX_ErrorInvalidComponentName;
     }
 
+    m_progressive = MSM_VIDC_PIC_STRUCT_PROGRESSIVE;
+
     if (eRet == OMX_ErrorNone) {
         OMX_COLOR_FORMATTYPE dest_color_format;
         if (m_disable_ubwc_mode) {
@@ -2387,7 +2389,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         }
 
         dpb_bit_depth = MSM_VIDC_BIT_DEPTH_8;
-        m_progressive = MSM_VIDC_PIC_STRUCT_PROGRESSIVE;
         is_flexible_format = FALSE;
         is_mbaff = FALSE;
 
