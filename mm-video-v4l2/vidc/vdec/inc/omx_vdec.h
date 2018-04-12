@@ -1250,10 +1250,18 @@ class omx_vdec: public qc_omx_component
                         OMX_U32 bytes);
                 OMX_ERRORTYPE free_output_buffer(OMX_BUFFERHEADERTYPE *bufferHdr);
                 bool is_color_conversion_enabled() {return enabled;}
+                bool is_client_buffers_disabled() {return client_buffers_disabled;}
+                void set_client_buffers_disabled(bool val) {client_buffers_disabled = val;}
+                // Returns a specific C2D state, if true current buffers should undergo C2D conversion
+                // otherwise C2D is in quasi enabled state where in C2D src and dst formats are set but
+                // color conversion doesnt take place. This state is needed to handle color conversion
+                // of interlaced clips during port reconfig.
+                bool client_buffers_invalid() {return (!enabled || client_buffers_disabled);}
             private:
 #define MAX_COUNT MAX_NUM_INPUT_OUTPUT_BUFFERS
                 omx_vdec *omx;
                 bool enabled;
+                bool client_buffers_disabled;
                 OMX_COLOR_FORMATTYPE ColorFormat;
                 void init_members();
                 bool color_convert_mode;
