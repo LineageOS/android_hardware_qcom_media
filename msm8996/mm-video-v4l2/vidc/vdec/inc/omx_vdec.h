@@ -1154,6 +1154,7 @@ class omx_vdec: public qc_omx_component
         }
 
         static OMX_ERRORTYPE describeColorFormat(OMX_PTR params);
+        bool m_buffer_error;
 
 };
 
