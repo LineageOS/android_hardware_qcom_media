@@ -1188,6 +1188,7 @@ class omx_vdec: public qc_omx_component
 
         // list of extensions is not mutable after initialization
         const VendorExtensionStore mVendorExtensionStore;
+        bool m_buffer_error;
 };
 
 #ifdef _MSM8974_
