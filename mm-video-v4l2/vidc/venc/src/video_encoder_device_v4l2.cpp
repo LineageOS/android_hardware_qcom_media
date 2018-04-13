@@ -5972,20 +5972,11 @@ bool venc_dev::venc_set_vpe_rotation(OMX_S32 rotation_angle)
     }
 
     control.id = V4L2_CID_ROTATE;
-    if (rotation_angle == 0) {
-        control.value = 0;
+    control.value = rotation_angle;
+    if ((rotation_angle == 0) || (rotation_angle == 180)) {
         if (m_rotation.rotation == 90 || m_rotation.rotation == 270)
             flip_dimensions = true;
-    } else if (rotation_angle == 90) {
-        control.value = 1;
-        if (m_rotation.rotation == 0 || m_rotation.rotation == 180)
-            flip_dimensions = true;
-    } else if (rotation_angle == 180) {
-        control.value = 2;
-        if (m_rotation.rotation == 90 || m_rotation.rotation == 270)
-            flip_dimensions = true;
-    } else if (rotation_angle == 270) {
-        control.value = 3;
+    } else if ((rotation_angle == 90) || (rotation_angle == 270)) {
         if (m_rotation.rotation == 0 || m_rotation.rotation == 180)
             flip_dimensions = true;
     } else {
