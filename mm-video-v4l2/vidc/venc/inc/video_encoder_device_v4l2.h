@@ -285,8 +285,9 @@ enum rc_modes {
     RC_CBR_CFR = BIT(3),
     RC_MBR_CFR = BIT(4),
     RC_MBR_VFR = BIT(5),
+    RC_CQ      = BIT(6),
     RC_ALL = (RC_VBR_VFR | RC_VBR_CFR
-        | RC_CBR_VFR | RC_CBR_CFR | RC_MBR_CFR | RC_MBR_VFR)
+        | RC_CBR_VFR | RC_CBR_CFR | RC_MBR_CFR | RC_MBR_VFR | RC_CQ)
 };
 
 class venc_dev
@@ -530,6 +531,7 @@ class venc_dev
         bool venc_set_iframesize_type(QOMX_VIDEO_IFRAMESIZE_TYPE type);
         unsigned long venc_get_color_format(OMX_COLOR_FORMATTYPE eColorFormat);
         unsigned long venc_get_codectype(OMX_VIDEO_CODINGTYPE eCompressionFormat);
+        bool venc_set_tile_dimension(OMX_U32 nTileDimension);
 
         OMX_U32 pmem_free();
         OMX_U32 pmem_allocate(OMX_U32 size, OMX_U32 alignment, OMX_U32 count);
