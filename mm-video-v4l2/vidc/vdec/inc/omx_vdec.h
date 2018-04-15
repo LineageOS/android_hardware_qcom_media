@@ -50,6 +50,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cutils/atomic.h>
 #include <qdMetaData.h>
 #include <color_metadata.h>
+#define STRINGIFY_ENUMS
 #include <media/msm_media_info.h>
 
 static ptrdiff_t x;
@@ -79,6 +80,7 @@ extern "C" {
 #endif // _ANDROID_
 
 #if defined (_ANDROID_HONEYCOMB_) || defined (_ANDROID_ICS_)
+#define STRINGIFY_ENUMS
 #include <media/hardware/HardwareAPI.h>
 #endif
 
