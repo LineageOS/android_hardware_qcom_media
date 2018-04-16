@@ -2431,6 +2431,8 @@ OMX_ERRORTYPE  omx_venc::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
         for (i=0; i<m_sInPortDef.nBufferCountActual; i++ ) {
             if (BITMASK_PRESENT(&m_inp_bm_count, i)) {
                 BITMASK_CLEAR(&m_inp_bm_count, i);
+                if (BITMASK_PRESENT(&m_client_in_bm_count, i))
+                    BITMASK_CLEAR(&m_client_in_bm_count, i);
                 free_input_buffer (&m_inp_mem_ptr[i]);
             }
 
