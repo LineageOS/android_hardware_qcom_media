@@ -304,7 +304,7 @@ typedef struct OMX_TICKS
 /** Define the public interface for the OMX Handle.  The core will not use
     this value internally, but the application should only use this value.
  */
-typedef void* OMX_HANDLETYPE;
+typedef OMX_PTR OMX_HANDLETYPE;
 
 typedef struct OMX_MARKTYPE
 {
@@ -320,11 +320,11 @@ typedef struct OMX_MARKTYPE
 /** OMX_NATIVE_DEVICETYPE is used to map a OMX video port to the
  *  platform & operating specific object used to reference the display 
  *  or can be used by a audio port for native audio rendering */
-typedef void* OMX_NATIVE_DEVICETYPE;
+typedef OMX_PTR OMX_NATIVE_DEVICETYPE;
 
 /** OMX_NATIVE_WINDOWTYPE is used to map a OMX video port to the
  *  platform & operating specific object used to reference the window */
-typedef void* OMX_NATIVE_WINDOWTYPE;
+typedef OMX_PTR OMX_NATIVE_WINDOWTYPE;
 
 /** The OMX_VERSIONTYPE union is used to specify the version for
     a structure or component.  For a component, the version is entirely
