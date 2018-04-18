@@ -264,6 +264,7 @@ void* async_message_thread (void *input)
                 vdec_msg.status_code=VDEC_S_SUCCESS;
                 vdec_msg.msgdata.output_frame.picsize.frame_height = ptr[0];
                 vdec_msg.msgdata.output_frame.picsize.frame_width = ptr[1];
+                vdec_msg.msgdata.output_frame.flags = true; // INSUFFICIENT event
                 DEBUG_PRINT_HIGH("VIDC Port Reconfig received insufficient");
                 omx->dpb_bit_depth = ptr[2];
                 DEBUG_PRINT_HIGH("VIDC Port Reconfig Bitdepth - %d", ptr[3]);
@@ -347,7 +348,7 @@ void* async_message_thread (void *input)
                     vdec_msg.status_code=VDEC_S_SUCCESS;
                     vdec_msg.msgdata.output_frame.picsize.frame_height = ptr[0];
                     vdec_msg.msgdata.output_frame.picsize.frame_width = ptr[1];
-
+                    vdec_msg.msgdata.output_frame.flags = false; // SUFFICIENT event
                 } else {
                     struct v4l2_decoder_cmd dec;
                     memset(&dec, 0, sizeof(dec));
@@ -1843,20 +1844,15 @@ void omx_vdec::process_event_cb(void *ctxt)
                                         }
 
                                         if (pThis->m_cb.EventHandler) {
-                                            uint32_t frame_data[4];
-                                            frame_data[0] = (p2 == OMX_IndexParamPortDefinition) ?
-                                                pThis->m_reconfig_height : pThis->rectangle.nHeight;
-                                            frame_data[1] = (p2 == OMX_IndexParamPortDefinition) ?
-                                                pThis->m_reconfig_width : pThis->rectangle.nWidth;
+                                            reconfig_client_data frame_data;
 
-                                            frame_data[2] = (p2 == OMX_IndexParamPortDefinition) ?
-                                                frame_data[0] : pThis->drv_ctx.video_resolution.frame_height;
-
-                                            frame_data[3] = (p2 == OMX_IndexParamPortDefinition) ?
-                                                frame_data[1] : pThis->drv_ctx.video_resolution.frame_width;
-
+                                            frame_data.width = pThis->m_reconfig_width;
+                                            frame_data.height = pThis->m_reconfig_height;
+                                            frame_data.dpb_bit_depth = pThis->dpb_bit_depth;
+                                            frame_data.m_progressive = pThis->m_progressive;
+                                            frame_data.isPortReconfigInsufficient = pThis->isPortReconfigInsufficient;
                                             pThis->m_cb.EventHandler(&pThis->m_cmp, pThis->m_app_data,
-                                                    OMX_EventPortSettingsChanged, p1, p2, (void*) frame_data );
+                                                    OMX_EventPortSettingsChanged, p1, p2, (void*) &frame_data );
                                         } else {
                                             DEBUG_PRINT_ERROR("ERROR: %s()::EventHandler is NULL", __func__);
                                         }
@@ -8498,6 +8494,7 @@ int omx_vdec::async_message_process (void *context, void* message)
             DEBUG_PRINT_HIGH("Port settings changed");
             omx->m_reconfig_width = vdec_msg->msgdata.output_frame.picsize.frame_width;
             omx->m_reconfig_height = vdec_msg->msgdata.output_frame.picsize.frame_height;
+            omx->isPortReconfigInsufficient = vdec_msg->msgdata.output_frame.flags;
             omx->post_event (OMX_CORE_OUTPUT_PORT_INDEX, OMX_IndexParamPortDefinition,
                     OMX_COMPONENT_GENERATE_PORT_RECONFIG);
             break;
