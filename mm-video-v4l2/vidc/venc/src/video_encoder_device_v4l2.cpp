@@ -3738,7 +3738,7 @@ bool venc_dev::allocate_extradata(unsigned port)
         {
             .num_planes = num_input_planes,
             .extradata_info = &input_extradata_info,
-            .flag = 0
+            .flag = ION_FLAG_CACHED
         },
         {
             .num_planes = num_output_planes,
