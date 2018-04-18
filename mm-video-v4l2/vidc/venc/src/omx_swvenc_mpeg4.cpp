@@ -1952,7 +1952,9 @@ bool omx_venc::dev_fill_buf
     opbuffer.size = bufhdr->nAllocLen;
     opbuffer.filled_length = bufhdr->nFilledLen;
     opbuffer.flags = bufhdr->nFlags;
+    opbuffer.timestamp = bufhdr->nTimeStamp;
     opbuffer.p_client_data = (unsigned char *)bufhdr;
+    opbuffer.frame_type = SWVENC_FRAME_TYPE_I;
 
     DEBUG_PRINT_LOW("FTB: p_buffer (%p) size (%d) filled_len (%d) flags (0x%X) timestamp (%lld) clientData (%p)",
       opbuffer.p_buffer,
