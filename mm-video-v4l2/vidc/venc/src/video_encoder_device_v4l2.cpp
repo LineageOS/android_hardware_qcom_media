@@ -3132,6 +3132,7 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                     DEBUG_PRINT_ERROR("Failed to set priority");
                     return false;
                 }
+                sess_priority.priority = priority->nU32;
                 break;
             }
         case OMX_IndexConfigOperatingRate:
