@@ -3385,6 +3385,7 @@ OMX_ERRORTYPE  omx_video::allocate_input_buffer(
         (*bufferHdr)->pInputPortPrivate = (OMX_PTR)&m_pInput_pmem[i];
 
 #ifdef USE_ION
+        // No use case where caching encoder makes sense
         bool status = alloc_map_ion_memory(m_sInPortDef.nBufferSize,
                 &m_pInput_ion[i],
                 secure_session ? SECURE_FLAGS_INPUT_BUFFER : 0);
@@ -3531,6 +3532,7 @@ OMX_ERRORTYPE  omx_video::allocate_output_buffer(
         if (i < m_sOutPortDef.nBufferCountActual) {
 #ifdef USE_ION
             align_size = ALIGN(m_sOutPortDef.nBufferSize, 4096);
+            // Output buffers are cached so that muxer writing is faster
             bool status = alloc_map_ion_memory(align_size,
                     &m_pOutput_ion[i],
                     secure_session ? SECURE_FLAGS_OUTPUT_BUFFER : ION_FLAG_CACHED);
@@ -4770,8 +4772,11 @@ OMX_ERRORTYPE omx_video::fill_buffer_done(OMX_HANDLETYPE hComp,
             m_fbd_count++;
 
             if (dev_get_output_log_flag()) {
+                venc_start_buffer_access(m_pOutput_ion[index].data_fd);
                 dev_output_log_buffers((const char*)buffer->pBuffer + buffer->nOffset, buffer->nFilledLen,
                                         buffer->nTimeStamp);
+                venc_end_buffer_access(m_pOutput_ion[index].data_fd);
+
             }
         }
         if (buffer->nFlags & OMX_BUFFERFLAG_EXTRADATA) {
@@ -4779,7 +4784,7 @@ OMX_ERRORTYPE omx_video::fill_buffer_done(OMX_HANDLETYPE hComp,
                 DEBUG_PRINT_ERROR("Failed to parse output extradata");
 
             dev_extradata_log_buffers((char *)(((unsigned long)buffer->pBuffer + buffer->nOffset +
-                        buffer->nFilledLen + 3) & (~3)));
+                        buffer->nFilledLen + 3) & (~3)), false);
         }
         m_pCallbacks.FillBufferDone (hComp,m_app_data,buffer);
     } else {
@@ -4890,32 +4895,64 @@ void omx_video::complete_pending_buffer_done_cbs()
     }
 }
 
+void omx_video::venc_start_buffer_access(int fd)
+{
+#ifdef USE_ION
+    struct dma_buf_sync buf_sync;
+
+    if (fd < 0)
+        return;
+
+    buf_sync.flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_RW;
+    int rc = ioctl(fd, DMA_BUF_IOCTL_SYNC, &buf_sync);
+    if (rc) {
+        DEBUG_PRINT_ERROR("Failed DMA_BUF_IOCTL_SYNC start fd : %d", fd);
+    }
+    return;
+#else
+    (void)fd;
+    return;
+#endif
+}
+
+void omx_video::venc_end_buffer_access(int fd)
+{
+#ifdef USE_ION
+    struct dma_buf_sync buf_sync;
+
+    if (fd < 0)
+        return;
+
+    buf_sync.flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_RW;
+    int rc = ioctl(fd, DMA_BUF_IOCTL_SYNC, &buf_sync);
+    if (rc) {
+        DEBUG_PRINT_ERROR("Failed DMA_BUF_IOCTL_SYNC end fd: %d", fd);
+    }
+    return;
+#else
+    (void)fd;
+    return;
+#endif
+}
+
 char *omx_video::ion_map(int fd, int len)
 {
     char *bufaddr = (char*)mmap(NULL, len, PROT_READ|PROT_WRITE,
                                 MAP_SHARED, fd, 0);
-    if (bufaddr != MAP_FAILED) {
 #ifdef USE_ION
-        struct dma_buf_sync buf_sync;
-        buf_sync.flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_RW;
-        int rc = ioctl(fd, DMA_BUF_IOCTL_SYNC, &buf_sync);
-        if (rc) {
-            DEBUG_PRINT_ERROR("Failed DMA_BUF_IOCTL_SYNC");
-        }
-#endif
+    if (bufaddr != MAP_FAILED) {
+        venc_start_buffer_access(fd);
     }
+#endif
     return bufaddr;
 }
 
 OMX_ERRORTYPE omx_video::ion_unmap(int fd, void *bufaddr, int len)
 {
 #ifdef USE_ION
-    struct dma_buf_sync buf_sync;
-    buf_sync.flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_RW;
-    int rc = ioctl(fd, DMA_BUF_IOCTL_SYNC, &buf_sync);
-    if (rc) {
-        DEBUG_PRINT_ERROR("Failed DMA_BUF_IOCTL_SYNC");
-    }
+    venc_end_buffer_access(fd);
+#else
+    (void)fd;
 #endif
     if (-1 == munmap(bufaddr, len)) {
         DEBUG_PRINT_ERROR("munmap failed.");
