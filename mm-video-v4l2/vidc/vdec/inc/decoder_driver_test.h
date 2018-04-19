@@ -32,14 +32,22 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <inttypes.h>
-#include <linux/msm_vidc_dec.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include <stdio.h>
+#ifndef _TARGET_KERNEL_VERSION_49_
+#include <linux/msm_vidc_dec.h>
+#else
+#include "omx_vdec.h"
+#endif
 
 struct video_decoder_context {
     enum vdec_codec               decoder_format;
+#ifndef _TARGET_KERNEL_VERSION_49_
     enum vdec_output_fromat       output_format;
+#else
+    enum vdec_output_format       output_format;
+#endif
     struct vdec_picsize           video_resoultion;
     struct vdec_allocatorproperty input_buffer;
     struct vdec_allocatorproperty output_buffer;
