@@ -118,22 +118,6 @@ class auto_lock {
         pthread_mutex_t &mLock;
 };
 
-class AutoUnmap {
-    void *vaddr;
-    int size;
-
-    public:
-        AutoUnmap(void *vaddr, int size) {
-            this->vaddr = vaddr;
-            this->size = size;
-        }
-
-        ~AutoUnmap() {
-            if (vaddr)
-                munmap(vaddr, size);
-        }
-};
-
 class Signal {
     bool signalled;
     pthread_mutex_t mutex;

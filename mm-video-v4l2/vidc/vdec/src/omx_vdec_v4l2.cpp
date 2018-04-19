@@ -9801,6 +9801,8 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
     int enable = OMX_InterlaceFrameProgressive;
     bool internal_hdr_info_changed_flag = false;
     bool reconfig_event_sent = false;
+    char *p_extradata = NULL;
+    OMX_OTHER_EXTRADATATYPE *data = NULL;
 
     int buf_index = p_buf_hdr - m_out_mem_ptr;
     if (buf_index >= drv_ctx.extradata_info.count) {
@@ -9831,21 +9833,20 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
     } else
         p_extra = m_other_extradata;
 
-    AutoUnmap autounmap(pBuffer, drv_ctx.ptr_outputbuffer[buf_index].buffer_len);
     if (m_client_output_extradata_mem_ptr &&
         m_client_out_extradata_info.getSize() >= drv_ctx.extradata_info.buffer_size) {
         p_client_extra = (OMX_OTHER_EXTRADATATYPE *)((m_client_output_extradata_mem_ptr + buf_index)->pBuffer);
     }
 
-    char *p_extradata = drv_ctx.extradata_info.uaddr + buf_index * drv_ctx.extradata_info.buffer_size;
+    p_extradata = drv_ctx.extradata_info.uaddr + buf_index * drv_ctx.extradata_info.buffer_size;
 
     if (!secure_mode && ((OMX_U8*)p_extra > (pBuffer + p_buf_hdr->nAllocLen))) {
         p_extra = NULL;
         DEBUG_PRINT_ERROR("Error: out of bound memory access by p_extra");
-        return reconfig_event_sent;
+        goto bailout;
     }
     m_extradata_info.output_crop_updated = OMX_FALSE;
-    OMX_OTHER_EXTRADATATYPE *data = (struct OMX_OTHER_EXTRADATATYPE *)p_extradata;
+    data = (struct OMX_OTHER_EXTRADATATYPE *)p_extradata;
     if (data && p_extra) {
         while ((consumed_len < drv_ctx.extradata_info.buffer_size)
                 && (data->eType != (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_NONE)) {
@@ -9857,7 +9858,7 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
             if (!secure_mode && ((OMX_U8*)p_extra > (pBuffer + p_buf_hdr->nAllocLen))) {
                 p_extra = NULL;
                 DEBUG_PRINT_ERROR("Error: out of bound memory access by p_extra");
-                return reconfig_event_sent;
+                goto bailout;
             }
 
             DEBUG_PRINT_LOW("handle_extradata: eType = 0x%x", data->eType);
@@ -9998,7 +9999,7 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                         DEBUG_PRINT_ERROR("Panscan windows are more than supported\n");
                         DEBUG_PRINT_ERROR("Max supported = %d FW returned = %d\n",
                             MAX_PAN_SCAN_WINDOWS, panscan_payload->num_panscan_windows);
-                        return reconfig_event_sent;
+                        goto bailout;
                     }
                     break;
                 case MSM_VIDC_EXTRADATA_MPEG2_SEQDISP:
@@ -10204,6 +10205,11 @@ unrecognized_extradata:
         ptr_extradatabuff->metadata_info.fd = drv_ctx.extradata_info.ion.data_fd;
         ptr_extradatabuff->metadata_info.offset = buf_index * drv_ctx.extradata_info.buffer_size;
         ptr_extradatabuff->metadata_info.buffer_size = drv_ctx.extradata_info.size;
+    }
+bailout:
+    if (pBuffer) {
+        ion_unmap(drv_ctx.ptr_outputbuffer[buf_index].pmem_fd, pBuffer,
+                  drv_ctx.ptr_outputbuffer[buf_index].buffer_len);
     }
     return reconfig_event_sent;
 }
@@ -11416,6 +11422,7 @@ OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::allocate_buffers_color_conve
         DEBUG_PRINT_ERROR("alloc_map_ion failed in color_convert");
         return OMX_ErrorInsufficientResources;
     }
+
     pmem_baseaddress[i] = (unsigned char *)omx->ion_map(pmem_fd[i], buffer_size_req);
     if (pmem_baseaddress[i] == MAP_FAILED) {
         DEBUG_PRINT_ERROR("MMAP failed for Size %d",buffer_size_req);
