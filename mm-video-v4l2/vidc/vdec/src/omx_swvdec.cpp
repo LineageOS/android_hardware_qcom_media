@@ -3644,13 +3644,13 @@ OMX_ERRORTYPE omx_swvdec::buffer_allocate_ip(
 
         pmem_fd = m_buffer_array_ip[ii].ion_info.data_fd;
 
-        bufferaddr = ion_map(size,pmem_fd);
+        bufferaddr = ion_map(pmem_fd,size);
 
         if (bufferaddr == MAP_FAILED)
         {
-            OMX_SWVDEC_LOG_ERROR("mmap() failed for fd %d of size %d",
+            OMX_SWVDEC_LOG_ERROR("mmap() failed for fd %d of size %d error %s",
                                  pmem_fd,
-                                 size);
+                                 size, strerror(errno));
 
             close(pmem_fd);
             ion_memory_free(&m_buffer_array_ip[ii].ion_info);
@@ -3777,7 +3777,7 @@ OMX_ERRORTYPE omx_swvdec::buffer_allocate_op(
 
         pmem_fd = m_buffer_array_op[ii].ion_info.data_fd;
 
-        bufferaddr = ion_map(size,pmem_fd);
+        bufferaddr = ion_map(pmem_fd,size);
 
         if (bufferaddr == MAP_FAILED)
         {
@@ -4083,7 +4083,7 @@ OMX_ERRORTYPE omx_swvdec::buffer_use_op(
 
             m_port_op.def.nBufferSize = p_handle->size;
 
-            p_buffer_mapped = ion_map(p_handle->size,p_handle->fd);
+            p_buffer_mapped = ion_map(p_handle->fd,p_handle->size);
 
             if (p_buffer_mapped == MAP_FAILED)
             {
