@@ -730,6 +730,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     stereo_output_mode(HAL_NO_3D),
     m_last_rendered_TS(-1),
     m_dec_hfr_fps(0),
+    m_arb_mode_override(0),
     m_queued_codec_config_count(0),
     secure_scaling_to_non_secure_opb(false),
     m_force_compressed_for_dpb(true),
@@ -773,6 +774,9 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     if (m_dec_hfr_fps) {
         m_last_rendered_TS = 0;
     }
+
+    Platform::Config::getInt32(Platform::vidc_dec_arb_mode_override,
+            (int32_t *)&m_arb_mode_override, 0);
 
     property_value[0] = '\0';
     property_get("vendor.vidc.dec.log.in", property_value, "0");
@@ -2274,18 +2278,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
     }
 #endif
 
-#ifdef _ANDROID_
-    /*
-     * turn off frame parsing for Android by default.
-     * Clients may configure OMX_QCOM_FramePacking_Arbitrary to enable this mode
-     */
-    arbitrary_bytes = false;
-    property_get("vendor.vidc.dec.debug.arbitrarybytes.mode", property_value, "0");
-    if (atoi(property_value)) {
-        DEBUG_PRINT_HIGH("arbitrary_bytes mode enabled via property command");
-        arbitrary_bytes = true;
-    }
-#endif
     if (!strncmp(role, "OMX.qcom.video.decoder.avc.secure",
                 OMX_MAX_STRINGNAME_SIZE)) {
         secure_mode = true;
@@ -4502,27 +4494,37 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                 } else if (portFmt->nFramePackingFormat ==
                                         OMX_QCOM_FramePacking_OnlyOneCompleteFrame) {
                                     arbitrary_bytes = false;
-#ifdef _ANDROID_
-                                    property_get("vendor.vidc.dec.debug.arbitrarybytes.mode", property_value, "0");
-                                    if (atoi(property_value)) {
-                                        DEBUG_PRINT_HIGH("arbitrary_bytes enabled via property command");
-                                        arbitrary_bytes = true;
-                                    }
-#endif
                                 } else {
                                     DEBUG_PRINT_ERROR("Setparameter: unknown FramePacking format %u",
                                             (unsigned int)portFmt->nFramePackingFormat);
                                     eRet = OMX_ErrorUnsupportedSetting;
                                 }
-                                /*
-                                 * Explicitly Disabling arbitrary bytes mode for Napali-P
-                                 * for codecs other than MPEG2
-                                 */
-                                if (arbitrary_bytes && (drv_ctx.decoder_format != VDEC_CODECTYPE_MPEG2)) {
-                                    DEBUG_PRINT_ERROR("Setparameter: Disabling arbitrary bytes mode explicitly");
-                                    arbitrary_bytes = false;
-                                    eRet = OMX_ErrorUnsupportedSetting;
+                                //Explicitly disable arb mode for unsupported codecs
+                                bool is_arb_supported = false;
+                                if (arbitrary_bytes) {
+                                   switch (drv_ctx.decoder_format) {
+                                   case VDEC_CODECTYPE_H264:
+                                      is_arb_supported = m_arb_mode_override & VDEC_ARB_CODEC_H264;
+                                      break;
+                                   case VDEC_CODECTYPE_HEVC:
+                                      is_arb_supported = m_arb_mode_override & VDEC_ARB_CODEC_HEVC;
+                                      break;
+                                   case VDEC_CODECTYPE_MPEG2:
+                                      is_arb_supported = m_arb_mode_override & VDEC_ARB_CODEC_MPEG2;
+                                      break;
+                                   default:
+                                      DEBUG_PRINT_HIGH("Arbitrary bytes mode not enabled for this Codec");
+                                      break;
+                                   }
+
+                                   if (!is_arb_supported) {
+                                       DEBUG_PRINT_ERROR("Setparameter: Disabling arbitrary bytes mode explicitly");
+                                       arbitrary_bytes = false;
+                                       eRet = OMX_ErrorUnsupportedSetting;
+                                   }
                                 }
+
+
                             } else if (portFmt->nPortIndex == OMX_CORE_OUTPUT_PORT_INDEX) {
                                 DEBUG_PRINT_ERROR("Unsupported at O/P port");
                                 eRet = OMX_ErrorUnsupportedSetting;

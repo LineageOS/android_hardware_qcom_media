@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -58,6 +58,7 @@ typedef enum {
     vidc_dec_conceal_color_8bit,
     vidc_dec_conceal_color_10bit,
     vidc_enc_csc_custom_matrix,
+    vidc_dec_arb_mode_override,
 } Config_t;
 
 struct configStr {
@@ -74,6 +75,7 @@ static const struct configStr configStrMap[] = {
     {vidc_dec_conceal_color_8bit, "vidc_dec_conceal_color_8bit"},
     {vidc_dec_conceal_color_10bit, "vidc_dec_conceal_color_10bit"},
     {vidc_enc_csc_custom_matrix, "vidc_enc_csc_custom_matrix"},
+    {vidc_dec_arb_mode_override, "vidc_dec_arb_mode_override"},
 };
 
 class Config {
