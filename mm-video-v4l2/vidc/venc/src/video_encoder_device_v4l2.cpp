@@ -668,7 +668,10 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
         p_extra = (OMX_OTHER_EXTRADATATYPE *) ((unsigned long)(pVirt + yuv_size + 3)&(~3));
     }
 
-    index = venc_get_index_from_fd(fd);
+    if (!venc_get_index_from_fd(fd, &index)) {
+        status = false;
+        goto bailout;
+    }
     p_extradata = input_extradata_info.uaddr + index * input_extradata_info.buffer_size;
     data = (struct OMX_OTHER_EXTRADATATYPE *)p_extradata;
     memset((void *)(data), 0, (input_extradata_info.buffer_size)); // clear stale data in current buffer
@@ -1241,10 +1244,8 @@ OMX_ERRORTYPE venc_dev::allocate_extradata(struct extradata_buffer_info *extrada
             return OMX_ErrorInsufficientResources;
         }
 
-        extradata_info->uaddr = (char *)mmap(NULL,
-                                             extradata_info->size,
-                                             PROT_READ|PROT_WRITE, MAP_SHARED,
-                                             extradata_info->ion.data_fd , 0);
+        extradata_info->uaddr = (char *)venc_handle->ion_map(extradata_info->ion.data_fd,
+                                                extradata_info->size);
 
         if (extradata_info->uaddr == MAP_FAILED) {
             DEBUG_PRINT_ERROR("Failed to map extradata memory\n");
@@ -3746,14 +3747,8 @@ unsigned venc_dev::venc_flush( unsigned port)
     struct v4l2_encoder_cmd enc;
     DEBUG_PRINT_LOW("in %s", __func__);
 
-    unsigned int cookie = 0;
     for (unsigned int i = 0; i < (sizeof(fd_list)/sizeof(fd_list[0])); i++) {
-        cookie = fd_list[i];
-        if (cookie != 0) {
-            close(cookie);
-            DEBUG_PRINT_HIGH("Freed handle = %u", cookie);
-            fd_list[i] = 0;
-        }
+        fd_list[i] = 0;
     }
 
     enc.cmd = V4L2_QCOM_CMD_FLUSH;
@@ -4315,11 +4310,10 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
     extra_idx = EXTRADATA_IDX(num_input_planes);
 
     if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
-        int extradata_index = venc_get_index_from_fd(fd);
-        if (extradata_index < 0 ) {
-                DEBUG_PRINT_ERROR("Extradata index calculation went wrong for fd = %d", fd);
-                return false;
-            }
+        OMX_U32 extradata_index;
+        if (!venc_get_index_from_fd(fd, &extradata_index)) {
+            return false;
+        }
 
         plane[extra_idx].bytesused = 0;
         plane[extra_idx].length = input_extradata_info.size;
@@ -4502,9 +4496,8 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
 
             if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
                 int fd = plane[0].reserved[0];
-                int extradata_index = venc_get_index_from_fd(fd);
-                if (extradata_index < 0) {
-                    DEBUG_PRINT_ERROR("Extradata index calculation went wrong for fd = %d", fd);
+                OMX_U32 extradata_index;
+                if (!venc_get_index_from_fd(fd, &extradata_index)) {
                     return false;
                 }
 
@@ -4721,17 +4714,26 @@ bool venc_dev::venc_set_au_delimiter(OMX_BOOL enable)
     return true;
 }
 
-int venc_dev::venc_get_index_from_fd(OMX_U32 buffer_fd)
+bool venc_dev::venc_get_index_from_fd(OMX_U32 buffer_fd, OMX_U32 *index)
 {
-    unsigned int cookie = buffer_fd;
-
-    for (unsigned int i = 0; i < (sizeof(fd_list)/sizeof(fd_list[0])); i++)
-        if (fd_list[i] == 0) {
-            DEBUG_PRINT_HIGH("FD added at index = %d", i);
-            fd_list[i] = cookie;
-            return i;
+    for (unsigned int i = 0; i < (sizeof(fd_list)/sizeof(fd_list[0])); i++) {
+        if (fd_list[i] == buffer_fd) {
+            DEBUG_PRINT_HIGH("FD : %d found at index = %d", buffer_fd, i);
+            *index = i;
+            return true;
         }
-    return -EINVAL;
+    }
+
+    for (unsigned int i = 0; i < (sizeof(fd_list)/sizeof(fd_list[0])); i++) {
+        if (fd_list[i] == 0) {
+            DEBUG_PRINT_HIGH("FD : %d added at index = %d", buffer_fd, i);
+            fd_list[i] = buffer_fd;
+            *index = i;
+            return true;
+        }
+    }
+    DEBUG_PRINT_ERROR("Couldn't get index from fd : %d",buffer_fd);
+    return false;
 }
 
 bool venc_dev::venc_set_extradata(OMX_U32 extra_data, OMX_BOOL enable)
