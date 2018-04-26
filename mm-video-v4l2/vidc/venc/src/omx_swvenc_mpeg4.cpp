@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -2254,8 +2254,18 @@ bool omx_venc::dev_empty_buf
                     {
                         if(handle->format == HAL_PIXEL_FORMAT_NV12_ENCODEABLE)
                         {
+                            DEBUG_PRINT_LOW("HAL_PIXEL_FORMAT_NV12_ENCODEABLE ");
                             m_sInPortFormat.eColorFormat = (OMX_COLOR_FORMATTYPE)
                                 QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
+                        }
+                        else if(handle->format == HAL_PIXEL_FORMAT_NV21_ZSL)
+                        {
+                            /* HAL_PIXEL_FORMAT_NV21_ZSL format is same as NV21 format,
+                               this format support is added to address OEM test app issue which is
+                               trigerring this input format, this format is not extensively verified */
+                            DEBUG_PRINT_LOW("HAL_PIXEL_FORMAT_NV21_ZSL ");
+                            m_sInPortFormat.eColorFormat = (OMX_COLOR_FORMATTYPE)
+                                QOMX_COLOR_FormatYVU420SemiPlanar;
                         }
                         else
                         {
