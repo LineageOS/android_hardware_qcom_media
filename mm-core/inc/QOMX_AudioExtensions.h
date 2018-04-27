@@ -595,6 +595,48 @@ typedef struct QOMX_AUDIO_PARAM_MPEGH_TYPE {
                                   Decoder **/
 } QOMX_AUDIO_PARAM_MPEGH_TYPE;
 
+typedef struct QOMX_AUDIO_PARAM_MPEGH_HEADER_TYPE {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    OMX_U64 pConfig;
+    OMX_U64 pSceneInfo;
+    OMX_U64 pDRC;
+    OMX_U64 pGroup;
+    OMX_U64 pSwitchGroup;
+    OMX_U64 pPreset;
+    OMX_U64 pTextLabel;
+} QOMX_AUDIO_PARAM_MPEGH_HEADER_TYPE;
+
+typedef struct QOMX_AUDIO_PARAM_CHANNEL_CONFIG_TYPE {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    OMX_U32 nChannelMask; /* Masked defined in Android audio-base.h */
+} QOMX_AUDIO_PARAM_CHANNEL_CONFIG_TYPE;
+
+typedef enum QOMX_BINAURAL_MODE {
+   QOMX_BINAURAL_MODE_OFF,
+   QOMX_BINAURAL_MODE_ON
+} QOMX_BINAURAL_MODE;
+
+typedef struct QOMX_AUDIO_PARAM_BINAURAL_TYPE {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    QOMX_BINAURAL_MODE eBinauralMode;
+} QOMX_AUDIO_PARAM_BINAURAL_TYPE;
+
+typedef struct QOMX_AUDIO_PARAM_ROTATION_TYPE {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    OMX_S32 nQX; /* x vector component of quaternion */
+    OMX_S32 nQY; /* y vector component of quaternion */
+    OMX_S32 nQZ; /* z vector component of quaternion */
+    OMX_S32 nQW; /* Scalar component of quaternion */
+} QOMX_AUDIO_PARAM_ROTATION_TYPE;
+
 enum {
     kKeyIndexAlacFrameLength = 0,
     kKeyIndexAlacCompatibleVersion = 4,
