@@ -767,7 +767,7 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
     if (roi.dirty) {
         data->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) +
             sizeof(struct msm_vidc_roi_qp_payload) +
-            roi.info.nRoiMBInfoSize - 2 * sizeof(unsigned int), 4);
+            roi.info.nRoiMBInfoSize - sizeof(unsigned int) - sizeof(unsigned char), 4);
         if (data->nSize > input_extradata_info.buffer_size  - consumed_len) {
            DEBUG_PRINT_ERROR("Buffer size (%lu) is less than ROI extradata size (%u)",
                              (input_extradata_info.buffer_size - consumed_len) ,data->nSize);
@@ -777,13 +777,14 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
         data->nVersion.nVersion = OMX_SPEC_VERSION;
         data->nPortIndex = 0;
         data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_ROI_QP;
-        data->nDataSize = sizeof(struct msm_vidc_roi_qp_payload);
+        data->nDataSize = sizeof(struct msm_vidc_roi_qp_payload) - sizeof(unsigned int) +
+                ALIGN(roi.info.nRoiMBInfoSize, 4);
         struct msm_vidc_roi_qp_payload *roiData =
                 (struct msm_vidc_roi_qp_payload *)(data->data);
         roiData->upper_qp_offset = roi.info.nUpperQpOffset;
         roiData->lower_qp_offset = roi.info.nLowerQpOffset;
         roiData->b_roi_info = roi.info.bUseRoiInfo;
-        roiData->mbi_info_size = roi.info.nRoiMBInfoSize;
+        roiData->mbi_info_size = ALIGN(roi.info.nRoiMBInfoSize, 4);
         DEBUG_PRINT_HIGH("Using ROI QP map: Enable = %d", roiData->b_roi_info);
         memcpy(roiData->data, roi.info.pRoiMBInfo, roi.info.nRoiMBInfoSize);
         data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
