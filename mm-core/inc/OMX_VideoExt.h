@@ -58,6 +58,12 @@ typedef struct OMX_NALSTREAMFORMATTYPE{
     OMX_NALUFORMATSTYPE eNaluFormat;
 } OMX_NALSTREAMFORMATTYPE;
 
+/** AVC additional profiles */
+typedef enum OMX_VIDEO_AVCPROFILEEXTTYPE {
+    OMX_VIDEO_AVCProfileConstrainedBaseline = 0x10000,   /**< Constrained baseline profile */
+    OMX_VIDEO_AVCProfileConstrainedHigh     = 0x80000,   /**< Constrained high profile */
+} OMX_VIDEO_AVCPROFILEEXTTYPE;
+
 /** VP8 profiles */
 typedef enum OMX_VIDEO_VP8PROFILETYPE {
     OMX_VIDEO_VP8ProfileMain = 0x01,
@@ -108,6 +114,47 @@ typedef struct OMX_VIDEO_VP8REFERENCEFRAMEINFOTYPE {
     OMX_BOOL bIsGoldenOrAlternateFrame;
 } OMX_VIDEO_VP8REFERENCEFRAMEINFOTYPE;
 
+/** Maximum number of VP8 temporal layers */
+#define OMX_VIDEO_ANDROID_MAXVP8TEMPORALLAYERS 3
+
+/** VP8 temporal layer patterns */
+typedef enum OMX_VIDEO_ANDROID_VPXTEMPORALLAYERPATTERNTYPE {
+    OMX_VIDEO_VPXTemporalLayerPatternNone = 0,
+    OMX_VIDEO_VPXTemporalLayerPatternWebRTC = 1,
+    OMX_VIDEO_VPXTemporalLayerPatternMax = 0x7FFFFFFF
+} OMX_VIDEO_ANDROID_VPXTEMPORALLAYERPATTERNTYPE;
+
+/**
+ * Android specific VP8/VP9 encoder params
+ *
+ * STRUCT MEMBERS:
+ *  nSize                      : Size of the structure in bytes
+ *  nVersion                   : OMX specification version information
+ *  nPortIndex                 : Port that this structure applies to
+ *  nKeyFrameInterval          : Key frame interval in frames
+ *  eTemporalPattern           : Type of temporal layer pattern
+ *  nTemporalLayerCount        : Number of temporal coding layers
+ *  nTemporalLayerBitrateRatio : Bitrate ratio allocation between temporal
+ *                               streams in percentage
+ *  nMinQuantizer              : Minimum (best quality) quantizer
+ *  nMaxQuantizer              : Maximum (worst quality) quantizer
+ */
+typedef struct OMX_VIDEO_PARAM_ANDROID_VP8ENCODERTYPE {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    OMX_U32 nKeyFrameInterval;        // distance between consecutive key_frames (including one
+                                      // of the key_frames). 0 means interval is unspecified and
+                                      // can be freely chosen by the codec. 1 means a stream of
+                                      // only key_frames.
+
+    OMX_VIDEO_ANDROID_VPXTEMPORALLAYERPATTERNTYPE eTemporalPattern;
+    OMX_U32 nTemporalLayerCount;
+    OMX_U32 nTemporalLayerBitrateRatio[OMX_VIDEO_ANDROID_MAXVP8TEMPORALLAYERS];
+    OMX_U32 nMinQuantizer;
+    OMX_U32 nMaxQuantizer;
+} OMX_VIDEO_PARAM_ANDROID_VP8ENCODERTYPE;
+
 /** VP9 profiles */
 typedef enum OMX_VIDEO_VP9PROFILETYPE {
     OMX_VIDEO_VP9Profile0 = 0x1,
@@ -141,19 +188,39 @@ typedef enum OMX_VIDEO_VP9LEVELTYPE {
     OMX_VIDEO_VP9LevelMax = 0x7FFFFFFF
 } OMX_VIDEO_VP9LEVELTYPE;
 
-/** HEVC Profiles */
+/**
+* VP9 Parameters.
+*   Encoder specific parameters (decoders should ignore these fields):
+*     - bErrorResilientMode
+*     - nTileRows
+*     - nTileColumns
+*     - bEnableFrameParallelDecoding
+*/
+typedef struct OMX_VIDEO_PARAM_VP9TYPE {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    OMX_VIDEO_VP9PROFILETYPE eProfile;
+    OMX_VIDEO_VP9LEVELTYPE eLevel;
+    OMX_BOOL bErrorResilientMode;
+    OMX_U32 nTileRows;
+    OMX_U32 nTileColumns;
+    OMX_BOOL bEnableFrameParallelDecoding;
+} OMX_VIDEO_PARAM_VP9TYPE;
+
+/** HEVC Profile enum type */
 typedef enum OMX_VIDEO_HEVCPROFILETYPE {
-    OMX_VIDEO_HEVCProfileMain    = 0x01,
-    OMX_VIDEO_HEVCProfileMain10  = 0x02,
+    OMX_VIDEO_HEVCProfileUnknown      = 0x0,
+    OMX_VIDEO_HEVCProfileMain         = 0x1,
+    OMX_VIDEO_HEVCProfileMain10       = 0x2,
     // Main10 profile with HDR SEI support.
     OMX_VIDEO_HEVCProfileMain10HDR10  = 0x1000,
-    OMX_VIDEO_HEVCProfileUnknown = 0x6EFFFFFF,
-    OMX_VIDEO_HEVCProfileMax      = 0x7FFFFFFF
+    OMX_VIDEO_HEVCProfileMax          = 0x7FFFFFFF
 } OMX_VIDEO_HEVCPROFILETYPE;
 
-/** HEVC levels */
+/** HEVC Level enum type */
 typedef enum OMX_VIDEO_HEVCLEVELTYPE {
-    OMX_VIDEO_HEVCLevel_Version0  = 0x0,
+    OMX_VIDEO_HEVCLevelUnknown    = 0x0,
     OMX_VIDEO_HEVCMainTierLevel1  = 0x1,
     OMX_VIDEO_HEVCHighTierLevel1  = 0x2,
     OMX_VIDEO_HEVCMainTierLevel2  = 0x4,
@@ -180,19 +247,74 @@ typedef enum OMX_VIDEO_HEVCLEVELTYPE {
     OMX_VIDEO_HEVCHighTierLevel61 = 0x800000,
     OMX_VIDEO_HEVCMainTierLevel62 = 0x1000000,
     OMX_VIDEO_HEVCHighTierLevel62 = 0x2000000,
-    OMX_VIDEO_HEVCLevelUnknown = 0x6EFFFFFF,
-    OMX_VIDEO_HEVCLevelMax = 0x7FFFFFFF
+    OMX_VIDEO_HEVCHighTiermax     = 0x7FFFFFFF
 } OMX_VIDEO_HEVCLEVELTYPE;
 
-/** HEVC Param */
+/** Structure for controlling HEVC video encoding */
 typedef struct OMX_VIDEO_PARAM_HEVCTYPE {
     OMX_U32 nSize;
     OMX_VERSIONTYPE nVersion;
     OMX_U32 nPortIndex;
     OMX_VIDEO_HEVCPROFILETYPE eProfile;
     OMX_VIDEO_HEVCLEVELTYPE eLevel;
-    OMX_U32 nKeyFrameInterval;
+    OMX_U32 nKeyFrameInterval;        // distance between consecutive I-frames (including one
+                                      // of the I frames). 0 means interval is unspecified and
+                                      // can be freely chosen by the codec. 1 means a stream of
+                                      // only I frames.
 } OMX_VIDEO_PARAM_HEVCTYPE;
+
+/** Structure to define if dependent slice segments should be used */
+typedef struct OMX_VIDEO_SLICESEGMENTSTYPE {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    OMX_BOOL bDepedentSegments;
+    OMX_BOOL bEnableLoopFilterAcrossSlices;
+} OMX_VIDEO_SLICESEGMENTSTYPE;
+
+/** Structure to return timestamps of rendered output frames as well as EOS
+ *  for tunneled components.
+ */
+typedef struct OMX_VIDEO_RENDEREVENTTYPE {
+    OMX_S64 nMediaTimeUs;  // timestamp of rendered video frame
+    OMX_S64 nSystemTimeNs; // system monotonic time at the time frame was rendered
+                           // Use INT64_MAX for nMediaTimeUs to signal that the EOS
+                           // has been reached. In this case, nSystemTimeNs MUST be
+                           // the system time when the last frame was rendered.
+                           // This MUST be done in addition to returning (and
+                           // following) the render information for the last frame.
+} OMX_VIDEO_RENDEREVENTTYPE;
+
+/** Dolby Vision Profile enum type */
+typedef enum OMX_VIDEO_DOLBYVISIONPROFILETYPE {
+    OMX_VIDEO_DolbyVisionProfileUnknown = 0x0,
+    OMX_VIDEO_DolbyVisionProfileDvavPer = 0x1,
+    OMX_VIDEO_DolbyVisionProfileDvavPen = 0x2,
+    OMX_VIDEO_DolbyVisionProfileDvheDer = 0x4,
+    OMX_VIDEO_DolbyVisionProfileDvheDen = 0x8,
+    OMX_VIDEO_DolbyVisionProfileDvheDtr = 0x10,
+    OMX_VIDEO_DolbyVisionProfileDvheStn = 0x20,
+    OMX_VIDEO_DolbyVisionProfileDvheDth = 0x40,
+    OMX_VIDEO_DolbyVisionProfileDvheDtb = 0x80,
+    OMX_VIDEO_DolbyVisionProfileDvheSt  = 0x100,
+    OMX_VIDEO_DolbyVisionProfileDvavSe  = 0x200,
+    OMX_VIDEO_DolbyVisionProfileMax     = 0x7FFFFFFF
+} OMX_VIDEO_DOLBYVISIONPROFILETYPE;
+
+/** Dolby Vision Level enum type */
+typedef enum OMX_VIDEO_DOLBYVISIONLEVELTYPE {
+    OMX_VIDEO_DolbyVisionLevelUnknown = 0x0,
+    OMX_VIDEO_DolbyVisionLevelHd24    = 0x1,
+    OMX_VIDEO_DolbyVisionLevelHd30    = 0x2,
+    OMX_VIDEO_DolbyVisionLevelFhd24   = 0x4,
+    OMX_VIDEO_DolbyVisionLevelFhd30   = 0x8,
+    OMX_VIDEO_DolbyVisionLevelFhd60   = 0x10,
+    OMX_VIDEO_DolbyVisionLevelUhd24   = 0x20,
+    OMX_VIDEO_DolbyVisionLevelUhd30   = 0x40,
+    OMX_VIDEO_DolbyVisionLevelUhd48   = 0x80,
+    OMX_VIDEO_DolbyVisionLevelUhd60   = 0x100,
+    OMX_VIDEO_DolbyVisionLevelmax     = 0x7FFFFFFF
+} OMX_VIDEO_DOLBYVISIONLEVELTYPE;
 
 /**
  * Structure for configuring video compression intra refresh period
@@ -202,7 +324,7 @@ typedef struct OMX_VIDEO_PARAM_HEVCTYPE {
  *  nVersion            : OMX specification version information
  *  nPortIndex          : Port that this structure applies to
  *  nRefreshPeriod      : Intra refreh period in frames. Value 0 means disable intra refresh
-*/
+ */
 typedef struct OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE {
     OMX_U32 nSize;
     OMX_VERSIONTYPE nVersion;
@@ -298,6 +420,49 @@ typedef struct OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE {
     OMX_BOOL bBitrateRatiosSpecified;
     OMX_U32 nBitrateRatios[OMX_VIDEO_ANDROID_MAXTEMPORALLAYERS];
 } OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE;
+
+/**
+ * Android specific param for specifying image grid layout information for image encoding
+ * use cases, corresponding to index OMX_IndexParamVideoAndroidImageGrid.
+ *
+ * OMX_VIDEO_CodingImageHEIC encoders must handle this param type. When this param is set
+ * on the component with bEnabled set to true, nTileWidth, nTileHeight, nGridRows,
+ * nGridCols indicates the desired grid config by the client. The component can use this
+ * as a heuristic, and is free to choose any suitable grid configs. The client shall
+ * always get the actual from the component after the param is set. Encoder will receive
+ * each input image in full, and shall encode it into tiles in row-major, top-row first,
+ * left-to-right order, and send each encoded tile in a separate output buffer. All output
+ * buffers for the same input buffer shall carry the same timestamp as the input buffer.
+ * If the input buffer is marked EOS, the EOS should only appear on the last output buffer
+ * for that input buffer.
+ *
+ * OMX_VIDEO_CodingHEVC encoders might also receive this param when it's used for image
+ * encoding, although in this case the param only serves as a hint. The encoder will
+ * receive the input image tiles in row-major, top-row first, left-to-right order.
+ * The grid config can be used for quality control, or optimizations.
+ *
+ * If this param is not set, the component shall assume that grid option is disabled.
+ *
+ *  nSize                      : Size of the structure in bytes
+ *  nVersion                   : OMX specification version information
+ *  nPortIndex                 : Port that this structure applies to (output port for encoders)
+ *  bEnabled                   : Whether grid is enabled. If true, the other parameters
+ *                               specifies the grid config; otherwise they shall be ignored.
+ *  nTileWidth                 : Width of each tile.
+ *  nTileHeight                : Height of each tile.
+ *  nGridRows                  : Number of rows in the grid.
+ *  nGridCols                  : Number of cols in the grid.
+ */
+typedef struct OMX_VIDEO_PARAM_ANDROID_IMAGEGRIDTYPE {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    OMX_BOOL bEnabled;
+    OMX_U32 nTileWidth;
+    OMX_U32 nTileHeight;
+    OMX_U32 nGridRows;
+    OMX_U32 nGridCols;
+} OMX_VIDEO_PARAM_ANDROID_IMAGEGRIDTYPE;
 
 #ifdef __cplusplus
 }

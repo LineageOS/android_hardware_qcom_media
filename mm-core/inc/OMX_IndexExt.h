@@ -48,7 +48,7 @@ typedef enum OMX_INDEXEXTTYPE {
 
     /* Component parameters and configurations */
     OMX_IndexExtComponentStartUnused = OMX_IndexKhronosExtensions + 0x00100000,
-    OMX_IndexConfigCallbackRequest,  /**< reference: OMX_CONFIG_CALLBACKREQUESTTYPE */
+    OMX_IndexConfigCallbackRequest,                 /**< reference: OMX_CONFIG_CALLBACKREQUESTTYPE */
     OMX_IndexConfigCommitMode,                      /**< reference: OMX_CONFIG_COMMITMODETYPE */
     OMX_IndexConfigCommit,                          /**< reference: OMX_CONFIG_COMMITTYPE */
     OMX_IndexConfigAndroidVendorExtension,          /**< reference: OMX_CONFIG_VENDOR_EXTENSIONTYPE */
@@ -76,12 +76,17 @@ typedef enum OMX_INDEXEXTTYPE {
     OMX_IndexParamVideoVp8,                         /**< reference: OMX_VIDEO_PARAM_VP8TYPE */
     OMX_IndexConfigVideoVp8ReferenceFrame,          /**< reference: OMX_VIDEO_VP8REFERENCEFRAMETYPE */
     OMX_IndexConfigVideoVp8ReferenceFrameType,      /**< reference: OMX_VIDEO_VP8REFERENCEFRAMEINFOTYPE */
-    OMX_IndexParamVideoReserved,                    /**< Reserved for future index */
+    OMX_IndexParamVideoAndroidVp8Encoder,           /**< reference: OMX_VIDEO_PARAM_ANDROID_VP8ENCODERTYPE */
     OMX_IndexParamVideoHevc,                        /**< reference: OMX_VIDEO_PARAM_HEVCTYPE */
     OMX_IndexParamSliceSegments,                    /**< reference: OMX_VIDEO_SLICESEGMENTSTYPE */
     OMX_IndexConfigAndroidIntraRefresh,             /**< reference: OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE */
     OMX_IndexParamAndroidVideoTemporalLayering,     /**< reference: OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE */
     OMX_IndexConfigAndroidVideoTemporalLayering,    /**< reference: OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE */
+    OMX_IndexParamMaxFrameDurationForBitrateControl,/**< reference: OMX_PARAM_U32TYPE */
+    OMX_IndexParamVideoVp9,                         /**< reference: OMX_VIDEO_PARAM_VP9TYPE */
+    OMX_IndexParamVideoAndroidVp9Encoder,           /**< reference: OMX_VIDEO_PARAM_ANDROID_VP9ENCODERTYPE */
+    OMX_IndexParamVideoAndroidImageGrid,            /**< reference: OMX_VIDEO_PARAM_ANDROID_IMAGEGRIDTYPE */
+    OMX_IndexExtVideoEndUnused,
 
     /* Image & Video common configurations */
     OMX_IndexExtCommonStartUnused = OMX_IndexKhronosExtensions + 0x00700000,
@@ -91,13 +96,16 @@ typedef enum OMX_INDEXEXTTYPE {
     OMX_IndexConfigAutoFramerateConversion,         /**< reference: OMX_CONFIG_BOOLEANTYPE */
     OMX_IndexConfigPriority,                        /**< reference: OMX_PARAM_U32TYPE */
     OMX_IndexConfigOperatingRate,                   /**< reference: OMX_PARAM_U32TYPE in Q16 format for video and in Hz for audio */
-    OMX_IndexParamConsumerUsageBits,
+    OMX_IndexParamConsumerUsageBits,                /**< reference: OMX_PARAM_U32TYPE */
+    OMX_IndexConfigLatency,                         /**< reference: OMX_PARAM_U32TYPE */
+    OMX_IndexExtOtherEndUnused,
 
     /* Time configurations */
     OMX_IndexExtTimeStartUnused = OMX_IndexKhronosExtensions + 0x00900000,
 
     OMX_IndexExtMax = 0x7FFFFFFF
 } OMX_INDEXEXTTYPE;
+
 #define OMX_MAX_STRINGVALUE_SIZE OMX_MAX_STRINGNAME_SIZE
 #define OMX_MAX_ANDROID_VENDOR_PARAMCOUNT 32
 
@@ -109,12 +117,13 @@ typedef enum OMX_ANDROID_VENDOR_VALUETYPE {
 } OMX_ANDROID_VENDOR_VALUETYPE;
 
 /**
+ * Structure describing a single value of an Android vendor extension.
  *
+ * STRUCTURE MEMBERS:
  *  cKey        : parameter value name.
  *  eValueType  : parameter value type
  *  bSet        : if false, the parameter is not set (for OMX_GetConfig) or is unset (OMX_SetConfig)
  *                if true, the parameter is set to the corresponding value below
- *  nInt32      : int32 value
  *  nInt64      : int64 value
  *  cString     : string value
  */
@@ -130,6 +139,65 @@ typedef struct OMX_CONFIG_ANDROID_VENDOR_PARAMTYPE {
 } OMX_CONFIG_ANDROID_VENDOR_PARAMTYPE;
 
 /**
+ * OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE is the structure for an Android vendor extension
+ * supported by the component. This structure enumerates the various extension parameters and their
+ * values.
+ *
+ * Android vendor extensions have a name and one or more parameter values - each with a string key -
+ * that are set together. The values are exposed to Android applications via a string key that is
+ * the concatenation of 'vendor', the extension name and the parameter key, each separated by dot
+ * (.), with any trailing '.value' suffix(es) removed (though optionally allowed).
+ *
+ * Extension names and parameter keys are subject to the following rules:
+ *   - Each SHALL contain a set of lowercase alphanumeric (underscore allowed) tags separated by
+ *     dot (.) or dash (-).
+ *   - The first character of the first tag, and any tag following a dot SHALL not start with a
+ *     digit.
+ *   - Tags 'value', 'vendor', 'omx' and 'android' (even if trailed and/or followed by any number
+ *     of underscores) are prohibited in the extension name.
+ *   - Tags 'vendor', 'omx' and 'android' (even if trailed and/or followed by any number
+ *     of underscores) are prohibited in parameter keys.
+ *   - The tag 'value' (even if trailed and/or followed by any number
+ *     of underscores) is prohibited in parameter keys with the following exception:
+ *     the parameter key may be exactly 'value'
+ *   - The parameter key for extensions with a single parameter value SHALL be 'value'
+ *   - No two extensions SHALL have the same name
+ *   - No extension's name SHALL start with another extension's NAME followed by a dot (.)
+ *   - No two parameters of an extension SHALL have the same key
+ *
+ * This config can be used with both OMX_GetConfig and OMX_SetConfig. In the OMX_GetConfig
+ * case, the caller specifies nIndex and nParamSizeUsed. The component fills in cName,
+ * eDir and nParamCount. Additionally, if nParamSizeUsed is not less than nParamCount, the
+ * component fills out the parameter values (nParam) with the current values for each parameter
+ * of the vendor extension.
+ *
+ * The value of nIndex goes from 0 to N-1, where N is the number of Android vendor extensions
+ * supported by the component. The component does not need to report N as the caller can determine
+ * N by enumerating all extensions supported by the component. The component may not support any
+ * extensions. If there are no more extensions, OMX_GetParameter returns OMX_ErrorNoMore. The
+ * component supplies extensions in the order it wants clients to set them.
+ *
+ * The component SHALL return OMX_ErrorNone for all cases where nIndex is less than N (specifically
+ * even in the case of where nParamCount is greater than nParamSizeUsed).
+ *
+ * In the OMX_SetConfig case the field nIndex is ignored. If the component supports an Android
+ * vendor extension with the name in cName, it SHALL configure the parameter values for that
+ * extension according to the parameters in nParam. nParamCount is the number of valid parameters
+ * in the nParam array, and nParamSizeUsed is the size of the nParam array. (nParamSizeUsed
+ * SHALL be at least nParamCount) Parameters that are part of a vendor extension but are not
+ * in the nParam array are assumed to be unset (this is different from not changed).
+ * All parameter values SHALL have distinct keys in nParam (the component can assume that this
+ * is the case. Otherwise, the actual value for the parameters that are multiply defined can
+ * be any of the set values.)
+ *
+ * Return values in case of OMX_SetConfig:
+ *   OMX_ErrorUnsupportedIndex: the component does not support the extension specified by cName
+ *   OMX_ErrorUnsupportedSetting: the component does not support some or any of the parameters
+ *       (names) specified in nParam
+ *   OMX_ErrorBadParameter: the parameter is invalid (e.g. nParamCount is greater than
+ *       nParamSizeUsed, or some parameter value has invalid type)
+ *
+ * STRUCTURE MEMBERS:
  *  nSize       : size of the structure in bytes
  *  nVersion    : OMX specification version information
  *  cName       : name of vendor extension
@@ -148,7 +216,6 @@ typedef struct OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE {
     OMX_U32 nParamSizeUsed;
     OMX_CONFIG_ANDROID_VENDOR_PARAMTYPE nParam[1];
 } OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE;
-
 
 #ifdef __cplusplus
 }
