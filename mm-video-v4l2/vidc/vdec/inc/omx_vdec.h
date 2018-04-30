@@ -537,6 +537,14 @@ struct reconfig_client_data {
     bool isPortReconfigInsufficient;
 };
 
+struct reconfig_client_crop_data {
+    OMX_U32 width;
+    OMX_U32 height;
+    OMX_U32 left;
+    OMX_U32 top;
+    bool isPortReconfigInsufficient;
+};
+
 typedef std::unordered_map <int, int> ColorSubMapping;
 typedef std::unordered_map <int, ColorSubMapping> DecColorMapping;
 typedef std::unordered_map <enum ColorAspects::Primaries, ColorPrimaries> PrimariesMap;

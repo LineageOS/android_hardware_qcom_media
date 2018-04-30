@@ -1844,15 +1844,26 @@ void omx_vdec::process_event_cb(void *ctxt)
                                         }
 
                                         if (pThis->m_cb.EventHandler) {
-                                            reconfig_client_data frame_data;
-
-                                            frame_data.width = pThis->m_reconfig_width;
-                                            frame_data.height = pThis->m_reconfig_height;
-                                            frame_data.dpb_bit_depth = pThis->dpb_bit_depth;
-                                            frame_data.m_progressive = pThis->m_progressive;
-                                            frame_data.isPortReconfigInsufficient = pThis->isPortReconfigInsufficient;
+                                            void *frame_data = NULL;
+                                            reconfig_client_data port_data;
+                                            reconfig_client_crop_data crop_data;
+                                            if (p2 == OMX_IndexConfigCommonOutputCrop) {
+                                                crop_data.width = pThis->rectangle.nWidth;
+                                                crop_data.height = pThis->rectangle.nHeight;
+                                                crop_data.left = pThis->rectangle.nLeft;
+                                                crop_data.top = pThis->rectangle.nTop;
+                                                crop_data.isPortReconfigInsufficient = pThis->isPortReconfigInsufficient;
+                                                frame_data = (void*)&crop_data;
+                                            } else if (p2 == OMX_IndexParamPortDefinition){
+                                                port_data.width = pThis->m_reconfig_width;
+                                                port_data.height = pThis->m_reconfig_height;
+                                                port_data.dpb_bit_depth = pThis->dpb_bit_depth;
+                                                port_data.m_progressive = pThis->m_progressive;
+                                                port_data.isPortReconfigInsufficient = pThis->isPortReconfigInsufficient;
+                                                frame_data = (void*)&port_data;
+                                            }
                                             pThis->m_cb.EventHandler(&pThis->m_cmp, pThis->m_app_data,
-                                                    OMX_EventPortSettingsChanged, p1, p2, (void*) &frame_data );
+                                                     OMX_EventPortSettingsChanged, p1, p2, (void*)frame_data);
                                         } else {
                                             DEBUG_PRINT_ERROR("ERROR: %s()::EventHandler is NULL", __func__);
                                         }
