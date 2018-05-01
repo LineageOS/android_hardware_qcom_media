@@ -301,8 +301,8 @@ void* async_message_thread (void *input)
                  * resolution through set_buffer_geometry.
                  */
 
-                 event_fields_changed |= (omx->drv_ctx.video_resolution.frame_height != ptr[7]);
-                 event_fields_changed |= (omx->drv_ctx.video_resolution.frame_width != ptr[8]);
+                 event_fields_changed |= (omx->drv_ctx.video_resolution.frame_height != ptr[0]);
+                 event_fields_changed |= (omx->drv_ctx.video_resolution.frame_width != ptr[1]);
 
                  if ((codec == V4L2_PIX_FMT_H264) ||
                      (codec  == V4L2_PIX_FMT_HEVC)) {
