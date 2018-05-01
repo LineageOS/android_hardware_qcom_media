@@ -1275,7 +1275,6 @@ class omx_vdec: public qc_omx_component
                 }
         };
         client_extradata_info m_client_extradata_info;
-        bool m_buffer_error;
 };
 
 #ifdef _MSM8974_
