@@ -897,6 +897,7 @@ class omx_vdec: public qc_omx_component
                     sp<MemoryHeapBase>    video_heap_ptr;
                 };
                 struct vidc_heap m_heap_ptr[MAX_COUNT];
+                bool m_buffer_error;
         };
 #if  defined (_MSM8960_) || defined (_MSM8974_)
         allocate_color_convert_buf client_buffers;
