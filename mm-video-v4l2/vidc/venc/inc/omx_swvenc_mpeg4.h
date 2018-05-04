@@ -196,6 +196,7 @@ class omx_venc: public omx_video
         int swvenc_input_log_buffers(const char *buffer, int bufferlen);
         bool dev_get_hevc_profile(OMX_U32*) { return false; }
         bool dev_handle_client_input_extradata(void*) { return false; }
+        void swvenc_calculate_frame_size(OMX_U32 width,OMX_U32 height,SWVENC_PROPERTY * p_property);
 
 };
 
