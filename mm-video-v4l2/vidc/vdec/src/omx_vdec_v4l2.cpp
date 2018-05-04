@@ -114,9 +114,8 @@ extern "C" {
 #undef ALIGN
 #define ALIGN(x, to_align) ((((unsigned) x) + (to_align - 1)) & ~(to_align - 1))
 
-#define DEFAULT_EXTRADATA (OMX_INTERLACE_EXTRADATA | OMX_FRAMEPACK_EXTRADATA | OMX_OUTPUTCROP_EXTRADATA \
-                           | OMX_DISPLAY_INFO_EXTRADATA | OMX_HDR_COLOR_INFO_EXTRADATA \
-                           | OMX_UBWC_CR_STATS_INFO_EXTRADATA)
+#define DEFAULT_EXTRADATA (OMX_INTERLACE_EXTRADATA | OMX_OUTPUTCROP_EXTRADATA \
+                           | OMX_DISPLAY_INFO_EXTRADATA | OMX_UBWC_CR_STATS_INFO_EXTRADATA)
 
 // Y=16(0-9bits), Cb(10-19bits)=Cr(20-29bits)=128, black by default
 #define DEFAULT_VIDEO_CONCEAL_COLOR_BLACK 0x8020010
@@ -2552,9 +2551,13 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
 
 #endif
         m_state = OMX_StateLoaded;
-#ifdef DEFAULT_EXTRADATA
-        enable_extradata(DEFAULT_EXTRADATA, true, true);
-#endif
+
+        unsigned long long extradata_mask = DEFAULT_EXTRADATA;
+        if (eCompressionFormat == (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingHevc) {
+            extradata_mask |= OMX_HDR_COLOR_INFO_EXTRADATA | OMX_EXTNUSER_EXTRADATA;
+        }
+        enable_extradata(extradata_mask, true, true);
+
         eRet = get_buffer_req(&drv_ctx.ip_buf);
         DEBUG_PRINT_HIGH("Input Buffer Size =%u",(unsigned int)drv_ctx.ip_buf.buffer_size);
         get_buffer_req(&drv_ctx.op_buf);
@@ -5264,7 +5267,7 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
         VALIDATE_OMX_PARAM_DATA(configData, DescribeColorAspectsParams);
         DescribeColorAspectsParams *params = (DescribeColorAspectsParams *)configData;
         if (!DEFAULT_EXTRADATA & OMX_DISPLAY_INFO_EXTRADATA) {
-            enable_extradata(OMX_DISPLAY_INFO_EXTRADATA, true, true);
+            enable_extradata(OMX_DISPLAY_INFO_EXTRADATA, false, true);
         }
 
         print_debug_color_aspects(&(params->sAspects), "Set Config");
@@ -5273,12 +5276,10 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
     } else if ((int)configIndex == (int)OMX_QTIIndexConfigDescribeHDRColorInfo) {
         VALIDATE_OMX_PARAM_DATA(configData, DescribeHDRStaticInfoParams);
         DescribeHDRStaticInfoParams *params = (DescribeHDRStaticInfoParams *)configData;
-        if (!DEFAULT_EXTRADATA & OMX_HDR_COLOR_INFO_EXTRADATA) {
-            ret = enable_extradata(OMX_HDR_COLOR_INFO_EXTRADATA, true, true);
-            if (ret != OMX_ErrorNone) {
-                DEBUG_PRINT_ERROR("Failed to enable OMX_HDR_COLOR_INFO_EXTRADATA");
-                return ret;
-            }
+        ret = enable_extradata(OMX_HDR_COLOR_INFO_EXTRADATA, false, true);
+        if (ret != OMX_ErrorNone) {
+            DEBUG_PRINT_ERROR("Failed to enable OMX_HDR_COLOR_INFO_EXTRADATA");
+            return ret;
         }
 
         print_debug_hdr_color_info(&(params->sInfo), "Set Config HDR");
@@ -9787,6 +9788,18 @@ void omx_vdec::get_preferred_hdr_info(HDRStaticInfo& finalHDRInfo)
     finalHDRInfo.sType1.mMaxFrameAverageLightLevel = (preferredHDRInfo.sType1.mMaxFrameAverageLightLevel != 0) ?
         preferredHDRInfo.sType1.mMaxFrameAverageLightLevel : defaultHDRInfo.sType1.mMaxFrameAverageLightLevel;
 }
+
+void omx_vdec::print_debug_hdr10plus_metadata(ColorMetaData& color_mdata) {
+    DEBUG_PRINT_LOW("HDR10+ valid data length: %d", color_mdata.dynamicMetaDataLen);
+    for (uint32_t i = 0 ; i < color_mdata.dynamicMetaDataLen && i+3 < HDR_DYNAMIC_META_DATA_SZ; i=i+4) {
+        DEBUG_PRINT_LOW("HDR10+ mdata: %02X %02X %02X %02X", color_mdata.dynamicMetaDataPayload[i],
+            color_mdata.dynamicMetaDataPayload[i+1],
+            color_mdata.dynamicMetaDataPayload[i+2],
+            color_mdata.dynamicMetaDataPayload[i+3]);
+    }
+
+}
+
 bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
 {
     OMX_OTHER_EXTRADATATYPE *p_sei = NULL, *p_vui = NULL, *p_client_extra = NULL;
@@ -9801,6 +9814,9 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
     bool reconfig_event_sent = false;
     char *p_extradata = NULL;
     OMX_OTHER_EXTRADATATYPE *data = NULL;
+    ColorMetaData color_mdata;
+
+    memset(&color_mdata, 0, sizeof(color_mdata));
 
     int buf_index = p_buf_hdr - m_out_mem_ptr;
     if (buf_index >= drv_ctx.extradata_info.count) {
@@ -10071,6 +10087,19 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                               SET_UBWC_CR_STATS_INFO, (void*)stats);
                     break;
                 case MSM_VIDC_EXTRADATA_STREAM_USERDATA:
+                    if(output_capability == V4L2_PIX_FMT_HEVC) {
+                        struct msm_vidc_stream_userdata_payload* userdata_payload = (struct msm_vidc_stream_userdata_payload*)data->data;
+                        // Remove the size of type from msm_vidc_stream_userdata_payload
+                        uint32_t payload_len = data->nDataSize - sizeof(userdata_payload->type);
+                        if ((data->nDataSize < sizeof(userdata_payload->type)) ||
+                            (payload_len > HDR_DYNAMIC_META_DATA_SZ)) {
+                            DEBUG_PRINT_ERROR("Invalid User extradata size %u for HDR10+", data->nDataSize);
+                        } else {
+                            color_mdata.dynamicMetaDataLen = payload_len;
+                            memcpy(color_mdata.dynamicMetaDataPayload, userdata_payload->data, payload_len);
+                            DEBUG_PRINT_HIGH("Copied %u bytes of HDR10+ extradata", payload_len);
+                        }
+                    }
                     if (client_extradata & OMX_EXTNUSER_EXTRADATA) {
                         if (p_client_extra) {
                             append_user_extradata(p_client_extra, data);
@@ -10124,10 +10153,8 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
         if (m_enable_android_native_buffers) {
                 ColorAspects final_color_aspects;
                 HDRStaticInfo final_hdr_info;
-                ColorMetaData color_mdata;
                 memset(&final_color_aspects, 0, sizeof(final_color_aspects));
                 memset(&final_hdr_info, 0, sizeof(final_hdr_info));
-                memset(&color_mdata, 0, sizeof(color_mdata));
                 get_preferred_color_aspects(final_color_aspects);
 
                 /* For VP8, always set the metadata on gralloc handle to 601-LR */
@@ -10141,6 +10168,7 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                 convert_color_aspects_to_metadata(final_color_aspects, color_mdata);
                 convert_hdr_info_to_metadata(final_hdr_info, color_mdata);
                 print_debug_hdr_color_info_mdata(&color_mdata);
+                print_debug_hdr10plus_metadata(color_mdata);
                 set_colormetadata_in_handle(&color_mdata, buf_index);
         }
 
@@ -10297,8 +10325,7 @@ OMX_ERRORTYPE omx_vdec::enable_extradata(OMX_U64 requested_extradata,
         }
         if (requested_extradata & OMX_HDR_COLOR_INFO_EXTRADATA) {
             control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
-            if (output_capability == V4L2_PIX_FMT_H264 ||
-                output_capability == V4L2_PIX_FMT_HEVC) {
+            if (output_capability == V4L2_PIX_FMT_HEVC) {
                 control.value = V4L2_MPEG_VIDC_EXTRADATA_DISPLAY_COLOUR_SEI;
                 if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
                     DEBUG_PRINT_HIGH("Failed to set Display Colour SEI extradata");
@@ -10307,6 +10334,8 @@ OMX_ERRORTYPE omx_vdec::enable_extradata(OMX_U64 requested_extradata,
                 if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
                     DEBUG_PRINT_HIGH("Failed to set Content Light Level SEI extradata");
                 }
+            } else {
+                DEBUG_PRINT_HIGH("OMX_HDR_COLOR_INFO_EXTRADATA supported for HEVC only");
             }
         }
     }
