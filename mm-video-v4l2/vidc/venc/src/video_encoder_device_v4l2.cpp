@@ -4143,6 +4143,27 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                             } else {
                                 DEBUG_PRINT_INFO("Encoding in HLG mode");
                             }
+                        } else if (handle->format == HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS) {
+                            if ((m_codec == OMX_VIDEO_CodingHEVC) &&
+                                 (codec_profile.profile == V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10)) {
+                                m_sVenc_cfg.inputformat = V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010_VENUS;
+                                DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = P010 Venus");
+                            } else {
+                                DEBUG_PRINT_ERROR("ENC_CONFIG: P010 Venus colorformat not supported for this codec and profile");
+                                return false;
+                            }
+
+                            if(colorData.masteringDisplayInfo.colorVolumeSEIEnabled ||
+                               colorData.contentLightLevel.lightLevelSEIEnabled) {
+                                if (!venc_set_hdr_info(colorData.masteringDisplayInfo, colorData.contentLightLevel)) {
+                                    DEBUG_PRINT_ERROR("HDR10-PQ Info Setting failed");
+                                    return false;
+                                } else {
+                                    DEBUG_PRINT_INFO("Encoding in HDR10-PQ mode");
+                                }
+                            } else {
+                                DEBUG_PRINT_INFO("Encoding in HLG mode");
+                            }
                         } else if (handle->format == QOMX_COLOR_FormatYVU420SemiPlanar) {
                            m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV21;
                            DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = NV21 Linear");
