@@ -2132,13 +2132,19 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamConsumerUsageBits");
                 bool hevc = dev_get_hevc_profile(&eProfile);
                 if(hevc && eProfile == (OMX_U32)OMX_VIDEO_HEVCProfileMain10HDR10) {
-                    DEBUG_PRINT_INFO("Setting TP10 consumer usage bits");
-                    m_sParamConsumerUsage |= GRALLOC1_CONSUMER_USAGE_PRIVATE_10BIT_TP;
-                    m_sParamConsumerUsage |= GRALLOC1_CONSUMER_USAGE_UBWC_FLAG;
-                }
-                memcpy(consumerUsage, &m_sParamConsumerUsage, sizeof(m_sParamConsumerUsage));
-                break;
-            }
+                    bool isp010enabled = property_get_bool("vendor.vidc.enc.p010.enable", false);
+                    if(isp010enabled) {
+                        DEBUG_PRINT_INFO("Setting P010 consumer usage bits");
+                        m_sParamConsumerUsage |= GRALLOC1_CONSUMER_USAGE_PRIVATE_10BIT;
+                    } else {
+                        DEBUG_PRINT_INFO("Setting TP10 consumer usage bits");
+                        m_sParamConsumerUsage |= GRALLOC1_CONSUMER_USAGE_PRIVATE_10BIT_TP;
+                        m_sParamConsumerUsage |= GRALLOC1_CONSUMER_USAGE_UBWC_FLAG;
+					}
+					memcpy(consumerUsage, &m_sParamConsumerUsage, sizeof(m_sParamConsumerUsage));
+					break;
+				}
+			}
         case OMX_IndexParamVideoSliceFMO:
         default:
             {
