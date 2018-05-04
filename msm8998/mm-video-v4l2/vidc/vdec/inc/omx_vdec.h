@@ -1276,7 +1276,6 @@ class omx_vdec: public qc_omx_component
                 }
         };
         client_extradata_info m_client_out_extradata_info;
-	bool m_buffer_error;
 
         OMX_ERRORTYPE get_vendor_extension_config(
                 OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext);
