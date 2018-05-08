@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "23b02951_84b9500d",
+        "filename": "mm-video-v4l2/vidc/vdec/src/omx_vdec_msm8974.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 6551,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2018-05-08T17:01:23Z",
+      "side": 1,
+      "message": "Bad cherrypick? Code looks duplicated here",
+      "range": {
+        "startLine": 6541,
+        "startChar": 0,
+        "endLine": 6551,
+        "endChar": 79
+      },
+      "revId": "f35420b6d4d1637240a7ecfb80196a501f181c8b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
