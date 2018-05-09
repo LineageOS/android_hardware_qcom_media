@@ -10095,6 +10095,7 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                             (payload_len > HDR_DYNAMIC_META_DATA_SZ)) {
                             DEBUG_PRINT_ERROR("Invalid User extradata size %u for HDR10+", data->nDataSize);
                         } else {
+                            color_mdata.dynamicMetaDataValid = true;
                             color_mdata.dynamicMetaDataLen = payload_len;
                             memcpy(color_mdata.dynamicMetaDataPayload, userdata_payload->data, payload_len);
                             DEBUG_PRINT_HIGH("Copied %u bytes of HDR10+ extradata", payload_len);
