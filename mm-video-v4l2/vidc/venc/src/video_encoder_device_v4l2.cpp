@@ -2948,8 +2948,8 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                         DEBUG_PRINT_ERROR("ERROR: Setting idr period failed");
                         return false;
                     }
+                    client_req_disable_bframe = (intraperiod->nBFrames == 0) ? true : false;
                 }
-                client_req_disable_bframe = (intraperiod->nBFrames == 0) ? true : false;
 
                 break;
             }
@@ -3498,6 +3498,7 @@ bool venc_dev::venc_set_vqzip_defaults()
             m_sVenc_cfg.input_width, m_sVenc_cfg.input_height);
         return false;
     }
+
     control.id = V4L2_CID_MPEG_VIDEO_BITRATE_MODE;
     control.value = V4L2_MPEG_VIDEO_BITRATE_MODE_RC_OFF;
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
@@ -5157,7 +5158,7 @@ bool venc_dev::venc_reconfigure_intra_period()
     if ((rate_ctrl.rcmode == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR) ||
         (rate_ctrl.rcmode == V4L2_MPEG_VIDEO_BITRATE_MODE_MBR) ||
         (rate_ctrl.rcmode == V4L2_MPEG_VIDEO_BITRATE_MODE_MBR_VFR)) {
-            isValidRcMode = true;
+        isValidRcMode = true;
     }
 
     isValidLtrSetting = ltrinfo.enabled ? false : true;

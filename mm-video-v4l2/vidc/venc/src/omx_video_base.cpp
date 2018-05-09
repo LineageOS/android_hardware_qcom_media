@@ -2216,7 +2216,8 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
             }
         case QOMX_IndexConfigVideoIntraperiod:
             {
-                DEBUG_PRINT_LOW("get_config:QOMX_IndexConfigVideoIntraperiod");
+                DEBUG_PRINT_LOW("get_config:QOMX_IndexConfigVideoIntraperiod nPframes : %d nBframes : %d",
+                              m_sIntraperiod.nPFrames, m_sIntraperiod.nBFrames);
                 VALIDATE_OMX_PARAM_DATA(configData, QOMX_VIDEO_INTRAPERIODTYPE);
                 QOMX_VIDEO_INTRAPERIODTYPE* pParam = reinterpret_cast<QOMX_VIDEO_INTRAPERIODTYPE*>(configData);
                 memcpy(pParam, &m_sIntraperiod, sizeof(m_sIntraperiod));
