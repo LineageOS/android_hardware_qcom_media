@@ -348,6 +348,22 @@ omx_core_cb_type core[] =
     }
   },
   {
+    "OMX.qcom.video.encoder.heic",
+    NULL,   // Create instance function
+    // Unique instance handle
+    {
+      NULL,
+      NULL,
+      NULL,
+      NULL
+    },
+    NULL,   // Shared object library handle
+    "libOmxVenc.so",
+    {
+      "image_encoder.heic"
+    }
+  },
+  {
     "OMX.qcom.video.encoder.tme",
     NULL,   // Create instance function
     // Unique instance handle

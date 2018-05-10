@@ -37,6 +37,9 @@ extern "C" {
     OMX_API void * get_omx_component_factory_fn(void);
 }
 
+#define DEFAULT_TILE_DIMENSION 512
+#define DEFAULT_TILE_COUNT 40
+
 class omx_venc: public omx_video
 {
     public:

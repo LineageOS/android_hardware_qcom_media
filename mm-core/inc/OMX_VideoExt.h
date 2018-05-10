@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 The Khronos Group Inc.
+ * Copyright (c) 2010, 2018 The Khronos Group Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -143,12 +143,13 @@ typedef enum OMX_VIDEO_VP9LEVELTYPE {
 
 /** HEVC Profiles */
 typedef enum OMX_VIDEO_HEVCPROFILETYPE {
-    OMX_VIDEO_HEVCProfileMain    = 0x01,
-    OMX_VIDEO_HEVCProfileMain10  = 0x02,
+    OMX_VIDEO_HEVCProfileMain         = 0x01,
+    OMX_VIDEO_HEVCProfileMain10       = 0x02,
+    OMX_VIDEO_HEVCProfileMainStill    = 0x04,
     // Main10 profile with HDR SEI support.
     OMX_VIDEO_HEVCProfileMain10HDR10  = 0x1000,
-    OMX_VIDEO_HEVCProfileUnknown = 0x6EFFFFFF,
-    OMX_VIDEO_HEVCProfileMax      = 0x7FFFFFFF
+    OMX_VIDEO_HEVCProfileUnknown      = 0x6EFFFFFF,
+    OMX_VIDEO_HEVCProfileMax          = 0x7FFFFFFF
 } OMX_VIDEO_HEVCPROFILETYPE;
 
 /** HEVC levels */
@@ -193,6 +194,49 @@ typedef struct OMX_VIDEO_PARAM_HEVCTYPE {
     OMX_VIDEO_HEVCLEVELTYPE eLevel;
     OMX_U32 nKeyFrameInterval;
 } OMX_VIDEO_PARAM_HEVCTYPE;
+
+/**
+ * Android specific param for specifying image grid layout information for image encoding
+ * use cases, corresponding to index OMX_IndexParamVideoAndroidImageGrid.
+ *
+ * OMX_VIDEO_CodingImageHEIC encoders must handle this param type. When this param is set
+ * on the component with bEnabled set to true, nTileWidth, nTileHeight, nGridRows,
+ * nGridCols indicates the desired grid config by the client. The component can use this
+ * as a heuristic, and is free to choose any suitable grid configs. The client shall
+ * always get the actual from the component after the param is set. Encoder will receive
+ * each input image in full, and shall encode it into tiles in row-major, top-row first,
+ * left-to-right order, and send each encoded tile in a separate output buffer. All output
+ * buffers for the same input buffer shall carry the same timestamp as the input buffer.
+ * If the input buffer is marked EOS, the EOS should only appear on the last output buffer
+ * for that input buffer.
+ *
+ * OMX_VIDEO_CodingHEVC encoders might also receive this param when it's used for image
+ * encoding, although in this case the param only serves as a hint. The encoder will
+ * receive the input image tiles in row-major, top-row first, left-to-right order.
+ * The grid config can be used for quality control, or optimizations.
+ *
+ * If this param is not set, the component shall assume that grid option is disabled.
+ *
+ *  nSize                      : Size of the structure in bytes
+ *  nVersion                   : OMX specification version information
+ *  nPortIndex                 : Port that this structure applies to (output port for encoders)
+ *  bEnabled                   : Whether grid is enabled. If true, the other parameters
+ *                               specifies the grid config; otherwise they shall be ignored.
+ *  nTileWidth                 : Width of each tile.
+ *  nTileHeight                : Height of each tile.
+ *  nGridRows                  : Number of rows in the grid.
+ *  nGridCols                  : Number of cols in the grid.
+ */
+typedef struct OMX_VIDEO_PARAM_ANDROID_IMAGEGRIDTYPE {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    OMX_BOOL bEnabled;
+    OMX_U32 nTileWidth;
+    OMX_U32 nTileHeight;
+    OMX_U32 nGridRows;
+    OMX_U32 nGridCols;
+} OMX_VIDEO_PARAM_ANDROID_IMAGEGRIDTYPE;
 
 /**
  * Structure for configuring video compression intra refresh period
