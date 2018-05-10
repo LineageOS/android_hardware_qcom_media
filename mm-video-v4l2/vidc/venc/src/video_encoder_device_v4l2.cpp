@@ -87,6 +87,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define VENC_BFRAME_MAX_HEIGHT      1088
 #define VENC_INFINITE_GOP 0xFFFFFFF
 
+// Scaled quality factor - QP mapping
+const unsigned int venc_dev::QFQPMapping[] = {51, 47, 43, 39, 35, 31, 28, 25, 22, 19, 16, 13, 11, 9, 7, 6, 5, 4, 3, 2, 1};
+
 #undef LOG_TAG
 #define LOG_TAG "OMX-VENC: venc_dev"
 
@@ -2197,14 +2200,34 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 DEBUG_PRINT_LOW("venc_set_param: OMX_IndexParamVideoBitrate");
 
                 if (pParam->nPortIndex == (OMX_U32) PORT_INDEX_OUT) {
+                    // Quality factor setting
+                    unsigned int scaledQF;
+                    if (pParam->eControlRate == OMX_Video_ControlRateConstantQuality) {
+                        pParam->eControlRate = OMX_Video_ControlRateDisable;
+                        scaledQF = pParam->nQualityFactor / 5;
+                        scaledQF = (scaledQF >= sizeof(QFQPMapping)/sizeof(QFQPMapping[0])) ? (sizeof(QFQPMapping)/sizeof(QFQPMapping[0])-1) : scaledQF;
+                    }
+
                     if (!venc_set_target_bitrate(pParam->nTargetBitrate)) {
-                        DEBUG_PRINT_ERROR("ERROR: Target Bit Rate setting failed");
+                        DEBUG_PRINT_ERROR("ERROR: Setting Target Bit Rate / Quality Factor failed");
                         return false;
                     }
 
                     if (!venc_set_ratectrl_cfg(pParam->eControlRate)) {
                         DEBUG_PRINT_ERROR("ERROR: Rate Control setting failed");
                         return false;
+                    }
+                    // Setting QP values
+                    if (((OMX_VIDEO_PARAM_BITRATETYPE*)paramData)->eControlRate == OMX_Video_ControlRateDisable) {
+                        if (venc_set_qp(QFQPMapping[scaledQF],
+                                        QFQPMapping[scaledQF],
+                                        QFQPMapping[scaledQF],
+                                        ENABLE_I_QP | ENABLE_P_QP | ENABLE_B_QP) == false) {
+                            DEBUG_PRINT_ERROR("ERROR: Setting QP values failed");
+                            return false;
+                        }
+                        DEBUG_PRINT_LOW("Rate control: %u Quality factor(client): %u scaledQF: %u",
+                            pParam->eControlRate, pParam->nQualityFactor, scaledQF);
                     }
                 } else {
                     DEBUG_PRINT_ERROR("ERROR: Invalid Port Index for OMX_IndexParamVideoBitrate");
