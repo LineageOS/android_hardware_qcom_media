@@ -125,7 +125,12 @@ class omx_venc: public omx_video
 
         OMX_VIDEO_PARAM_MPEG4TYPE m_sParamMPEG4;
         OMX_VIDEO_PARAM_H263TYPE m_sParamH263;
-
+        enum color_format
+        {
+            COLOR_FMT_NV12,
+            COLOR_FMT_NV21,
+            COLOR_FMT_NV12_ZSL,
+        };
         OMX_U32 dev_stop(void);
         OMX_U32 dev_pause(void);
         OMX_U32 dev_start(void);
@@ -196,6 +201,91 @@ class omx_venc: public omx_video
         int swvenc_input_log_buffers(const char *buffer, int bufferlen);
         bool dev_get_hevc_profile(OMX_U32*) { return false; }
         bool dev_handle_client_input_extradata(void*) { return false; }
+        static inline unsigned int SWVENC_Y_STRIDE(int color_fmt, int width)
+        {
+            unsigned int alignment, stride = 0;
+            if (!width)
+                goto invalid_input;
+            switch (color_fmt)
+            {
+            case COLOR_FMT_NV21:
+            case COLOR_FMT_NV12:
+            case COLOR_FMT_NV12_ZSL:
+                alignment = 128;
+                stride = ALIGN(width, alignment);
+                break;
+            default:
+                break;
+            }
+            invalid_input:
+                return stride;
+        }
+        static inline unsigned int SWVENC_Y_SCANLINES(int color_fmt, int height)
+        {
+	    unsigned int alignment, scanlines = 0;
+            if (!height)
+                goto invalid_input;
+            switch (color_fmt)
+            {
+            case COLOR_FMT_NV21:
+            case COLOR_FMT_NV12:
+                alignment = 32;
+                break;
+            case COLOR_FMT_NV12_ZSL:
+                alignment = 64;
+                break;
+            default:
+                return 0;
+            }
+            scanlines = ALIGN(height, alignment);
+            invalid_input:
+                return scanlines;
+        }
+        static inline unsigned int SWVENC_UV_SCANLINES(int color_fmt, int height)
+        {
+            unsigned int alignment, scanlines = 0;
+            if (!height)
+                goto invalid_input;
+            switch (color_fmt)
+            {
+                case COLOR_FMT_NV21:
+                case COLOR_FMT_NV12:
+                case COLOR_FMT_NV12_ZSL:
+                    alignment = 16;
+                    break;
+                default:
+                    goto invalid_input;
+            }
+            scanlines = ALIGN((height+1)>>1, alignment);
+            invalid_input:
+                return scanlines;
+        }
+        static inline unsigned int SWVENC_BUFFER_SIZE(int color_fmt, int width, int height)
+        {
+            unsigned int uv_alignment = 0, size = 0;
+            unsigned int y_plane, uv_plane, y_stride,uv_stride, y_scanlines, uv_scanlines;
+            if (!width || !height)
+                goto invalid_input;
+            y_stride = SWVENC_Y_STRIDE(color_fmt, width);
+            uv_stride = y_stride;
+            y_scanlines = SWVENC_Y_SCANLINES(color_fmt, height);
+            uv_scanlines = SWVENC_UV_SCANLINES(color_fmt, height);
+            switch (color_fmt)
+            {
+                case COLOR_FMT_NV21:
+                case COLOR_FMT_NV12:
+                case COLOR_FMT_NV12_ZSL:
+                    uv_alignment = 4096;
+                    y_plane = y_stride * y_scanlines;
+                    uv_plane = uv_stride * uv_scanlines + uv_alignment;
+                    size = ALIGN((y_plane + uv_plane),4096);
+                    break;
+               default:
+                   break;
+            }
+            invalid_input:
+                return size;
+        }
 
 };
 
