@@ -55,6 +55,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 static ptrdiff_t x;
 
 #ifdef _ANDROID_
+#undef LOG_TAG
 #ifdef MAX_RES_720P
 #define LOG_TAG "OMX-VDEC-720P"
 #elif MAX_RES_1080P
@@ -82,6 +83,49 @@ extern "C" {
 #include <media/hardware/HardwareAPI.h>
 #endif
 
+#ifdef _TARGET_KERNEL_VERSION_49_
+/* DECODER STATUS CODES */
+/* Base value for status codes */
+#define VDEC_S_BASE    0x40000000
+/* Success */
+#define VDEC_S_SUCCESS    (VDEC_S_BASE)
+/* General failure */
+#define VDEC_S_EFAIL    (VDEC_S_BASE + 1)
+/* Fatal irrecoverable  failure. Need to  tear down session. */
+#define VDEC_S_EFATAL    (VDEC_S_BASE + 2)
+/* Error with input bistream */
+#define VDEC_S_INPUT_BITSTREAM_ERR    (VDEC_S_BASE + 3)
+
+#define VDEC_MSG_BASE    0x0000000
+/* Codes to identify asynchronous message responses and events that driver
+  wants to communicate to the app.*/
+#define VDEC_MSG_RESP_INPUT_BUFFER_DONE    (VDEC_MSG_BASE + 1)
+#define VDEC_MSG_RESP_OUTPUT_BUFFER_DONE    (VDEC_MSG_BASE + 2)
+#define VDEC_MSG_RESP_INPUT_FLUSHED    (VDEC_MSG_BASE + 3)
+#define VDEC_MSG_RESP_OUTPUT_FLUSHED    (VDEC_MSG_BASE + 4)
+#define VDEC_MSG_RESP_FLUSH_INPUT_DONE    (VDEC_MSG_BASE + 5)
+#define VDEC_MSG_RESP_FLUSH_OUTPUT_DONE    (VDEC_MSG_BASE + 6)
+#define VDEC_MSG_RESP_START_DONE    (VDEC_MSG_BASE + 7)
+#define VDEC_MSG_RESP_STOP_DONE    (VDEC_MSG_BASE + 8)
+#define VDEC_MSG_RESP_PAUSE_DONE    (VDEC_MSG_BASE + 9)
+#define VDEC_MSG_RESP_RESUME_DONE    (VDEC_MSG_BASE + 10)
+#define VDEC_MSG_EVT_CONFIG_CHANGED    (VDEC_MSG_BASE + 11)
+#define VDEC_MSG_EVT_HW_ERROR    (VDEC_MSG_BASE + 12)
+#define VDEC_MSG_EVT_INFO_FIELD_DROPPED    (VDEC_MSG_BASE + 13)
+#define VDEC_MSG_EVT_HW_OVERLOAD    (VDEC_MSG_BASE + 14)
+#define VDEC_MSG_EVT_MAX_CLIENTS    (VDEC_MSG_BASE + 15)
+#define VDEC_MSG_EVT_HW_UNSUPPORTED    (VDEC_MSG_BASE + 16)
+
+/*Buffer flags bits masks.*/
+#define VDEC_BUFFERFLAG_EOS    0x00000001
+#define VDEC_BUFFERFLAG_DECODEONLY    0x00000004
+#define VDEC_BUFFERFLAG_DATACORRUPT    0x00000008
+#define VDEC_BUFFERFLAG_ENDOFFRAME    0x00000010
+#define VDEC_BUFFERFLAG_SYNCFRAME    0x00000020
+#define VDEC_BUFFERFLAG_EXTRADATA    0x00000040
+#define VDEC_BUFFERFLAG_CODECCONFIG    0x00000080
+#endif // _TARGET_KERNEL_VERSION_49_
+
 #include <unistd.h>
 
 #if defined (_ANDROID_ICS_)
@@ -98,12 +142,12 @@ extern "C" {
 #include "OMX_VideoExt.h"
 #include "OMX_IndexExt.h"
 #include "qc_omx_component.h"
+#ifndef _TARGET_KERNEL_VERSION_49_
 #include <linux/msm_vidc_dec.h>
+#endif
+#include "mp4_utils.h"
 #include <media/msm_vidc.h>
 #include "frameparser.h"
-#ifdef MAX_RES_1080P
-#include "mp4_utils.h"
-#endif
 #include "extra_data_handler.h"
 #include "ts_parser.h"
 #include "vidc_color_converter.h"
@@ -239,6 +283,179 @@ enum turbo_mode {
     TURBO_MODE_MAX = 0xFF
 };
 
+#ifdef _TARGET_KERNEL_VERSION_49_
+enum vdec_output_format {
+    VDEC_YUV_FORMAT_NV12 = 0x1,
+    VDEC_YUV_FORMAT_TILE_4x2 = 0x2,
+    VDEC_YUV_FORMAT_NV12_UBWC = 0x3,
+    VDEC_YUV_FORMAT_NV12_TP10_UBWC = 0x4,
+    VDEC_YUV_FORMAT_P010_VENUS = 0x5,
+};
+
+enum vdec_picture {
+    PICTURE_TYPE_I,
+    PICTURE_TYPE_P,
+    PICTURE_TYPE_B,
+    PICTURE_TYPE_BI,
+    PICTURE_TYPE_SKIP,
+    PICTURE_TYPE_IDR,
+    PICTURE_TYPE_UNKNOWN
+};
+
+enum vdec_codec {
+    VDEC_CODECTYPE_H264 = 0x1,
+    VDEC_CODECTYPE_H263 = 0x2,
+    VDEC_CODECTYPE_MPEG4 = 0x3,
+    VDEC_CODECTYPE_DIVX_3 = 0x4,
+    VDEC_CODECTYPE_DIVX_4 = 0x5,
+    VDEC_CODECTYPE_DIVX_5 = 0x6,
+    VDEC_CODECTYPE_DIVX_6 = 0x7,
+    VDEC_CODECTYPE_XVID = 0x8,
+    VDEC_CODECTYPE_MPEG1 = 0x9,
+    VDEC_CODECTYPE_MPEG2 = 0xa,
+    VDEC_CODECTYPE_VC1 = 0xb,
+    VDEC_CODECTYPE_VC1_RCV = 0xc,
+    VDEC_CODECTYPE_HEVC = 0xd,
+    VDEC_CODECTYPE_MVC = 0xe,
+    VDEC_CODECTYPE_VP8 = 0xf,
+    VDEC_CODECTYPE_VP9 = 0x10,
+};
+
+enum vdec_interlaced_format {
+    VDEC_InterlaceFrameProgressive = 0x1,
+    VDEC_InterlaceInterleaveFrameTopFieldFirst = 0x2,
+    VDEC_InterlaceInterleaveFrameBottomFieldFirst = 0x4
+};
+
+enum vdec_output_order {
+    VDEC_ORDER_DISPLAY = 0x1,
+    VDEC_ORDER_DECODE = 0x2
+};
+
+enum vdec_buffer {
+    VDEC_BUFFER_TYPE_INPUT,
+    VDEC_BUFFER_TYPE_OUTPUT
+};
+
+struct vdec_aspectratioinfo {
+    uint32_t aspect_ratio;
+    uint32_t par_width;
+    uint32_t par_height;
+};
+
+struct vdec_sep_metadatainfo {
+    void *metabufaddr;
+    uint32_t size;
+    int fd;
+    int offset;
+    uint32_t buffer_size;
+};
+
+struct vdec_picsize {
+    uint32_t frame_width;
+    uint32_t frame_height;
+    uint32_t stride;
+    uint32_t scan_lines;
+};
+
+struct vdec_framesize {
+    uint32_t   left;
+    uint32_t   top;
+    uint32_t   right;
+    uint32_t   bottom;
+};
+
+struct vdec_bufferpayload {
+    void *bufferaddr;
+    size_t buffer_len;
+    int pmem_fd;
+    size_t offset;
+    size_t mmaped_size;
+};
+
+struct vdec_misrinfo {
+    uint32_t misr_dpb_luma;
+    uint32_t misr_dpb_chroma;
+    uint32_t misr_opb_luma;
+    uint32_t misr_opb_chroma;
+};
+
+struct vdec_output_frameinfo {
+    void *bufferaddr;
+    size_t offset;
+    size_t len;
+    uint32_t flags;
+    int64_t time_stamp;
+    enum vdec_picture pic_type;
+    void *client_data;
+    void *input_frame_clientdata;
+    struct vdec_picsize picsize;
+    struct vdec_framesize framesize;
+    enum vdec_interlaced_format interlaced_format;
+    struct vdec_aspectratioinfo aspect_ratio_info;
+    struct vdec_sep_metadatainfo metadata_info;
+    struct vdec_misrinfo misrinfo[2];
+};
+
+union vdec_msgdata {
+    struct vdec_output_frameinfo output_frame;
+    void *input_frame_clientdata;
+};
+
+struct vdec_msginfo {
+    uint32_t status_code;
+    uint32_t msgcode;
+    union vdec_msgdata msgdata;
+    size_t msgdatasize;
+};
+
+struct vdec_allocatorproperty {
+    enum vdec_buffer buffer_type;
+    uint32_t mincount;
+    uint32_t maxcount;
+    uint32_t actualcount;
+    size_t buffer_size;
+    uint32_t alignment;
+    uint32_t buf_poolid;
+    size_t meta_buffer_size;
+};
+
+struct vdec_framerate {
+    unsigned long fps_denominator;
+    unsigned long fps_numerator;
+};
+
+struct vdec_setbuffer_cmd {
+    enum vdec_buffer buffer_type;
+    struct vdec_bufferpayload buffer;
+};
+
+struct vdec_input_frameinfo {
+    void *bufferaddr;
+    size_t offset;
+    size_t datalen;
+    uint32_t flags;
+    int64_t timestamp;
+    void *client_data;
+    int pmem_fd;
+    size_t pmem_offset;
+    void *desc_addr;
+    uint32_t desc_size;
+};
+
+struct vdec_seqheader {
+    void *ptr_seqheader;
+    size_t seq_header_len;
+    int pmem_fd;
+    size_t pmem_offset;
+};
+
+struct vdec_fillbuffer_cmd {
+    struct vdec_bufferpayload buffer;
+    void *client_data;
+};
+#endif //_TARGET_KERNEL_VERSION_49_
+
 #ifdef USE_ION
 struct vdec_ion {
     int ion_device_fd;
@@ -269,7 +486,11 @@ struct extradata_buffer_info {
 struct video_driver_context {
     int video_driver_fd;
     enum vdec_codec decoder_format;
+#ifndef _TARGET_KERNEL_VERSION_49_
     enum vdec_output_fromat output_format;
+#else
+   enum vdec_output_format output_format;
+#endif
     enum vdec_interlaced_format interlace;
     enum vdec_output_order picture_order;
     struct vdec_framesize frame_size;
@@ -1321,10 +1542,12 @@ enum instance_state {
     MSM_VIDC_CORE_UNINIT,
 };
 
+#ifndef _TARGET_KERNEL_VERSION_49_
 enum vidc_resposes_id {
     MSM_VIDC_DECODER_FLUSH_DONE = 0x11,
     MSM_VIDC_DECODER_EVENT_CHANGE,
 };
+#endif
 
 #endif // _MSM8974_
 

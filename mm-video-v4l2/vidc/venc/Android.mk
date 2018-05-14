@@ -45,6 +45,10 @@ libmm-venc-def += -DMAX_RES_1080P_EBI
 endif
 endif
 
+ifeq ($(TARGET_KERNEL_VERSION), 4.9)
+libmm-venc-def += -D_TARGET_KERNEL_VERSION_49_
+endif
+
 ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_UBWC)),true)
 libmm-venc-def += -D_UBWC_
 endif

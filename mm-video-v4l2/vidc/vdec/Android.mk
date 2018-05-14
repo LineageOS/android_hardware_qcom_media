@@ -25,7 +25,9 @@ libmm-vdec-def += -D_MSM8974_
 libmm-vdec-def += -DPROCESS_EXTRADATA_IN_OUTPUT_PORT
 libmm-vdec-def += -DMAX_RES_1080P
 libmm-vdec-def += -DMAX_RES_1080P_EBI
-
+ifeq ($(TARGET_KERNEL_VERSION), 4.9)
+libmm-vdec-def += -D_TARGET_KERNEL_VERSION_49_
+endif
 TARGETS_THAT_USE_HEVC_ADSP_HEAP := msm8226 msm8974
 TARGETS_THAT_HAVE_VENUS_HEVC := apq8084 msm8994 msm8996
 TARGETS_THAT_SUPPORT_UBWC := msm8996 msm8953 msm8998 sdm660 apq8098_latv
@@ -61,6 +63,10 @@ endif
 
 ifeq ($(call is-board-platform-in-list, $(MASTER_SIDE_CP_TARGET_LIST)),true)
 libmm-vdec-def += -DMASTER_SIDE_CP
+endif
+
+ifeq ($(call is-platform-sdk-version-at-least,27),true) # O-MR1
+libmm-vdec-def += -D_ANDROID_O_MR1_DIVX_CHANGES
 endif
 
 include $(CLEAR_VARS)

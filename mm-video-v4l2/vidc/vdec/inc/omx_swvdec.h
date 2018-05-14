@@ -45,8 +45,9 @@
 #include <semaphore.h>
 
 #include <linux/msm_ion.h>
+#ifndef _TARGET_KERNEL_VERSION_49_
 #include <linux/msm_vidc_dec.h>
-
+#endif
 #include "qc_omx_component.h"
 
 #include "omx_swvdec_utils.h"
@@ -89,7 +90,15 @@ typedef struct {
 } ASYNC_THREAD;
 
 /// @cond
-
+#ifdef _TARGET_KERNEL_VERSION_49_
+struct vdec_bufferpayload {
+    void *bufferaddr;
+    size_t buffer_len;
+    int pmem_fd;
+    size_t offset;
+    size_t mmaped_size;
+};
+#endif //_TARGET_KERNEL_VERSION_49_
 struct vdec_ion {
     int                        ion_fd_device;
     struct ion_fd_data         ion_fd_data;

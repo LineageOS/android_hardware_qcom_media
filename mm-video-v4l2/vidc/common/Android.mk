@@ -16,7 +16,9 @@ libmm-vidc-def += -Dinline=__inline
 libmm-vidc-def += -D_ANDROID_
 libmm-vidc-def += -Werror
 libmm-vidc-def += -D_ANDROID_ICS_
-
+ifeq ($(TARGET_KERNEL_VERSION), 4.9)
+libmm-vidc-def += -D_TARGET_KERNEL_VERSION_49_
+endif
 # ---------------------------------------------------------------------------------
 # 			Make the Shared library (libOmxVidcCommon)
 # ---------------------------------------------------------------------------------
