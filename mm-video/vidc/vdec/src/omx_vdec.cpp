@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2013, 2015, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2013, 2015, 2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -577,7 +577,8 @@ omx_vdec::omx_vdec(): m_pipe_in(-1),
                       external_meta_buffer(false),
                       external_meta_buffer_iommu(false),
                       m_extradata(NULL),
-                      m_use_uncache_buffers(false)
+                      m_use_uncache_buffers(false),
+                      m_buffer_error(false)
 {
   /* Assumption is that , to begin with , we have all the frames with decoder */
   DEBUG_PRINT_HIGH("In OMX vdec Constructor");
@@ -4555,7 +4556,7 @@ OMX_ERRORTYPE  omx_vdec::use_output_buffer(
       }
     }
 #endif
-
+    output_use_buffer = true;
   }
 
   if (eRet == OMX_ErrorNone) {
@@ -4932,7 +4933,6 @@ OMX_ERRORTYPE omx_vdec::free_input_buffer(OMX_BUFFERHEADERTYPE *bufferHdr)
   index = bufferHdr - m_inp_mem_ptr;
   DEBUG_PRINT_LOW("Free Input Buffer index = %d",index);
 
-  auto_lock l(buf_lock);
   bufferHdr->pInputPortPrivate = NULL;
 
   if (index < drv_ctx.ip_buf.actualcount && drv_ctx.ptr_inputbuffer)
@@ -5194,6 +5194,7 @@ OMX_ERRORTYPE  omx_vdec::allocate_input_buffer(
   unsigned   i = 0;
   unsigned char *buf_addr = NULL;
   int pmem_fd = -1;
+  unsigned int align_size = 0;
   (void) hComp;
   (void) port;
 
@@ -5258,8 +5259,10 @@ OMX_ERRORTYPE  omx_vdec::allocate_input_buffer(
     DEBUG_PRINT_LOW("Allocate input Buffer");
 
 #ifdef USE_ION
+    align_size = drv_ctx.ip_buf.buffer_size + 512;
+    align_size = (align_size + drv_ctx.ip_buf.alignment - 1)&(~(drv_ctx.ip_buf.alignment - 1));
  drv_ctx.ip_buf_ion_info[i].ion_device_fd = alloc_map_ion_memory(
-                    drv_ctx.ip_buf.buffer_size,drv_ctx.op_buf.alignment,
+                    align_size, drv_ctx.op_buf.alignment,
                     &drv_ctx.ip_buf_ion_info[i].ion_alloc_data,
 		    &drv_ctx.ip_buf_ion_info[i].fd_ion_data,ION_FLAG_CACHED);
     if(drv_ctx.ip_buf_ion_info[i].ion_device_fd < 0) {
@@ -5761,6 +5764,10 @@ OMX_ERRORTYPE  omx_vdec::allocate_buffer(OMX_IN OMX_HANDLETYPE                hC
     }
     else if (port == OMX_CORE_OUTPUT_PORT_INDEX)
     {
+      if (output_use_buffer) {
+        DEBUG_PRINT_ERROR("Allocate output buffer not allowed after use buffer");
+        return OMX_ErrorBadParameter;
+      }
       eRet = client_buffers.allocate_buffers_color_convert(hComp,bufferHdr,port,
                                                            appData,bytes);
     }
@@ -5830,6 +5837,7 @@ OMX_ERRORTYPE  omx_vdec::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
 
     DEBUG_PRINT_LOW("In for decoder free_buffer");
 
+    auto_lock l(buf_lock);
     if (m_state == OMX_StateIdle &&
        (BITMASK_PRESENT_U32(m_flags ,OMX_COMPONENT_LOADING_PENDING)))
     {
@@ -5846,7 +5854,7 @@ OMX_ERRORTYPE  omx_vdec::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
         post_event(OMX_EventError,
                    OMX_ErrorPortUnpopulated,
                    OMX_COMPONENT_GENERATE_EVENT);
-
+        m_buffer_error = true;
         return OMX_ErrorIncorrectStateOperation;
     }
     else if (m_state != OMX_StateInvalid)
@@ -5856,7 +5864,6 @@ OMX_ERRORTYPE  omx_vdec::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
                    OMX_ErrorPortUnpopulated,
                    OMX_COMPONENT_GENERATE_EVENT);
     }
-
     if (port == OMX_CORE_INPUT_PORT_INDEX)
     {
       /*Check if arbitrary bytes*/
@@ -5971,6 +5978,7 @@ OMX_ERRORTYPE  omx_vdec::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
             m_flags = BITMASK_CLEAR_U32(m_flags,OMX_COMPONENT_LOADING_PENDING);
             post_event(OMX_CommandStateSet, OMX_StateLoaded,
                                       OMX_COMPONENT_GENERATE_EVENT);
+            m_buffer_error = false;
         }
     }
     return eRet;
@@ -6182,6 +6190,11 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE         h
 
   if (!temp_buffer || (temp_buffer -  drv_ctx.ptr_inputbuffer) > (int)drv_ctx.ip_buf.actualcount)
   {
+    return OMX_ErrorBadParameter;
+  }
+
+  if (BITMASK_ABSENT(&m_inp_bm_count, nPortIndex) || m_buffer_error) {
+    DEBUG_PRINT_ERROR("ETBProxy: ERROR: invalid buffer, nPortIndex %u", nPortIndex);
     return OMX_ErrorBadParameter;
   }
 
@@ -6397,6 +6410,7 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
   struct vdec_bufferpayload     *ptr_outputbuffer = NULL;
   struct vdec_output_frameinfo  *ptr_respbuffer = NULL;
 
+  auto_lock l(buf_lock);
   nPortIndex = buffer-((OMX_BUFFERHEADERTYPE *)client_buffers.get_il_buf_hdr());
 
   if (bufferAdd == NULL || nPortIndex > drv_ctx.op_buf.actualcount) {
@@ -7547,7 +7561,7 @@ int omx_vdec::async_message_process (void *context, void* message)
         output_respbuf->aspect_ratio_info =
            vdec_msg->msgdata.output_frame.aspect_ratio_info;
 
-        if (omx->output_use_buffer) {
+        if (!omx->m_enable_android_native_buffers && omx->output_use_buffer) {
           DEBUG_PRINT_LOW("FBD: memcpy(%p, 0x%x, %d)", omxhdr->pBuffer,
             ((unsigned long)vdec_msg->msgdata.output_frame.bufferaddr +
              (unsigned long)vdec_msg->msgdata.output_frame.offset),
