@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010 - 2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2010 - 2018, The Linux Foundation. All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -50,6 +50,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cutils/atomic.h>
 #include <qdMetaData.h>
 #include <color_metadata.h>
+#define STRINGIFY_ENUMS
 #include <media/msm_media_info.h>
 
 static ptrdiff_t x;
@@ -79,6 +80,7 @@ extern "C" {
 #endif // _ANDROID_
 
 #if defined (_ANDROID_HONEYCOMB_) || defined (_ANDROID_ICS_)
+#define STRINGIFY_ENUMS
 #include <media/hardware/HardwareAPI.h>
 #endif
 
@@ -1289,6 +1291,7 @@ class omx_vdec: public qc_omx_component
                 }
         };
         client_extradata_info m_client_out_extradata_info;
+        bool m_buffer_error;
 
         OMX_ERRORTYPE get_vendor_extension_config(
                 OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext);
