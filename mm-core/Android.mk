@@ -12,20 +12,12 @@ OMXCORE_CFLAGS += -U_ENABLE_QC_MSG_LOG_
 #             Figure out the targets
 #===============================================================================
 
-ifeq ($(filter $(TARGET_BOARD_PLATFORM), sdm845),$(TARGET_BOARD_PLATFORM))
-MM_CORE_TARGET = sdm845
-else ifeq ($(filter $(TARGET_BOARD_PLATFORM), msmnile),$(TARGET_BOARD_PLATFORM))
-MM_CORE_TARGET = msmnile
-else ifeq ($(filter $(TARGET_BOARD_PLATFORM), msmpeafowl),$(TARGET_BOARD_PLATFORM))
-MM_CORE_TARGET = msmpeafowl
-else ifeq ($(filter $(TARGET_BOARD_PLATFORM), sdm670),$(TARGET_BOARD_PLATFORM))
-MM_CORE_TARGET = sdm670
-else ifeq ($(filter $(TARGET_BOARD_PLATFORM), qcs605),$(TARGET_BOARD_PLATFORM))
-MM_CORE_TARGET = qcs605
+ifeq ($(filter $(TARGET_BOARD_PLATFORM), msmnile),$(TARGET_BOARD_PLATFORM))
+OMXCORE_CFLAGS += -D_NILE_
 else ifeq ($(filter $(TARGET_BOARD_PLATFORM), $(MSMSTEPPE)),$(TARGET_BOARD_PLATFORM))
-MM_CORE_TARGET = msmsteppe
+OMXCORE_CFLAGS += -D_STEPPE_
 else
-MM_CORE_TARGET = default
+OMXCORE_CFLAGS += -D_DEFAULT_
 endif
 
 ifeq ($(call is-platform-sdk-version-at-least,27),true) # O-MR1
@@ -87,10 +79,10 @@ LOCAL_CFLAGS            := $(OMXCORE_CFLAGS)
 
 LOCAL_SRC_FILES         := src/common/omx_core_cmp.cpp
 LOCAL_SRC_FILES         += src/common/qc_omx_core.c
-ifneq (,$(filter msmnile sdm845 msmpeafowl sdm670 qcs605 $(MSMSTEPPE),$(TARGET_BOARD_PLATFORM)))
-LOCAL_SRC_FILES         += src/$(MM_CORE_TARGET)/registry_table_android.c
+ifneq (,$(filter msmnile $(MSMSTEPPE),$(TARGET_BOARD_PLATFORM)))
+LOCAL_SRC_FILES         += src/registry_table_android.c
 else
-LOCAL_SRC_FILES         += src/$(MM_CORE_TARGET)/qc_registry_table_android.c
+LOCAL_SRC_FILES         += src/qc_registry_table_android.c
 endif
 
 include $(BUILD_SHARED_LIBRARY)
@@ -119,7 +111,7 @@ LOCAL_CFLAGS            := $(OMXCORE_CFLAGS)
 
 LOCAL_SRC_FILES         := src/common/omx_core_cmp.cpp
 LOCAL_SRC_FILES         += src/common/qc_omx_core.c
-ifneq (,$(filter msmnile sdm845 msmpeafowl sdm670 qcs605 $(MSMSTEPPE),$(TARGET_BOARD_PLATFORM)))
+ifneq (,$(filter msmnile $(MSMSTEPPE),$(TARGET_BOARD_PLATFORM)))
 LOCAL_SRC_FILES         += src/$(MM_CORE_TARGET)/registry_table.c
 else
 LOCAL_SRC_FILES         += src/$(MM_CORE_TARGET)/qc_registry_table.c

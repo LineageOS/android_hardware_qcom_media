@@ -39,6 +39,29 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "qc_omx_common.h"        // OMX API
 #include <string.h>
 
+#ifdef _ANDROID_O_MR1_DIVX_CHANGES
+#define DIVX4_MIME "video_decoder.divx4"
+#else
+#define DIVX4_MIME "video_decoder.divx"
+#endif
+
+#define OMX_REGISTRY_ENTRY(name, lib_name, role) \
+  { \
+    name, \
+    NULL, \
+    { \
+      NULL, \
+      NULL, \
+      NULL, \
+      NULL \
+    }, \
+    NULL, \
+    lib_name, \
+    { \
+      role \
+    } \
+  }
+
 #define OMX_COMP_MAX_INST 16
 
 typedef struct _omx_core_cb_type
