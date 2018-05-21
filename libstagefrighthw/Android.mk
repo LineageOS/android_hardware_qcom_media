@@ -45,5 +45,8 @@ LOCAL_MODULE := libstagefrighthw
 
 LOCAL_VENDOR_MODULE := true
 
+LOCAL_HEADER_LIBRARIES := \
+        media_plugin_headers
+
 include $(BUILD_SHARED_LIBRARY)
 
