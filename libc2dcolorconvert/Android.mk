@@ -13,7 +13,7 @@ LOCAL_C_INCLUDES := \
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 
-LOCAL_SHARED_LIBRARIES := liblog libdl
+LOCAL_SHARED_LIBRARIES := libutils liblog libdl
 
 LOCAL_MODULE_TAGS := optional
 
