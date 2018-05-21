@@ -30,6 +30,7 @@
 #include <C2DColorConverter.h>
 #include <arm_neon.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <linux/msm_kgsl.h>
 #include <sys/ioctl.h>
