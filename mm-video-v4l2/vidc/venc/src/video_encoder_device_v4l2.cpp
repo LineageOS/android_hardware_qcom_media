@@ -597,7 +597,7 @@ void venc_dev::append_extradata_mbidata(OMX_OTHER_EXTRADATATYPE *p_extra,
             struct msm_vidc_extradata_header *p_extradata)
 {
     OMX_U32 payloadSize = append_mbi_extradata(&p_extra->data, p_extradata);
-    p_extra->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) + payloadSize, 4);
+    p_extra->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) + payloadSize - sizeof(unsigned int), 4);
     p_extra->nVersion.nVersion = OMX_SPEC_VERSION;
     p_extra->nPortIndex = OMX_DirOutput;
     p_extra->eType = (OMX_EXTRADATATYPE)OMX_ExtraDataVideoEncoderMBInfo;
@@ -608,7 +608,7 @@ void venc_dev::append_extradata_mbidata(OMX_OTHER_EXTRADATATYPE *p_extra,
 void venc_dev::append_extradata_ltrinfo(OMX_OTHER_EXTRADATATYPE *p_extra,
             struct msm_vidc_extradata_header *p_extradata)
 {
-    p_extra->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) + p_extradata->data_size, 4);
+    p_extra->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) + p_extradata->data_size  - sizeof(unsigned int), 4);
     p_extra->nVersion.nVersion = OMX_SPEC_VERSION;
     p_extra->nPortIndex = OMX_DirOutput;
     p_extra->eType = (OMX_EXTRADATATYPE) OMX_ExtraDataVideoLTRInfo;
@@ -2070,7 +2070,7 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
             return false;
         }
 
-        output_extradata_info.buffer_size = extra_data_size;
+        output_extradata_info.buffer_size = ALIGN(extra_data_size, SZ_4K);
         output_extradata_info.count = m_sOutput_buff_property.actualcount;
         output_extradata_info.size = output_extradata_info.buffer_size * output_extradata_info.count;
         venc_handle->m_client_out_extradata_info.set_extradata_info(extra_data_size,m_sOutput_buff_property.actualcount);
