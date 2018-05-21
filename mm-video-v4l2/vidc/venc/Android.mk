@@ -110,6 +110,9 @@ libmm-venc-inc      += $(call project-path-for,qcom-display)/libcopybit
 libmm-venc-inc      += frameworks/av/include/media/stagefright
 libmm-venc-inc      += $(venc-inc)
 
+LOCAL_HEADER_LIBRARIES := \
+        media_plugin_headers
+
 LOCAL_MODULE                    := libOmxVenc
 LOCAL_MODULE_TAGS               := optional
 LOCAL_VENDOR_MODULE             := true
@@ -117,7 +120,7 @@ LOCAL_CFLAGS                    := $(libmm-venc-def)
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 
 LOCAL_PRELINK_MODULE      := false
-LOCAL_SHARED_LIBRARIES    := liblog libutils libbinder libcutils \
+LOCAL_SHARED_LIBRARIES    := liblog libutils libhardware libbinder libcutils \
                              libc2dcolorconvert libdl
 
 LOCAL_SRC_FILES   := src/omx_video_base.cpp
@@ -147,6 +150,9 @@ mm-venc-test720p-inc            += $(call project-path-for,qcom-media)/mm-core/i
 mm-venc-test720p-inc            += $(call project-path-for,qcom-display)/libgralloc
 mm-venc-test720p-inc            += $(venc-inc)
 
+LOCAL_HEADER_LIBRARIES := \
+        media_plugin_headers
+
 LOCAL_MODULE                    := mm-venc-omx-test720p
 LOCAL_MODULE_TAGS               := optional
 LOCAL_VENDOR_MODULE             := true
@@ -172,6 +178,9 @@ include $(CLEAR_VARS)
 venc-test-inc                   += $(LOCAL_PATH)/inc
 venc-test-inc                   += $(call project-path-for,qcom-display)/libgralloc
 venc-test-inc                   += $(venc-inc)
+
+LOCAL_HEADER_LIBRARIES := \
+        media_plugin_headers
 
 LOCAL_MODULE                    := mm-video-encdrv-test
 LOCAL_MODULE_TAGS               := optional
