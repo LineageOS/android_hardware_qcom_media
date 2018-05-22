@@ -5155,9 +5155,7 @@ bool venc_dev::venc_reconfigure_intra_period()
         isValidLayerCount = true;
     }
 
-    if ((rate_ctrl.rcmode == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR) ||
-        (rate_ctrl.rcmode == V4L2_MPEG_VIDEO_BITRATE_MODE_MBR) ||
-        (rate_ctrl.rcmode == V4L2_MPEG_VIDEO_BITRATE_MODE_MBR_VFR)) {
+    if (rate_ctrl.rcmode == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR) {
         isValidRcMode = true;
     }
 
@@ -5170,13 +5168,15 @@ bool venc_dev::venc_reconfigure_intra_period()
                     isValidLtrSetting   &&
                     isValidRcMode       &&
                     isValidCodec        &&
+                    !low_latency_mode   &&
                     !client_req_disable_bframe;
 
     DEBUG_PRINT_LOW("B-frame enablement = %u; Conditions for Resolution = %u, FPS = %u,"
                      " Operating rate = %u, Layer condition = %u,"
-                     " LTR = %u, RC = %u Codec/Profile = %u Client request to disable = %u\n",
+                     " LTR = %u, RC = %u Codec/Profile = %u Client request to disable = %u LowLatency : %u\n",
                      enableBframes, isValidResolution, isValidFps, isValidOpRate,
-                     isValidLayerCount, isValidLtrSetting, isValidRcMode, isValidCodec, client_req_disable_bframe);
+                     isValidLayerCount, isValidLtrSetting, isValidRcMode, isValidCodec, client_req_disable_bframe,
+                     low_latency_mode);
 
     if (enableBframes && intra_period.num_bframes == 0 && intra_period.num_pframes > VENC_BFRAME_MAX_COUNT) {
         intra_period.num_bframes = VENC_BFRAME_MAX_COUNT;
@@ -6266,6 +6266,7 @@ bool venc_dev::venc_set_lowlatency_mode(OMX_BOOL enable)
         DEBUG_PRINT_ERROR("Failed to set lowlatency control");
         return false;
     }
+    low_latency_mode = enable;
     DEBUG_PRINT_LOW("Success IOCTL set control for id=%x, value=%d", control.id, control.value);
 
     return true;

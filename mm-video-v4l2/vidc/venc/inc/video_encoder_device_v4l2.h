@@ -558,6 +558,7 @@ class venc_dev
         bool enable_mv_narrow_searchrange;
         int supported_rc_modes;
         bool camera_mode_enabled;
+        bool low_latency_mode;
         struct roidata {
             bool dirty;
             OMX_TICKS timestamp;
