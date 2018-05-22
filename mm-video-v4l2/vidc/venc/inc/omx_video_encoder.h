@@ -98,6 +98,7 @@ class omx_venc: public omx_video
                                    int buffer_len, uint64_t timestamp);
         int dev_extradata_log_buffers(char *buffer, bool input);
         bool dev_get_hevc_profile(OMX_U32* profile);
+        void dev_get_color_format_as_string(char * buf, int buf_len, unsigned colorformat);
         class perf_control {
             typedef int (*perf_lock_acquire_t)(int, int, int*, int);
             typedef int (*perf_lock_release_t)(int);

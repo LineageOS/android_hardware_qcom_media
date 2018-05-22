@@ -623,11 +623,12 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 VALIDATE_OMX_PARAM_DATA(paramData, OMX_PARAM_PORTDEFINITIONTYPE);
                 OMX_PARAM_PORTDEFINITIONTYPE *portDefn;
                 portDefn = (OMX_PARAM_PORTDEFINITIONTYPE *) paramData;
-
-                DEBUG_PRINT_HIGH("set_parameter: OMX_IndexParamPortDefinition: port %d, wxh %dx%d, min %d, actual %d, size %d, colorformat %#x, compression format %#x",
+                char colorFormatStr[200];
+                dev_get_color_format_as_string(colorFormatStr, sizeof(colorFormatStr), portDefn->format.video.eColorFormat);
+                DEBUG_PRINT_HIGH("set_parameter: OMX_IndexParamPortDefinition: port %d, wxh %dx%d, min %d, actual %d, size %d, colorformat %#x (%s), compression format %#x",
                     portDefn->nPortIndex, portDefn->format.video.nFrameWidth, portDefn->format.video.nFrameHeight,
                     portDefn->nBufferCountMin, portDefn->nBufferCountActual, portDefn->nBufferSize,
-                    portDefn->format.video.eColorFormat, portDefn->format.video.eCompressionFormat);
+                    portDefn->format.video.eColorFormat, colorFormatStr, portDefn->format.video.eCompressionFormat);
 
                 if (PORT_INDEX_IN == portDefn->nPortIndex) {
                     if (portDefn->nBufferCountActual > MAX_NUM_INPUT_BUFFERS) {
@@ -752,16 +753,18 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_PORTFORMATTYPE);
                 OMX_VIDEO_PARAM_PORTFORMATTYPE *portFmt =
                     (OMX_VIDEO_PARAM_PORTFORMATTYPE *)paramData;
-                DEBUG_PRINT_LOW("set_parameter: OMX_IndexParamVideoPortFormat %d",
-                        portFmt->eColorFormat);
+                char colorFormatStr[200];
+                dev_get_color_format_as_string(colorFormatStr, sizeof(colorFormatStr), portFmt->eColorFormat);
+                DEBUG_PRINT_LOW("set_parameter: OMX_IndexParamVideoPortFormat %x (%s)",
+                        portFmt->eColorFormat, colorFormatStr);
                 //set the driver with the corresponding values
                 if (PORT_INDEX_IN == portFmt->nPortIndex) {
                     if (handle->venc_set_param(paramData,OMX_IndexParamVideoPortFormat) != true) {
                         return OMX_ErrorUnsupportedSetting;
                     }
 
-                    DEBUG_PRINT_LOW("set_parameter: OMX_IndexParamVideoPortFormat %d",
-                            portFmt->eColorFormat);
+                    DEBUG_PRINT_LOW("set_parameter: OMX_IndexParamVideoPortFormat %x (%s)",
+                            portFmt->eColorFormat, colorFormatStr);
                     update_profile_level(); //framerate
 
 #ifdef _ANDROID_ICS_
@@ -2403,6 +2406,51 @@ OMX_ERRORTYPE omx_venc::dev_get_supported_profile_level(OMX_VIDEO_PARAM_PROFILEL
 
 bool omx_venc::dev_get_supported_color_format(unsigned index, OMX_U32 *colorFormat) {
     return handle->venc_get_supported_color_format(index, colorFormat);
+}
+
+void omx_venc::dev_get_color_format_as_string(char * buf, int buf_len, unsigned colorformat) {
+    // Try to match with OMX_QCOM_COLOR_FORMATTYPE
+    switch (colorformat) {
+        case QOMX_COLOR_FormatYVU420SemiPlanar:
+            snprintf(buf, buf_len, "QOMX_COLOR_FormatYVU420SemiPlanar");
+            break;
+        case QOMX_COLOR_FormatYVU420PackedSemiPlanar32m4ka:
+            snprintf(buf, buf_len, "QOMX_COLOR_FormatYVU420PackedSemiPlanar32m4ka");
+            break;
+        case QOMX_COLOR_FormatYUV420PackedSemiPlanar16m2ka:
+            snprintf(buf, buf_len, "QOMX_COLOR_FormatYUV420PackedSemiPlanar16m2ka");
+            break;
+        case QOMX_COLOR_FormatYUV420PackedSemiPlanar64x32Tile2m8ka:
+            snprintf(buf, buf_len, "QOMX_COLOR_FormatYUV420PackedSemiPlanar64x32Tile2m8ka");
+            break;
+        case QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m:
+            snprintf(buf, buf_len, "QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m");
+            break;
+        case QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mMultiView:
+            snprintf(buf, buf_len, "QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mMultiView");
+            break;
+        case QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed:
+            snprintf(buf, buf_len, "QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed");
+            break;
+        case QOMX_COLOR_Format32bitRGBA8888:
+            snprintf(buf, buf_len, "QOMX_COLOR_Format32bitRGBA8888");
+            break;
+        case QOMX_COLOR_Format32bitRGBA8888Compressed:
+            snprintf(buf, buf_len, "QOMX_COLOR_Format32bitRGBA8888Compressed");
+            break;
+        case QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed:
+            snprintf(buf, buf_len, "QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed");
+            break;
+        case QOMX_COLOR_FORMATYUV420SemiPlanarP010Venus:
+            snprintf(buf, buf_len, "QOMX_COLOR_FORMATYUV420SemiPlanarP010Venus");
+            break;
+        case QOMX_COLOR_FormatAndroidOpaque:
+            snprintf(buf, buf_len, "QOMX_COLOR_FormatAndroidOpaque");
+            break;
+        default:
+            snprintf(buf, buf_len, "no match found in OMX_QCOM_COLOR_FORMATTYPE");
+            return;
+    }
 }
 
 bool omx_venc::dev_loaded_start()
