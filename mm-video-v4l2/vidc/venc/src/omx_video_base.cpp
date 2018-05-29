@@ -1911,8 +1911,13 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 }
                 else if (pParam->nIndex == (OMX_INDEXTYPE)OMX_ExtraDataVideoLTRInfo) {
                     if (pParam->nPortIndex == PORT_INDEX_OUT) {
+#ifndef _TARGET_KERNEL_VERSION_49_
                         pParam->bEnabled =
                             (OMX_BOOL)(m_sExtraData & VEN_EXTRADATA_LTRINFO);
+#else
+                        pParam->bEnabled =
+                            (OMX_BOOL)(m_sExtraData & VENC_EXTRADATA_LTRINFO);
+#endif
                         DEBUG_PRINT_HIGH("LTR Info extradata %d", pParam->bEnabled);
                     } else {
                         DEBUG_PRINT_ERROR("get_parameter: LTR information is "

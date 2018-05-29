@@ -36,7 +36,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef _QC_OMX_MSG_H_
 #define _QC_OMX_MSG_H_
-
+#undef DEBUG_PRINT_ERROR
 #ifdef _ENABLE_QC_MSG_LOG_
     #ifdef _ANDROID_
         #include <utils/Log.h>

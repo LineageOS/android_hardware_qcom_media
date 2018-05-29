@@ -34,8 +34,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string.h>
 #include <stdlib.h>
 #include "OMX_QCOMExtns.h"
+#ifndef _TARGET_KERNEL_VERSION_49_
 #include<linux/msm_vidc_dec.h>
 #include<linux/msm_vidc_enc.h>
+#else
+#include <media/msm_vidc.h>
+#endif
 
 #ifdef _ANDROID_
 extern "C" {
@@ -50,6 +54,24 @@ extern "C" {
 #define VDEC_OMX_SEI 0x7F000007
 #define FRAME_PACK_SIZE 18
 #define H264_EMULATION_BYTE 0x03
+
+#ifdef _TARGET_KERNEL_VERSION_49_
+/*Post processing flags bit masks*/
+#define VDEC_EXTRADATA_NONE 0x001
+#define VDEC_EXTRADATA_QP 0x004
+#define VDEC_EXTRADATA_MB_ERROR_MAP 0x008
+#define VDEC_EXTRADATA_SEI 0x010
+#define VDEC_EXTRADATA_VUI 0x020
+#define VDEC_EXTRADATA_VC1 0x040
+
+/*Post processing flags bit masks*/
+#define VEN_EXTRADATA_NONE          0x001
+#define VEN_EXTRADATA_QCOMFILLER    0x002
+#define VEN_EXTRADATA_SLICEINFO     0x100
+#define VEN_EXTRADATA_LTRINFO       0x200
+#define VEN_EXTRADATA_MBINFO        0x400
+#endif
+
 class extra_data_handler
 {
     public:
