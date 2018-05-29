@@ -764,7 +764,7 @@ class omx_vdec: public qc_omx_component
             OMX_COMPONENT_GENERATE_EVENT_FLUSH       = 0x9,
             OMX_COMPONENT_GENERATE_EVENT_INPUT_FLUSH = 0x0A,
             OMX_COMPONENT_GENERATE_EVENT_OUTPUT_FLUSH = 0x0B,
-            OMX_COMPONENT_GENERATE_FBD = 0xc,
+            OMX_COMPONENT_GENERATE_FBD = 0xC,
             OMX_COMPONENT_GENERATE_START_DONE = 0xD,
             OMX_COMPONENT_GENERATE_PAUSE_DONE = 0xE,
             OMX_COMPONENT_GENERATE_RESUME_DONE = 0xF,
@@ -777,7 +777,9 @@ class omx_vdec: public qc_omx_component
             OMX_COMPONENT_GENERATE_INFO_FIELD_DROPPED = 0x16,
             OMX_COMPONENT_GENERATE_UNSUPPORTED_SETTING = 0x17,
             OMX_COMPONENT_GENERATE_HARDWARE_OVERLOAD = 0x18,
-            OMX_COMPONENT_CLOSE_MSG = 0x19
+            OMX_COMPONENT_GENERATE_ION_PREFETCH_PIXEL = 0x19,
+            OMX_COMPONENT_GENERATE_ION_PREFETCH_NON_PIXEL = 0x1A,
+            OMX_COMPONENT_CLOSE_MSG = 0x1B
         };
 
         enum vc1_profile_type {
@@ -1406,8 +1408,10 @@ class omx_vdec: public qc_omx_component
         }
 
         static OMX_ERRORTYPE describeColorFormat(OMX_PTR params);
-        void prefetchNewBuffers();
-
+        bool prefetch_buffers(unsigned long prefetch_count,
+                    unsigned long prefetch_size, unsigned ioctl_code,
+                    unsigned ion_flag);
+        unsigned char m_prefetch_done;
 
         client_extradata_info m_client_out_extradata_info;
 
