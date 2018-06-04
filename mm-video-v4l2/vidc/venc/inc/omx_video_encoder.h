@@ -30,6 +30,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define __OMX_VENC__H
 
 #include <unistd.h>
+#include <dlfcn.h>
 #include "omx_video_base.h"
 #include "video_encoder_device_v4l2.h"
 
@@ -105,11 +106,13 @@ class omx_venc: public omx_video
             public:
                 perf_control();
                 ~perf_control();
-                void send_hint_to_mpctl(bool state);
+                bool load_perf_library();
+                int perf_lock_acquire();
+                void perf_lock_release();
+                int m_perf_control_enable;
             private:
                 int m_perf_handle;
                 void *m_perf_lib;
-                bool load_lib();
                 perf_lock_acquire_t m_perf_lock_acquire;
                 perf_lock_release_t m_perf_lock_release;
         };

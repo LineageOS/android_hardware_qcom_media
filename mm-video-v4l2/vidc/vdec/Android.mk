@@ -60,6 +60,7 @@ libmm-vdec-inc          += $(TOP)/system/core/libion/include
 libmm-vdec-inc          += $(TOP)/system/core/libion/kernel-headers
 libmm-vdec-inc          += $(TOP)/hardware/qcom/media/mm-video-v4l2/vidc/common/inc
 libmm-vdec-inc          += $(TOP)/hardware/qcom/media/mm-core/inc
+libmm-vdec-inc          += $(TOP)/vendor/qcom/proprietary/android-perf
 libmm-vdec-inc          += hardware/qcom/media/libplatformconfig
 libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/qcom/display
 libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/adreno
