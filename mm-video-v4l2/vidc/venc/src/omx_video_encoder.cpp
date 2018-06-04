@@ -40,6 +40,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <glib.h>
 #define strlcpy g_strlcpy
 #endif
+#include "PlatformConfig.h"
+
+/* defined in mp-ctl.h */
+#define MPCTLV3_VIDEO_ENCODE_PB_HINT 0x41C00000
 
 // factory function executed by the core to create instances
 void *get_omx_component_factory_fn(void)
@@ -49,6 +53,7 @@ void *get_omx_component_factory_fn(void)
 
 omx_venc::perf_control::perf_control()
 {
+    m_perf_control_enable = 0;
     m_perf_lib = NULL;
     m_perf_lock_acquire = NULL;
     m_perf_lock_release = NULL;
@@ -57,40 +62,75 @@ omx_venc::perf_control::perf_control()
 
 omx_venc::perf_control::~perf_control()
 {
-    if (m_perf_handle != 0 && m_perf_lock_release) {
+    if (!m_perf_control_enable)
+        return;
+    if (m_perf_handle && m_perf_lock_release) {
         m_perf_lock_release(m_perf_handle);
+        DEBUG_PRINT_HIGH("perflock released");
     }
     if (m_perf_lib) {
         dlclose(m_perf_lib);
     }
 }
 
-void omx_venc::perf_control::send_hint_to_mpctl(bool state)
+int omx_venc::perf_control::perf_lock_acquire()
 {
-    if (load_lib() == false) {
-        return;
+    int arg[2];
+    if (!m_perf_control_enable)
+        return 0;
+    if (!m_perf_lock_acquire) {
+        DEBUG_PRINT_ERROR("NULL perflock acquire");
+        return -1;
     }
-    /* 0x4601 maps to video encode callback in
-     * perflock, 46 is the enum number, 01 is
-     * the state being sent when perflock
-     * acquire succeeds
-     */
-    int arg = 0x4601;
+    if (m_perf_handle) {
+        DEBUG_PRINT_LOW("perflock already acquired");
+        return 0;
+    }
 
-    if (m_perf_lock_acquire && state == true) {
-        m_perf_handle = m_perf_lock_acquire(0, 0, &arg, sizeof(arg) / sizeof(int));
-        DEBUG_PRINT_INFO("Video encode perflock acquired,handle=%d",m_perf_handle);
-    } else if (m_perf_lock_release && state == false) {
-        m_perf_lock_release(m_perf_handle);
-        DEBUG_PRINT_INFO("Video encode perflock released");
+    DEBUG_PRINT_HIGH("perflock acquire");
+    arg[0] = MPCTLV3_VIDEO_ENCODE_PB_HINT;
+    arg[1] = 1;
+    m_perf_handle = m_perf_lock_acquire(0, 0, arg, sizeof(arg) / sizeof(int));
+    if (m_perf_handle < 0) {
+        DEBUG_PRINT_INFO("perflock acquire failed with error %d", m_perf_handle);
+        m_perf_handle = 0;
+        return -1;
     }
+    return 0;
 }
 
-bool omx_venc::perf_control::load_lib()
+void omx_venc::perf_control::perf_lock_release()
+{
+    if (!m_perf_control_enable)
+        return;
+    if (!m_perf_lib)
+        return;
+    if (!m_perf_lock_release) {
+        DEBUG_PRINT_ERROR("NULL perflock release");
+        return;
+    }
+    if (!m_perf_handle) {
+        DEBUG_PRINT_LOW("perflock already released");
+        return;
+    }
+    DEBUG_PRINT_HIGH("perflock release");
+    m_perf_lock_release(m_perf_handle);
+    m_perf_handle = 0;
+}
+
+bool omx_venc::perf_control::load_perf_library()
 {
     char perf_lib_path[PROPERTY_VALUE_MAX] = {0};
-    if (m_perf_lib)
+
+    if (!m_perf_control_enable) {
+        DEBUG_PRINT_HIGH("perf cotrol not enabled");
+        return false;
+    }
+
+    if (m_perf_lib) {
+        DEBUG_PRINT_HIGH("perf cotrol library already opened");
         return true;
+    }
 
     if ((property_get("ro.vendor.extension_library", perf_lib_path, NULL) <= 0)) {
         DEBUG_PRINT_ERROR("vendor library not set in ro.vendor.extension_library");
@@ -114,9 +154,11 @@ bool omx_venc::perf_control::load_lib()
     return true;
 
 handle_err:
-    if(m_perf_lib != NULL) {
+    if(m_perf_lib)
         dlclose(m_perf_lib);
-    }
+    m_perf_lib = NULL;
+    m_perf_lock_acquire = NULL;
+    m_perf_lock_release = NULL;
     return false;
 }
 
@@ -137,14 +179,19 @@ omx_venc::omx_venc()
     debug_level = strtoul(property_value, NULL, 16);
     property_value[0] = '\0';
     handle = NULL;
-    m_perf_control.send_hint_to_mpctl(true);
+    Platform::Config::getInt32(Platform::vidc_perf_control_enable,
+            (int32_t *)&m_perf_control.m_perf_control_enable, 0);
+    if (m_perf_control.m_perf_control_enable) {
+        DEBUG_PRINT_HIGH("perf cotrol enabled");
+        m_perf_control.load_perf_library();
+    }
+    m_perf_control.perf_lock_acquire();
 }
 
 omx_venc::~omx_venc()
 {
     get_syntaxhdr_enable = false;
-    m_perf_control.send_hint_to_mpctl(false);
-    //nothing to do
+    m_perf_control.perf_lock_release();
 }
 
 /* ======================================================================

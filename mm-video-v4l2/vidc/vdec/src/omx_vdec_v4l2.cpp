@@ -142,6 +142,9 @@ extern "C" {
 
 #define LUMINANCE_DIV_FACTOR 10000.0
 
+/* defined in mp-ctl.h */
+#define MPCTLV3_VIDEO_DECODE_PB_HINT 0x41C04000
+
 #define MIN(x,y) (((x) < (y)) ? (x) : (y))
 #define MAX(x,y) (((x) > (y)) ? (x) : (y))
 
@@ -782,6 +785,13 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     Platform::Config::getInt32(Platform::vidc_dec_arb_mode_override,
             (int32_t *)&m_arb_mode_override, 0);
 
+    Platform::Config::getInt32(Platform::vidc_perf_control_enable,
+            (int32_t *)&m_perf_control.m_perf_control_enable, 0);
+    if (m_perf_control.m_perf_control_enable) {
+        DEBUG_PRINT_HIGH("perf cotrol enabled");
+        m_perf_control.load_perf_library();
+    }
+
     property_value[0] = '\0';
     property_get("vendor.vidc.dec.log.in", property_value, "0");
     m_debug.in_buffer_log |= atoi(property_value);
@@ -874,7 +884,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_smoothstreaming_width = 0;
     m_smoothstreaming_height = 0;
     m_decode_order_mode = false;
-    m_perf_control.send_hint_to_mpctl(true);
+    m_perf_control.perf_lock_acquire();
     m_client_req_turbo_mode = false;
     is_q6_platform = false;
     m_input_pass_buffer_fd = false;
@@ -1020,7 +1030,7 @@ omx_vdec::~omx_vdec()
         dec_time.end();
     }
     DEBUG_PRINT_INFO("Exit OMX vdec Destructor: fd=%d",drv_ctx.video_driver_fd);
-    m_perf_control.send_hint_to_mpctl(false);
+    m_perf_control.perf_lock_release();
 }
 
 OMX_ERRORTYPE omx_vdec::set_dpb(bool is_split_mode)
@@ -4300,7 +4310,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                            eRet = OMX_ErrorHardware;
                                            break;
                                        }
-                                       m_perf_control.request_cores(frm_int);
                                    }
 
                                    if (drv_ctx.video_resolution.frame_height !=
@@ -10372,7 +10381,6 @@ void omx_vdec::set_frame_rate(OMX_S64 act_timestamp)
                 DEBUG_PRINT_LOW("set_frame_rate: frm_int(%u) fps(%f)",
                         (unsigned int)frm_int, drv_ctx.frame_rate.fps_numerator /
                         (float)drv_ctx.frame_rate.fps_denominator);
-                m_perf_control.request_cores(frm_int);
                 /* We need to report the difference between this FBD and the previous FBD
                  * back to the driver for clock scaling purposes. */
                 struct v4l2_outputparm oparm;
@@ -12520,6 +12528,7 @@ void omx_vdec::send_codec_config() {
 
 omx_vdec::perf_control::perf_control()
 {
+    m_perf_control_enable = 0;
     m_perf_lib = NULL;
     m_perf_handle = 0;
     m_perf_lock_acquire = NULL;
@@ -12528,71 +12537,82 @@ omx_vdec::perf_control::perf_control()
 
 omx_vdec::perf_control::~perf_control()
 {
-    if (m_perf_handle != 0 && m_perf_lock_release) {
-        DEBUG_PRINT_LOW("NOTE2: release perf lock");
+    if (!m_perf_control_enable)
+        return;
+
+    if (m_perf_handle && m_perf_lock_release) {
         m_perf_lock_release(m_perf_handle);
+        DEBUG_PRINT_LOW("perflock released");
     }
     if (m_perf_lib) {
         dlclose(m_perf_lib);
     }
 }
 
-struct omx_vdec::perf_control::mpctl_stats omx_vdec::perf_control::mpctl_obj = {0, 0, 0};
-
-omx_vdec::perf_lock omx_vdec::perf_control::m_perf_lock;
-
-void omx_vdec::perf_control::send_hint_to_mpctl(bool state)
+int omx_vdec::perf_control::perf_lock_acquire()
 {
-    if (load_lib() == false) {
-       return;
-    }
-    m_perf_lock.lock();
-    /* 0x4401 maps to video decode playback hint
-     * in perflock, enum number is 44 and state
-     * being sent on perflock acquire is 01 (true)
-     */
-    int arg = 0x4401;
+    int arg[2];
+    if (!m_perf_control_enable)
+        return 0;
 
-    if (state == true) {
-        mpctl_obj.vid_inst_count++;
-    } else if (state == false) {
-        mpctl_obj.vid_inst_count--;
+    if (!m_perf_lib) {
+        DEBUG_PRINT_ERROR("no perf control library");
+        return -1;
     }
-
-    if (m_perf_lock_acquire && mpctl_obj.vid_inst_count == 1 && mpctl_obj.vid_acquired == false) {
-        mpctl_obj.vid_disp_handle = m_perf_lock_acquire(0, 0, &arg, sizeof(arg) / sizeof(int));
-        mpctl_obj.vid_acquired = true;
-        DEBUG_PRINT_INFO("Video slvp perflock acquired");
-    } else if (m_perf_lock_release && (mpctl_obj.vid_inst_count == 0 || mpctl_obj.vid_inst_count > 1) && mpctl_obj.vid_acquired == true) {
-        m_perf_lock_release(mpctl_obj.vid_disp_handle);
-        mpctl_obj.vid_acquired = false;
-        DEBUG_PRINT_INFO("Video slvp perflock released");
+    if (!m_perf_lock_acquire) {
+        DEBUG_PRINT_ERROR("NULL perflock acquire");
+        return -1;
     }
-    m_perf_lock.unlock();
+    if (m_perf_handle) {
+        DEBUG_PRINT_LOW("perflock already acquired");
+        return 0;
+    }
+    DEBUG_PRINT_HIGH("perflock acquire");
+    arg[0] = MPCTLV3_VIDEO_DECODE_PB_HINT;
+    arg[1] = 1;
+    m_perf_handle = m_perf_lock_acquire(0, 0, arg, sizeof(arg) / sizeof(int));
+    if (m_perf_handle < 0) {
+        DEBUG_PRINT_ERROR("perflock acquire failed with error %d", m_perf_handle);
+        m_perf_handle = 0;
+        return -1;
+    }
+    return 0;
 }
 
-void omx_vdec::perf_control::request_cores(int frame_duration_us)
+void omx_vdec::perf_control::perf_lock_release()
 {
-    if (frame_duration_us > MIN_FRAME_DURATION_FOR_PERF_REQUEST_US) {
+    if (!m_perf_control_enable)
+        return;
+
+    if (!m_perf_lib) {
+        DEBUG_PRINT_ERROR("no perf control library");
         return;
     }
-    bool retVal = load_lib();
-    if (retVal && m_perf_lock_acquire && m_perf_handle == 0) {
-        int arg[2];
-        arg[0] = 0x41000000;
-        arg[1] = 0x4;
-        m_perf_handle = m_perf_lock_acquire(m_perf_handle, 0, arg, sizeof(arg)/sizeof(int));
-        if (m_perf_handle) {
-            DEBUG_PRINT_HIGH("perf lock acquired");
-        }
+    if (!m_perf_lock_release) {
+        DEBUG_PRINT_ERROR("NULL perflock release");
+        return;
     }
+    if (!m_perf_handle) {
+        DEBUG_PRINT_LOW("perflock already released");
+        return;
+    }
+    DEBUG_PRINT_HIGH("perflock release");
+    m_perf_lock_release(m_perf_handle);
+    m_perf_handle = 0;
 }
 
-bool omx_vdec::perf_control::load_lib()
+bool omx_vdec::perf_control::load_perf_library()
 {
     char perf_lib_path[PROPERTY_VALUE_MAX] = {0};
-    if (m_perf_lib)
+
+    if (!m_perf_control_enable) {
+        DEBUG_PRINT_HIGH("perf control is not enabled");
+        return false;
+    }
+    if (m_perf_lib) {
+        DEBUG_PRINT_HIGH("perf lib already opened");
         return true;
+    }
 
     if((property_get("ro.vendor.extension_library", perf_lib_path, NULL) <= 0)) {
         DEBUG_PRINT_ERROR("vendor library not set in ro.vendor.extension_library");
@@ -12621,6 +12641,8 @@ handle_err:
         dlclose(m_perf_lib);
     }
     m_perf_lib = NULL;
+    m_perf_lock_acquire = NULL;
+    m_perf_lock_release = NULL;
     return false;
 }
 
