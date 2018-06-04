@@ -202,7 +202,7 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     } else if (!strncmp((char *)m_nkind, "OMX.qcom.video.encoder.heic",    \
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_encoder.hevc", OMX_MAX_STRINGNAME_SIZE);
-        codec_type = OMX_VIDEO_CodingHEIC;
+        codec_type = OMX_VIDEO_CodingImageHEIC;
     } else if (!strncmp((char *)m_nkind, "OMX.qcom.video.encoder.hevc.secure",    \
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_encoder.hevc", OMX_MAX_STRINGNAME_SIZE);
@@ -348,7 +348,7 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     } else if (codec_type == OMX_VIDEO_CodingHEVC) {
         m_sParamProfileLevel.eProfile = (OMX_U32) OMX_VIDEO_HEVCProfileMain;
         m_sParamProfileLevel.eLevel = (OMX_U32) OMX_VIDEO_HEVCMainTierLevel1;
-    } else if (codec_type == OMX_VIDEO_CodingHEIC) {
+    } else if (codec_type == OMX_VIDEO_CodingImageHEIC) {
         m_sParamProfileLevel.eProfile = (OMX_U32) OMX_VIDEO_HEVCProfileMainStill;
         m_sParamProfileLevel.eLevel = (OMX_U32) OMX_VIDEO_HEVCMainTierLevel1;
     }
@@ -400,8 +400,8 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
         m_sOutPortDef.format.video.eCompressionFormat =  OMX_VIDEO_CodingVP8;
     } else if (codec_type == OMX_VIDEO_CodingHEVC) {
         m_sOutPortDef.format.video.eCompressionFormat =  OMX_VIDEO_CodingHEVC;
-    } else if (codec_type == OMX_VIDEO_CodingHEIC) {
-        m_sOutPortDef.format.video.eCompressionFormat =  OMX_VIDEO_CodingHEIC;
+    } else if (codec_type == OMX_VIDEO_CodingImageHEIC) {
+        m_sOutPortDef.format.video.eCompressionFormat =  OMX_VIDEO_CodingImageHEIC;
     } else if (codec_type == (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingTME) {
         m_sOutPortDef.format.video.eCompressionFormat =  (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingTME;
     }
@@ -433,8 +433,8 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
         m_sOutPortFormat.eCompressionFormat =  OMX_VIDEO_CodingVP8;
     } else if (codec_type == OMX_VIDEO_CodingHEVC) {
         m_sOutPortFormat.eCompressionFormat =  OMX_VIDEO_CodingHEVC;
-    } else if (codec_type == OMX_VIDEO_CodingHEIC) {
-        m_sOutPortFormat.eCompressionFormat =  OMX_VIDEO_CodingHEIC;
+    } else if (codec_type == OMX_VIDEO_CodingImageHEIC) {
+        m_sOutPortFormat.eCompressionFormat =  OMX_VIDEO_CodingImageHEIC;
     } else if (codec_type == (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingTME) {
         m_sOutPortFormat.eCompressionFormat =  (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingTME;
     }

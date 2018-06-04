@@ -1494,12 +1494,12 @@ bool venc_dev::venc_open(OMX_U32 codec)
         profile_level.level = V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_0;
         minqp = 0;
         maxqp = 127;
-    } else if (codec == OMX_VIDEO_CodingHEVC || codec == OMX_VIDEO_CodingHEIC) {
+    } else if (codec == OMX_VIDEO_CodingHEVC || codec == OMX_VIDEO_CodingImageHEIC) {
         m_sVenc_cfg.codectype = V4L2_PIX_FMT_HEVC;
         idrperiod.idrperiod = 1;
         minqp = 0;
         maxqp = 51;
-        if (codec == OMX_VIDEO_CodingHEIC)
+        if (codec == OMX_VIDEO_CodingImageHEIC)
             codec_profile.profile = V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN_STILL_PIC;
         else
             codec_profile.profile = V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN;
@@ -2098,7 +2098,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 } else if (portDefn->nPortIndex == PORT_INDEX_OUT) {
                     unsigned long codectype = venc_get_codectype(portDefn->format.video.eCompressionFormat);
 
-                    if (portDefn->format.video.eCompressionFormat == OMX_VIDEO_CodingHEIC) {
+                    if (portDefn->format.video.eCompressionFormat == OMX_VIDEO_CodingImageHEIC) {
                         portDefn->format.video.nFrameWidth = DEFAULT_TILE_DIMENSION;
                         portDefn->format.video.nFrameHeight = DEFAULT_TILE_DIMENSION;
                         DEBUG_PRINT_HIGH("set_parameter: OMX_IndexParamPortDefinition: port %d, wxh (for HEIC coding type) %dx%d",
@@ -2363,7 +2363,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 OMX_VIDEO_PARAM_ANDROID_IMAGEGRIDTYPE* pParam =
                        (OMX_VIDEO_PARAM_ANDROID_IMAGEGRIDTYPE*)paramData;
 
-                if (m_codec != OMX_VIDEO_CodingHEIC) {
+                if (m_codec != OMX_VIDEO_CodingImageHEIC) {
                     DEBUG_PRINT_ERROR("OMX_IndexParamVideoAndroidImageGrid is only supported for HEIC");
                     return false;
                 }
@@ -4398,7 +4398,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
             }
 
             // Tiling in HEIC requires output WxH to be Tile size; difference is permitted
-            if (!(m_codec == OMX_VIDEO_CodingHEIC) &&
+            if (!(m_codec == OMX_VIDEO_CodingImageHEIC) &&
                 inp_width * inp_height != out_width * out_height) {
                 DEBUG_PRINT_ERROR("Downscalar is disabled and input/output dimenstions don't match");
                 DEBUG_PRINT_ERROR("Input WxH : %dx%d Output WxH : %dx%d",inp_width, inp_height, out_width, out_height);
@@ -5179,7 +5179,7 @@ bool venc_dev::venc_reconfigure_intra_period()
         ((codec_profile.profile == V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN) ||
          (codec_profile.profile == V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10) ||
          (codec_profile.profile == V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN_STILL_PIC)) &&
-         (m_codec != OMX_VIDEO_CodingHEIC)) {
+         (m_codec != OMX_VIDEO_CodingImageHEIC)) {
         isValidCodec = true;
     }
 
@@ -5319,7 +5319,7 @@ bool venc_dev::_venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames)
 
     if (m_sVenc_cfg.codectype != V4L2_PIX_FMT_H264 &&
         m_sVenc_cfg.codectype != V4L2_PIX_FMT_HEVC &&
-        m_codec == OMX_VIDEO_CodingHEIC) {
+        m_codec == OMX_VIDEO_CodingImageHEIC) {
         nBFrames = 0;
     }
 
@@ -5782,7 +5782,7 @@ unsigned long venc_dev::venc_get_codectype(OMX_VIDEO_CODINGTYPE eCompressionForm
     case OMX_VIDEO_CodingVP9:
         codectype = V4L2_PIX_FMT_VP9;
         break;
-    case OMX_VIDEO_CodingHEIC:
+    case OMX_VIDEO_CodingImageHEIC:
     case OMX_VIDEO_CodingHEVC:
         codectype = V4L2_PIX_FMT_HEVC;
         break;

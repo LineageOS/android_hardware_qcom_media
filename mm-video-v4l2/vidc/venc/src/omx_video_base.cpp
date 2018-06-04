@@ -1598,7 +1598,7 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     // At the same time, FWK needs original WxH for various purposes
                     // Sending input WxH as output port def WxH to FWK
                     if (m_sOutPortDef.format.video.eCompressionFormat ==
-                            OMX_VIDEO_CodingHEIC) {
+                            OMX_VIDEO_CodingImageHEIC) {
                         portDefn->format.video.nFrameWidth =
                             m_sInPortDef.format.video.nFrameWidth;
                         portDefn->format.video.nFrameHeight =

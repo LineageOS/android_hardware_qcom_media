@@ -75,7 +75,6 @@ typedef enum OMX_VIDEO_CODINGTYPE {
     OMX_VIDEO_CodingImageHEIC,  /**< HEIF image encoded with HEVC */
     OMX_VIDEO_CodingKhronosExtensions = 0x6F000000, /**< Reserved region for introducing Khronos Standard Extensions */
     OMX_VIDEO_CodingVendorStartUnused = 0x7F000000, /**< Reserved region for introducing Vendor Extensions */
-    OMX_VIDEO_CodingHEIC = OMX_VIDEO_CodingImageHEIC,  /**< HEIC */
     OMX_VIDEO_CodingMax = 0x7FFFFFFF
 } OMX_VIDEO_CODINGTYPE;
 
