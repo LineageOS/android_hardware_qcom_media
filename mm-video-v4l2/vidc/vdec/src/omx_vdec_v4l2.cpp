@@ -2240,7 +2240,7 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
     struct v4l2_control control;
     struct v4l2_frmsizeenum frmsize;
     struct v4l2_queryctrl query;
-    unsigned int   alignment = 0,buffer_size = 0, nBufCount = 0;
+    unsigned int   alignment = 0,buffer_size = 0;
     int fds[2];
     int r,ret=0;
     bool codec_ambiguous = false;
@@ -2328,42 +2328,36 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         drv_ctx.decoder_format = VDEC_CODECTYPE_MPEG2;
         output_capability = V4L2_PIX_FMT_MPEG2;
         eCompressionFormat = OMX_VIDEO_CodingMPEG2;
-        nBufCount = 6;
     } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.avc",\
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_decoder.avc",OMX_MAX_STRINGNAME_SIZE);
         drv_ctx.decoder_format = VDEC_CODECTYPE_H264;
         output_capability=V4L2_PIX_FMT_H264;
         eCompressionFormat = OMX_VIDEO_CodingAVC;
-        nBufCount = 8;
     } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.mvc",\
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_decoder.mvc", OMX_MAX_STRINGNAME_SIZE);
         drv_ctx.decoder_format = VDEC_CODECTYPE_MVC;
         output_capability = V4L2_PIX_FMT_H264_MVC;
         eCompressionFormat = (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingMVC;
-        nBufCount = 8;
     } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.hevc",\
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_decoder.hevc",OMX_MAX_STRINGNAME_SIZE);
         drv_ctx.decoder_format = VDEC_CODECTYPE_HEVC;
         output_capability = V4L2_PIX_FMT_HEVC;
         eCompressionFormat = (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingHevc;
-        nBufCount = 8;
     } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.vp8",    \
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_decoder.vp8",OMX_MAX_STRINGNAME_SIZE);
         drv_ctx.decoder_format = VDEC_CODECTYPE_VP8;
         output_capability = V4L2_PIX_FMT_VP8;
         eCompressionFormat = OMX_VIDEO_CodingVP8;
-        nBufCount = 6;
     } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.vp9",    \
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_decoder.vp9",OMX_MAX_STRINGNAME_SIZE);
         drv_ctx.decoder_format = VDEC_CODECTYPE_VP9;
         output_capability = V4L2_PIX_FMT_VP9;
         eCompressionFormat = OMX_VIDEO_CodingVP9;
-        nBufCount = 11;
     } else {
         DEBUG_PRINT_ERROR("ERROR:Unknown Component");
         eRet = OMX_ErrorInvalidComponentName;
@@ -2534,18 +2528,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         drv_ctx.idr_only_decoding = 0;
 
 #ifdef _ANDROID_
-        ctrl[0].id = V4L2_CID_MIN_BUFFERS_FOR_CAPTURE;
-        ctrl[0].value = nBufCount;
-
-        controls.count = 1;
-        controls.ctrl_class = V4L2_CTRL_CLASS_USER;
-        controls.controls = ctrl;
-
-        ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_EXT_CTRLS, &controls);
-        if (ret < 0)
-            DEBUG_PRINT_HIGH("Failed to set OUTPUT Buffer count Err = %d Count = %d",
-                ret, nBufCount);
-
         if (m_dec_hfr_fps) {
             memset(&query, 0, sizeof(struct v4l2_queryctrl));
 
@@ -8781,7 +8763,6 @@ int omx_vdec::stream_off(OMX_U32 port)
 OMX_ERRORTYPE omx_vdec::get_buffer_req(vdec_allocatorproperty *buffer_prop)
 {
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
-    struct v4l2_requestbuffers bufreq;
     struct v4l2_control control;
     unsigned int buf_size = 0, extra_data_size = 0, default_extra_data_size = 0;
     unsigned int final_extra_data_size = 0;
@@ -8789,22 +8770,18 @@ OMX_ERRORTYPE omx_vdec::get_buffer_req(vdec_allocatorproperty *buffer_prop)
     int ret = 0;
     DEBUG_PRINT_LOW("GetBufReq IN: ActCnt(%d) Size(%u)",
             buffer_prop->actualcount, (unsigned int)buffer_prop->buffer_size);
-    bufreq.memory = V4L2_MEMORY_USERPTR;
-    bufreq.count = 1;
+
     if (buffer_prop->buffer_type == VDEC_BUFFER_TYPE_INPUT) {
-        bufreq.type=V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
         fmt.type =V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
         fmt.fmt.pix_mp.pixelformat = output_capability;
         control.id = V4L2_CID_MIN_BUFFERS_FOR_OUTPUT;
     } else if (buffer_prop->buffer_type == VDEC_BUFFER_TYPE_OUTPUT) {
-        bufreq.type=V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
         fmt.type =V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
         fmt.fmt.pix_mp.pixelformat = capture_capability;
         control.id = V4L2_CID_MIN_BUFFERS_FOR_CAPTURE;
     } else {
         eRet = OMX_ErrorBadParameter;
     }
-    control.value = buffer_prop->mincount;
     if (eRet == OMX_ErrorNone) {
         ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_CTRL, &control);
     }
@@ -8815,7 +8792,6 @@ OMX_ERRORTYPE omx_vdec::get_buffer_req(vdec_allocatorproperty *buffer_prop)
         return eRet;
     }
     buffer_prop->actualcount = buffer_prop->mincount = control.value;
-        DEBUG_PRINT_HIGH("Count = %d",bufreq.count);
     DEBUG_PRINT_LOW("GetBufReq IN: ActCnt(%d) Size(%u)",
             buffer_prop->actualcount, (unsigned int)buffer_prop->buffer_size);
 
