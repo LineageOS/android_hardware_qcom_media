@@ -1500,10 +1500,7 @@ int venc_dev::venc_input_log_buffers(OMX_BUFFERHEADERTYPE *pbuffer, int fd, int 
                 fwrite(ptemp, m_sVenc_cfg.input_width * 4, 1, m_debug.infile);
                 ptemp += stride;
             }
-        } else if (color_format == COLOR_FMT_NV12_UBWC || color_format == COLOR_FMT_RGBA8888_UBWC) {
-            if (color_format == COLOR_FMT_NV12_UBWC) {
-                msize -= 2 * extra_size;
-            }
+        } else if (color_format == COLOR_FMT_NV12_UBWC || color_format == COLOR_FMT_NV12_BPP10_UBWC || color_format == COLOR_FMT_RGBA8888_UBWC) {
             fwrite(ptemp, msize, 1, m_debug.infile);
         } else if(color_format == COLOR_FMT_P010) {
             stride = VENUS_Y_STRIDE(color_format, m_sVenc_cfg.input_width);
