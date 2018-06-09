@@ -4731,7 +4731,6 @@ OMX_ERRORTYPE omx_swvdec::flush(unsigned int port_index)
  */
 int omx_swvdec::ion_memory_alloc_map(vdec_ion *p_ion_info, OMX_U32 size, OMX_U32 alignment)
 {
-    p_ion_info->dev_fd = -EINVAL;
     int rc = -EINVAL;
 
     if((!p_ion_info) || (size == 0))
@@ -4739,6 +4738,8 @@ int omx_swvdec::ion_memory_alloc_map(vdec_ion *p_ion_info, OMX_U32 size, OMX_U32
         OMX_SWVDEC_LOG_ERROR("invalid arguments");
         goto ion_memory_alloc_map_exit;
     }
+
+    p_ion_info->dev_fd = -EINVAL;
 
     if ((p_ion_info->dev_fd = ion_open()) < 0)
     {
@@ -4775,7 +4776,7 @@ int omx_swvdec::ion_memory_alloc_map(vdec_ion *p_ion_info, OMX_U32 size, OMX_U32
                      (unsigned int)p_ion_info->alloc_data.heap_id_mask);
 
 ion_memory_alloc_map_exit:
-    return p_ion_info->dev_fd;
+    return (p_ion_info == nullptr) ? -EINVAL : p_ion_info->dev_fd;
 }
 
 /**
