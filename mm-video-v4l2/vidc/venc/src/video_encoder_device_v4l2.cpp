@@ -7252,7 +7252,7 @@ bool venc_dev::venc_get_profile_level(OMX_U32 *eProfile,OMX_U32 *eLevel)
                 *eLevel = OMX_VIDEO_HEVCMainTierLevel62;
                 break;
             default:
-                *eLevel = OMX_VIDEO_HEVCLevelMax;
+                *eLevel = OMX_VIDEO_HEVCHighTiermax;
                 status = false;
                 break;
         }
