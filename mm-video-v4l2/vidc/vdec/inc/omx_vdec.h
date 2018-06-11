@@ -446,9 +446,12 @@ struct video_driver_context {
     struct vdec_bufferpayload *ptr_inputbuffer;
     struct vdec_bufferpayload *ptr_outputbuffer;
     struct vdec_output_frameinfo *ptr_respbuffer;
+    struct vdec_bufferpayload *ptr_intermediate_outputbuffer;
+    struct vdec_output_frameinfo *ptr_intermediate_respbuffer;
 #ifdef USE_ION
     struct vdec_ion *ip_buf_ion_info;
     struct vdec_ion *op_buf_ion_info;
+    struct vdec_ion *op_intermediate_buf_ion_info;
     struct vdec_ion h264_mv;
     struct vdec_ion meta_buffer;
     struct vdec_ion meta_buffer_iommu;
@@ -811,8 +814,9 @@ class omx_vdec: public qc_omx_component
         OMX_ERRORTYPE free_input_buffer(OMX_BUFFERHEADERTYPE *bufferHdr);
         OMX_ERRORTYPE free_input_buffer(unsigned int bufferindex,
                 OMX_BUFFERHEADERTYPE *pmem_bufferHdr);
-        OMX_ERRORTYPE free_output_buffer(OMX_BUFFERHEADERTYPE *bufferHdr);
-        void free_output_buffer_header();
+        OMX_ERRORTYPE free_output_buffer(OMX_BUFFERHEADERTYPE *bufferHdr,
+                                         bool                 intermediate=false);
+        void free_output_buffer_header(bool intermediate=false);
         void free_input_buffer_header();
         void free_output_extradata_buffer_header();
 
@@ -832,7 +836,9 @@ class omx_vdec: public qc_omx_component
         OMX_ERRORTYPE allocate_output_buffer(OMX_HANDLETYPE       hComp,
                 OMX_BUFFERHEADERTYPE **bufferHdr,
                 OMX_U32 port,OMX_PTR appData,
-                OMX_U32              bytes);
+                OMX_U32              bytes,
+                bool                 intermediate=false,
+                int                  index=-1);
         OMX_ERRORTYPE use_output_buffer(OMX_HANDLETYPE hComp,
                 OMX_BUFFERHEADERTYPE   **bufferHdr,
                 OMX_U32                port,
@@ -848,7 +854,7 @@ class omx_vdec: public qc_omx_component
         OMX_ERRORTYPE get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVELTYPE *profileLevelType);
 
         OMX_ERRORTYPE allocate_desc_buffer(OMX_U32 index);
-        OMX_ERRORTYPE allocate_output_headers();
+        OMX_ERRORTYPE allocate_output_headers(bool intermediate=false);
         OMX_ERRORTYPE allocate_client_output_extradata_headers();
         bool execute_omx_flush(OMX_U32);
         bool execute_output_flush();
@@ -1046,6 +1052,8 @@ class omx_vdec: public qc_omx_component
         OMX_BUFFERHEADERTYPE  *m_inp_mem_ptr;
         // Output memory pointer
         OMX_BUFFERHEADERTYPE  *m_out_mem_ptr;
+        // Output memory pointer
+        OMX_BUFFERHEADERTYPE  *m_intermediate_out_mem_ptr;
         // Client extradata memory pointer
         OMX_BUFFERHEADERTYPE  *m_client_output_extradata_mem_ptr;
         // number of input bitstream error frame count
@@ -1243,7 +1251,6 @@ class omx_vdec: public qc_omx_component
                 OMX_ERRORTYPE set_buffer_req(OMX_U32 buffer_size, OMX_U32 actual_count);
                 OMX_BUFFERHEADERTYPE* get_il_buf_hdr();
                 OMX_BUFFERHEADERTYPE* get_il_buf_hdr(OMX_BUFFERHEADERTYPE *input_hdr);
-                OMX_BUFFERHEADERTYPE* get_dr_buf_hdr(OMX_BUFFERHEADERTYPE *input_hdr);
                 OMX_BUFFERHEADERTYPE* convert(OMX_BUFFERHEADERTYPE *header);
                 OMX_BUFFERHEADERTYPE* queue_buffer(OMX_BUFFERHEADERTYPE *header);
                 OMX_ERRORTYPE allocate_buffers_color_convert(OMX_HANDLETYPE hComp,
@@ -1258,6 +1265,7 @@ class omx_vdec: public qc_omx_component
                 // color conversion doesnt take place. This state is needed to handle color conversion
                 // of interlaced clips during port reconfig.
                 bool client_buffers_invalid() {return (!enabled || client_buffers_disabled);}
+                unsigned int allocated_count;
             private:
 #define MAX_COUNT MAX_NUM_INPUT_OUTPUT_BUFFERS
                 omx_vdec *omx;
@@ -1269,7 +1277,6 @@ class omx_vdec: public qc_omx_component
                 ColorConvertFormat dest_format;
                 ColorConvertFormat src_format;
                 C2DColorConverter c2dcc;
-                unsigned int allocated_count;
                 unsigned int buffer_size_req;
                 unsigned int buffer_alignment_req;
                 OMX_U32 m_c2d_width;
