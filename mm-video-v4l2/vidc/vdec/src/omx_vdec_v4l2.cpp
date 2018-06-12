@@ -812,7 +812,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
 
 #ifdef _UBWC_
     property_value[0] = '\0';
-    property_get("debug.gralloc.gfx_ubwc_disable", property_value, "0");
+    property_get("vendor.gralloc.disable_ubwc", property_value, "0");
     m_disable_ubwc_mode = atoi(property_value);
     DEBUG_PRINT_HIGH("UBWC mode is %s", m_disable_ubwc_mode ? "disabled" : "enabled");
 #else
