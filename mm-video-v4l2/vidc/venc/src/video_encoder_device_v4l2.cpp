@@ -195,6 +195,8 @@ venc_dev::venc_dev(class omx_venc *venc_class)
          strlcpy(m_debug.log_loc, property_value, PROPERTY_VALUE_MAX);
 
     mUseAVTimerTimestamps = false;
+    mIsGridset = false;
+    mTileDimension = 0;
 
     profile_level_converter::init();
 }
@@ -2098,13 +2100,6 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 } else if (portDefn->nPortIndex == PORT_INDEX_OUT) {
                     unsigned long codectype = venc_get_codectype(portDefn->format.video.eCompressionFormat);
 
-                    if (portDefn->format.video.eCompressionFormat == OMX_VIDEO_CodingImageHEIC) {
-                        portDefn->format.video.nFrameWidth = DEFAULT_TILE_DIMENSION;
-                        portDefn->format.video.nFrameHeight = DEFAULT_TILE_DIMENSION;
-                        DEBUG_PRINT_HIGH("set_parameter: OMX_IndexParamPortDefinition: port %d, wxh (for HEIC coding type) %dx%d",
-                            portDefn->nPortIndex, portDefn->format.video.nFrameWidth,
-                            portDefn->format.video.nFrameHeight);
-                    }
                     //Don't worry about width/height if downscalar is enabled.
                     if (((m_sVenc_cfg.dvs_height != portDefn->format.video.nFrameHeight ||
                             m_sVenc_cfg.dvs_width != portDefn->format.video.nFrameWidth) && !downscalar_enabled) ||
@@ -3558,6 +3553,27 @@ unsigned venc_dev::venc_start(void)
                 (m_sVenc_cfg.dvs_width *  m_sVenc_cfg.dvs_height)/(256 * multislice.mslice_size),
                 MAX_SUPPORTED_SLICES_PER_FRAME);
         return 1;
+    }
+
+    if(m_codec == OMX_VIDEO_CodingImageHEIC && mIsGridset) {
+        struct v4l2_format fmt;
+        memset(&fmt, 0, sizeof(fmt));
+        fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+        fmt.fmt.pix_mp.height = mTileDimension;
+        fmt.fmt.pix_mp.width = mTileDimension;
+        fmt.fmt.pix_mp.pixelformat = m_sVenc_cfg.codectype;
+        DEBUG_PRINT_INFO("set format type %d, wxh %dx%d, pixelformat %#x",
+                 fmt.type, fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height,
+                 fmt.fmt.pix_mp.pixelformat);
+        if (ioctl(m_nDriver_fd, VIDIOC_S_FMT, &fmt)) {
+            DEBUG_PRINT_ERROR("set format failed, type %d, wxh %dx%d, pixelformat %#x",
+                 fmt.type, fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height,
+                 fmt.fmt.pix_mp.pixelformat);
+            hw_overload = errno == EBUSY;
+            return false;
+        }
+
+
     }
 
     buf_type=V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
@@ -5296,6 +5312,8 @@ bool venc_dev::venc_set_tile_dimension(OMX_U32 nTileDimension)
     }
 
     DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
+    mIsGridset = true;
+    mTileDimension = nTileDimension;
 
     return true;
 }

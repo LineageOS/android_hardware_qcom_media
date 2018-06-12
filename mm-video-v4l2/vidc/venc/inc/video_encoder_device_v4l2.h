@@ -594,6 +594,8 @@ class venc_dev
         BatchInfo mBatchInfo;
         bool mUseAVTimerTimestamps;
         bool venc_set_hdr_info(const MasteringDisplay&, const ContentLightLevel&);
+        bool mIsGridset;
+        OMX_U32 mTileDimension;
 };
 
 enum instance_state {
