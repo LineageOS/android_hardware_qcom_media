@@ -24,7 +24,7 @@ libmm-vdec-def += -D_ANDROID_ICS_
 libmm-vdec-def += -DPROCESS_EXTRADATA_IN_OUTPUT_PORT
 
 TARGETS_THAT_HAVE_VENUS_HEVC := apq8084 msm8994 msm8996
-TARGETS_THAT_NEED_SW_VDEC := msm8937 sdm845 msmpeafowl sdm670 qcs605 msmnile
+TARGETS_THAT_DONT_NEED_SW_VDEC := msm8226 msm8916 msm8992 msm8996 sdm660 msm8998 msm8909
 
 ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_HAVE_VENUS_HEVC)),true)
 libmm-vdec-def += -DVENUS_HEVC
@@ -129,7 +129,7 @@ include $(BUILD_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
 ifneq "$(wildcard $(QCPATH) )" ""
-ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_NEED_SW_VDEC)),true)
+ifneq ($(call is-board-platform-in-list, $(TARGETS_THAT_DONT_NEED_SW_VDEC)),true)
 
 LOCAL_MODULE                  := libOmxSwVdec
 LOCAL_MODULE_TAGS             := optional
