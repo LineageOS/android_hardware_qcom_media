@@ -4045,7 +4045,8 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV12;
                         fmt.fmt.pix_mp.height = m_sVenc_cfg.input_height;
                         fmt.fmt.pix_mp.width = m_sVenc_cfg.input_width;
-                        if (usage & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED) {
+                        if (usage & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED ||
+                            usage & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED_PI) {
                             m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV12_UBWC;
                         }
 
@@ -4115,7 +4116,9 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         memset(&fmt, 0, sizeof(fmt));
                         fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
 
-                        bool isUBWC = (handle->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED) && is_gralloc_source_ubwc;
+                        bool isUBWC = ((handle->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED ||
+                                        handle->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED_PI) &&
+                                       is_gralloc_source_ubwc);
                         if (handle->format == HAL_PIXEL_FORMAT_NV12_ENCODEABLE) {
                             m_sVenc_cfg.inputformat = isUBWC ? V4L2_PIX_FMT_NV12_UBWC : V4L2_PIX_FMT_NV12;
                             DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = NV12 %s", isUBWC ? "UBWC" : "Linear");
