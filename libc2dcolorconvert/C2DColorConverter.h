@@ -1,4 +1,4 @@
-/* Copyright (c) 2012 - 2013, 2015 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012 - 2013, 2015, 2018 The Linux Foundation. All rights reserved.
  *
  * redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,6 +30,7 @@
 #ifndef C2D_ColorConverter_H_
 #define C2D_ColorConverter_H_
 
+#include <pthread.h>
 #include <c2d2.h>
 #include <sys/types.h>
 

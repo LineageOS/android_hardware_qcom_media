@@ -77,13 +77,8 @@ libmm-vdec-inc          += $(TOP)/hardware/qcom/media/mm-video-v4l2/vidc/common/
 libmm-vdec-inc          += $(TOP)/hardware/qcom/media/mm-core/inc
 libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/qcom/display
 libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/adreno
-libmm-vdec-inc          += $(TOP)/frameworks/native/include/media/openmax
-libmm-vdec-inc          += $(TOP)/frameworks/native/include/media/hardware
 libmm-vdec-inc          += $(TOP)/hardware/qcom/media/libc2dcolorconvert
 libmm-vdec-inc          += $(TOP)/hardware/qcom/media/hypv-intercept
-libmm-vdec-inc          += frameworks/native/libs/nativewindow/include/
-libmm-vdec-inc          += frameworks/native/libs/arect/include/
-libmm-vdec-inc          += frameworks/native/libs/nativebase/include
 libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/mm-video/SwVdec
 libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/mm-video/swvdec
 libmm-vdec-inc          += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
@@ -132,6 +127,13 @@ LOCAL_MODULE                    := libOmxVdec
 LOCAL_MODULE_TAGS               := optional
 LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libmm-vdec-def) -Werror
+
+LOCAL_HEADER_LIBRARIES := \
+        media_plugin_headers \
+        libnativebase_headers \
+        libutils_headers \
+        libhardware_headers
+
 LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-vdec-add-dep)
 
@@ -164,6 +166,13 @@ LOCAL_MODULE                  := libOmxSwVdec
 LOCAL_MODULE_TAGS             := optional
 LOCAL_VENDOR_MODULE           := true
 LOCAL_CFLAGS                  := $(libmm-vdec-def)
+
+LOCAL_HEADER_LIBRARIES := \
+        media_plugin_headers \
+        libnativebase_headers \
+        libutils_headers \
+        libhardware_headers
+
 LOCAL_C_INCLUDES              += $(libmm-vdec-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES := $(libmm-vdec-add-dep)
 

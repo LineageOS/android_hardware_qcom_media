@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010 - 2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2010 - 2018, The Linux Foundation. All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -69,7 +69,7 @@ static ptrdiff_t x;
 //#include <binder/MemoryHeapIon.h>
 //#else
 #endif
-#include <ui/ANativeObjectBase.h>
+#include <nativebase/nativebase.h>
 extern "C" {
 #include <utils/Log.h>
 }
@@ -1510,6 +1510,7 @@ class omx_vdec: public qc_omx_component
                 }
         };
         client_extradata_info m_client_out_extradata_info;
+        bool m_buffer_error;
 
         OMX_ERRORTYPE get_vendor_extension_config(
                 OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE *ext);
