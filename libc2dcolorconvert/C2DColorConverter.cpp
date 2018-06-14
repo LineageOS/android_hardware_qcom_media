@@ -218,7 +218,8 @@ bool C2DColorConverter::convertC2D(int srcFd, void *srcBase, void * srcData,
     if (srcFd < 0 || dstFd < 0
                 || srcData == NULL || dstData == NULL
                 || srcBase == NULL || dstBase == NULL) {
-      ALOGE("%s: Color conversion failed. Incorrect input parameters", __FUNCTION__);
+      ALOGE("%s: Color conversion failed. Incorrect input parameters FD (%d:%d) Data (%p:%p) Base (%p:%p)",
+            __FUNCTION__, srcFd, dstFd, srcData, dstData, srcBase, dstBase);
       status = false;
     } else {
 
