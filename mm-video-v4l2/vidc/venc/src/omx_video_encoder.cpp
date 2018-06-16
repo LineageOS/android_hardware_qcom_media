@@ -1557,16 +1557,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 }
                 break;
             }
-        case OMX_QcomIndexParamVideoHybridHierpMode:
-            {
-                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_EXTNINDEX_VIDEO_HYBRID_HP_MODE);
-               if(!handle->venc_set_param(paramData,
-                         (OMX_INDEXTYPE)OMX_QcomIndexParamVideoHybridHierpMode)) {
-                   DEBUG_PRINT_ERROR("Request to Enable Hybrid Hier-P failed");
-                   return OMX_ErrorUnsupportedSetting;
-                }
-                break;
-            }
         case OMX_QcomIndexParamBatchSize:
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, OMX_PARAM_U32TYPE);

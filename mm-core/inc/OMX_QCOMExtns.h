@@ -517,9 +517,6 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     /* Max Hierarchical P layers */
     OMX_QcomIndexMaxHierarchicallayers = 0x7F000041,
 
-    /* Set Hybrid Hier-p layers */
-    OMX_QcomIndexParamVideoHybridHierpMode = 0x7F000043,
-
     OMX_QcomIndexFlexibleYUVDescription = 0x7F000044,
 
     /* Vpp Hqv Control Type */
@@ -738,37 +735,6 @@ typedef struct QOMX_EXTNINDEX_VIDEO_HIER_P_LAYERS {
    OMX_VERSIONTYPE nVersion;
    OMX_U32 nNumHierLayers;
 } QOMX_EXTNINDEX_VIDEO_HIER_P_LAYERS;
-
-
-/**
-* This is custom extension to configure Hybrid Hier-p settings.
-* This mode is different from enabling Hier-p mode. This
-* property enables Hier-p encoding with LTR referencing in each
-* sub-GOP.
-*
-* STRUCT MEMBERS
-*
-* nSize         : Size of Structure in bytes
-* nVersion      : OpenMAX IL specification version information
-* nKeyFrameInterval : Indicates the I frame interval
-* nHpLayers     : Set the number of Hier-p layers for the session
-*                  - This should be <= 6. (1 Base layer +
-*                    5 Enhancement layers)
-* nTemporalLayerBitrateRatio[OMX_VIDEO_MAX_HP_LAYERS] : Bitrate to
-*                    be set for each enhancement layer
-* nMinQuantizer  : minimum session QP
-* nMaxQuantizer  : Maximun session QP
-*/
-
-typedef struct QOMX_EXTNINDEX_VIDEO_HYBRID_HP_MODE {
-   OMX_U32 nSize;
-   OMX_VERSIONTYPE nVersion;
-   OMX_U32 nKeyFrameInterval;
-   OMX_U32 nTemporalLayerBitrateRatio[OMX_VIDEO_MAX_HP_LAYERS];
-   OMX_U32 nMinQuantizer;
-   OMX_U32 nMaxQuantizer;
-   OMX_U32 nHpLayers;
-} QOMX_EXTNINDEX_VIDEO_HYBRID_HP_MODE;
 
 /**
  * Initial QP parameter.  This structure is used to enable

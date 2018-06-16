@@ -347,8 +347,6 @@ class venc_dev
         OMX_ERRORTYPE venc_set_hp(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE &temporalSettings);
         OMX_ERRORTYPE venc_set_hhp(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE &temporalSettings);
         OMX_ERRORTYPE venc_set_bitrate_ratio(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE &temporalSettings);
-        bool venc_convert_abs2cum_bitrate(QOMX_EXTNINDEX_VIDEO_HYBRID_HP_MODE *,
-                                OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE &temporalSettings);
         bool venc_validate_temporal_settings();
         bool venc_validate_temporal_extn(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE &temporalSettings);
         OMX_ERRORTYPE venc_set_temporal_settings(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE &temporalSettings);

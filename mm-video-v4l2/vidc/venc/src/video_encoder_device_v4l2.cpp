@@ -2704,55 +2704,6 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 }
                 break;
             }
-        case OMX_QcomIndexParamVideoHybridHierpMode:
-            {
-                QOMX_EXTNINDEX_VIDEO_HYBRID_HP_MODE* pParam =
-                        (QOMX_EXTNINDEX_VIDEO_HYBRID_HP_MODE*)paramData;
-                OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE temporalParams;
-                OMX_U32 i = 0, cumulativeBitrate = 0, cumulativeRatio = 0;
-                OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE qp_range;
-
-                memset(&temporalParams, 0, sizeof(temporalParams));
-                temporalParams.nPLayerCountActual   = pParam->nHpLayers;
-                temporalParams.ePattern             = OMX_VIDEO_AndroidTemporalLayeringPatternAndroid;
-                temporalParams.nBLayerCountActual   = 0;
-                temporalParams.nLayerCountMax       = pParam->nHpLayers;
-                temporalParams.nBLayerCountMax      = 0;
-
-                if (!venc_convert_abs2cum_bitrate(pParam, temporalParams)) {
-                    DEBUG_PRINT_ERROR("Failed to convert Hybrid param to internal struct");
-                    return false;
-                }
-
-                if (!venc_validate_temporal_extn(temporalParams)) {
-                    DEBUG_PRINT_ERROR("Invalid settings for Hybrid HP");
-                    return false;
-                }
-
-                venc_copy_temporal_settings(temporalParams);
-
-                if (!venc_set_intra_period(pParam->nKeyFrameInterval, 0)) {
-                   DEBUG_PRINT_ERROR("Failed to set Intraperiod: %d", pParam->nKeyFrameInterval);
-                   return false;
-                }
-
-                temporal_layers_config.nKeyFrameInterval = intra_period.num_pframes;
-
-                qp_range.minIQP = pParam->nMinQuantizer;
-                qp_range.maxIQP = pParam->nMaxQuantizer;
-                qp_range.minPQP = pParam->nMinQuantizer;
-                qp_range.maxPQP = pParam->nMaxQuantizer;
-                qp_range.minBQP = pParam->nMinQuantizer;
-                qp_range.maxBQP = pParam->nMaxQuantizer;
-                if(!venc_set_session_qp_range (&qp_range)) {
-                    DEBUG_PRINT_ERROR("ERROR: Setting QP Range for hybridHP [%u %u] failed",
-                        (unsigned int)pParam->nMinQuantizer, (unsigned int)pParam->nMaxQuantizer);
-                    return false;
-                }
-                temporal_layers_config.nMinQuantizer = pParam->nMinQuantizer;
-                temporal_layers_config.nMaxQuantizer = pParam->nMaxQuantizer;
-                break;
-            }
         case OMX_QcomIndexParamBatchSize:
             {
                 OMX_PARAM_U32TYPE* pParam =
@@ -6734,7 +6685,6 @@ OMX_ERRORTYPE venc_dev::venc_set_hhp(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYP
     }
     return OMX_ErrorNone;
 }
-
 OMX_ERRORTYPE venc_dev::venc_disable_hhp() {
 
     if (m_sVenc_cfg.codectype != V4L2_PIX_FMT_H264) {
@@ -6834,41 +6784,6 @@ OMX_ERRORTYPE venc_dev::venc_set_bitrate_ratio(OMX_VIDEO_PARAM_ANDROID_TEMPORALL
     }
 
     return OMX_ErrorNone;
-}
-
-bool venc_dev::venc_convert_abs2cum_bitrate(QOMX_EXTNINDEX_VIDEO_HYBRID_HP_MODE *pHybrid,
-                OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE &temporal_settings) {
-
-    OMX_U32 cumulativeBitrate   = 0;
-    OMX_U32 cumulativeRatio     = 0;
-    OMX_U32 i = 0;
-
-    if (pHybrid == NULL) {
-        DEBUG_PRINT_ERROR("TemporalLayer: Invalid arg %s", __func__);
-        return false;
-    }
-
-    DEBUG_PRINT_LOW("TemporalLayer: Converting layered bitrate to cumulative bitrate in percentage");
-
-    for (i = 0; i < temporal_settings.nPLayerCountActual; i++) {
-        cumulativeBitrate += pHybrid->nTemporalLayerBitrateRatio[i];
-    }
-
-    if (cumulativeBitrate == 0) {
-        temporal_settings.bBitrateRatiosSpecified = OMX_FALSE;
-        return true;
-    }
-
-    DEBUG_PRINT_LOW("TemporalLayer: Cumulative bitrate is: %u", cumulativeBitrate);
-    for (i = 0; i < temporal_settings.nPLayerCountActual; i++) {
-        temporal_settings.nBitrateRatios[i] = ((pHybrid->nTemporalLayerBitrateRatio[i] * 100)/cumulativeBitrate) + cumulativeRatio;
-        cumulativeRatio = temporal_settings.nBitrateRatios[i];
-        DEBUG_PRINT_LOW("TemporalLayer: Layer %u bitrate %u percent %u", i,
-            pHybrid->nTemporalLayerBitrateRatio[i], temporal_settings.nBitrateRatios[i]);
-    }
-    temporal_settings.bBitrateRatiosSpecified = OMX_TRUE;
-
-    return true;
 }
 
 bool venc_dev::venc_validate_temporal_settings() {
