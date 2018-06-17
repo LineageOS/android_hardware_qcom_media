@@ -21,10 +21,11 @@ libmm-venc-def += -Werror
 libmm-venc-def += -D_ANDROID_ICS_
 
 TARGETS_THAT_USE_FLAG_MSM8226 := msm8226 msm8916 msm8909
-TARGETS_THAT_NEED_SW_VENC_MPEG4 := msm8909 msm8937 sdm845 msmpeafowl sdm670 qcs605 msmnile
+TARGETS_THAT_DONT_NEED_SW_VENC_MPEG4 := msm8226 msm8916 msm8992 msm8996 sdm660 msm8998
+TARGETS_THAT_DONT_SUPPORT_SW_VENC_ROTATION := msm8226 msm8916 msm8992 msm8996 sdm660 msm8998 msm8909 msm8937
+
 TARGETS_THAT_NEED_SW_VENC_HEVC := msm8992
 TARGETS_THAT_SUPPORT_VQZIP := msm8996 msm8998
-TARGETS_THAT_SUPPORT_SW_VENC_ROTATION := sdm845 msmpeafowl sdm670 qcs605 msmnile
 
 ifeq ($(TARGET_BOARD_PLATFORM),msm8610)
 libmm-venc-def += -D_MSM8610_
@@ -70,7 +71,7 @@ libmm-venc-inc      += $(TOP)/frameworks/native/libs/nativebase/include
 libmm-venc-inc      += $(TOP)/frameworks/native/libs/arect/include
 libmm-venc-inc      += $(TOP)/vendor/qcom/proprietary/android-perf
 
-ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_SW_VENC_ROTATION)),true)
+ifneq ($(call is-board-platform-in-list, $(TARGETS_THAT_DONT_SUPPORT_SW_VENC_ROTATION)),true)
 libmm-venc-inc      += hardware/libhardware/include/hardware
 endif
 
@@ -113,7 +114,7 @@ LOCAL_SRC_FILES   += src/video_encoder_device_v4l2.cpp
 
 include $(BUILD_SHARED_LIBRARY)
 
-ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_NEED_SW_VENC_MPEG4)),true)
+ifneq ($(call is-board-platform-in-list, $(TARGETS_THAT_DONT_NEED_SW_VENC_MPEG4)),true)
 # ---------------------------------------------------------------------------------
 # 			Make the Shared library (libOmxSwVencMpeg4)
 # ---------------------------------------------------------------------------------
@@ -142,7 +143,7 @@ LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl libplatformconfig libion
 LOCAL_SHARED_LIBRARIES    += libMpeg4SwEncoder
 LOCAL_SHARED_LIBRARIES    += libqdMetaData
 
-ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_SW_VENC_ROTATION)),true)
+ifneq ($(call is-board-platform-in-list, $(TARGETS_THAT_DONT_SUPPORT_SW_VENC_ROTATION)),true)
 LOCAL_SHARED_LIBRARIES += libui
 LOCAL_SHARED_LIBRARIES += libutils
 endif
