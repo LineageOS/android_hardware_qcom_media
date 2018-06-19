@@ -198,6 +198,7 @@ class omx_venc: public omx_video
         );
         int swvenc_input_log_buffers(const char *buffer, int bufferlen);
         bool dev_get_hevc_profile(OMX_U32*) { return false; }
+        void dev_get_consumer_usage(OMX_U32*) { };
         static inline unsigned int SWVENC_Y_STRIDE(int color_fmt, int width)
         {
             unsigned int alignment, stride = 0;
