@@ -3275,6 +3275,14 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
             }
             break;
         }
+        case OMX_IndexConfigVideoNalSize:
+        {
+            if(!venc_set_nal_size((OMX_VIDEO_CONFIG_NALSIZE *)configData)) {
+                DEBUG_PRINT_LOW("Failed to set Nal size info");
+                return false;
+            }
+            break;
+        }
         default:
             DEBUG_PRINT_ERROR("Unsupported config index = %u", index);
             break;
@@ -4146,6 +4154,9 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                             } else {
                                 DEBUG_PRINT_INFO("Encoding in HLG mode");
                             }
+                        } else if (handle->format == QOMX_COLOR_FormatYVU420SemiPlanar) {
+                           m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV21;
+                           DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = NV21 Linear");
                         }
 
                         DEBUG_PRINT_INFO("color_space.primaries %d colorData.colorPrimaries %d, is_csc_custom_matrix_enabled=%d",
@@ -7195,6 +7206,7 @@ bool venc_dev::venc_get_hevc_profile(OMX_U32* profile)
         } else return false;
     } else return false;
 }
+
 bool venc_dev::venc_get_profile_level(OMX_U32 *eProfile,OMX_U32 *eLevel)
 {
     bool status = true;
@@ -7422,13 +7434,53 @@ bool venc_dev::venc_get_profile_level(OMX_U32 *eProfile,OMX_U32 *eLevel)
                 *eLevel = OMX_VIDEO_HEVCMainTierLevel62;
                 break;
             default:
-                *eLevel = OMX_VIDEO_HEVCLevelMax;
+                *eLevel = OMX_VIDEO_HEVCHighTiermax;
                 status = false;
                 break;
         }
     }
 
     return status;
+}
+
+bool venc_dev::venc_set_nal_size (OMX_VIDEO_CONFIG_NALSIZE *nalSizeInfo) {
+    struct v4l2_control gControl;
+    struct v4l2_control sControl;
+
+    DEBUG_PRINT_HIGH("set video stream format - nal size - %u", nalSizeInfo->nNaluBytes);
+    gControl.id = V4L2_CID_MPEG_VIDC_VIDEO_STREAM_FORMAT;
+
+    if (ioctl(m_nDriver_fd, VIDIOC_G_CTRL, &gControl)) {
+        DEBUG_PRINT_ERROR("get control: video stream format failed");
+        return false;
+    }
+
+    sControl.id = V4L2_CID_MPEG_VIDC_VIDEO_STREAM_FORMAT;
+    switch (nalSizeInfo->nNaluBytes) {
+            case 0:
+                sControl.value = V4L2_MPEG_VIDC_VIDEO_NAL_FORMAT_STARTCODES;
+                break;
+            case 2:
+                sControl.value = V4L2_MPEG_VIDC_VIDEO_NAL_FORMAT_TWO_BYTE_LENGTH;
+                break;
+            case 4:
+                sControl.value = V4L2_MPEG_VIDC_VIDEO_NAL_FORMAT_FOUR_BYTE_LENGTH;
+                break;
+            default:
+                return false;
+        }
+
+    if ((1 << sControl.value) & gControl.value) {
+        if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &sControl)) {
+            DEBUG_PRINT_ERROR("set control: video stream format failed - %u",
+                    (unsigned int)nalSizeInfo->nNaluBytes);
+            return false;
+        }
+        return true;
+    }
+
+    return false;
+
 }
 
 #ifdef _ANDROID_ICS_
