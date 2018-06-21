@@ -10572,9 +10572,12 @@ bool omx_vdec::handle_color_space_info(void *data)
 
                 if (seqdisp_payload && seqdisp_payload->color_descp) {
 
-                    convert_color_space_info(seqdisp_payload->color_primaries, 1,
+                    convert_color_space_info(seqdisp_payload->color_primaries, 0,
                             seqdisp_payload->transfer_char, seqdisp_payload->matrix_coeffs,
                             aspects);
+                    /* MPEG2 seqdisp payload doesn't give range info. Hence assing the value
+                     * set by client */
+                    aspects->mRange = m_client_color_space.sAspects.mRange;
                     m_disp_hor_size = seqdisp_payload->disp_width;
                     m_disp_vert_size = seqdisp_payload->disp_height;
                 }
@@ -11413,6 +11416,9 @@ OMX_ERRORTYPE omx_vdec::enable_extradata(OMX_U64 requested_extradata,
                 case V4L2_PIX_FMT_VP8:
                 case V4L2_PIX_FMT_VP9:
                     control.value = V4L2_MPEG_VIDC_EXTRADATA_VPX_COLORSPACE;
+                    break;
+                case V4L2_PIX_FMT_MPEG2:
+                    control.value = V4L2_MPEG_VIDC_EXTRADATA_MPEG2_SEQDISP;
                     break;
                 default:
                     DEBUG_PRINT_HIGH("Don't support Disp info for this codec : %s", drv_ctx.kind);
