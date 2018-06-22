@@ -4136,7 +4136,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
             }
             Input_pmem_info.offset = offset;
             Input_pmem_info.size = size;
-            DEBUG_PRINT_INFO("ETB (meta-Camera) fd = %d, offset = %d, size = %d",
+            DEBUG_PRINT_HIGH("ETB (meta-Camera) fd = %d, offset = %d, size = %d",
                     Input_pmem_info.fd, Input_pmem_info.offset,
                     Input_pmem_info.size);
         } else {
