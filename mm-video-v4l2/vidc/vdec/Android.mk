@@ -67,6 +67,7 @@ libmm-vdec-inc      	+= $(TOP)/hardware/qcom/media/libc2dcolorconvert
 libmm-vdec-inc      	+= $(TARGET_OUT_HEADERS)/mm-video/SwVdec
 libmm-vdec-inc      	+= $(TARGET_OUT_HEADERS)/mm-video/swvdec
 libmm-vdec-inc      	+= $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+libmm-vdec-inc      	+= $(TOP)/hardware/qcom/media/libarbitrarybytes/inc
 
 ifeq ($(PLATFORM_SDK_VERSION), 18)  #JB_MR2
 libmm-vdec-def += -DANDROID_JELLYBEAN_MR2=1
@@ -113,12 +114,14 @@ LOCAL_SHARED_LIBRARIES  := liblog libcutils libdl libion
 LOCAL_SHARED_LIBRARIES  += libc2dcolorconvert
 LOCAL_SHARED_LIBRARIES  += libqdMetaData
 LOCAL_SHARED_LIBRARIES  += libplatformconfig
+LOCAL_SHARED_LIBRARIES  += libarbitrarybytes
 
 LOCAL_SRC_FILES         := src/ts_parser.cpp
 LOCAL_STATIC_LIBRARIES  := libOmxVidcCommon
 LOCAL_SRC_FILES         += src/omx_vdec_v4l2.cpp
 
 include $(BUILD_SHARED_LIBRARY)
+
 
 
 

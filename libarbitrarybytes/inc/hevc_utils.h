@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2013, The Linux Foundation. All rights reserved.
+Copyright (c) 2013, 2018 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -47,7 +47,6 @@ This module contains H264 video decoder utilities and helper routines.
 ========================================================================== */
 #include <stdio.h>
 #include <utils/Log.h>
-#include "Map.h"
 #include "qtypes.h"
 #include "OMX_Core.h"
 #include "OMX_QCOMExtns.h"
