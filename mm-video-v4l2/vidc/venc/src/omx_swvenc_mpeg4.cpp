@@ -118,7 +118,7 @@ omx_venc::omx_venc()
     m_bUseAVTimerTimestamps = false;
     m_pIpbuffers = nullptr;
     set_format = false;
-
+    update_offset = true;
     EXIT_FUNC();
 }
 
@@ -2300,13 +2300,6 @@ bool omx_venc::dev_empty_buf
             {
                 set_format = false;
                 m_sInPortDef.format.video.eColorFormat = m_sInPortFormat.eColorFormat;
-                Ret = swvenc_set_color_format(m_sInPortFormat.eColorFormat);
-                if (Ret != SWVENC_S_SUCCESS)
-                {
-                    DEBUG_PRINT_ERROR("%s, swvenc_setproperty failed (%d)",
-                        __FUNCTION__, Ret);
-                    RETURN(false);
-                }
             }
         }
     }
@@ -2315,6 +2308,17 @@ bool omx_venc::dev_empty_buf
         ipbuffer.p_buffer = bufhdr->pBuffer;
         ipbuffer.size = bufhdr->nAllocLen;
         ipbuffer.filled_length = bufhdr->nFilledLen;
+    }
+    if(update_offset)
+    {
+        update_offset = false;
+        Ret = swvenc_set_color_format(m_sInPortFormat.eColorFormat);
+        if (Ret != SWVENC_S_SUCCESS)
+        {
+            DEBUG_PRINT_ERROR("%s, swvenc_setproperty failed (%d)",
+                             __FUNCTION__, Ret);
+            RETURN(false);
+        }
     }
     ipbuffer.flags = 0;
     if (bufhdr->nFlags & OMX_BUFFERFLAG_EOS)
@@ -3551,7 +3555,7 @@ SWVENC_STATUS omx_venc::swvenc_set_color_format
         swvenc_color_format = SWVENC_COLOR_FORMAT_NV12;
         Prop.id = SWVENC_PROPERTY_ID_FRAME_ATTRIBUTES;
         Prop.info.frame_attributes.stride_luma = ALIGN(m_sOutPortDef.format.video.nFrameWidth,128);
-        Prop.info.frame_attributes.stride_chroma = ALIGN(m_sOutPortDef.format.video.nFrameWidth,128);
+        Prop.info.frame_attributes.stride_chroma = ALIGN(m_sOutPortDef.format.video.nFrameWidth,32);
         Prop.info.frame_attributes.offset_luma = 0;
         Prop.info.frame_attributes.offset_chroma = ((ALIGN(m_sOutPortDef.format.video.nFrameWidth,128)) * (ALIGN(m_sOutPortDef.format.video.nFrameHeight,32)));
         Ret = swvenc_setproperty(m_hSwVenc, &Prop);
