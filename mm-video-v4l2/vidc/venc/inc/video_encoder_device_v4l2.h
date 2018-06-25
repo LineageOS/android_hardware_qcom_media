@@ -362,6 +362,7 @@ class venc_dev
         int venc_extradata_log_buffers(char *buffer_addr);
         bool venc_set_bitrate_type(OMX_U32 type);
         bool venc_get_hevc_profile(OMX_U32* profile);
+        void venc_get_consumer_usage(OMX_U32* usage);
 
 #ifdef _VQZIP_
         class venc_dev_vqzip
@@ -594,6 +595,8 @@ class venc_dev
         BatchInfo mBatchInfo;
         bool mUseAVTimerTimestamps;
         bool venc_set_hdr_info(const MasteringDisplay&, const ContentLightLevel&);
+        bool mIsGridset;
+        OMX_U32 mTileDimension;
 };
 
 enum instance_state {
