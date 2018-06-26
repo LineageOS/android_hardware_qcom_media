@@ -69,6 +69,8 @@ ifeq ($(call is-platform-sdk-version-at-least,27),true) # O-MR1
 libmm-vdec-def += -D_ANDROID_O_MR1_DIVX_CHANGES
 endif
 
+libmm-vdec-def += -D_QUERY_DISP_RES_
+
 include $(CLEAR_VARS)
 
 # Common Includes
@@ -132,13 +134,14 @@ LOCAL_HEADER_LIBRARIES := \
         media_plugin_headers \
         libnativebase_headers \
         libutils_headers \
-        libhardware_headers
+        libhardware_headers \
+        display_headers
 
 LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-vdec-add-dep)
 
 LOCAL_PRELINK_MODULE    := false
-LOCAL_SHARED_LIBRARIES  := liblog libcutils libdl
+LOCAL_SHARED_LIBRARIES  := liblog libcutils libdl libqdutils
 
 LOCAL_SHARED_LIBRARIES  += libqdMetaData libhypv_intercept
 
