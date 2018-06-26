@@ -65,7 +65,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #undef USE_EGL_IMAGE_GPU
 
 #ifdef _QUERY_DISP_RES_
-#include "DisplayConfig.h"
+#include "display_config.h"
 #endif
 #endif
 
@@ -1291,21 +1291,21 @@ int omx_vdec::decide_downscalar()
     }
     isPortraitVideo = fmt.fmt.pix_mp.width < fmt.fmt.pix_mp.height ? OMX_TRUE : OMX_FALSE;
     if (!m_downscalar_width || !m_downscalar_height) {
-        display::DisplayAttributes dpa = {}, dsa = {}, dva = {};
+        qdutils::DisplayAttributes dpa = {}, dsa = {}, dva = {};
         int prim_config, ext_config, virt_config;
 
-        prim_config = getActiveConfig(display::DISPLAY_PRIMARY);
-        dpa = getDisplayAttributes(prim_config, display::DISPLAY_PRIMARY);
+        prim_config = qdutils::getActiveConfig(qdutils::DISPLAY_PRIMARY);
+        dpa = qdutils::getDisplayAttributes(prim_config, qdutils::DISPLAY_PRIMARY);
         DEBUG_PRINT_HIGH("%s: Primary dpa.xres = %d  dpa.yres=%d   dpa.xdpi = %f  dpa.ydpi = %f ",
             __func__, dpa.xres, dpa.yres, dpa.xdpi, dpa.ydpi);
 
-        ext_config = getActiveConfig(display::DISPLAY_EXTERNAL);
-        dsa = getDisplayAttributes(ext_config, display::DISPLAY_EXTERNAL);
+        ext_config = qdutils::getActiveConfig(qdutils::DISPLAY_EXTERNAL);
+        dsa = qdutils::getDisplayAttributes(ext_config, qdutils::DISPLAY_EXTERNAL);
         DEBUG_PRINT_HIGH("%s: HDMI dsa.xres = %d  dsa.yres = %d   dsa.xdpi = %f  dsa.ydpi = %f ",
             __func__, dsa.xres, dsa.yres, dsa.xdpi, dsa.ydpi);
 
-        virt_config = getActiveConfig(display::DISPLAY_VIRTUAL);
-        dva = getDisplayAttributes(virt_config, display::DISPLAY_VIRTUAL);
+        virt_config = qdutils::getActiveConfig(qdutils::DISPLAY_VIRTUAL);
+        dva = qdutils::getDisplayAttributes(virt_config, qdutils::DISPLAY_VIRTUAL);
         DEBUG_PRINT_HIGH("%s: Virtual dva.xres = %d  dva.yres = %d   dva.xdpi = %f  dva.ydpi = %f ",
             __func__, dva.xres, dva.yres, dva.xdpi, dva.ydpi);
 

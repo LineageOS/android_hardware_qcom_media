@@ -69,8 +69,6 @@ ifeq ($(call is-platform-sdk-version-at-least,27),true) # O-MR1
 libmm-vdec-def += -D_ANDROID_O_MR1_DIVX_CHANGES
 endif
 
-libmm-vdec-def += -D_QUERY_DISP_RES_
-
 include $(CLEAR_VARS)
 
 # Common Includes
@@ -84,9 +82,6 @@ libmm-vdec-inc          += $(TOP)/hardware/qcom/media/hypv-intercept
 libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/mm-video/SwVdec
 libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/mm-video/swvdec
 libmm-vdec-inc          += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
-libmm-vdec-inc          += $(TOP)/hardware/qcom/display/libdisplayconfig
-
-LOCAL_HEADER_LIBRARIES := display_headers
 
 ifeq ($(PLATFORM_SDK_VERSION), 18)  #JB_MR2
 libmm-vdec-def += -DANDROID_JELLYBEAN_MR2=1
@@ -143,7 +138,7 @@ LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-vdec-add-dep)
 
 LOCAL_PRELINK_MODULE    := false
-LOCAL_SHARED_LIBRARIES  := liblog libcutils libdl libdisplayconfig
+LOCAL_SHARED_LIBRARIES  := liblog libcutils libdl
 
 LOCAL_SHARED_LIBRARIES  += libqdMetaData libhypv_intercept
 
