@@ -379,7 +379,8 @@ int32_t C2DColorConverter::getDummySurfaceDef(ColorConvertFormat format,
         }
         (*surfaceRGBDef)->format = getC2DFormat(format);
 
-        if (mFlags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED)
+        if (mFlags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED ||
+            mFlags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED_PI)
             (*surfaceRGBDef)->format |= C2D_FORMAT_UBWC_COMPRESSED;
         (*surfaceRGBDef)->width = width;
         (*surfaceRGBDef)->height = height;

@@ -5140,7 +5140,8 @@ bool omx_video::is_conv_needed(private_handle_t *handle)
 
     if (!strncmp(m_platform, "msm8996", 7)) {
         bRet = handle->format == HAL_PIXEL_FORMAT_RGBA_8888 &&
-            !(handle->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED);
+            !(handle->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED ||
+              handle->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED_PI);
     } else {
         bRet = handle->format == HAL_PIXEL_FORMAT_RGBA_8888;
     }
