@@ -2336,9 +2336,10 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
                     // If the dataspace says RGB, recommend 601-limited;
                     // since that is the destination colorspace that C2D or Venus will convert to.
                     if (pParam->nPixelFormat == HAL_PIXEL_FORMAT_RGBA_8888) {
-                        DEBUG_PRINT_INFO("get_config (dataspace changed): ColorSpace: Recommend 601-limited for RGBA8888");
+                        DEBUG_PRINT_INFO("get_config (dataspace changed): ColorSpace: Recommend 601 for RGBA8888");
                         pParam->sAspects.mPrimaries = ColorAspects::PrimariesBT601_6_625;
-                        pParam->sAspects.mRange = ColorAspects::RangeLimited;
+                        // keep client-default setting for range
+                        // pParam->sAspects.mRange = ColorAspects::RangeLimited;
                         pParam->sAspects.mTransfer = ColorAspects::TransferSMPTE170M;
                         pParam->sAspects.mMatrixCoeffs = ColorAspects::MatrixBT601_6;
                     } else {
@@ -5083,6 +5084,8 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
 
         mUsesColorConversion = is_conv_needed(handle);
         bool interlaced = is_ubwc_interlaced(handle);
+        int  full_range_flag = m_sConfigColorAspects.sAspects.mRange == ColorAspects::RangeFull ?
+                               private_handle_t::PRIV_FLAGS_ITU_R_601_FR : 0;
 
         if (c2dcc.getConversionNeeded() &&
             c2dcc.isPropChanged(m_sInPortDef.format.video.nFrameWidth,
@@ -5103,7 +5106,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
                                      m_sInPortDef.format.video.nFrameWidth,
                                      m_sInPortDef.format.video.nFrameHeight,
                                      c2dSrcFmt, c2dDestFmt,
-                                     handle->flags, handle->width)) {
+                                     handle->flags | full_range_flag, handle->width)) {
                 m_pCallbacks.EmptyBufferDone(hComp,m_app_data,buffer);
                 DEBUG_PRINT_ERROR("SetResolution failed");
                 return OMX_ErrorBadParameter;
