@@ -108,6 +108,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #endif
 
+// Gralloc flag to indicate UBWC
+#define GRALLOC1_CONSUMER_USAGE_UBWC_FLAG GRALLOC1_CONSUMER_USAGE_PRIVATE_0
+
 typedef struct OMXComponentCapabilityFlagsType {
     ////////////////// OMX COMPONENT CAPABILITY RELATED MEMBERS
     OMX_U32 nSize;
@@ -2135,10 +2138,10 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 OMX_U32 eProfile = 0;
                 DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamConsumerUsageBits");
                 bool hevc = dev_get_hevc_profile(&eProfile);
-                dev_get_consumer_usage(&m_sParamConsumerUsage);
                 if(hevc && eProfile == (OMX_U32)OMX_VIDEO_HEVCProfileMain10HDR10) {
                     DEBUG_PRINT_INFO("Setting TP10 consumer usage bits");
                     m_sParamConsumerUsage |= GRALLOC1_CONSUMER_USAGE_PRIVATE_10BIT_TP;
+                    m_sParamConsumerUsage |= GRALLOC1_CONSUMER_USAGE_UBWC_FLAG;
                 }
                 memcpy(consumerUsage, &m_sParamConsumerUsage, sizeof(m_sParamConsumerUsage));
                 break;

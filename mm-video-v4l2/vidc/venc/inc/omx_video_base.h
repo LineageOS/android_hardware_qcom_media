@@ -307,7 +307,6 @@ class omx_video: public qc_omx_component
         virtual int dev_output_log_buffers(const char *buffer_addr, int buffer_len, uint64_t timestamp) = 0;
         virtual int dev_extradata_log_buffers(char *buffer_addr) = 0;
         virtual bool dev_get_hevc_profile(OMX_U32*) = 0;
-        virtual void dev_get_consumer_usage(OMX_U32*) = 0;
         OMX_ERRORTYPE component_role_enum(
                 OMX_HANDLETYPE hComp,
                 OMX_U8 *role,
