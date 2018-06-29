@@ -555,7 +555,12 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
 
     OMX_INIT_STRUCT(&m_sParamLTRCount, QOMX_VIDEO_PARAM_LTRCOUNT_TYPE);
     m_sParamLTRCount.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
+
+#ifdef LTR_SUPPORT
+    m_sParamLTRCount.nCount = 3; //Non zero count indicated LTR feature support
+#else
     m_sParamLTRCount.nCount = 0;
+#endif
 
     OMX_INIT_STRUCT(&m_sConfigDeinterlace, OMX_VIDEO_CONFIG_DEINTERLACE);
     m_sConfigDeinterlace.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
