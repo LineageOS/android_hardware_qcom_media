@@ -18,6 +18,8 @@ LOCAL_VENDOR_MODULE    := true
 LOCAL_C_INCLUDES       := $(libarbitrarybytes-inc)
 LOCAL_CFLAGS           := $(libarbitrarybytes-def)
 
+LOCAL_HEADER_LIBRARIES := libutils_headers
+
 LOCAL_SHARED_LIBRARIES := liblog libcutils
 
 LOCAL_SRC_FILES        := src/frameparser.cpp
