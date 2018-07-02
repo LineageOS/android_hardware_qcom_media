@@ -823,7 +823,7 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
             if (!valueSet) {
                 break;
             }
-            if (targetStrength <= BLUR_STRENGTH_NONE && targetStrength > BLUR_STRENGTH_MAX240) {
+            if (targetStrength <= BLUR_STRENGTH_NONE) {
                 blurInfo.eTargetResol = BLUR_RESOL_DISABLED;
             }
             else if (targetStrength > BLUR_STRENGTH_NONE && targetStrength <= BLUR_STRENGTH_MAX1080) {
@@ -837,6 +837,10 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
             }
             else if (targetStrength >= BLUR_STRENGTH_MAX480 && targetStrength <= BLUR_STRENGTH_MAX240) {
                 blurInfo.eTargetResol = BLUR_RESOL_240;
+            }
+            else {
+                // custom blur resolution, bit[31:16] for width, bit[15:0] for height
+                blurInfo.eTargetResol = (OMX_QTI_VIDEO_BLUR_RESOLUTION)targetStrength;
             }
 
             DEBUG_PRINT_HIGH("VENDOR-EXT: set_config: OMX_QTIIndexConfigVideoBlurResolution : %d",
