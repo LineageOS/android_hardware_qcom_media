@@ -87,9 +87,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define VENC_BFRAME_MAX_HEIGHT      1088
 #define VENC_INFINITE_GOP 0xFFFFFFF
 
-// Gralloc flag to indicate UBWC
-#define GRALLOC1_CONSUMER_USAGE_UBWC_FLAG GRALLOC1_CONSUMER_USAGE_PRIVATE_0
-
 // Scaled quality factor - QP mapping
 const unsigned int venc_dev::QFQPMapping[] = {51, 47, 43, 39, 35, 31, 28, 25, 22, 19, 16, 13, 11, 9, 7, 6, 5, 4, 3, 2, 1};
 
@@ -7187,10 +7184,6 @@ bool venc_dev::venc_get_hevc_profile(OMX_U32* profile)
             return true;
         } else return false;
     } else return false;
-}
-
-void venc_dev::venc_get_consumer_usage(OMX_U32* usage) {
-    *usage |= GRALLOC1_CONSUMER_USAGE_UBWC_FLAG;
 }
 
 bool venc_dev::venc_get_profile_level(OMX_U32 *eProfile,OMX_U32 *eLevel)

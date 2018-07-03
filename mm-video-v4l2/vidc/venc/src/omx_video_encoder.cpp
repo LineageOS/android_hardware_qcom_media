@@ -2684,8 +2684,3 @@ bool omx_venc::dev_get_hevc_profile(OMX_U32* profile)
 {
     return handle->venc_get_hevc_profile(profile);
 }
-
-void omx_venc::dev_get_consumer_usage(OMX_U32* usage)
-{
-    return handle->venc_get_consumer_usage(usage);
-}
