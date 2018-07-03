@@ -32,6 +32,7 @@ TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_4 := msm8937
 TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_51 := msm8953 sdm660
 TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_52 := msm8996 msm8998 apq8098_latv
 TARGETS_THAT_DONOT_SUPPORT_TEMPORAL_LAYER := msm8909 msm8937
+TARGETS_THAT_SUPPORT_LTR := msm8998 sdm660
 
 ifeq ($(TARGET_BOARD_PLATFORM),msm8610)
 libmm-venc-def += -DMAX_RES_720P
@@ -73,6 +74,10 @@ ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_DONOT_SUPPORT_TEMPORAL_LA
 libmm-venc-def += -D_DISABLE_TEMPORAL_LAYER_
 endif
 
+ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_LTR)),true)
+libmm-venc-def += -DLTR_SUPPORT
+endif
+
 ifeq ($(TARGET_USES_ION),true)
 libmm-venc-def += -DUSE_ION
 endif
@@ -103,11 +108,6 @@ libmm-venc-inc      += hardware/qcom/media/mm-core/inc
 libmm-venc-inc      += hardware/qcom/media/libstagefrighthw
 libmm-venc-inc      += $(TARGET_OUT_HEADERS)/qcom/display
 libmm-venc-inc      += $(TARGET_OUT_HEADERS)/adreno
-libmm-venc-inc      += frameworks/native/include/media/hardware
-libmm-venc-inc      += frameworks/native/libs/nativewindow/include/
-libmm-venc-inc      += frameworks/native/libs/arect/include/
-libmm-venc-inc      += frameworks/native/libs/nativebase/include
-libmm-venc-inc      += frameworks/native/include/media/openmax
 libmm-venc-inc      += hardware/qcom/media/libc2dcolorconvert
 libmm-venc-inc      += hardware/qcom/media/hypv-intercept
 libmm-venc-inc      += $(TARGET_OUT_HEADERS)/libvqzip
@@ -137,6 +137,14 @@ LOCAL_MODULE                    := libOmxVenc
 LOCAL_MODULE_TAGS               := optional
 LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libmm-venc-def)
+
+LOCAL_HEADER_LIBRARIES := \
+        media_plugin_headers \
+        libnativebase_headers \
+        libcutils_headers \
+        libutils_headers \
+        libhardware_headers \
+
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 
@@ -170,6 +178,13 @@ LOCAL_MODULE                    := libOmxSwVencMpeg4
 LOCAL_MODULE_TAGS               := optional
 LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libmm-venc-def)
+
+LOCAL_HEADER_LIBRARIES := \
+        media_plugin_headers \
+        libnativebase_headers \
+        libutils_headers \
+        libhardware_headers \
+
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 

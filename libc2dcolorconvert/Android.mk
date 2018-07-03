@@ -10,6 +10,10 @@ LOCAL_C_INCLUDES := \
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/qcom/display
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 
+LOCAL_HEADER_LIBRARIES := \
+        libutils_headers \
+        libhardware_headers
+
 LOCAL_SHARED_LIBRARIES := liblog libdl
 
 LOCAL_MODULE_TAGS := optional
