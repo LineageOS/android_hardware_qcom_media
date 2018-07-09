@@ -13427,7 +13427,8 @@ OMX_ERRORTYPE omx_vdec::describeColorFormat(OMX_PTR pParam) {
     DescribeColorFormatParams *params = (DescribeColorFormatParams*)pParam;
 
     MediaImage *img = &(params->sMediaImage);
-    switch(params->eColorFormat) {
+    int z = params->eColorFormat;
+    switch(z) {
         case QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m:
         {
             img->mType = MediaImage::MEDIA_IMAGE_TYPE_YUV;
