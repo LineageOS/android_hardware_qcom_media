@@ -1959,7 +1959,12 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 DEBUG_PRINT_LOW("get_parameter: OMX_QcomIndexParamVideoLTRCount");
                 OMX_QCOM_VIDEO_PARAM_LTRCOUNT_TYPE *pParam =
                         reinterpret_cast<OMX_QCOM_VIDEO_PARAM_LTRCOUNT_TYPE*>(paramData);
+#ifdef LTR_SUPPORT
                 memcpy(pParam, &m_sParamLTRCount, sizeof(m_sParamLTRCount));
+#else
+                m_sParamLTRCount.nCount = 0;
+                memcpy(pParam, &m_sParamLTRCount, sizeof(m_sParamLTRCount));
+#endif
                 break;
             }
 #endif
