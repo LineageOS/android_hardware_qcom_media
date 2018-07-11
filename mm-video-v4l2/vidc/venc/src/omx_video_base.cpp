@@ -2122,17 +2122,27 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             }
         case OMX_IndexParamConsumerUsageBits:
             {
+               /*                            Consumer usage bits
+                *  --------------------------------------------------------------------
+                *  GRALLOC_USAGE_PRIVATE_    | GRALLOC_USAGE_PRIVATE_  |  Color       |
+                *  ALLOC_UBWC                | ALLOC_10BITS            |  Format      |
+                *   (bit 28)                 |  (bit30)                |              |
+                *  --------------------------------------------------------------------
+                *    0                       |     0                   |   NV12       |
+                *    0                       |     1                   |   P010       |
+                *    1                       |     0                   |   UBWC_NV12  |
+                *    1                       |     1                   |   BPP10_UBWC |
+                *  --------------------------------------------------------------------
+                */
+
                 if (paramData == NULL) { return OMX_ErrorBadParameter; }
+
                 OMX_U32 *consumerUsage = (OMX_U32 *)paramData;
-                OMX_U32 eProfile = 0;
-                DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamConsumerUsageBits");
-                bool hevc = dev_get_hevc_profile(&eProfile);
-                if(hevc && eProfile == (OMX_U32)OMX_VIDEO_HEVCProfileMain10HDR10) {
-                    DEBUG_PRINT_INFO("Setting TP10 consumer usage bits");
-                    m_sParamConsumerUsage |= GRALLOC1_CONSUMER_USAGE_PRIVATE_10BIT_TP;
-                    m_sParamConsumerUsage |= GRALLOC1_CONSUMER_USAGE_UBWC_FLAG;
-                }
+                m_sParamConsumerUsage = 0;
+                dev_get_consumer_usage(&m_sParamConsumerUsage);
                 memcpy(consumerUsage, &m_sParamConsumerUsage, sizeof(m_sParamConsumerUsage));
+                DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamConsumerUsageBits %x",
+                    m_sParamConsumerUsage);
                 break;
             }
         case OMX_IndexParamVideoSliceFMO:

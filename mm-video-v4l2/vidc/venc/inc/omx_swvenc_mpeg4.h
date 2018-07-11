@@ -200,6 +200,8 @@ class omx_venc: public omx_video
         bool dev_get_hevc_profile(OMX_U32*) { return false; }
         bool dev_handle_client_input_extradata(void*) { return false; }
         void dev_get_color_format_as_string(char *, int, unsigned) {};
+        /* Only NV12 is supported so not setting UBWC & 10Bit flag */
+        void dev_get_consumer_usage(OMX_U32* usage) { *usage = 0; }
         static inline unsigned int SWVENC_Y_STRIDE(int color_fmt, int width)
         {
             unsigned int alignment, stride = 0;
