@@ -27,6 +27,8 @@
  *
  */
 
+#include <pthread.h>
+
 #include <C2DColorConverter.h>
 
 C2DColorConverter::C2DColorConverter()
