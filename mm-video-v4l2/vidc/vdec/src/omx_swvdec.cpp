@@ -2224,14 +2224,14 @@ OMX_ERRORTYPE omx_swvdec::fill_this_buffer(OMX_HANDLETYPE        cmp_handle,
         {
             unsigned char *bufferaddr;
 
-            bufferaddr = ion_map(p_private_handle->fd,m_port_op.def.nBufferSize);
+            bufferaddr = ion_map(p_private_handle->fd,p_private_handle->size);
 
             if (bufferaddr == MAP_FAILED)
             {
                 OMX_SWVDEC_LOG_ERROR("mmap() failed for "
                                      "fd %d of size %d",
                                      p_private_handle->fd,
-                                     m_port_op.def.nBufferSize);
+                                     p_private_handle->size);
 
                 pthread_mutex_unlock(&m_meta_buffer_array_mutex);
 
@@ -2241,11 +2241,11 @@ OMX_ERRORTYPE omx_swvdec::fill_this_buffer(OMX_HANDLETYPE        cmp_handle,
 
             p_buffer_payload->bufferaddr  = bufferaddr;
             p_buffer_payload->pmem_fd     = p_private_handle->fd;
-            p_buffer_payload->buffer_len  = m_port_op.def.nBufferSize;
-            p_buffer_payload->mmaped_size = m_port_op.def.nBufferSize;
+            p_buffer_payload->buffer_len  = p_private_handle->size;
+            p_buffer_payload->mmaped_size = p_private_handle->size;
 
             p_buffer_swvdec->p_buffer      = bufferaddr;
-            p_buffer_swvdec->size          = m_port_op.def.nBufferSize;
+            p_buffer_swvdec->size          = p_private_handle->size;
             p_buffer_swvdec->p_client_data = (void *) ((unsigned long) ii);
         }
 
@@ -3024,7 +3024,6 @@ OMX_ERRORTYPE omx_swvdec::set_port_definition(
          */
 
         m_port_op.def.nBufferCountActual = p_port_def->nBufferCountActual;
-        m_port_op.def.nBufferCountMin    = p_port_def->nBufferCountMin;
 
         OMX_SWVDEC_LOG_HIGH("port index %d: %d x %d",
                             p_port_def->nPortIndex,
@@ -6500,7 +6499,7 @@ OMX_ERRORTYPE omx_swvdec::async_process_event_port_reconfig()
                                 m_app_data,
                                 OMX_EventPortSettingsChanged,
                                 OMX_CORE_PORT_INDEX_OP,
-                                0,
+                                OMX_IndexParamPortDefinition,
                                 NULL);
     }
 
