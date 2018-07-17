@@ -201,7 +201,7 @@ class C2DColorConverter{
                              size_t height, bool isSource);
   C2D_STATUS updateYUVSurfaceDef(uint8_t *addr, void *base, void * data, bool isSource);
   C2D_STATUS updateRGBSurfaceDef(uint8_t *addr, void * data, bool isSource);
-  uint32_t getC2DFormat(ColorConvertFormat format);
+  uint32_t getC2DFormat(ColorConvertFormat format, bool isSource);
   size_t calcStride(ColorConvertFormat format, size_t width);
   size_t calcYSize(ColorConvertFormat format, size_t width, size_t height);
   size_t calcSize(ColorConvertFormat format, size_t width, size_t height);
