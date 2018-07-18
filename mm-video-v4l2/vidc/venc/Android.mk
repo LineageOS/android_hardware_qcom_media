@@ -67,7 +67,6 @@ libmm-venc-inc      += frameworks/native/libs/nativewindow/include
 libmm-venc-inc      += frameworks/native/libs/arect/include
 libmm-venc-inc      += frameworks/native/libs/nativebase/include
 endif
-libmm-venc-inc      += frameworks/native/include/media/openmax
 libmm-venc-inc      += frameworks/native/libs/nativewindow/include/
 libmm-venc-inc      += frameworks/native/libs/arect/include/
 libmm-venc-inc      += frameworks/native/libs/nativebase/include
@@ -97,6 +96,8 @@ LOCAL_SHARED_LIBRARIES    := liblog libutils libcutils \
                              libc2dcolorconvert libdl libgui
 LOCAL_SHARED_LIBRARIES += libqdMetaData
 LOCAL_STATIC_LIBRARIES    := libOmxVidcCommon
+
+LOCAL_HEADER_LIBRARIES    := media_plugin_headers
 
 LOCAL_SRC_FILES   := src/omx_video_base.cpp
 LOCAL_SRC_FILES   += src/omx_video_encoder.cpp
