@@ -3514,9 +3514,9 @@ bool omx_venc::swvenc_color_align(OMX_BUFFERHEADERTYPE *buffer, OMX_U32 width,
 {
     OMX_U32 y_stride,y_scanlines,uv_scanlines,plane_size_y,plane_size_uv,src_chroma_offset;
     y_stride = ALIGN(width,128);
-    y_scanlines = ALIGN(height,64);
+    y_scanlines = ALIGN(height,32);
     src_chroma_offset = width * height;
-    OMX_U32 buffersize = SWVENC_BUFFER_SIZE(COLOR_FMT_NV12_ZSL,width,height);
+    OMX_U32 buffersize = SWVENC_BUFFER_SIZE(COLOR_FMT_NV12,width,height);
     if (buffer->nAllocLen >= buffersize) {
         OMX_U8* src_buf = buffer->pBuffer, *dst_buf = buffer->pBuffer;
         //Do chroma first, so that we can convert it in-place
@@ -3561,7 +3561,7 @@ SWVENC_STATUS omx_venc::swvenc_set_color_format
         swvenc_color_format = SWVENC_COLOR_FORMAT_NV12;
         Prop.id = SWVENC_PROPERTY_ID_FRAME_ATTRIBUTES;
         Prop.info.frame_attributes.stride_luma = ALIGN(m_sOutPortDef.format.video.nFrameWidth,128);
-        Prop.info.frame_attributes.stride_chroma = ALIGN(m_sOutPortDef.format.video.nFrameWidth,32);
+        Prop.info.frame_attributes.stride_chroma = ALIGN(m_sOutPortDef.format.video.nFrameWidth,128);
         Prop.info.frame_attributes.offset_luma = 0;
         Prop.info.frame_attributes.offset_chroma = ((ALIGN(m_sOutPortDef.format.video.nFrameWidth,128)) * (ALIGN(m_sOutPortDef.format.video.nFrameHeight,32)));
         Ret = swvenc_setproperty(m_hSwVenc, &Prop);
@@ -3576,10 +3576,10 @@ SWVENC_STATUS omx_venc::swvenc_set_color_format
     {
         swvenc_color_format = SWVENC_COLOR_FORMAT_NV12;
         Prop.id = SWVENC_PROPERTY_ID_FRAME_ATTRIBUTES;
-        Prop.info.frame_attributes.stride_luma = ALIGN(m_sInPortDef.format.video.nFrameWidth,16);
-        Prop.info.frame_attributes.stride_chroma = ALIGN(m_sInPortDef.format.video.nFrameWidth,16);
+        Prop.info.frame_attributes.stride_luma = ALIGN(m_sInPortDef.format.video.nFrameWidth,128);
+        Prop.info.frame_attributes.stride_chroma = ALIGN(m_sInPortDef.format.video.nFrameWidth,128);
         Prop.info.frame_attributes.offset_luma = 0;
-        Prop.info.frame_attributes.offset_chroma = ((ALIGN(m_sInPortDef.format.video.nFrameWidth,16)) * (ALIGN(m_sInPortDef.format.video.nFrameHeight,16)));
+        Prop.info.frame_attributes.offset_chroma = ((ALIGN(m_sInPortDef.format.video.nFrameWidth,128)) * (ALIGN(m_sInPortDef.format.video.nFrameHeight,32)));
         Ret = swvenc_setproperty(m_hSwVenc, &Prop);
         if (Ret != SWVENC_S_SUCCESS)
         {
