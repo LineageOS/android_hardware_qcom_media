@@ -11176,45 +11176,7 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                     }
                     break;
                 case MSM_VIDC_EXTRADATA_UBWC_CR_STAT_INFO:
-                          struct msm_vidc_ubwc_cr_stats_info *cr_stats_info;
-                          struct UBWCStats stats[2];
-
-                          cr_stats_info = (struct msm_vidc_ubwc_cr_stats_info *)(void *)data->data;
-                          stats[0].version = UBWC_2_0;
-                          stats[0].bDataValid = (uint8_t)true;
-                          stats[0].ubwc_stats.nCRStatsTile32 = cr_stats_info->stats_tile_32;
-                          stats[0].ubwc_stats.nCRStatsTile64 = cr_stats_info->stats_tile_64;
-                          stats[0].ubwc_stats.nCRStatsTile96 = cr_stats_info->stats_tile_96;
-                          stats[0].ubwc_stats.nCRStatsTile128 = cr_stats_info->stats_tile_128;
-                          stats[0].ubwc_stats.nCRStatsTile160 = cr_stats_info->stats_tile_160;
-                          stats[0].ubwc_stats.nCRStatsTile192 = cr_stats_info->stats_tile_192;
-                          stats[0].ubwc_stats.nCRStatsTile256 = cr_stats_info->stats_tile_256;
-                          DEBUG_PRINT_HIGH("Field 0 : 32 Tile = %d 64 Tile = %d 96 Tile = %d 128 Tile = %d 160 Tile = %d 192 Tile = %d 256 Tile = %d\n",
-                              cr_stats_info->stats_tile_32, cr_stats_info->stats_tile_64,
-                              cr_stats_info->stats_tile_96, cr_stats_info->stats_tile_128,
-                              cr_stats_info->stats_tile_160, cr_stats_info->stats_tile_192,
-                              cr_stats_info->stats_tile_256);
-                          stats[1].bDataValid = (uint8_t)false;
-                          if (drv_ctx.interlace != VDEC_InterlaceFrameProgressive) {
-
-                              cr_stats_info += sizeof(struct msm_vidc_ubwc_cr_stats_info);
-                              stats[1].version = UBWC_2_0;
-                              stats[1].bDataValid = (uint8_t)true;
-                              stats[1].ubwc_stats.nCRStatsTile32 = cr_stats_info->stats_tile_32;
-                              stats[1].ubwc_stats.nCRStatsTile64 = cr_stats_info->stats_tile_64;
-                              stats[1].ubwc_stats.nCRStatsTile96 = cr_stats_info->stats_tile_96;
-                              stats[1].ubwc_stats.nCRStatsTile128 = cr_stats_info->stats_tile_128;
-                              stats[1].ubwc_stats.nCRStatsTile160 = cr_stats_info->stats_tile_160;
-                              stats[1].ubwc_stats.nCRStatsTile192 = cr_stats_info->stats_tile_192;
-                              stats[1].ubwc_stats.nCRStatsTile256 = cr_stats_info->stats_tile_256;
-                              DEBUG_PRINT_HIGH("Field 1 : 32 Tile = %d 64 Tile = %d 96 Tile = %d 128 Tile = %d 160 Tile = %d 192 Tile = %d 256 Tile = %d\n",
-                                      cr_stats_info->stats_tile_32, cr_stats_info->stats_tile_64,
-                                      cr_stats_info->stats_tile_96, cr_stats_info->stats_tile_128,
-                                      cr_stats_info->stats_tile_160, cr_stats_info->stats_tile_192,
-                                      cr_stats_info->stats_tile_256);
-                          }
-                          setMetaData((private_handle_t *)native_buffer[buf_index].privatehandle,
-                              SET_UBWC_CR_STATS_INFO, (void*)stats);
+                    DEBUG_PRINT_LOW("MSM_VIDC_EXTRADATA_UBWC_CR_STAT_INFO not used. Ignoring.");
                     break;
                 case MSM_VIDC_EXTRADATA_STREAM_USERDATA:
                     if(output_capability == V4L2_PIX_FMT_HEVC) {
