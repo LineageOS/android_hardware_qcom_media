@@ -30,14 +30,13 @@ ifeq ($(TARGET_USES_MEDIA_EXTENSIONS),true)
 LOCAL_CFLAGS += -DUSE_NATIVE_HANDLE_SOURCE
 endif
 
-LOCAL_C_INCLUDES:= \
-        frameworks/native/include/media/openmax \
-        frameworks/native/include/media/hardware
-
 LOCAL_SHARED_LIBRARIES :=       \
         libutils                \
         libcutils               \
         libdl                   \
+
+LOCAL_HEADER_LIBRARIES :=       \
+        media_plugin_headers    \
 
 LOCAL_MODULE := libstagefrighthw
 
