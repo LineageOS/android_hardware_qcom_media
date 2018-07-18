@@ -2747,3 +2747,8 @@ bool omx_venc::dev_handle_client_input_extradata(void *buffer)
 {
     return handle->venc_handle_client_input_extradata(buffer);
 }
+
+void omx_venc::dev_get_consumer_usage(OMX_U32* usage)
+{
+    return handle->venc_get_consumer_usage(usage);
+}
