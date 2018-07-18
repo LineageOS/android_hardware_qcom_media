@@ -6837,7 +6837,8 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
                     (OMX_U8 *)(intptr_t)(*omx_op_buf_ion_info)[i].data_fd;
 #endif
             }
-            if (intermediate == false) {
+            if (intermediate == false &&
+                client_buffers.is_color_conversion_enabled()) {
                 OMX_BUFFERHEADERTYPE *temp_bufferHdr = NULL;
                 eRet = allocate_output_buffer(hComp, &temp_bufferHdr,
                                               port, appData,
@@ -7568,8 +7569,6 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer(OMX_IN OMX_HANDLETYPE  hComp,
 
     if (client_buffers.is_color_conversion_enabled()) {
         buffer = m_intermediate_out_mem_ptr + nPortIndex;
-        drv_ctx.ptr_intermediate_outputbuffer[nPortIndex].bufferaddr = (OMX_U8*) buffer;
-        buffer->nAllocLen = drv_ctx.op_buf.buffer_size;
     }
 
     //buffer->nAllocLen will be sizeof(struct VideoDecoderOutputMetaData). Overwrite
