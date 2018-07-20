@@ -179,7 +179,7 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     m_debug.extradata_log = atoi(property_value);
 
 #ifdef _UBWC_
-    property_get("debug.gralloc.gfx_ubwc_disable", property_value, "0");
+    property_get("vendor.gralloc.disable_ubwc", property_value, "0");
     if(!(strncmp(property_value, "1", PROPERTY_VALUE_MAX)) ||
         !(strncmp(property_value, "true", PROPERTY_VALUE_MAX))) {
         is_gralloc_source_ubwc = 0;
