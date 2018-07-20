@@ -341,7 +341,7 @@ int32_t C2DColorConverter::getDummySurfaceDef(ColorConvertFormat format,
         } else {
             memset(*surfaceYUVDef, 0, sizeof(C2D_YUV_SURFACE_DEF));
         }
-        (*surfaceYUVDef)->format = getC2DFormat(format);
+        (*surfaceYUVDef)->format = getC2DFormat(format, isSource);
         (*surfaceYUVDef)->width = width;
         (*surfaceYUVDef)->height = height;
         (*surfaceYUVDef)->plane0 = (void *)0xaaaaaaaa;
@@ -381,7 +381,7 @@ int32_t C2DColorConverter::getDummySurfaceDef(ColorConvertFormat format,
         } else {
             memset(*surfaceRGBDef, 0, sizeof(C2D_RGB_SURFACE_DEF));
         }
-        (*surfaceRGBDef)->format = getC2DFormat(format);
+        (*surfaceRGBDef)->format = getC2DFormat(format, isSource);
 
         if (mFlags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED ||
             mFlags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED_PI)
@@ -461,17 +461,24 @@ C2D_STATUS C2DColorConverter::updateRGBSurfaceDef(uint8_t *gpuAddr, void * data,
     }
 }
 
-uint32_t C2DColorConverter::getC2DFormat(ColorConvertFormat format)
+uint32_t C2DColorConverter::getC2DFormat(ColorConvertFormat format, bool isSource)
 {
+    uint32_t C2DFormat;
     switch (format) {
         case RGB565:
             return C2D_COLOR_FORMAT_565_RGB;
         case RGBA8888:
-            return C2D_COLOR_FORMAT_8888_RGBA | C2D_FORMAT_SWAP_ENDIANNESS;
+            C2DFormat = C2D_COLOR_FORMAT_8888_RGBA | C2D_FORMAT_SWAP_ENDIANNESS;
+            if (isSource)
+                C2DFormat |= C2D_FORMAT_PREMULTIPLIED;
+            return C2DFormat;
         case RGBA8888_UBWC:
-            return C2D_COLOR_FORMAT_8888_RGBA |
-                   C2D_FORMAT_SWAP_ENDIANNESS |
-                   C2D_FORMAT_UBWC_COMPRESSED;
+            C2DFormat = C2D_COLOR_FORMAT_8888_RGBA |
+                        C2D_FORMAT_SWAP_ENDIANNESS |
+                        C2D_FORMAT_UBWC_COMPRESSED;
+            if (isSource)
+                C2DFormat |= C2D_FORMAT_PREMULTIPLIED;
+            return C2DFormat;
         case YCbCr420Tile:
             return (C2D_COLOR_FORMAT_420_NV12 | C2D_FORMAT_MACROTILED);
         case YCbCr420SP:
