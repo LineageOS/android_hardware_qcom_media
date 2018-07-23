@@ -5737,7 +5737,8 @@ OMX_ERRORTYPE omx_vdec::allocate_extradata()
             DEBUG_PRINT_ERROR("Failed to alloc extradata memory");
             return OMX_ErrorInsufficientResources;
         }
-
+        DEBUG_PRINT_HIGH("Allocated extradata size : %d fd: %d",
+            drv_ctx.extradata_info.size, drv_ctx.extradata_info.ion.data_fd);
         drv_ctx.extradata_info.uaddr = ion_map(drv_ctx.extradata_info.ion.data_fd,
                                                drv_ctx.extradata_info.size);
         if (drv_ctx.extradata_info.uaddr == MAP_FAILED) {
@@ -5784,9 +5785,6 @@ OMX_ERRORTYPE  omx_vdec::use_output_buffer(
         DEBUG_PRINT_HIGH("Use_op_buf:Allocating output headers C2D(%d)",
                          client_buffers.is_color_conversion_enabled());
         eRet = allocate_output_headers();
-        if (eRet == OMX_ErrorNone && intermediate) {
-            eRet = allocate_output_headers(true);
-        }
         if (eRet == OMX_ErrorNone)
             eRet = allocate_extradata();
         output_use_buffer = true;
@@ -10312,7 +10310,9 @@ OMX_ERRORTYPE omx_vdec::allocate_output_headers(bool intermediate)
         eRet =  OMX_ErrorInsufficientResources;
     }
 
-    if (intermediate == false && eRet == OMX_ErrorNone) {
+    if (intermediate == false &&
+        eRet == OMX_ErrorNone &&
+        client_buffers.is_color_conversion_enabled()) {
         eRet = allocate_output_headers(true);
     }
 
