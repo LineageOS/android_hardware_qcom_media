@@ -7631,15 +7631,15 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
     if (m_out_bEnabled != OMX_TRUE || output_flush_progress == true || in_reconfig) {
         DEBUG_PRINT_LOW("Output Buffers return flush/disable condition");
         buffer->nFilledLen = 0;
-        print_omx_buffer("FBD in FTBProxy", buffer);
-        m_cb.FillBufferDone (hComp,m_app_data,buffer);
+        print_omx_buffer("FBD in FTBProxy", &m_out_mem_ptr[bufIndex]);
+        m_cb.FillBufferDone (hComp,m_app_data,&m_out_mem_ptr[bufIndex]);
         return OMX_ErrorNone;
     }
     if (m_error_propogated == true) {
         DEBUG_PRINT_LOW("Return buffers in error state");
         buffer->nFilledLen = 0;
-        print_omx_buffer("FBD in FTBProxy", buffer);
-        m_cb.FillBufferDone (hComp,m_app_data,buffer);
+        print_omx_buffer("FBD in FTBProxy", &m_out_mem_ptr[bufIndex]);
+        m_cb.FillBufferDone (hComp,m_app_data,&m_out_mem_ptr[bufIndex]);
         return OMX_ErrorNone;
     }
 
@@ -7660,8 +7660,8 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
         DEBUG_PRINT_ERROR("Invalid ptr_respbuffer %p, ptr_outputbuffer %p",
             ptr_respbuffer, ptr_outputbuffer);
         buffer->nFilledLen = 0;
-        print_omx_buffer("FBD in error", buffer);
-        m_cb.FillBufferDone (hComp,m_app_data,buffer);
+        print_omx_buffer("FBD in error", &m_out_mem_ptr[bufIndex]);
+        m_cb.FillBufferDone (hComp,m_app_data,&m_out_mem_ptr[bufIndex]);
         pending_output_buffers--;
         VIDC_TRACE_INT_LOW("FTB-pending", pending_output_buffers);
         return OMX_ErrorBadParameter;
@@ -7706,8 +7706,8 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
     if (rc) {
         buffer->nFilledLen = 0;
         DEBUG_PRINT_ERROR("Failed to qbuf to driver, error %s", strerror(errno));
-        print_omx_buffer("FBD in error", buffer);
-        m_cb.FillBufferDone(hComp, m_app_data, buffer);
+        print_omx_buffer("FBD in error", &m_out_mem_ptr[bufIndex]);
+        m_cb.FillBufferDone(hComp, m_app_data, &m_out_mem_ptr[bufIndex]);
         return OMX_ErrorHardware;
     }
 
