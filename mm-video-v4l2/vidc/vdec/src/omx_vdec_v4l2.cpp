@@ -7603,7 +7603,7 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
     VIDC_TRACE_NAME_HIGH("FTB");
     OMX_ERRORTYPE nRet = OMX_ErrorNone;
     OMX_BUFFERHEADERTYPE *buffer = bufferAdd;
-    unsigned nPortIndex = 0;
+    unsigned bufIndex = 0;
     struct vdec_bufferpayload     *ptr_outputbuffer = NULL;
     struct vdec_output_frameinfo  *ptr_respbuffer = NULL;
 
@@ -7614,16 +7614,16 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
     vdec_bufferpayload *omx_ptr_outputbuffer =
         client_buffers.is_color_conversion_enabled()?
                     drv_ctx.ptr_intermediate_outputbuffer:drv_ctx.ptr_outputbuffer;
-    nPortIndex = buffer-omx_base_address;
+    bufIndex = buffer-omx_base_address;
 
-    if (bufferAdd == NULL || nPortIndex >= drv_ctx.op_buf.actualcount) {
-        DEBUG_PRINT_ERROR("FTBProxy: ERROR: invalid buffer index, nPortIndex %u bufCount %u",
-            nPortIndex, drv_ctx.op_buf.actualcount);
+    if (bufferAdd == NULL || bufIndex >= drv_ctx.op_buf.actualcount) {
+        DEBUG_PRINT_ERROR("FTBProxy: ERROR: invalid buffer index, bufIndex %u bufCount %u",
+            bufIndex, drv_ctx.op_buf.actualcount);
         return OMX_ErrorBadParameter;
     }
 
-    if (BITMASK_ABSENT(&m_out_bm_count, nPortIndex) || m_buffer_error) {
-        DEBUG_PRINT_ERROR("FTBProxy: ERROR: invalid buffer, nPortIndex %u", nPortIndex);
+    if (BITMASK_ABSENT(&m_out_bm_count, bufIndex) || m_buffer_error) {
+        DEBUG_PRINT_ERROR("FTBProxy: ERROR: invalid buffer, bufIndex %u", bufIndex);
         return OMX_ErrorBadParameter;
     }
 
@@ -7644,9 +7644,9 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
     }
 
     if (dynamic_buf_mode) {
-        omx_ptr_outputbuffer[nPortIndex].offset = 0;
-        omx_ptr_outputbuffer[nPortIndex].buffer_len = buffer->nAllocLen;
-        omx_ptr_outputbuffer[nPortIndex].mmaped_size = buffer->nAllocLen;
+        omx_ptr_outputbuffer[bufIndex].offset = 0;
+        omx_ptr_outputbuffer[bufIndex].buffer_len = buffer->nAllocLen;
+        omx_ptr_outputbuffer[bufIndex].mmaped_size = buffer->nAllocLen;
     }
 
     pending_output_buffers++;
@@ -7674,26 +7674,26 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
     memset( (void *)plane, 0, (sizeof(struct v4l2_plane)*VIDEO_MAX_PLANES));
     unsigned int extra_idx = 0;
 
-    buf.index = nPortIndex;
+    buf.index = bufIndex;
     buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     buf.memory = V4L2_MEMORY_USERPTR;
     plane[0].bytesused = buffer->nFilledLen;
     plane[0].length = buffer->nAllocLen;
     plane[0].m.userptr =
-        (unsigned long)omx_ptr_outputbuffer[nPortIndex].bufferaddr -
-        (unsigned long)omx_ptr_outputbuffer[nPortIndex].offset;
-    plane[0].reserved[0] = omx_ptr_outputbuffer[nPortIndex].pmem_fd;
-    plane[0].reserved[1] = omx_ptr_outputbuffer[nPortIndex].offset;
+        (unsigned long)omx_ptr_outputbuffer[bufIndex].bufferaddr -
+        (unsigned long)omx_ptr_outputbuffer[bufIndex].offset;
+    plane[0].reserved[0] = omx_ptr_outputbuffer[bufIndex].pmem_fd;
+    plane[0].reserved[1] = omx_ptr_outputbuffer[bufIndex].offset;
     plane[0].data_offset = 0;
     extra_idx = EXTRADATA_IDX(drv_ctx.num_planes);
     if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
         plane[extra_idx].bytesused = 0;
         plane[extra_idx].length = drv_ctx.extradata_info.buffer_size;
-        plane[extra_idx].m.userptr = (long unsigned int) (drv_ctx.extradata_info.uaddr + nPortIndex * drv_ctx.extradata_info.buffer_size);
+        plane[extra_idx].m.userptr = (long unsigned int) (drv_ctx.extradata_info.uaddr + bufIndex * drv_ctx.extradata_info.buffer_size);
 #ifdef USE_ION
         plane[extra_idx].reserved[0] = drv_ctx.extradata_info.ion.data_fd;
 #endif
-        plane[extra_idx].reserved[1] = nPortIndex * drv_ctx.extradata_info.buffer_size;
+        plane[extra_idx].reserved[1] = bufIndex * drv_ctx.extradata_info.buffer_size;
         plane[extra_idx].data_offset = 0;
     } else if (extra_idx >= VIDEO_MAX_PLANES) {
         DEBUG_PRINT_ERROR("Extradata index higher than expected: %u", extra_idx);
