@@ -6337,9 +6337,10 @@ OMX_ERRORTYPE omx_vdec::free_output_buffer(OMX_BUFFERHEADERTYPE *bufferHdr,
             }
 #endif
         } //!dynamic_buf_mode
-        if (client_buffers.is_color_conversion_enabled() && intermediate == false) {
+        if (intermediate == false) {
             OMX_BUFFERHEADERTYPE *tempBufHdr = m_intermediate_out_mem_ptr + index;
-            if (free_output_buffer(tempBufHdr, true) != OMX_ErrorNone) {
+            if (client_buffers.is_color_conversion_enabled() &&
+                free_output_buffer(tempBufHdr, true) != OMX_ErrorNone) {
                 return OMX_ErrorBadParameter;
             }
 
@@ -9737,7 +9738,7 @@ void omx_vdec::free_output_buffer_header(bool intermediate)
         *omx_op_buf_ion_info = NULL;
     }
 #endif
-    if (intermediate == false) {
+    if (intermediate == false && client_buffers.is_color_conversion_enabled()) {
         free_output_buffer_header(true);
     }
 }
