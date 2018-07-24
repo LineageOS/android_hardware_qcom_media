@@ -2272,6 +2272,12 @@ bool omx_venc::dev_empty_buf
                             m_sInPortFormat.eColorFormat = (OMX_COLOR_FORMATTYPE)
                                 HAL_PIXEL_FORMAT_NV21_ZSL;
                         }
+                        else if (handle->format == QOMX_COLOR_FormatYVU420SemiPlanar)
+                        {
+                            DEBUG_PRINT_LOW("HAL_PIXEL_FORMAT_NV21_ENCODEABLE ");
+                            m_sInPortFormat.eColorFormat = (OMX_COLOR_FORMATTYPE)
+                                QOMX_COLOR_FormatYVU420SemiPlanar;
+                        }
                         else
                         {
                             DEBUG_PRINT_ERROR("%s: OMX_IndexParamVideoPortFormat 0x%x invalid",
