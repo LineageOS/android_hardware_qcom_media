@@ -111,6 +111,9 @@ pl_map profile_level_converter::level_avc_omx_to_v4l2 ({
             {OMX_VIDEO_AVCLevel5, V4L2_MPEG_VIDEO_H264_LEVEL_5_0},
             {OMX_VIDEO_AVCLevel51, V4L2_MPEG_VIDEO_H264_LEVEL_5_1},
             {OMX_VIDEO_AVCLevel52, V4L2_MPEG_VIDEO_H264_LEVEL_5_2},
+            {OMX_VIDEO_AVCLevel6, V4L2_MPEG_VIDEO_H264_LEVEL_6_0},
+            {OMX_VIDEO_AVCLevel61, V4L2_MPEG_VIDEO_H264_LEVEL_6_1},
+            {OMX_VIDEO_AVCLevel62, V4L2_MPEG_VIDEO_H264_LEVEL_6_2},
         });
 
 pl_map profile_level_converter::level_avc_v4l2_to_omx ({});
