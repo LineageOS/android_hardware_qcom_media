@@ -6745,7 +6745,7 @@ bool venc_dev::venc_get_temporal_layer_caps(OMX_U32 *nMaxLayers,
 }
 
 bool venc_dev::venc_check_for_hybrid_hp(OMX_VIDEO_ANDROID_TEMPORALLAYERINGPATTERNTYPE ePattern) {
-    //Hybrid HP is only for H264 and VBR CFR
+    //Hybrid HP is only for H264 and CFR
     if (m_sVenc_cfg.codectype != V4L2_PIX_FMT_H264) {
         DEBUG_PRINT_LOW("TemporalLayer: Hybrid HierP is not supported for non H264");
         return false;
@@ -6755,8 +6755,11 @@ bool venc_dev::venc_check_for_hybrid_hp(OMX_VIDEO_ANDROID_TEMPORALLAYERINGPATTER
         DEBUG_PRINT_LOW("TemporalLayer: The pattern must be Android for Hybrid HP");
         return false;
     }
-    if (rate_ctrl.rcmode != V4L2_MPEG_VIDEO_BITRATE_MODE_VBR) {
-        DEBUG_PRINT_LOW("TemporalLayer: RC must be VBR CFR for HybridHP");
+
+    if (rate_ctrl.rcmode != V4L2_CID_MPEG_VIDC_VIDEO_RATE_CONTROL_VBR_CFR &&
+        rate_ctrl.rcmode != V4L2_CID_MPEG_VIDC_VIDEO_RATE_CONTROL_CBR_CFR &&
+        rate_ctrl.rcmode != V4L2_CID_MPEG_VIDC_VIDEO_RATE_CONTROL_MBR_CFR) {
+        DEBUG_PRINT_LOW("TemporalLayer: RC must be CFR for Hybrid");
         return false;
     }
 
@@ -6983,10 +6986,34 @@ bool venc_dev::venc_convert_abs2cum_bitrate(QOMX_EXTNINDEX_VIDEO_HYBRID_HP_MODE 
 
 bool venc_dev::venc_validate_temporal_settings() {
 
-    if (intra_period.num_bframes > 0) {
-        DEBUG_PRINT_HIGH("TemporalLayer: Invalid B-frame settings for Hier layers");
+    bool fps_30_plus = false;
+    bool fps_60_plus = false;
+    bool res_1080p_plus = false;
+
+    fps_30_plus = (((m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) > 30) || ((operating_rate) > 30));
+    fps_60_plus = (((m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) > 60) || ((operating_rate) > 60));
+    res_1080p_plus = ((m_sVenc_cfg.input_width * m_sVenc_cfg.input_height / 256) > (1920 * 1088 / 256));
+
+    if (res_1080p_plus == false && fps_60_plus == false) {
+        DEBUG_PRINT_HIGH("TemporalLayer: Hier layers cannot be enabled for res <= 1080p & fps <= 60");
         return false;
     }
+
+    if (res_1080p_plus == true && fps_30_plus == false) {
+        DEBUG_PRINT_HIGH("TemporalLayer: Hier layers cannot be enabled for res > 1080p & fps <= 30");
+        return false;
+    }
+
+    if (intra_period.num_bframes > 0 || intra_period.num_pframes == 0) {
+        DEBUG_PRINT_HIGH("TemporalLayer: Invalid P-frame/B-frame settings for Hier layers");
+        return false;
+    }
+
+    if (rate_ctrl.rcmode != V4L2_CID_MPEG_VIDC_VIDEO_RATE_CONTROL_VBR_CFR) {
+        DEBUG_PRINT_HIGH("TemporalLayer: Hier layers cannot be enabled when RC is not VBR_CFR");
+        return false;
+    }
+
     return true;
 }
 
@@ -7113,10 +7140,22 @@ bool venc_dev::venc_reconfigure_temporal_settings() {
     memset(&temporalParams, 0x0, sizeof(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE));
 
     DEBUG_PRINT_HIGH("TemporalLayer: Reconfigure temporal layer settings");
+    // If client hasn't disabled temporal layers and layer count is set to zero
+    // enable two temporal layers by default only if it satisfies certain conditions
+    if (client_req_disable_temporal_layers == false && temporal_layers_config.nPLayers <= 1) {
 
-    if (!venc_validate_temporal_settings()) {
-        DEBUG_PRINT_HIGH("TemporalLayer: Cannot enable temporal layers");
-        return true;
+        if (!venc_validate_temporal_settings()) {
+            DEBUG_PRINT_HIGH("TemporalLayer: Cannot enable temporal layers by default");
+            return true;
+        }
+
+        temporal_layers_config.nMaxLayers           = 2;
+        temporal_layers_config.nMaxBLayers          = 0;
+        temporal_layers_config.ePattern             = OMX_VIDEO_AndroidTemporalLayeringPatternAndroid;
+        temporal_layers_config.nPLayers             = 2;
+        temporal_layers_config.nBLayers             = 0;
+        temporal_layers_config.bIsBitrateRatioValid = OMX_FALSE;
+        DEBUG_PRINT_HIGH("TemporalLayer: Enabling temporal layers = 2 by default");
     }
 
     temporalParams.nLayerCountMax           = temporal_layers_config.nMaxLayers;
