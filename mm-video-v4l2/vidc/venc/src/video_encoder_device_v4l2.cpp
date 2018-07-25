@@ -6662,8 +6662,10 @@ bool venc_dev::venc_set_blur_resolution(OMX_QTI_VIDEO_CONFIG_BLURINFO *blurInfo)
             blur_height = 1080;
             break;
         default:
-            DEBUG_PRINT_ERROR("Blur resolution not recognized");
-            return false;
+            blur_width = blurInfo->eTargetResol >> 16;
+            blur_height = blurInfo->eTargetResol & 0xFFFF;
+            DEBUG_PRINT_LOW("Custom blur resolution %dx%d", blur_width, blur_height);
+            break;
     }
 
     ctrl[0].id = V4L2_CID_MPEG_VIDC_VIDEO_BLUR_WIDTH;
