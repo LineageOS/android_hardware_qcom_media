@@ -8699,7 +8699,7 @@ int omx_vdec::async_message_process (void *context, void* message)
                 omx->post_event ((unsigned)NULL, vdec_msg->status_code,\
                         OMX_COMPONENT_GENERATE_HARDWARE_ERROR);
             }
-            if (v4l2_buf_ptr->flags & V4L2_BUF_FLAG_ERROR) {
+            if (v4l2_buf_ptr->flags & V4L2_QCOM_BUF_DATA_CORRUPT) {
                 omxhdr->nFlags |= OMX_BUFFERFLAG_DATACORRUPT;
                 vdec_msg->status_code = VDEC_S_INPUT_BITSTREAM_ERR;
             }
@@ -8790,7 +8790,7 @@ int omx_vdec::async_message_process (void *context, void* message)
                                         omx_ptr_outputbuffer[v4l2_buf_ptr->index].pmem_fd);
                    }
 
-                   if (v4l2_buf_ptr->flags & V4L2_BUF_FLAG_ERROR) {
+                   if (v4l2_buf_ptr->flags & V4L2_QCOM_BUF_DATA_CORRUPT) {
                        omxhdr->nFlags |= OMX_BUFFERFLAG_DATACORRUPT;
                    }
 
