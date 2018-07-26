@@ -7576,6 +7576,7 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer(OMX_IN OMX_HANDLETYPE  hComp,
 
     if (client_buffers.is_color_conversion_enabled()) {
         buffer = m_intermediate_out_mem_ptr + nPortIndex;
+        buffer->nAllocLen = drv_ctx.op_buf.buffer_size;
     }
 
     //buffer->nAllocLen will be sizeof(struct VideoDecoderOutputMetaData). Overwrite
