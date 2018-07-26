@@ -5732,10 +5732,7 @@ OMX_ERRORTYPE omx_vdec::allocate_extradata()
 #ifdef USE_ION
     if (drv_ctx.extradata_info.buffer_size) {
         if (drv_ctx.extradata_info.ion.data_fd >= 0) {
-            ion_unmap(drv_ctx.extradata_info.ion.data_fd,
-                      (void *)drv_ctx.extradata_info.uaddr,
-                      drv_ctx.extradata_info.size);
-            free_ion_memory(&drv_ctx.extradata_info.ion);
+            free_extradata();
         }
 
         drv_ctx.extradata_info.size = (drv_ctx.extradata_info.size + 4095) & (~4095);
@@ -5766,8 +5763,10 @@ void omx_vdec::free_extradata()
     if (drv_ctx.extradata_info.uaddr) {
         ion_unmap(drv_ctx.extradata_info.ion.data_fd,
                   (void *)drv_ctx.extradata_info.uaddr,
-                  drv_ctx.extradata_info.size);
+                  drv_ctx.extradata_info.ion.alloc_data.len);
         free_ion_memory(&drv_ctx.extradata_info.ion);
+        drv_ctx.extradata_info.uaddr = NULL;
+        drv_ctx.extradata_info.ion.data_fd = -1;
     }
 #endif
 }
