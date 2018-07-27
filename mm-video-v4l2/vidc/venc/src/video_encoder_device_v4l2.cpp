@@ -197,6 +197,7 @@ venc_dev::venc_dev(class omx_venc *venc_class)
          strlcpy(m_debug.log_loc, property_value, PROPERTY_VALUE_MAX);
 
     mUseAVTimerTimestamps = false;
+    mUseLinearColorFormat = false;
 
     profile_level_converter::init();
 }
@@ -2864,6 +2865,12 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 QOMX_ENABLETYPE *pParam = (QOMX_ENABLETYPE *)paramData;
                 csc_enable = pParam->bEnable;
                 DEBUG_PRINT_INFO("CSC settings: Enabled : %d ", pParam->bEnable);
+            }
+        case OMX_QTIIndexParamEnableLinearColorFormat:
+            {
+                QOMX_ENABLETYPE *pParam = (QOMX_ENABLETYPE *)paramData;
+                mUseLinearColorFormat = pParam->bEnable;
+                DEBUG_PRINT_INFO("Linear Color Format Enabled : %d ", pParam->bEnable);
             }
         default:
             DEBUG_PRINT_ERROR("ERROR: Unsupported parameter in venc_set_param: %u",
@@ -6962,16 +6969,21 @@ void venc_dev::venc_get_consumer_usage(OMX_U32* usage) {
     /* Initialize to zero & update as per required color format */
     *usage = 0;
 
-    /* TODO: P010 & NV12 color format addition pending */
+    /* TODO: NV12 color format addition pending */
 
     /* Configure UBWC as default */
     *usage |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
 
-    if(hevc && eProfile == (OMX_U32)OMX_VIDEO_HEVCProfileMain10HDR10) {
-        DEBUG_PRINT_INFO("Setting TP10 consumer usage bits");
+    if (hevc && eProfile == (OMX_U32)OMX_VIDEO_HEVCProfileMain10HDR10) {
+        DEBUG_PRINT_INFO("Setting 10-bit consumer usage bits");
         *usage |= GRALLOC_USAGE_PRIVATE_10BIT_VIDEO;
+        if (mUseLinearColorFormat) {
+            *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
+            DEBUG_PRINT_INFO("Clear UBWC consumer usage bits for P010");
+        }
     }
 
+    DEBUG_PRINT_INFO("venc_get_consumer_usage 0x%x", *usage);
 }
 
 bool venc_dev::venc_get_profile_level(OMX_U32 *eProfile,OMX_U32 *eLevel)
