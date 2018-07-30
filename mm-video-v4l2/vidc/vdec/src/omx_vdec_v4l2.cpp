@@ -305,7 +305,7 @@ void* async_message_thread (void *input)
                  * for HEVC. For others, it should be 16.
                  */
 
-                uint32_t pixel_align = (codec  == V4L2_PIX_FMT_HEVC? 32:16);
+                uint32_t pixel_align = (codec == V4L2_PIX_FMT_HEVC? 32:16);
 
                 event_fields_changed |= (ALIGN(omx->drv_ctx.video_resolution.frame_height,
                                                          pixel_align) !=
@@ -1778,11 +1778,13 @@ void omx_vdec::process_event_cb(void *ctxt)
                                             DEBUG_PRINT_HIGH("Rxd PORT_RECONFIG: OMX_IndexConfigCommonOutputCrop");
 
                                             /* Check if resolution is changed in smooth streaming mode */
+                                            int codec = pThis->get_session_codec_type();
+                                            uint32_t pixel_align = (codec == V4L2_PIX_FMT_HEVC? 32:16);
                                             if (pThis->m_smoothstreaming_mode &&
-                                                (pThis->framesize.nWidth !=
-                                                    pThis->drv_ctx.video_resolution.frame_width) ||
-                                                (pThis->framesize.nHeight !=
-                                                    pThis->drv_ctx.video_resolution.frame_height)) {
+                                                (ALIGN(pThis->framesize.nWidth, pixel_align) !=
+                                                 ALIGN(pThis->drv_ctx.video_resolution.frame_width, pixel_align)) ||
+                                                (ALIGN(pThis->framesize.nHeight, pixel_align) !=
+                                                 ALIGN(pThis->drv_ctx.video_resolution.frame_height, pixel_align))) {
 
                                                 DEBUG_PRINT_HIGH("Resolution changed from: wxh = %dx%d to: wxh = %dx%d",
                                                         pThis->framesize.nWidth,
@@ -8862,14 +8864,19 @@ int omx_vdec::async_message_process (void *context, void* message)
                    /* Post event if resolution OR crop changed */
                    /* filled length will be changed if resolution changed */
                    /* Crop parameters can be changed even without resolution change */
+                   int codec = omx->get_session_codec_type();
+                   uint32_t pixel_align = (codec  == V4L2_PIX_FMT_HEVC? 32:16);
+
                    if (omxhdr->nFilledLen
                        && ((omx->prev_n_filled_len != omxhdr->nFilledLen)
                        || (omx->drv_ctx.frame_size.left != vdec_msg->msgdata.output_frame.framesize.left)
                        || (omx->drv_ctx.frame_size.top != vdec_msg->msgdata.output_frame.framesize.top)
                        || (omx->drv_ctx.frame_size.right != vdec_msg->msgdata.output_frame.framesize.right)
                        || (omx->drv_ctx.frame_size.bottom != vdec_msg->msgdata.output_frame.framesize.bottom)
-                       || (omx->drv_ctx.video_resolution.frame_width != vdec_msg->msgdata.output_frame.picsize.frame_width)
-                       || (omx->drv_ctx.video_resolution.frame_height != vdec_msg->msgdata.output_frame.picsize.frame_height) )) {
+                           || (ALIGN(omx->drv_ctx.video_resolution.frame_width, pixel_align) !=
+                               ALIGN(vdec_msg->msgdata.output_frame.picsize.frame_width, pixel_align))
+                           || (ALIGN(omx->drv_ctx.video_resolution.frame_height, pixel_align) !=
+                               ALIGN(vdec_msg->msgdata.output_frame.picsize.frame_height, pixel_align)) )) {
 
                        DEBUG_PRINT_HIGH("Parameters Changed From: Len: %u, WxH: %dx%d, L: %u, T: %u, R: %u, B: %u --> Len: %u, WxH: %dx%d, L: %u, T: %u, R: %u, B: %u",
                                omx->prev_n_filled_len,
