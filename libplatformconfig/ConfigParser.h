@@ -46,6 +46,10 @@
     extern "C" {
 #endif
 
+#define VIDC_PLAT_LOGH(fmt, args...) ({ \
+          ALOGD(fmt,##args); \
+      })
+
 namespace Platform {
 
 class ConfigParser {
