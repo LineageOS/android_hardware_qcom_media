@@ -42,14 +42,14 @@ namespace Platform {
 
 void ConfigParser::processProperty(const XML_Char **attr, ConfigMap &configMap) {
     if (strcmp(attr[0], "name") != 0) {
-        DEBUG_PRINT_HIGH("%s: Element 'name' not found!", __func__);
+        VIDC_PLAT_LOGH("%s: Element 'name' not found!", __func__);
         return;
     }
 
     std::string propName(attr[1]);
 
     if (strcmp(attr[2], "value") != 0) {
-        DEBUG_PRINT_HIGH("%s: Element 'value' not found for %s!", __func__, propName.c_str());
+        VIDC_PLAT_LOGH("%s: Element 'value' not found for %s!", __func__, propName.c_str());
         return;
     }
 
@@ -78,7 +78,7 @@ int ConfigParser::initAndParse(std::string configFile, ConfigMap &configMap) {
     FILE *file;
     file = fopen(configFile.c_str(), "r");
     if (!file) {
-        DEBUG_PRINT_HIGH("%s: Error: %d (%s). Using defaults!",
+        VIDC_PLAT_LOGH("%s: Error: %d (%s). Using defaults!",
             __func__, errno, strerror(errno));
         return err;
     }
@@ -86,7 +86,7 @@ int ConfigParser::initAndParse(std::string configFile, ConfigMap &configMap) {
     // Create Parser
     parser = XML_ParserCreate(NULL);
     if (!parser) {
-        DEBUG_PRINT_HIGH("%s: Failed to create XML parser!", __func__);
+        VIDC_PLAT_LOGH("%s: Failed to create XML parser!", __func__);
         err = -ENODEV;
         goto fileError;
     }
@@ -101,21 +101,21 @@ int ConfigParser::initAndParse(std::string configFile, ConfigMap &configMap) {
     while (1) {
         buf = XML_GetBuffer(parser, BUF_SIZE);
         if (buf == NULL) {
-            DEBUG_PRINT_HIGH("%s: XML_GetBuffer failed", __func__);
+            VIDC_PLAT_LOGH("%s: XML_GetBuffer failed", __func__);
             err = -ENOMEM;
             goto parserError;
         }
 
         bytesRead = fread(buf, 1, BUF_SIZE, file);
         if (bytesRead < 0) {
-            DEBUG_PRINT_HIGH("%s: fread failed, bytes read = %d", __func__, bytesRead);
+            VIDC_PLAT_LOGH("%s: fread failed, bytes read = %d", __func__, bytesRead);
             err = bytesRead;
             goto parserError;
         }
 
         if (XML_ParseBuffer(parser, bytesRead,
                 bytesRead == 0) == XML_STATUS_ERROR) {
-            DEBUG_PRINT_HIGH("%s: XML_ParseBuffer failed, for %s",
+            VIDC_PLAT_LOGH("%s: XML_ParseBuffer failed, for %s",
                     __func__, configFile.c_str());
             err = -EINVAL;
             goto parserError;
