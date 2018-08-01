@@ -560,7 +560,6 @@ class venc_dev
         bool low_latency_mode;
         struct roidata {
             bool dirty;
-            OMX_TICKS timestamp;
             OMX_QTI_VIDEO_CONFIG_ROIINFO info;
         };
         bool m_roi_enabled;
