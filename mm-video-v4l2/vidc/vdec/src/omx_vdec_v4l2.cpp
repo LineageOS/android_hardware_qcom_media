@@ -11003,13 +11003,10 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
     m_extradata_info.output_crop_updated = OMX_FALSE;
     data = (struct OMX_OTHER_EXTRADATATYPE *)p_extradata;
     if (data) {
-        while ((consumed_len < drv_ctx.extradata_info.buffer_size)
+        while ((((consumed_len + sizeof(struct OMX_OTHER_EXTRADATATYPE)) <
+                drv_ctx.extradata_info.buffer_size) && ((consumed_len + data->nSize) <
+                drv_ctx.extradata_info.buffer_size))
                 && (data->eType != (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_NONE)) {
-            if ((consumed_len + data->nSize) > (unsigned)drv_ctx.extradata_info.buffer_size) {
-                DEBUG_PRINT_LOW("Invalid extra data size");
-                break;
-            }
-
             DEBUG_PRINT_LOW("handle_extradata: eType = 0x%x", data->eType);
             switch ((unsigned long)data->eType) {
                 case MSM_VIDC_EXTRADATA_INTERLACE_VIDEO:
