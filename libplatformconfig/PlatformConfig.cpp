@@ -32,7 +32,6 @@
 #include <errno.h>
 #include <utils/Log.h>
 #include <sys/mman.h>
-#include "vidc_debug.h"
 #include "PlatformConfig.h"
 #include "ConfigParser.h"
 
