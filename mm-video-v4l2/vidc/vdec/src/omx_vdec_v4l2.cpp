@@ -12446,8 +12446,8 @@ OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::cache_ops(unsigned int index
     }
 
     struct dma_buf_sync dma_buf_sync_data[2];
-    dma_buf_sync_data[0].flags = DMA_BUF_SYNC_START;
-    dma_buf_sync_data[1].flags = DMA_BUF_SYNC_END;
+    dma_buf_sync_data[0].flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_RW;
+    dma_buf_sync_data[1].flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_RW;
 
     for(unsigned int i=0; i<2; i++) {
         int ret = ioctl(omx->drv_ctx.op_intermediate_buf_ion_info[index].data_fd,
