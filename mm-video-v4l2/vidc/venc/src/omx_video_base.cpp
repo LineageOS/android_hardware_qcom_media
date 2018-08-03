@@ -4811,10 +4811,10 @@ OMX_ERRORTYPE omx_video::fill_buffer_done(OMX_HANDLETYPE hComp,
             m_fbd_count++;
 
             if (dev_get_output_log_flag()) {
-                venc_start_buffer_access(m_pOutput_ion[index].data_fd);
+                do_cache_operations(m_pOutput_ion[index].data_fd);
                 dev_output_log_buffers((const char*)buffer->pBuffer + buffer->nOffset, buffer->nFilledLen,
                                         buffer->nTimeStamp);
-                venc_end_buffer_access(m_pOutput_ion[index].data_fd);
+                do_cache_operations(m_pOutput_ion[index].data_fd);
 
             }
         }
@@ -4934,7 +4934,7 @@ void omx_video::complete_pending_buffer_done_cbs()
     }
 }
 
-void omx_video::venc_start_buffer_access(int fd)
+void omx_video::do_cache_operations(int fd)
 {
 #ifdef USE_ION
     struct dma_buf_sync buf_sync;
@@ -4942,32 +4942,17 @@ void omx_video::venc_start_buffer_access(int fd)
     if (fd < 0)
         return;
 
-    buf_sync.flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_RW;
-    int rc = ioctl(fd, DMA_BUF_IOCTL_SYNC, &buf_sync);
-    if (rc) {
-        DEBUG_PRINT_ERROR("Failed DMA_BUF_IOCTL_SYNC start fd : %d", fd);
+    struct dma_buf_sync dma_buf_sync_data[2];
+    dma_buf_sync_data[0].flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_RW;
+    dma_buf_sync_data[1].flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_RW;
+
+    for(unsigned int i=0; i<2; i++) {
+        int rc = ioctl(fd, DMA_BUF_IOCTL_SYNC, &dma_buf_sync_data[i]);
+        if (rc < 0) {
+            DEBUG_PRINT_ERROR("Failed DMA_BUF_IOCTL_SYNC %s fd : %d", i==0?"start":"end", fd);
+            return;
+        }
     }
-    return;
-#else
-    (void)fd;
-    return;
-#endif
-}
-
-void omx_video::venc_end_buffer_access(int fd)
-{
-#ifdef USE_ION
-    struct dma_buf_sync buf_sync;
-
-    if (fd < 0)
-        return;
-
-    buf_sync.flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_RW;
-    int rc = ioctl(fd, DMA_BUF_IOCTL_SYNC, &buf_sync);
-    if (rc) {
-        DEBUG_PRINT_ERROR("Failed DMA_BUF_IOCTL_SYNC end fd: %d", fd);
-    }
-    return;
 #else
     (void)fd;
     return;
@@ -4980,7 +4965,7 @@ char *omx_video::ion_map(int fd, int len)
                                 MAP_SHARED, fd, 0);
 #ifdef USE_ION
     if (bufaddr != MAP_FAILED) {
-        venc_start_buffer_access(fd);
+        do_cache_operations(fd);
     }
 #endif
     return bufaddr;
@@ -4989,7 +4974,7 @@ char *omx_video::ion_map(int fd, int len)
 OMX_ERRORTYPE omx_video::ion_unmap(int fd, void *bufaddr, int len)
 {
 #ifdef USE_ION
-    venc_end_buffer_access(fd);
+    do_cache_operations(fd);
 #else
     (void)fd;
 #endif

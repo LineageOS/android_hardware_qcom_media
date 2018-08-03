@@ -653,7 +653,7 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
 
     DEBUG_PRINT_HIGH("Processing Extradata for Buffer = %lld", nTimeStamp); // Useful for debugging
 #ifdef USE_ION
-    venc_handle->venc_start_buffer_access(input_extradata_info.ion.data_fd);
+    venc_handle->do_cache_operations(input_extradata_info.ion.data_fd);
 #endif
     if (m_sVenc_cfg.inputformat == V4L2_PIX_FMT_NV12 || m_sVenc_cfg.inputformat == V4L2_PIX_FMT_NV21) {
         size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12, width, height);
@@ -823,7 +823,7 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
 
 bailout:
 #ifdef USE_ION
-    venc_handle->venc_end_buffer_access(input_extradata_info.ion.data_fd);
+    venc_handle->do_cache_operations(input_extradata_info.ion.data_fd);
 #endif
     return status;
 }
@@ -1342,7 +1342,7 @@ int venc_dev::venc_extradata_log_buffers(char *buffer_addr, bool input)
         fd = output_extradata_info.ion.data_fd;
 
 #ifdef USE_ION
-    venc_handle->venc_start_buffer_access(fd);
+    venc_handle->do_cache_operations(fd);
 #endif
     if (!m_debug.extradatafile && m_debug.extradata_log) {
         int size = 0;
@@ -1368,7 +1368,7 @@ int venc_dev::venc_extradata_log_buffers(char *buffer_addr, bool input)
                                m_debug.extradatafile_name, errno);
             m_debug.extradatafile_name[0] = '\0';
 #ifdef USE_ION
-            venc_handle->venc_end_buffer_access(fd);
+            venc_handle->do_cache_operations(fd);
 #endif
             return -1;
         }
@@ -1383,7 +1383,7 @@ int venc_dev::venc_extradata_log_buffers(char *buffer_addr, bool input)
         } while (p_extra->eType != OMX_ExtraDataNone);
     }
 #ifdef USE_ION
-    venc_handle->venc_end_buffer_access(fd);
+    venc_handle->do_cache_operations(fd);
 #endif
     return 0;
 }
@@ -1397,7 +1397,7 @@ int venc_dev::venc_input_log_buffers(OMX_BUFFERHEADERTYPE *pbuffer, int fd, int 
     }
 
 #ifdef USE_ION
-    venc_handle->venc_start_buffer_access(fd);
+    venc_handle->do_cache_operations(fd);
 #endif
     if (!m_debug.infile) {
         int size = snprintf(m_debug.infile_name, PROPERTY_VALUE_MAX, "%s/input_enc_%lu_%lu_%p.yuv",
@@ -1514,7 +1514,7 @@ int venc_dev::venc_input_log_buffers(OMX_BUFFERHEADERTYPE *pbuffer, int fd, int 
     }
 bailout:
 #ifdef USE_ION
-    venc_handle->venc_end_buffer_access(fd);
+    venc_handle->do_cache_operations(fd);
 #endif
     return status;
 }
