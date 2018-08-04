@@ -5418,11 +5418,13 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
 
         switch (config->eDecodeType) {
             case OMX_QCOM_PictypeDecode_I:
-                control.value = V4L2_MPEG_MSM_VIDC_ENABLE;
+                control.value = V4L2_MPEG_VIDC_VIDEO_PICTYPE_DECODE_I;
                 break;
             case OMX_QCOM_PictypeDecode_IPB:
             default:
-                control.value = V4L2_MPEG_MSM_VIDC_DISABLE;
+                control.value = (V4L2_MPEG_VIDC_VIDEO_PICTYPE_DECODE_I|
+                                  V4L2_MPEG_VIDC_VIDEO_PICTYPE_DECODE_P|
+                                  V4L2_MPEG_VIDC_VIDEO_PICTYPE_DECODE_B);
                 break;
         }
 
