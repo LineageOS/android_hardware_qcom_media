@@ -696,7 +696,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_platform_entry(NULL),
     m_pmem_info(NULL),
     h264_parser(NULL),
-    arbitrary_bytes (true),
+    arbitrary_bytes (false),
     psource_frame (NULL),
     pdest_frame (NULL),
     m_inp_heap_ptr (NULL),
@@ -2302,22 +2302,18 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
     if (!strncmp(role, "OMX.qcom.video.decoder.avc.secure",
                 OMX_MAX_STRINGNAME_SIZE)) {
         secure_mode = true;
-        arbitrary_bytes = false;
         role = (OMX_STRING)"OMX.qcom.video.decoder.avc";
     } else if (!strncmp(role, "OMX.qcom.video.decoder.mpeg2.secure",
                 OMX_MAX_STRINGNAME_SIZE)) {
         secure_mode = true;
-        arbitrary_bytes = false;
         role = (OMX_STRING)"OMX.qcom.video.decoder.mpeg2";
     } else if (!strncmp(role, "OMX.qcom.video.decoder.hevc.secure",
                 OMX_MAX_STRINGNAME_SIZE)) {
         secure_mode = true;
-        arbitrary_bytes = false;
         role = (OMX_STRING)"OMX.qcom.video.decoder.hevc";
     } else if (!strncmp(role, "OMX.qcom.video.decoder.vp9.secure",
                 OMX_MAX_STRINGNAME_SIZE)) {
         secure_mode = true;
-        arbitrary_bytes = false;
         role = (OMX_STRING)"OMX.qcom.video.decoder.vp9";
     }
 
@@ -2400,7 +2396,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         output_capability = V4L2_PIX_FMT_VP8;
         eCompressionFormat = OMX_VIDEO_CodingVP8;
         codec_type_parse = CODEC_TYPE_VP8;
-        arbitrary_bytes = false;
     } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.vp9",    \
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_decoder.vp9",OMX_MAX_STRINGNAME_SIZE);
@@ -2408,7 +2403,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         output_capability = V4L2_PIX_FMT_VP9;
         eCompressionFormat = OMX_VIDEO_CodingVP9;
         codec_type_parse = CODEC_TYPE_VP9;
-        arbitrary_bytes = false;
     } else {
         DEBUG_PRINT_ERROR("ERROR:Unknown Component");
         eRet = OMX_ErrorInvalidComponentName;
