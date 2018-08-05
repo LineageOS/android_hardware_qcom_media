@@ -47,7 +47,7 @@ Config::Config() {
 }
 
 Config* Config::getInstance() {
-    DEBUG_PRINT_LOW("%s: Enter", __func__);
+    VIDC_PLAT_LOGH("%s: Enter", __func__);
     if (!mInstance) {
         mInstance = new Config();
     }
@@ -62,12 +62,12 @@ ConfigError_t Config::getInt32(Config_t config, int32_t *value,
         return FAIL;
     }
     if (conf->mConfigMap.find(configStrMap[config].name) == conf->mConfigMap.end()) {
-        DEBUG_PRINT_HIGH("%s: Returning default", __func__);
+        VIDC_PLAT_LOGH("%s: Returning default", __func__);
         *value = defaultValue;
         return FAIL;
     }
     *value = (int32_t) atoi(conf->mConfigMap[configStrMap[config].name].c_str());
-    DEBUG_PRINT_LOW("%s Config name: %s value: %d",
+    VIDC_PLAT_LOGH("%s Config name: %s value: %d",
             __func__, configStrMap[config].name, *value);
     return OK;
 }
