@@ -211,7 +211,6 @@ int hypv_close(int fd)
             DEBUG_PRINT_ERROR("invalid fd=%d", fd_index);
             rc = -1;
         } else {
-            int handle_count = 0;
             pthread_mutex_lock(&g_hvfe_handle_lock);
             rc = video_fe_close(g_hvfe_handle_storage[fd_index]);
             g_hvfe_handle_storage[fd_index] = 0;
