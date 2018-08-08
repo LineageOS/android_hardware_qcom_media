@@ -76,7 +76,7 @@ class omx_venc: public omx_video
         bool m_max_allowed_bitrate_check;
         bool m_stopped;
         bool set_format;
-
+        bool update_offset;
         int dev_handle_output_extradata(void *, int);
         int dev_handle_input_extradata(void *, int, int);
         bool dev_buffer_ready_to_queue(OMX_BUFFERHEADERTYPE *buffer);

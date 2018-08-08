@@ -1394,19 +1394,29 @@ typedef struct OMX_QTI_VIDEO_CONFIG_ROIINFO {
     OMX_PTR         pRoiMBInfo;
 } OMX_QTI_VIDEO_CONFIG_ROIINFO;
 
+/**
+ * When enable below BLUR feature, a filter will be applied to the
+ * input YUV to achieve the similar effect as downscaling to the
+ * BLUR resolution specified in eTargetResol.
+ * Could use the 4 pre-defined resolutions, 240p, 480p, 720p, 1080p,
+ * or could specify custom resolution, use bit[31:16] for width,
+ * bit[15:0] for height.
+*/
+
 typedef enum OMX_QTI_VIDEO_BLUR_RESOLUTION {
     BLUR_RESOL_DISABLED = 0,
     BLUR_RESOL_240      = 1,
     BLUR_RESOL_480      = 2,
     BLUR_RESOL_720      = 3,
     BLUR_RESOL_1080     = 4,
+    BLUR_RESOL_MAX      = 0xFFFFFFFF,
 } OMX_QTI_VIDEO_BLUR_RESOLUTION;
 
 typedef struct OMX_QTI_VIDEO_CONFIG_BLURINFO {
     OMX_U32         nSize;
     OMX_VERSIONTYPE nVersion;
     OMX_U32         nPortIndex;
-    OMX_QTI_VIDEO_BLUR_RESOLUTION eTargetResol;
+    OMX_QTI_VIDEO_BLUR_RESOLUTION eTargetResol;  /* if custom resolution, bit[31:16] for width, bit[15:0] for height*/
 } OMX_QTI_VIDEO_CONFIG_BLURINFO;
 
 typedef enum OMX_QCOM_EXTRADATATYPE
