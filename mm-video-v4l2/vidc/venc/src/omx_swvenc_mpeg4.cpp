@@ -1251,7 +1251,14 @@ OMX_ERRORTYPE  omx_venc::set_parameter
             if ( (m_codec != SWVENC_CODEC_H263) && (pParam->nResynchMarkerSpacing) )
             {
                Prop.info.slice_config.mode = SWVENC_SLICE_MODE_BYTE;
-               Prop.info.slice_config.size = pParam->nResynchMarkerSpacing;
+               Prop.info.slice_config.size = ALIGN(pParam->nResynchMarkerSpacing, 8) >> 3; //slice size is defined in bits
+               Ret = swvenc_setproperty(m_hSwVenc, &Prop);
+               if (Ret != SWVENC_S_SUCCESS)
+               {
+                  DEBUG_PRINT_ERROR("%s, swvenc_setproperty failed (%d)",
+                    __FUNCTION__, Ret);
+                  RETURN(OMX_ErrorUndefined);
+               }
             }
             else if ( (SWVENC_CODEC_H263 == m_codec) && (pParam->bEnableResync) )
             {
