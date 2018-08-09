@@ -132,9 +132,11 @@ C2DColorConverter::~C2DColorConverter()
 
     if (mC2DLibHandle) {
         dlclose(mC2DLibHandle);
+        mC2DLibHandle = NULL;
     }
     if (mAdrenoUtilsHandle) {
         dlclose(mAdrenoUtilsHandle);
+        mAdrenoUtilsHandle = NULL;
     }
 
 }
