@@ -754,6 +754,7 @@ class omx_video: public qc_omx_component
         QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE m_sParamLowLatency;
         OMX_U32 m_nOperatingRate;
         QOMX_ENABLETYPE m_sParamColorSpaceConversion;
+        OMX_VIDEO_PARAM_ANDROID_IMAGEGRIDTYPE m_sParamAndroidImageGrid;
 
         // fill this buffer queue
         omx_cmd_queue m_ftb_q;
