@@ -986,8 +986,7 @@ class omx_vdec: public qc_omx_component
 #ifdef USE_ION
         bool alloc_map_ion_memory(OMX_U32 buffer_size, vdec_ion *ion_info, int flag);
         void free_ion_memory(struct vdec_ion *buf_ion_info);
-        void start_buffer_access(int fd);
-        void end_buffer_access(int fd);
+        void do_cache_operations(int fd);
 #endif
 
 
@@ -1322,13 +1321,6 @@ class omx_vdec: public qc_omx_component
 #endif
                 unsigned char *pmem_baseaddress[MAX_COUNT];
                 int pmem_fd[MAX_COUNT];
-                OMX_ERRORTYPE cache_ops(unsigned int index);
-                inline OMX_ERRORTYPE cache_clean_buffer(unsigned int index) {
-                    return cache_ops(index);
-                }
-                OMX_ERRORTYPE cache_clean_invalidate_buffer(unsigned int index) {
-                    return cache_ops(index);
-                }
         };
         allocate_color_convert_buf client_buffers;
         struct video_decoder_capability m_decoder_capability;

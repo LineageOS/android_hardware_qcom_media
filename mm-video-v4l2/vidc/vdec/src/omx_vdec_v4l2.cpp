@@ -1979,7 +1979,7 @@ int omx_vdec::update_resolution(int width, int height, int stride, int scan_line
 int omx_vdec::log_input_buffers(const char *buffer_addr, int buffer_len, uint64_t timeStamp, int fd)
 {
 #ifdef USE_ION
-    start_buffer_access(fd);
+    do_cache_operations(fd);
 #else
     (void)fd;
 #endif
@@ -2010,7 +2010,7 @@ int omx_vdec::log_input_buffers(const char *buffer_addr, int buffer_len, uint64_
                              m_debug.infile_name, errno, strerror(errno));
             m_debug.infile_name[0] = '\0';
 #ifdef USE_ION
-            end_buffer_access(fd);
+            do_cache_operations(fd);
 #endif
             return -1;
         }
@@ -2034,7 +2034,7 @@ int omx_vdec::log_input_buffers(const char *buffer_addr, int buffer_len, uint64_
         fwrite(buffer_addr, buffer_len, 1, m_debug.infile);
     }
 #ifdef USE_ION
-    end_buffer_access(fd);
+    do_cache_operations(fd);
 #endif
     return 0;
 }
@@ -5678,7 +5678,7 @@ char *omx_vdec::ion_map(int fd, int len)
                                 MAP_SHARED, fd, 0);
     if (bufaddr != MAP_FAILED) {
 #ifdef USE_ION
-    start_buffer_access(fd);
+    do_cache_operations(fd);
 #endif
     }
     return bufaddr;
@@ -5703,7 +5703,7 @@ char *omx_vdec::ion_map(int fd, int len)
 OMX_ERRORTYPE omx_vdec::ion_unmap(int fd, void *bufaddr, int len)
 {
 #ifdef USE_ION
-    end_buffer_access(fd);
+    do_cache_operations(fd);
 #else
     (void)fd;
 #endif
@@ -9676,34 +9676,22 @@ void omx_vdec::free_ion_memory(struct vdec_ion *buf_ion_info)
     }
 }
 
-void omx_vdec::start_buffer_access(int fd)
+void omx_vdec::do_cache_operations(int fd)
 {
-    struct dma_buf_sync buf_sync;
-
     if (fd < 0)
         return;
 
-    buf_sync.flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_RW;
-    int rc = ioctl(fd, DMA_BUF_IOCTL_SYNC, &buf_sync);
-    if (rc) {
-        DEBUG_PRINT_ERROR("Failed DMA_BUF_IOCTL_SYNC start fd : %d", fd);
+    struct dma_buf_sync dma_buf_sync_data[2];
+    dma_buf_sync_data[0].flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_RW;
+    dma_buf_sync_data[1].flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_RW;
+
+    for(unsigned int i=0; i<2; i++) {
+        int rc = ioctl(fd, DMA_BUF_IOCTL_SYNC, &dma_buf_sync_data[i]);
+        if (rc < 0) {
+            DEBUG_PRINT_ERROR("Failed DMA_BUF_IOCTL_SYNC %s fd : %d", i==0?"start":"end", fd);
+            return;
+        }
     }
-    return;
-}
-
-void omx_vdec::end_buffer_access(int fd)
-{
-    struct dma_buf_sync buf_sync;
-
-    if (fd < 0)
-        return;
-
-    buf_sync.flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_RW;
-    int rc = ioctl(fd, DMA_BUF_IOCTL_SYNC, &buf_sync);
-    if (rc) {
-        DEBUG_PRINT_ERROR("Failed DMA_BUF_IOCTL_SYNC end fd : %d", fd);
-    }
-    return;
 }
 
 #endif
@@ -12308,7 +12296,7 @@ OMX_BUFFERHEADERTYPE* omx_vdec::allocate_color_convert_buf::get_il_buf_hdr
         bool status = false;
         if (!omx->in_reconfig && !omx->output_flush_progress && bufadd->nFilledLen) {
             pthread_mutex_lock(&omx->c_lock);
-            cache_clean_buffer(index);
+            omx->do_cache_operations(omx->drv_ctx.op_intermediate_buf_ion_info[index].data_fd);
 
             DEBUG_PRINT_INFO("C2D: Start color convertion");
             status = c2dcc.convertC2D(
@@ -12317,7 +12305,7 @@ OMX_BUFFERHEADERTYPE* omx_vdec::allocate_color_convert_buf::get_il_buf_hdr
                              omx->drv_ctx.ptr_outputbuffer[index].pmem_fd,
                              omx->m_out_mem_ptr[index].pBuffer,
                              omx->m_out_mem_ptr[index].pBuffer);
-
+            omx->do_cache_operations(omx->drv_ctx.op_intermediate_buf_ion_info[index].data_fd);
             if (!status) {
                 DEBUG_PRINT_ERROR("Failed color conversion %d", status);
                 m_out_mem_ptr_client[index].nFilledLen = 0;
@@ -12329,7 +12317,6 @@ OMX_BUFFERHEADERTYPE* omx_vdec::allocate_color_convert_buf::get_il_buf_hdr
                 c2dcc.getBuffFilledLen(C2D_OUTPUT, filledLen);
                 m_out_mem_ptr_client[index].nFilledLen = filledLen;
                 omx->m_out_mem_ptr[index].nFilledLen = filledLen;
-                cache_clean_invalidate_buffer(index);
             }
             pthread_mutex_unlock(&omx->c_lock);
         } else {
@@ -12428,35 +12415,6 @@ bool omx_vdec::allocate_color_convert_buf::get_color_format(OMX_COLOR_FORMATTYPE
         }
     }
     return status;
-}
-
-OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::cache_ops(unsigned int index)
-{
-    if (!enabled) {
-        return OMX_ErrorNone;
-    }
-
-    if (!omx || index >= omx->drv_ctx.op_buf.actualcount) {
-        DEBUG_PRINT_ERROR("%s: Invalid param", __func__);
-        return OMX_ErrorBadParameter;
-    }
-
-    struct dma_buf_sync dma_buf_sync_data[2];
-    dma_buf_sync_data[0].flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_RW;
-    dma_buf_sync_data[1].flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_RW;
-
-    for(unsigned int i=0; i<2; i++) {
-        int ret = ioctl(omx->drv_ctx.op_intermediate_buf_ion_info[index].data_fd,
-                        DMA_BUF_IOCTL_SYNC, &dma_buf_sync_data[i]);
-        if (ret < 0) {
-            DEBUG_PRINT_ERROR("Cache %s failed: %s\n",
-                              (i==0) ? "START" : "END",
-                              strerror(errno));
-            return OMX_ErrorUndefined;
-        }
-    }
-
-    return OMX_ErrorNone;
 }
 
 void omx_vdec::send_codec_config() {
