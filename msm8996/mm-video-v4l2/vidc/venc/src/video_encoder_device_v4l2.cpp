@@ -6253,7 +6253,7 @@ bool venc_dev::venc_set_roi_qp_info(OMX_QTI_VIDEO_CONFIG_ROIINFO *roiInfo) {
     venc_roiqp_log_buffers(roiInfo);
     mInputExtradata.getForConfig(&userptr, &fd, &offset, &size);
     if (!userptr || size < roiInfo->nRoiMBInfoSize) {
-        DEBUG_PRINT_ERROR("ROI extradata insufficient. Check if OMX_QTIIndexParamVideoEnableRoiInfo was set. (%p, %zd, %u)", userptr, size, roiInfo->nRoiMBInfoSize);
+        DEBUG_PRINT_ERROR("ROI extradata insufficient. Check if OMX_QTIIndexParamVideoEnableRoiInfo was set. (%p, %ld, %u)", userptr, size, roiInfo->nRoiMBInfoSize);
         return false;
     }
 
@@ -7333,7 +7333,7 @@ OMX_ERRORTYPE encExtradata::__allocate()
             &mIon.ion_alloc_data,
             &mIon.fd_ion_data, 0);
     if (mIon.ion_device_fd < 0) {
-        DEBUG_PRINT_ERROR("Failed to alloc extradata memory: %zd", totalSize);
+        DEBUG_PRINT_ERROR("Failed to alloc extradata memory: %ld", totalSize);
         DEBUG_PRINT_ERROR("Check if OMX_QTIIndexParamVideoEnableRoiInfo is set.");
         return OMX_ErrorInsufficientResources;
     }
@@ -7384,7 +7384,7 @@ OMX_ERRORTYPE encExtradata::get(char **userptr, int *fd, unsigned *offset, ssize
     *size = 0;
     pthread_mutex_lock(&lock);
     index = __get(userptr, fd, offset, size, FREE);
-    DEBUG_PRINT_LOW("%s: (%d, %p, %d, %u, %zd)", __func__, index, *userptr, *fd, *offset, *size);
+    DEBUG_PRINT_LOW("%s: (%d, %p, %d, %u, %ld)", __func__, index, *userptr, *fd, *offset, *size);
     pthread_mutex_unlock(&lock);
     return index < 0 ? OMX_ErrorInsufficientResources : OMX_ErrorNone;
 }
@@ -7416,7 +7416,7 @@ OMX_ERRORTYPE encExtradata::get(void *cookie, char **userptr, int *fd, unsigned 
             rc = OMX_ErrorInsufficientResources;
         }
     }
-    DEBUG_PRINT_LOW("%s: (%p, %p, %d, %u, %zd)", __func__, cookie, *userptr, *fd, *offset, *size);
+    DEBUG_PRINT_LOW("%s: (%p, %p, %d, %u, %ld)", __func__, cookie, *userptr, *fd, *offset, *size);
     pthread_mutex_unlock(&lock);
     return rc;
 }
@@ -7438,7 +7438,7 @@ OMX_ERRORTYPE encExtradata::getForConfig(char **userptr, int *fd, unsigned *offs
         rc = OMX_ErrorInsufficientResources;
     } else {
         mIndex[found].status = FOR_CONFIG;
-        DEBUG_PRINT_LOW("%s: (%p, %d, %d, %zd)", __func__, *userptr, *fd, *offset, *size);
+        DEBUG_PRINT_LOW("%s: (%p, %d, %d, %ld)", __func__, *userptr, *fd, *offset, *size);
     }
     pthread_mutex_unlock(&lock);
     return rc;
@@ -7482,7 +7482,7 @@ OMX_ERRORTYPE encExtradata::peek(unsigned index, char **userptr, int *fd, unsign
             *size = mSize;
         }
     }
-    DEBUG_PRINT_LOW("%s: (%d, %p, %d, %u, %zd)", __func__, index, *userptr, *fd, *offset, *size);
+    DEBUG_PRINT_LOW("%s: (%d, %p, %d, %u, %ld)", __func__, index, *userptr, *fd, *offset, *size);
     pthread_mutex_unlock(&lock);
     return rc;
 }
@@ -7531,13 +7531,13 @@ void encExtradata::update(unsigned int count, ssize_t size)
     __free();
     mCount = count <= MAX_V4L2_BUFS ? count : MAX_V4L2_BUFS;
     mSize = size;
-    DEBUG_PRINT_LOW("%s: (%d, %zd)", __func__, mCount, mSize);
+    DEBUG_PRINT_LOW("%s: (%d, %ld)", __func__, mCount, mSize);
     pthread_mutex_unlock(&lock);
 }
 
 void encExtradata::__debug()
 {
-    DEBUG_PRINT_HIGH("encExtradata: this: %p, mCount: %d, mSize: %zd, mUaddr: %p, mVencHandle: %p",
+    DEBUG_PRINT_HIGH("encExtradata: this: %p, mCount: %d, mSize: %ld, mUaddr: %p, mVencHandle: %p",
             this, mCount, mSize, mUaddr, mVencHandle);
     for (unsigned i = 0; i < mCount; i++) {
         DEBUG_PRINT_HIGH("index: %d, status: %d, cookie: %p\n", i, mIndex[i].status, mIndex[i].cookie);
