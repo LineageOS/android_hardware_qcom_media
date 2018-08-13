@@ -867,17 +867,21 @@ OMX_ERRORTYPE  omx_venc::set_parameter
             }
 
             /* set the intra period */
-            Ret = swvenc_set_intra_period(pParam->nPFrames,pParam->nBFrames);
-            if (Ret != SWVENC_S_SUCCESS)
+            if(pParam->nPFrames)
             {
-               DEBUG_PRINT_ERROR("%s, swvenc_set_intra_period failed (%d)",
-                 __FUNCTION__, Ret);
-               RETURN(OMX_ErrorUnsupportedSetting);
-            }
-            else
-            {
-                m_sIntraperiod.nPFrames = pParam->nPFrames;
-                m_sIntraperiod.nBFrames = pParam->nBFrames;
+                DEBUG_PRINT_LOW("pParam->nPFrames : %d", pParam->nPFrames);
+                Ret = swvenc_set_intra_period(pParam->nPFrames,pParam->nBFrames);
+                if (Ret != SWVENC_S_SUCCESS)
+                {
+                    DEBUG_PRINT_ERROR("%s, swvenc_set_intra_period failed (%d)",
+                    __FUNCTION__, Ret);
+                    RETURN(OMX_ErrorUnsupportedSetting);
+                }
+                else
+                {
+                    m_sIntraperiod.nPFrames = pParam->nPFrames;
+                    m_sIntraperiod.nBFrames = pParam->nBFrames;
+                }
             }
 
             /* set profile/level */
@@ -898,6 +902,25 @@ OMX_ERRORTYPE  omx_venc::set_parameter
                 }
             }
 
+            /*set slice config */
+            if (pParam->nSliceHeaderSpacing > 0)
+            {
+                SWVENC_PROPERTY Prop;
+                Prop.id = SWVENC_PROPERTY_ID_SLICE_CONFIG;
+                Prop.info.slice_config.mode = SWVENC_SLICE_MODE_MB;
+                Prop.info.slice_config.size = pParam->nSliceHeaderSpacing;
+                Ret = swvenc_setproperty(m_hSwVenc, &Prop);
+                if (Ret != SWVENC_S_SUCCESS)
+                {
+                    DEBUG_PRINT_ERROR("%s, swvenc_setproperty failed (%d)",
+                        __FUNCTION__, Ret);
+                    RETURN(OMX_ErrorUndefined);
+                }
+                else
+                {
+                    m_sParamMPEG4.nSliceHeaderSpacing = pParam->nSliceHeaderSpacing;
+                }
+            }
             // NOTE: m_sParamMPEG4.eProfile/eLevel may be overwritten to 0 if client didn't set them
             memcpy(&m_sParamMPEG4, pParam, sizeof(struct OMX_VIDEO_PARAM_MPEG4TYPE));
             break;
