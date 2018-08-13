@@ -75,7 +75,6 @@ typedef enum OMX_VIDEO_CODINGTYPE {
     OMX_VIDEO_CodingImageHEIC,  /**< HEIF image encoded with HEVC */
     OMX_VIDEO_CodingKhronosExtensions = 0x6F000000, /**< Reserved region for introducing Khronos Standard Extensions */
     OMX_VIDEO_CodingVendorStartUnused = 0x7F000000, /**< Reserved region for introducing Vendor Extensions */
-    OMX_VIDEO_CodingHEIC = OMX_VIDEO_CodingImageHEIC,  /**< HEIC */
     OMX_VIDEO_CodingMax = 0x7FFFFFFF
 } OMX_VIDEO_CODINGTYPE;
 
@@ -225,6 +224,7 @@ typedef enum OMX_VIDEO_CONTROLRATETYPE {
     OMX_Video_ControlRateConstant,
     OMX_Video_ControlRateVariableSkipFrames,
     OMX_Video_ControlRateConstantSkipFrames,
+    OMX_Video_ControlRateConstantQuality,
     OMX_Video_ControlRateKhronosExtensions = 0x6F000000, /**< Reserved region for introducing Khronos Standard Extensions */ 
     OMX_Video_ControlRateVendorStartUnused = 0x7F000000, /**< Reserved region for introducing Vendor Extensions */
     OMX_Video_ControlRateMax = 0x7FFFFFFF
@@ -245,11 +245,14 @@ typedef enum OMX_VIDEO_CONTROLRATETYPE {
  *                   OMX_Video_ControlRateConstantQuality only)
  */
 typedef struct OMX_VIDEO_PARAM_BITRATETYPE {
-    OMX_U32 nSize;                          
-    OMX_VERSIONTYPE nVersion;               
-    OMX_U32 nPortIndex;                     
-    OMX_VIDEO_CONTROLRATETYPE eControlRate; 
-    OMX_U32 nTargetBitrate;                 
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    OMX_VIDEO_CONTROLRATETYPE eControlRate;
+    union {
+        OMX_U32 nTargetBitrate;
+        OMX_U32 nQualityFactor;
+    };
 } OMX_VIDEO_PARAM_BITRATETYPE;
 
 

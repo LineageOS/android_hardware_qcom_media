@@ -1068,8 +1068,9 @@ OMX_ERRORTYPE venc_dev::venc_get_supported_profile_level(OMX_VIDEO_PARAM_PROFILE
                             QOMX_VIDEO_AVCProfileMain,
                             QOMX_VIDEO_AVCProfileConstrainedHigh,
                             QOMX_VIDEO_AVCProfileHigh };
-    int hevc_profiles[2] = { OMX_VIDEO_HEVCProfileMain,
-                             OMX_VIDEO_HEVCProfileMain10HDR10 };
+    int hevc_profiles[3] = { OMX_VIDEO_HEVCProfileMain,
+                             OMX_VIDEO_HEVCProfileMain10HDR10,
+                             OMX_VIDEO_HEVCProfileMainStill };
 
     if (!profileLevelType)
         return OMX_ErrorBadParameter;
@@ -1574,12 +1575,15 @@ bool venc_dev::venc_open(OMX_U32 codec)
         profile_level.level = V4L2_MPEG_VIDC_VIDEO_VP8_VERSION_0;
         minqp = 0;
         maxqp = 127;
-    } else if (codec == OMX_VIDEO_CodingHEVC) {
+    } else if (codec == OMX_VIDEO_CodingHEVC || codec == OMX_VIDEO_CodingImageHEIC) {
         m_sVenc_cfg.codectype = V4L2_PIX_FMT_HEVC;
         idrperiod.idrperiod = 1;
         minqp = 0;
         maxqp = 51;
-        codec_profile.profile = V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN;
+        if (codec == OMX_VIDEO_CodingImageHEIC)
+            codec_profile.profile = V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN_STILL_PIC;
+        else
+            codec_profile.profile = V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN;
         profile_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_1;
     } else if (codec == QOMX_VIDEO_CodingTME) {
         m_sVenc_cfg.codectype = V4L2_PIX_FMT_TME;
@@ -2286,13 +2290,13 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 DEBUG_PRINT_LOW("venc_set_param: OMX_IndexParamVideoBitrate");
 
                 if (pParam->nPortIndex == (OMX_U32) PORT_INDEX_OUT) {
-                    if (!venc_set_target_bitrate(pParam->nTargetBitrate)) {
-                        DEBUG_PRINT_ERROR("ERROR: Target Bit Rate setting failed");
+                    if (!venc_set_ratectrl_cfg(pParam->eControlRate)) {
+                        DEBUG_PRINT_ERROR("ERROR: Rate Control setting failed");
                         return false;
                     }
 
-                    if (!venc_set_ratectrl_cfg(pParam->eControlRate)) {
-                        DEBUG_PRINT_ERROR("ERROR: Rate Control setting failed");
+                    if (!venc_set_target_bitrate(pParam->nTargetBitrate)) {
+                        DEBUG_PRINT_ERROR("ERROR: Target Bit Rate setting failed");
                         return false;
                     }
                 } else {
@@ -2417,6 +2421,21 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 if (!venc_set_level(pParam->eLevel)) {
                     DEBUG_PRINT_ERROR("ERROR: Unsuccessful in updating level %d",
                                       pParam->eLevel);
+                    return false;
+                }
+                break;
+            }
+        case (OMX_INDEXTYPE)OMX_IndexParamVideoAndroidImageGrid:
+            {
+                DEBUG_PRINT_LOW("venc_set_param: OMX_IndexParamVideoAndroidImageGrid");
+
+                if (m_codec != OMX_VIDEO_CodingImageHEIC) {
+                    DEBUG_PRINT_ERROR("OMX_IndexParamVideoAndroidImageGrid is only set for HEIC (HW tiling)");
+                    return true;
+                }
+
+                if (!venc_set_grid_enable()) {
+                    DEBUG_PRINT_ERROR("ERROR: Failed to set tile dimension");
                     return false;
                 }
                 break;
@@ -3541,6 +3560,25 @@ unsigned venc_dev::venc_start(void)
         return 1;
     }
 
+    if (m_codec == OMX_VIDEO_CodingImageHEIC && mIsGridset) {
+        struct v4l2_format fmt;
+        memset(&fmt, 0, sizeof(fmt));
+        fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+        fmt.fmt.pix_mp.height = DEFAULT_TILE_DIMENSION;
+        fmt.fmt.pix_mp.width = DEFAULT_TILE_DIMENSION;
+        fmt.fmt.pix_mp.pixelformat = m_sVenc_cfg.codectype;
+        DEBUG_PRINT_INFO("set format type %d, wxh %dx%d, pixelformat %#x",
+            fmt.type, fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height,
+            fmt.fmt.pix_mp.pixelformat);
+        if (ioctl(m_nDriver_fd, VIDIOC_S_FMT, &fmt)) {
+            DEBUG_PRINT_ERROR("set format failed, type %d, wxh %dx%d, pixelformat %#x",
+                fmt.type, fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height,
+                fmt.fmt.pix_mp.pixelformat);
+            hw_overload = errno == EBUSY;
+            return false;
+        }
+    }
+
     buf_type=V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     DEBUG_PRINT_LOW("send_command_proxy(): Idle-->Executing");
     ret=ioctl(m_nDriver_fd, VIDIOC_STREAMON,&buf_type);
@@ -4374,7 +4412,9 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                 return false;
             }
 
-            if (inp_width * inp_height != out_width * out_height) {
+            // Tiling in HEIC requires output WxH to be Tile size; difference is permitted
+            if (!(m_codec == OMX_VIDEO_CodingImageHEIC) &&
+                inp_width * inp_height != out_width * out_height) {
                 DEBUG_PRINT_ERROR("Downscalar is disabled and input/output dimenstions don't match");
                 DEBUG_PRINT_ERROR("Input WxH : %dx%d Output WxH : %dx%d",inp_width, inp_height, out_width, out_height);
                 return false;
@@ -5108,7 +5148,9 @@ bool venc_dev::venc_reconfigure_intra_period()
 
     if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC &&
         ((codec_profile.profile == V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN) ||
-         (codec_profile.profile == V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10))) {
+         (codec_profile.profile == V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10) ||
+         (codec_profile.profile == V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN_STILL_PIC)) &&
+         (m_codec != OMX_VIDEO_CodingImageHEIC)) {
         isValidCodec = true;
     }
 
@@ -5207,6 +5249,26 @@ bool venc_dev::venc_reconfigure_intra_period()
     return true;
 }
 
+bool venc_dev::venc_set_grid_enable()
+{
+    int rc;
+    struct v4l2_control control;
+
+    DEBUG_PRINT_LOW("venc_set_tile_dimension");
+    control.id = V4L2_CID_MPEG_VIDC_IMG_GRID_ENABLE;
+    control.value = 1;
+    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
+
+    if (rc) {
+        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
+        return false;
+    }
+
+    DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
+    mIsGridset = true;
+    return true;
+}
+
 bool venc_dev::venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames)
 {
     DEBUG_PRINT_LOW("venc_set_intra_period: nPFrames = %u, nBFrames: %u", (unsigned int)nPFrames, (unsigned int)nBFrames);
@@ -5225,7 +5287,8 @@ bool venc_dev::_venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames)
     char property_value[PROPERTY_VALUE_MAX] = {0};
 
     if (m_sVenc_cfg.codectype != V4L2_PIX_FMT_H264 &&
-        m_sVenc_cfg.codectype != V4L2_PIX_FMT_HEVC) {
+        m_sVenc_cfg.codectype != V4L2_PIX_FMT_HEVC &&
+        m_codec == OMX_VIDEO_CodingImageHEIC) {
         nBFrames = 0;
     }
 
@@ -5233,6 +5296,7 @@ bool venc_dev::_venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames)
         (codec_profile.profile != V4L2_MPEG_VIDEO_H264_PROFILE_MAIN)             &&
         (codec_profile.profile != V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN)        &&
         (codec_profile.profile != V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10)      &&
+        (codec_profile.profile != V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN_STILL_PIC) &&
         (codec_profile.profile != V4L2_MPEG_VIDEO_H264_PROFILE_HIGH)) {
         nBFrames = 0;
     }
@@ -5549,7 +5613,10 @@ bool venc_dev::venc_set_target_bitrate(OMX_U32 nTargetBitrate)
         return true;
     }
 
-    control.id = V4L2_CID_MPEG_VIDEO_BITRATE;
+    if (rate_ctrl.rcmode == V4L2_MPEG_VIDEO_BITRATE_MODE_CQ)
+        control.id = V4L2_CID_MPEG_VIDC_VIDEO_FRAME_QUALITY;
+    else
+        control.id = V4L2_CID_MPEG_VIDEO_BITRATE;
     control.value = nTargetBitrate;
 
     DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
@@ -5561,6 +5628,8 @@ bool venc_dev::venc_set_target_bitrate(OMX_U32 nTargetBitrate)
 
     DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
 
+    if (control.id == V4L2_CID_MPEG_VIDC_VIDEO_FRAME_QUALITY)
+        return true;
 
     m_sVenc_cfg.targetbitrate = control.value;
     bitrate.target_bitrate = control.value;
@@ -5632,6 +5701,7 @@ unsigned long venc_dev::venc_get_codectype(OMX_VIDEO_CODINGTYPE eCompressionForm
         codectype = V4L2_PIX_FMT_VP9;
         break;
     case OMX_VIDEO_CodingHEVC:
+    case OMX_VIDEO_CodingImageHEIC:
         codectype = V4L2_PIX_FMT_HEVC;
         break;
     case QOMX_VIDEO_CodingTME:
@@ -6157,6 +6227,11 @@ bool venc_dev::venc_set_ratectrl_cfg(OMX_VIDEO_CONTROLRATETYPE eControlRate)
         case QOMX_Video_ControlRateMaxBitrateSkipFrames:
             (supported_rc_modes & RC_MBR_VFR) ?
                 control.value = V4L2_MPEG_VIDEO_BITRATE_MODE_MBR_VFR:
+                status = false;
+            break;
+        case OMX_Video_ControlRateConstantQuality:
+            (supported_rc_modes & RC_CQ) ?
+                control.value = V4L2_MPEG_VIDEO_BITRATE_MODE_CQ:
                 status = false;
             break;
         default:
@@ -7125,6 +7200,9 @@ bool venc_dev::venc_get_profile_level(OMX_U32 *eProfile,OMX_U32 *eLevel)
                 break;
             case V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10:
                 *eProfile = OMX_VIDEO_HEVCProfileMain10HDR10;
+                break;
+            case V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN_STILL_PIC:
+                *eProfile = OMX_VIDEO_HEVCProfileMainStill;
                 break;
             default:
                 *eProfile = OMX_VIDEO_HEVCProfileMax;
