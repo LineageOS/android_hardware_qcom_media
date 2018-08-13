@@ -3986,7 +3986,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                     DEBUG_PRINT_ERROR("venc_empty_buf: Zero length buffers are not valid");
                     return false;
                 }
-            } else if (!color_format) {
+            } else if (!color_format) { // Metadata mode
 
                 if (meta_buf->buffer_type == LEGACY_CAM_SOURCE) {
                     native_handle_t *hnd = (native_handle_t*)meta_buf->meta_handle;
@@ -4128,34 +4128,17 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         } else if (handle->format == QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m) {
                             m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV12;
                             DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = NV12 Linear");
-                        } else if (handle->format == HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC) {
+                        } else if (handle->format == HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC ||
+                                   handle->format == HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS) {
                             if ((m_codec == OMX_VIDEO_CodingHEVC) &&
                                  (codec_profile.profile == V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10)) {
-                                m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV12_TP10_UBWC;
-                                DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = TP10UBWC");
+                                m_sVenc_cfg.inputformat =
+                                    (handle->format == HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC)?
+                                             V4L2_PIX_FMT_NV12_TP10_UBWC :
+                                             V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010_VENUS;
+                                DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = 10bit");
                             } else {
-                                DEBUG_PRINT_ERROR("ENC_CONFIG: TP10UBWC colorformat not supported for this codec and profile");
-                                return false;
-                            }
-
-                            if(colorData.masteringDisplayInfo.colorVolumeSEIEnabled ||
-                               colorData.contentLightLevel.lightLevelSEIEnabled) {
-                                if (!venc_set_hdr_info(colorData.masteringDisplayInfo, colorData.contentLightLevel)) {
-                                    DEBUG_PRINT_ERROR("HDR10-PQ Info Setting failed");
-                                    return false;
-                                } else {
-                                    DEBUG_PRINT_INFO("Encoding in HDR10-PQ mode");
-                                }
-                            } else {
-                                DEBUG_PRINT_INFO("Encoding in HLG mode");
-                            }
-                        } else if (handle->format == HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS) {
-                            if ((m_codec == OMX_VIDEO_CodingHEVC) &&
-                                 (codec_profile.profile == V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10)) {
-                                m_sVenc_cfg.inputformat = V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010_VENUS;
-                                DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = P010 Venus");
-                            } else {
-                                DEBUG_PRINT_ERROR("ENC_CONFIG: P010 Venus colorformat not supported for this codec and profile");
+                                DEBUG_PRINT_ERROR("ENC_CONFIG: 10bit colorformat not supported for this codec and profile");
                                 return false;
                             }
 
@@ -4173,6 +4156,9 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         } else if (handle->format == QOMX_COLOR_FormatYVU420SemiPlanar) {
                            m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV21;
                            DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = NV21 Linear");
+                        } else {
+                            DEBUG_PRINT_ERROR("Color format is not recoganized. Format 0x%X", handle->format);
+                            return false;
                         }
 
                         DEBUG_PRINT_INFO("color_space.primaries %d colorData.colorPrimaries %d, is_csc_custom_matrix_enabled=%d",
@@ -4227,53 +4213,6 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         }
                     }
 
-                    struct UBWCStats cam_ubwc_stats[2];
-                    unsigned long long int cr = 1 << 16;
-
-                    if (getMetaData(handle, GET_UBWC_CR_STATS_INFO, (void *)cam_ubwc_stats) == 0) {
-                        if (cam_ubwc_stats[0].bDataValid) {
-                            switch (cam_ubwc_stats[0].version) {
-                            case UBWC_2_0:
-                                {
-                                    unsigned long long int sum = 0, weighted_sum = 0;
-
-                                    DEBUG_PRINT_HIGH("Field 0 : 32 Tile = %d 64 Tile = %d 96 Tile = %d "
-                                       "128 Tile = %d 160 Tile = %d 192 Tile = %d 256 Tile = %d\n",
-                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile32,
-                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile64,
-                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile96,
-                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile128,
-                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile160,
-                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile192,
-                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile256);
-
-                                    weighted_sum =
-                                        32  * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile32 +
-                                        64  * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile64 +
-                                        96  * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile96 +
-                                        128 * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile128 +
-                                        160 * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile160 +
-                                        192 * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile192 +
-                                        256 * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile256;
-
-                                    sum =
-                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile32 +
-                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile64 +
-                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile96 +
-                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile128 +
-                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile160 +
-                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile192 +
-                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile256;
-
-                                    cr = (weighted_sum && sum) ?
-                                        ((256 * sum) << 16) / weighted_sum : cr;
-                                }
-                                break;
-                            default:
-                                break;
-                            }
-                        }
-                    }
 
                     uint32_t encodePerfMode = 0;
                     if (getMetaData(handle, GET_VIDEO_PERF_MODE, &encodePerfMode) == 0) {
@@ -4285,12 +4224,12 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                     plane[0].data_offset = 0;
                     plane[0].length = handle->size;
                     plane[0].bytesused = handle->size;
-                    plane[0].reserved[2] = (unsigned long int)cr;
                     DEBUG_PRINT_LOW("venc_empty_buf: Opaque camera buf: fd = %d "
-                                ": filled %d of %d format 0x%lx CR = %d", fd, plane[0].bytesused,
-                                plane[0].length, m_sVenc_cfg.inputformat, plane[0].reserved[2]);
+                                ": filled %d of %d format 0x%lx", fd, plane[0].bytesused,
+                                plane[0].length, m_sVenc_cfg.inputformat);
                 }
             } else {
+                // Metadata mode
                 // color_format == 1 ==> RGBA to YUV Color-converted buffer
                 // Buffers color-converted via C2D have 601-Limited color
                 if (!streaming[OUTPUT_PORT]) {
@@ -4305,7 +4244,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                 DEBUG_PRINT_LOW("venc_empty_buf: Opaque non-camera buf: fd = %d filled %d of %d",
                         fd, plane[0].bytesused, plane[0].length);
             }
-        } else {
+        } else { // Not Metadata mode
             plane[0].m.userptr = (unsigned long) bufhdr->pBuffer;
             plane[0].data_offset = bufhdr->nOffset;
             plane[0].length = bufhdr->nAllocLen;
@@ -4317,7 +4256,6 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
 
     if (!streaming[OUTPUT_PORT] &&
         (m_sVenc_cfg.inputformat != V4L2_PIX_FMT_NV12_TP10_UBWC &&
-         m_sVenc_cfg.inputformat != V4L2_PIX_FMT_NV12_P010_UBWC &&
          m_sVenc_cfg.inputformat != V4L2_PIX_FMT_NV12_UBWC)) {
         if (bframe_implicitly_enabled) {
             DEBUG_PRINT_HIGH("Disabling implicitly enabled B-frames");
