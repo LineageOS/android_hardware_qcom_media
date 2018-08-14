@@ -46,6 +46,7 @@ extern "C" {
 #include "OMX_Core.h"
 #include "OMX_Video.h"
 #include "string.h"
+#include "OMX_VideoExt.h"
 
 #define OMX_VIDEO_MAX_HP_LAYERS 6
 
@@ -1511,10 +1512,10 @@ typedef enum QOMX_VIDEO_AVCPROFILETYPE {
     QOMX_VIDEO_AVCProfileHigh10        = OMX_VIDEO_AVCProfileHigh10,
     QOMX_VIDEO_AVCProfileHigh422       = OMX_VIDEO_AVCProfileHigh422,
     QOMX_VIDEO_AVCProfileHigh444       = OMX_VIDEO_AVCProfileHigh444,
+    QOMX_VIDEO_AVCProfileConstrainedBaseline = OMX_VIDEO_AVCProfileConstrainedBaseline,
+    QOMX_VIDEO_AVCProfileConstrainedHigh     = OMX_VIDEO_AVCProfileConstrainedHigh,
     /* QCom specific profile indexes */
-    QOMX_VIDEO_AVCProfileConstrained           = OMX_VIDEO_AVCProfileVendorStartUnused,
-    QOMX_VIDEO_AVCProfileConstrainedBaseline,
-    QOMX_VIDEO_AVCProfileConstrainedHigh,
+    QOMX_VIDEO_AVCProfileConstrained         = OMX_VIDEO_AVCProfileVendorStartUnused
 } QOMX_VIDEO_AVCPROFILETYPE;
 
 
