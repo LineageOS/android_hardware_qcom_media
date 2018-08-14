@@ -207,7 +207,7 @@ venc_dev::~venc_dev()
         pthread_mutex_lock(&m_roilock);
         for (iter = m_roilist.begin(); iter != m_roilist.end(); iter++) {
             DEBUG_PRINT_HIGH("roidata with timestamp (%lld) should have been removed already",
-                iter->timestamp);
+                iter->info.nTimeStamp);
         }
         m_roilist.clear();
         pthread_mutex_unlock(&m_roilock);
@@ -520,35 +520,23 @@ void venc_dev::get_roi_for_timestamp(struct roidata &roi, OMX_TICKS timestamp)
     memset(&roi, 0, sizeof(struct roidata));
     roi.dirty = false;
 
-    /*
-     * look for the roi data which has timestamp nearest and
-     * lower than the etb timestamp, we should not take the
-     * roi data which has the timestamp greater than etb timestamp.
-     */
     pthread_mutex_lock(&m_roilock);
     iter = m_roilist.begin();
     while (iter != m_roilist.end()) {
-        if (iter->timestamp <= timestamp) {
-            if (found) {
-                /* we found roidata in previous iteration already and got another
-                 * roidata in this iteration, so we will use this iteration's
-                 * roidata and free the previous roidata which is no longer used.
-                 */
-                DEBUG_PRINT_LOW("freeing unused roidata with timestamp %lld us", roi.timestamp);
-            }
+        if (iter->info.nTimeStamp < timestamp) {
+            /* remove previous roi data */
+            iter = m_roilist.erase(iter);
+            /* iter++ is not required as erase would do it */
+            continue;
+        } else if (iter->info.nTimeStamp == timestamp){
             found = true;
             roi = *iter;
-            /* we got roidata so erase the elment in the roi list.
-             * after list erase iterator will point to next element
-             * so we don't need to increment iter after erase.
-             */
-            iter = m_roilist.erase(iter);
-        } else {
-            iter++;
+            break;
         }
+        iter++;
     }
     if (found) {
-        DEBUG_PRINT_LOW("found roidata with timestamp %lld us", roi.timestamp);
+        DEBUG_PRINT_LOW("found roidata with timestamp %lld us", roi.info.nTimeStamp);
     }
     pthread_mutex_unlock(&m_roilock);
 }
@@ -764,32 +752,74 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
     }
 
     if (roi.dirty) {
-        data->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) +
-            sizeof(struct msm_vidc_roi_qp_payload) +
-            roi.info.nRoiMBInfoCount - sizeof(unsigned int) - sizeof(unsigned char), 4);
+        OMX_U32 mbAlign = 16;
+        if (m_codec == OMX_VIDEO_CodingHEVC) {
+            mbAlign = 32;
+        }
+        OMX_U32 mbRow = ALIGN(width, mbAlign) / mbAlign;
+        OMX_U32 mbRowAligned = ((mbRow + 7) >> 3) << 3;
+        OMX_U32 mbCol = ALIGN(height, mbAlign) / mbAlign;
+        OMX_U32 numBytes = mbRowAligned * mbCol * 2;
+        OMX_U32 numBytesAligned = ALIGN(numBytes, 4);
+
+        data->nDataSize = ALIGN(sizeof(struct msm_vidc_roi_deltaqp_payload),256)
+                            + numBytesAligned;
+        data->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) + data->nDataSize, 4);
         if (data->nSize > input_extradata_info.buffer_size  - consumed_len) {
            DEBUG_PRINT_ERROR("Buffer size (%lu) is less than ROI extradata size (%u)",
                              (input_extradata_info.buffer_size - consumed_len) ,data->nSize);
            status = false;
            goto bailout;
         }
+
         data->nVersion.nVersion = OMX_SPEC_VERSION;
         data->nPortIndex = 0;
         data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_ROI_QP;
-        data->nDataSize = sizeof(struct msm_vidc_roi_qp_payload) - sizeof(unsigned int) +
-                ALIGN(roi.info.nRoiMBInfoCount, 4);
-        struct msm_vidc_roi_qp_payload *roiData =
-                (struct msm_vidc_roi_qp_payload *)(data->data);
-        roiData->mbi_info_size = ALIGN(roi.info.nRoiMBInfoCount, 4);
-        DEBUG_PRINT_HIGH("Using ROI QP map");
-        memcpy(roiData->data, roi.info.pRoiMBInfo, roi.info.nRoiMBInfoCount);
+        struct msm_vidc_roi_deltaqp_payload *roiData =
+                (struct msm_vidc_roi_deltaqp_payload *)(data->data);
+        roiData->b_roi_info = true;
+        roiData->mbi_info_size = numBytesAligned;
+        /* Video hardware expects ROI QP data to be aligned to 256,
+         * And its offset should be available in roiData->data[0].
+         *  -----------------
+         *  | unsigned int b_roi_info;   |
+         *  | int mbi_info_size;         |
+         *  ----------------------------
+         *  | data[0] = n                | => Contains Offset value to 256 aligned address
+         *  | .                          |
+         *  | .                          |
+         *  | .                          |
+         *  | data+n  <ROI data start>   | => 256 aligned address
+         *  ----------------------------
+         */
+        roiData->data[0] = (unsigned int)(ALIGN(&roiData->data[1], 256) - (unsigned long)roiData->data);
+
+        OMX_U8* tempBuf = (OMX_U8*)roi.info.pRoiMBInfo;
+        OMX_U16* exDataBuf = (OMX_U16*)((OMX_U8*)roiData->data + roiData->data[0]);;
+        OMX_U16* pBuf;
+        OMX_U8 clientROI;
+
+        /* Convert input extradata format to HW compatible format
+         * Input        : 1byte per MB
+         * HW Format    : 2bytes per MB. (1 << 11) | ((clientROI & 0x3F)<< 4)
+         * MB Row must be aligned to 8
+         */
+        for (OMX_U32 j = 0;j < mbCol; j++)
+        {
+            pBuf = exDataBuf + j*mbRowAligned;
+            for (OMX_U32 i = 0;i < mbRow; i++)
+            {
+                clientROI = *tempBuf++;
+                *pBuf++ = (1 << 11) | ((clientROI & 0x3F)<< 4);
+            }
+        }
         data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
         consumed_len += data->nSize;
     }
 
     if (m_roi_enabled) {
         if (roi.dirty) {
-            DEBUG_PRINT_LOW("free roidata with timestamp %lld us", roi.timestamp);
+            DEBUG_PRINT_LOW("free roidata with timestamp %lld us", roi.info.nTimeStamp);
             roi.dirty = false;
         }
     }
@@ -853,25 +883,16 @@ bool venc_dev::venc_handle_client_input_extradata(void *buffer)
                     return false;
                 }
 
-                DEBUG_PRINT_HIGH("ROI QP info received");
                 memset(&roi, 0, sizeof(struct roidata));
 
                 roi.info.nRoiMBInfoCount = roiInfo->nRoiMBInfoCount;
-
+                roi.info.nTimeStamp = roiInfo->nTimeStamp;
                 memcpy(roi.info.pRoiMBInfo, &roiInfo->pRoiMBInfo, roiInfo->nRoiMBInfoCount);
-                /*
-                * set the timestamp equal to previous etb timestamp + 1
-                * to know this roi data arrived after previous etb
-                */
-                if (venc_handle->m_etb_count)
-                    roi.timestamp = venc_handle->m_etb_timestamp + 1;
-                else
-                    roi.timestamp = 0;
 
                 roi.dirty = true;
 
                 pthread_mutex_lock(&m_roilock);
-                DEBUG_PRINT_LOW("list add roidata with timestamp %lld us.", roi.timestamp);
+                DEBUG_PRINT_LOW("list add roidata with timestamp %lld us.", roi.info.nTimeStamp);
                 m_roilist.push_back(roi);
                 pthread_mutex_unlock(&m_roilock);
                 break;
@@ -3774,10 +3795,9 @@ bool venc_dev::allocate_extradata(unsigned port)
         int flag;
     }port_info[2] = {
         {
-            // Inout extradata is cached to improve ROI performance
             .num_planes = num_input_planes,
             .extradata_info = &input_extradata_info,
-            .flag = ION_FLAG_CACHED
+            .flag = 0
         },
         {
             .num_planes = num_output_planes,
@@ -6449,25 +6469,16 @@ bool venc_dev::venc_set_roi_qp_info(OMX_QTI_VIDEO_CONFIG_ROIINFO *roiInfo)
         return false;
     }
 
-    DEBUG_PRINT_HIGH("ROI QP info received");
     memset(&roi, 0, sizeof(struct roidata));
 
     roi.info.nRoiMBInfoCount = roiInfo->nRoiMBInfoCount;
-
+    roi.info.nTimeStamp = roiInfo->nTimeStamp;
     memcpy(roi.info.pRoiMBInfo, roiInfo->pRoiMBInfo, roiInfo->nRoiMBInfoCount);
-    /*
-     * set the timestamp equal to previous etb timestamp + 1
-     * to know this roi data arrived after previous etb
-     */
-    if (venc_handle->m_etb_count)
-        roi.timestamp = venc_handle->m_etb_timestamp + 1;
-    else
-        roi.timestamp = 0;
 
     roi.dirty = true;
 
     pthread_mutex_lock(&m_roilock);
-    DEBUG_PRINT_LOW("list add roidata with timestamp %lld us.", roi.timestamp);
+    DEBUG_PRINT_LOW("list add roidata with timestamp %lld us.", roi.info.nTimeStamp);
     m_roilist.push_back(roi);
     pthread_mutex_unlock(&m_roilock);
 
