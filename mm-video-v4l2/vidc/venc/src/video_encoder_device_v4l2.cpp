@@ -4130,6 +4130,11 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         bool isUBWC = ((handle->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED ||
                                         handle->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED_PI) &&
                                        is_gralloc_source_ubwc);
+
+                        char grallocFormatStr[200];
+                        get_gralloc_format_as_string(grallocFormatStr, sizeof(grallocFormatStr), handle->format);
+                        DEBUG_PRINT_LOW("gralloc format 0x%x (%s)", handle->format, grallocFormatStr);
+
                         if (handle->format == HAL_PIXEL_FORMAT_NV12_ENCODEABLE) {
                             m_sVenc_cfg.inputformat = isUBWC ? V4L2_PIX_FMT_NV12_UBWC : V4L2_PIX_FMT_NV12;
                             DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = NV12 %s", isUBWC ? "UBWC" : "Linear");
@@ -4244,9 +4249,11 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                     plane[0].data_offset = 0;
                     plane[0].length = handle->size;
                     plane[0].bytesused = handle->size;
+                    char v4l2ColorFormatStr[200];
+                    get_v4l2_color_format_as_string(v4l2ColorFormatStr, sizeof(v4l2ColorFormatStr), m_sVenc_cfg.inputformat);
                     DEBUG_PRINT_LOW("venc_empty_buf: Opaque camera buf: fd = %d "
-                                ": filled %d of %d format 0x%lx", fd, plane[0].bytesused,
-                                plane[0].length, m_sVenc_cfg.inputformat);
+                                ": filled %d of %d format 0x%lx (%s)", fd, plane[0].bytesused,
+                                plane[0].length, m_sVenc_cfg.inputformat, v4l2ColorFormatStr);
                 }
             } else {
                 // Metadata mode

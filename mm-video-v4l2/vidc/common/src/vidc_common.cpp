@@ -310,6 +310,66 @@ bool profile_level_converter::convert_omx_level_to_v4l2(int codec, int omx_level
     return find_item(*level_map, omx_level, v4l2_level);
 }
 
+void get_gralloc_format_as_string(char * buf, int buf_len, int format) {
+    switch (format) {
+        case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
+            snprintf(buf, buf_len, "HAL_PIXEL_FORMAT_NV12_ENCODEABLE");
+            break;
+        case HAL_PIXEL_FORMAT_RGBA_8888:
+            snprintf(buf, buf_len, "HAL_PIXEL_FORMAT_RGBA_8888");
+            break;
+        case QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m:
+            snprintf(buf, buf_len, "QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m");
+            break;
+        case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
+            snprintf(buf, buf_len, "HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC");
+            break;
+        case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
+            snprintf(buf, buf_len, "HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS");
+            break;
+        case QOMX_COLOR_FormatYVU420SemiPlanar:
+            snprintf(buf, buf_len, "QOMX_COLOR_FormatYVU420SemiPlanar");
+            break;
+        default:
+            snprintf(buf, buf_len, "no match found for gralloc format 0x%d",
+                    format);
+            return;
+    }
+}
+
+void get_v4l2_color_format_as_string(char * buf, int buf_len, unsigned long v4l2Pixformat) {
+    switch (v4l2Pixformat) {
+        case V4L2_PIX_FMT_RGB32:
+            snprintf(buf, buf_len, "V4L2_PIX_FMT_RGB32");
+            break;
+        case V4L2_PIX_FMT_RGBA8888_UBWC:
+            snprintf(buf, buf_len, "V4L2_PIX_FMT_RGBA8888_UBWC");
+            break;
+        case V4L2_PIX_FMT_NV12:
+            snprintf(buf, buf_len, "V4L2_PIX_FMT_NV12");
+            break;
+        case V4L2_PIX_FMT_NV12_UBWC:
+            snprintf(buf, buf_len, "V4L2_PIX_FMT_NV12_UBWC");
+            break;
+        case V4L2_PIX_FMT_NV12_TP10_UBWC:
+            snprintf(buf, buf_len, "V4L2_PIX_FMT_NV12_TP10_UBWC");
+            break;
+        case V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010_VENUS:
+            snprintf(buf, buf_len, "V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010_VENUS");
+            break;
+        case V4L2_PIX_FMT_NV21:
+            snprintf(buf, buf_len, "V4L2_PIX_FMT_NV21");
+            break;
+        case V4L2_PIX_FMT_NV12_P010_UBWC:
+            snprintf(buf, buf_len, "V4L2_PIX_FMT_NV12_P010_UBWC");
+            break;
+        default:
+            snprintf(buf, buf_len, "no match found for v4l2 pix format 0x%lx",
+                    v4l2Pixformat);
+            return;
+    }
+}
+
 IvfFileHeader:: IvfFileHeader() :
     signature{'D','K','I','F'},
     version(),
