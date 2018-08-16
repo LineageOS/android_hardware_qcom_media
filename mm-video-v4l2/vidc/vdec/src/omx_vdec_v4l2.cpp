@@ -2660,6 +2660,7 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
 
     OMX_INIT_STRUCT(&m_sParamLowLatency, QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE);
     m_sParamLowLatency.nNumFrames = 0;
+    m_sParamLowLatency.bEnableLowLatencyMode = OMX_FALSE;
 
     return eRet;
 }
@@ -4681,6 +4682,8 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                 if (rc) {
                                     DEBUG_PRINT_ERROR("Set low latency failed");
                                     eRet = OMX_ErrorUnsupportedSetting;
+                                } else {
+                                    m_sParamLowLatency.bEnableLowLatencyMode = pParam->bEnableLowLatencyMode;
                                 }
                                break;
                            }
