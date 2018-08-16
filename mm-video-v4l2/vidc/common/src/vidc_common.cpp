@@ -315,6 +315,9 @@ void get_gralloc_format_as_string(char * buf, int buf_len, int format) {
         case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
             snprintf(buf, buf_len, "HAL_PIXEL_FORMAT_NV12_ENCODEABLE");
             break;
+        case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
+            snprintf(buf, buf_len, "HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC");
+            break;
         case HAL_PIXEL_FORMAT_RGBA_8888:
             snprintf(buf, buf_len, "HAL_PIXEL_FORMAT_RGBA_8888");
             break;
