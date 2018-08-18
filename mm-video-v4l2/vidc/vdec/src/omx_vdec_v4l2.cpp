@@ -1978,6 +1978,9 @@ int omx_vdec::update_resolution(int width, int height, int stride, int scan_line
 
 int omx_vdec::log_input_buffers(const char *buffer_addr, int buffer_len, uint64_t timeStamp, int fd)
 {
+    if (!m_debug.in_buffer_log)
+        return 0;
+
 #ifdef USE_ION
     do_cache_operations(fd);
 #else
