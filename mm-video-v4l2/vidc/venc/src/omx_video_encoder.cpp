@@ -247,7 +247,7 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     } else if (!strncmp((char *)m_nkind, "OMX.qcom.video.encoder.heic",    \
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_encoder.hevc", OMX_MAX_STRINGNAME_SIZE);
-        codec_type = OMX_VIDEO_CodingHEVC;
+        codec_type = OMX_VIDEO_CodingImageHEIC;
     } else if (!strncmp((char *)m_nkind, "OMX.qcom.video.encoder.hevc.secure",    \
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_encoder.hevc", OMX_MAX_STRINGNAME_SIZE);
