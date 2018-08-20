@@ -116,6 +116,7 @@ extern "C" {
 #include "extra_data_handler.h"
 #include "ts_parser.h"
 #include "vidc_debug.h"
+#include "vidc_common.h"
 #include "vidc_vendor_extensions.h"
 #ifdef _ANDROID_
 #include <cutils/properties.h>
@@ -144,24 +145,6 @@ extern "C" {
         (unsigned)((OMX_BUFFERHEADERTYPE *)bufHdr)->pBuffer,\
         (unsigned)((OMX_BUFFERHEADERTYPE *)bufHdr)->nFilledLen,\
         (unsigned)((OMX_BUFFERHEADERTYPE *)bufHdr)->nTimeStamp)
-
-// BitMask Management logic
-#define BITS_PER_INDEX        64
-#define BITMASK_SIZE(mIndex) (((mIndex) + BITS_PER_INDEX - 1)/BITS_PER_INDEX)
-#define BITMASK_OFFSET(mIndex) ((mIndex)/BITS_PER_INDEX)
-#define BITMASK_FLAG(mIndex) ((uint64_t)1 << ((mIndex) % BITS_PER_INDEX))
-#define BITMASK_CLEAR(mArray,mIndex) (mArray)[BITMASK_OFFSET(mIndex)] \
-    &=  ~(BITMASK_FLAG(mIndex))
-#define BITMASK_SET(mArray,mIndex)  (mArray)[BITMASK_OFFSET(mIndex)] \
-    |=  BITMASK_FLAG(mIndex)
-#define BITMASK_PRESENT(mArray,mIndex) ((mArray)[BITMASK_OFFSET(mIndex)] \
-        & BITMASK_FLAG(mIndex))
-#define BITMASK_ABSENT(mArray,mIndex) (((mArray)[BITMASK_OFFSET(mIndex)] \
-            & BITMASK_FLAG(mIndex)) == 0x0)
-#define BITMASK_PRESENT(mArray,mIndex) ((mArray)[BITMASK_OFFSET(mIndex)] \
-        & BITMASK_FLAG(mIndex))
-#define BITMASK_ABSENT(mArray,mIndex) (((mArray)[BITMASK_OFFSET(mIndex)] \
-            & BITMASK_FLAG(mIndex)) == 0x0)
 
 #define OMX_CORE_CONTROL_CMDQ_SIZE   100
 #define OMX_CORE_QCIF_HEIGHT         144
