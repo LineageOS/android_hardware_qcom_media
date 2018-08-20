@@ -3884,6 +3884,9 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 DEBUG_PRINT_LOW("get_parameter: describeColorFormat");
                 VALIDATE_OMX_PARAM_DATA(paramData, DescribeColorFormatParams);
                 eRet = describeColorFormat(paramData);
+                if (eRet == OMX_ErrorUnsupportedSetting) {
+                    DEBUG_PRINT_LOW("The standard OMX linear formats are understood by client. Please ignore this  Unsupported Setting (0x80001019).");
+                }
                 break;
             }
 #endif
@@ -4893,7 +4896,7 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 VALIDATE_OMX_PARAM_DATA(paramData, AllocateNativeHandleParams);
 
                 if (allocateNativeHandleParams->nPortIndex != OMX_CORE_INPUT_PORT_INDEX) {
-                    DEBUG_PRINT_ERROR("Enable/Disable allocate-native-handle allowed only on input port!");
+                    DEBUG_PRINT_LOW("Enable/Disable allocate-native-handle allowed only on input port!. Please ignore this Unsupported Setting (0x80001019).");
                     eRet = OMX_ErrorUnsupportedSetting;
                     break;
                 } else if (m_inp_mem_ptr) {
@@ -5280,7 +5283,7 @@ OMX_ERRORTYPE  omx_vdec::get_config(OMX_IN OMX_HANDLETYPE      hComp,
             DescribeColorAspectsParams *params = (DescribeColorAspectsParams *)configData;
 
             if (params->bRequestingDataSpace) {
-                DEBUG_PRINT_ERROR("Does not handle dataspace request");
+                DEBUG_PRINT_LOW("Does not handle dataspace request. Please ignore this Unsupported Setting (0x80001019).");
                 return OMX_ErrorUnsupportedSetting;
             }
 
