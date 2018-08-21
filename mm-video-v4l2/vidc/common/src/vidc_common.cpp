@@ -179,6 +179,8 @@ pl_map profile_level_converter::level_vp9_omx_to_v4l2 ({
             {OMX_VIDEO_VP9Level41, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_41},
             {OMX_VIDEO_VP9Level5, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_5},
             {OMX_VIDEO_VP9Level51, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_51},
+            {OMX_VIDEO_VP9Level6, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_6},
+            {OMX_VIDEO_VP9Level61, V4L2_MPEG_VIDC_VIDEO_VP9_LEVEL_61},
         });
 
 pl_map profile_level_converter::level_vp9_v4l2_to_omx ({});
