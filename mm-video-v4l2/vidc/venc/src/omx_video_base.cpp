@@ -290,6 +290,7 @@ omx_video::omx_video():
     mMapPixelFormat2Converter.insert({
             {HAL_PIXEL_FORMAT_RGBA_8888, RGBA8888},
             {HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC, NV12_UBWC},
+            {HAL_PIXEL_FORMAT_NV12_HEIF, NV12_512},
                 });
 
     pthread_mutex_init(&m_lock, NULL);
@@ -5120,6 +5121,9 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
 
         mUsesColorConversion = is_conv_needed(handle);
         bool interlaced = is_ubwc_interlaced(handle);
+
+        if (m_sOutPortDef.format.video.eCompressionFormat == OMX_VIDEO_CodingImageHEIC)
+            c2dDestFmt = NV12_512;
 
         if (c2dcc.getConversionNeeded() &&
             c2dcc.isPropChanged(m_sInPortDef.format.video.nFrameWidth,
