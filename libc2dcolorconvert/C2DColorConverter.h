@@ -52,6 +52,8 @@
 #define ALIGN8K 8192
 #define ALIGN4K 4096
 #define ALIGN2K 2048
+#define ALIGN512 512
+#define ALIGN256 256
 #define ALIGN128 128
 #define ALIGN32 32
 #define ALIGN16 16
@@ -106,6 +108,7 @@ enum ColorConvertFormat {
     RGBA8888,
     RGBA8888_UBWC,
     NV12_2K,
+    NV12_512,
     NV12_128m,
     NV12_UBWC,
     TP10_UBWC,
