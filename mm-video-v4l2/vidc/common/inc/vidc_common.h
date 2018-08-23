@@ -26,6 +26,7 @@ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --------------------------------------------------------------------------*/
+
 #ifndef __VIDC_COMMON_H__
 #define __VIDC_COMMON_H__
 
@@ -35,6 +36,19 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifdef _ANDROID_
 #include <gralloc_priv.h>
 #endif
+
+// BitMask Management logic
+#define BITS_PER_INDEX                          64
+#define BITMASK_FLAG(mIndex)                    ((uint64_t)1 \
+    << ((mIndex) % BITS_PER_INDEX))
+#define BITMASK_CLEAR(pBufferMask_64,mIndex)    ((*pBufferMask_64) \
+    &= ~(BITMASK_FLAG(mIndex)))
+#define BITMASK_SET(pBufferMask_64,mIndex)      ((*pBufferMask_64) \
+    |= BITMASK_FLAG(mIndex))
+#define BITMASK_PRESENT(pBufferMask_64,mIndex)  ((*pBufferMask_64) \
+    & BITMASK_FLAG(mIndex))
+#define BITMASK_ABSENT(pBufferMask_64,mIndex)   (((*pBufferMask_64) \
+    & BITMASK_FLAG(mIndex)) == 0x0)
 
 using pl_map = std::unordered_map<int, int>;
 using codec_map = std::unordered_map<int, pl_map *>;
@@ -84,4 +98,4 @@ class profile_level_converter {
 void get_gralloc_format_as_string(char * buf, int buf_len, int format);
 void get_v4l2_color_format_as_string(char * buf, int buf_len, unsigned long v4l2Pixformat);
 
-#endif
+#endif // __VIDC_COMMON_H__
