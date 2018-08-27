@@ -60,18 +60,22 @@ AM_CPPFLAGS += -I$(top_srcdir)/libc2dcolorconvert/
 AM_CPPFLAGS += -I$(top_srcdir)/mm-core/inc/
 AM_CPPFLAGS += -I$(top_srcdir)/mm-core/src/common/
 AM_CPPFLAGS += -I$(top_srcdir)/libstagefrighthw/
-
+AM_CPPFLAGS += -I$(top_srcdir)/libplatformconfig/
+AM_CPPFLAGS += -I$(WORKSPACE)/graphics/libdrm/freedreno/kgsl/
+AM_CPPFLAGS += -I$(WORKSPACE)/display/display-hal/gralloc/
+AM_CPPFLAGS += -I$(WORKSPACE)/display/display-hal/libqdutils/
+AM_CPPFLAGS += -I${WORKSPACE}/frameworks/native/include/
 sources = src/omx_video_base.cpp
 sources += src/omx_video_encoder.cpp
 sources += src/video_encoder_device_v4l2.cpp
-sources += $(top_srcdir)/mm-video-v4l2/vidc/common/src/extra_data_handler.cpp
-sources += $(top_srcdir)/mm-video-v4l2/vidc/common/src/vidc_color_converter.cpp
+sources += $(top_srcdir)/mm-video-v4l2/vidc/common/src/vidc_common.cpp
+sources += $(top_srcdir)/mm-video-v4l2/vidc/common/src/vidc_vendor_extensions.cpp
 
 lib_LTLIBRARIES = libOmxVenc.la
 libOmxVenc_la_SOURCES = $(sources)
 libOmxVenc_la_CFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) -fPIC
-#libOmxVenc_la_LDLIBS = ../libc2d2colorconvert/libc2dcolorconvert.la
-#libOmxVenc_la_LIBADD  = ../../../mm-core/libOmxCore.la
-libOmxVenc_la_LDFLAGS = -lstdc++ -lpthread -llog -lutils -lbinder -lcutils -lglib-2.0 -lbase -ldl -lpthread -shared -lqdMetaData
-#  -lc2d2 -lgui -lOmxCore -lgpustats -ldl -lpthread
-libOmxVenc_la_LDFLAGS += -version-info 0
+libOmxVenc_la_LDFLAGS = -module -shared -avoid-version
+libOmxVenc_la_LDFLAGS += -lstdc++ -lpthread -llog -lutils -lcutils -lglib-2.0 -lbase -ldl -lpthread -lion
+
+libOmxVenc_la_LDFLAGS += -L$(top_builddir)/libc2dcolorconvert  -L$(top_builddir)/libplatformconfig -L$(top_builddir)/libarbitrarybytes
+libOmxVenc_la_LDFLAGS += -lc2dcolorconvert -lplatformconfig -larbitrarybytes

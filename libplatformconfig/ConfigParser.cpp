@@ -29,6 +29,7 @@
 
 #define LOG_TAG "ConfigParser"
 
+#include <string.h>
 #include <errno.h>
 #include <utils/Log.h>
 #include <sys/mman.h>
