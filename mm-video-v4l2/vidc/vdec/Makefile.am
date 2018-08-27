@@ -21,13 +21,13 @@ AM_CPPFLAGS += -UOUTPUT_BUFFER_LOG
 AM_CPPFLAGS += -Wno-parentheses
 AM_CPPFLAGS += -D_ANDROID_ICS_
 AM_CPPFLAGS += -DPROCESS_EXTRADATA_IN_OUTPUT_PORT
+AM_CPPFLAGS += -DNATIVE_BASE_DISABLE
 #AM_CPPFLAGS += "-include stdint.h"
 AM_CPPFLAGS += "-Dstrlcpy=g_strlcpy"
 AM_CPPFLAGS += "-Dstrlcat=g_strlcat"
 AM_CPPFLAGS += "-std=c++11"
 AM_CPPFLAGS += "-DHAVE_ANDROID_OS"
 AM_CPPFLAGS += -DSYS_IOCTL
-
 if USE_GLIB
 AM_CPPFLAGS += -D_USE_GLIB_
 endif
@@ -51,18 +51,24 @@ endif
 AM_CPPFLAGS += -I$(top_srcdir)/mm-video-v4l2/vidc/common/inc/
 AM_CPPFLAGS += -I$(top_srcdir)/mm-video-v4l2/vidc/vdec/inc/
 AM_CPPFLAGS += -I$(top_srcdir)/libc2dcolorconvert/
+AM_CPPFLAGS += -I$(top_srcdir)/libplatformconfig/
+AM_CPPFLAGS += -I$(top_srcdir)/libarbitrarybytes/inc/
 AM_CPPFLAGS += -I$(top_srcdir)/mm-core/inc/
 AM_CPPFLAGS += -I$(top_srcdir)/mm-core/src/common/
 
-c_sources         := src/frameparser.cpp
-c_sources         += src/h264_utils.cpp
-c_sources         += src/ts_parser.cpp
-c_sources         += src/mp4_utils.cpp
-c_sources         += src/hevc_utils.cpp
-c_sources         += src/omx_vdec_v4l2.cpp
+AM_CPPFLAGS += -I$(WORKSPACE)/graphics/libdrm/freedreno/kgsl/
+AM_CPPFLAGS += -I$(WORKSPACE)/display/display-hal/gralloc/
+AM_CPPFLAGS += -I$(WORKSPACE)/display/display-hal/libqdutils/
+AM_CPPFLAGS += -I${WORKSPACE}/frameworks/native/include/
+c_sources = src/ts_parser.cpp
+c_sources += src/omx_vdec_v4l2.cpp
+c_sources += $(top_srcdir)/mm-video-v4l2/vidc/common/src/vidc_common.cpp
+c_sources += $(top_srcdir)/mm-video-v4l2/vidc/common/src/vidc_vendor_extensions.cpp
 
 lib_LTLIBRARIES = libOmxVdec.la
 libOmxVdec_la_SOURCES = $(c_sources)
 libOmxVdec_la_CFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) -fPIC
-libOmxVdec_la_CFLAGS += ../libc2d2colorconvert/libc2dcolorconvert.la
-libOmxVdec_la_LDFLAGS = -lglib-2.0 -shared -version-info 0
+libOmxVdec_la_LDFLAGS = -module -shared -avoid-version
+libOmxVdec_la_LDFLAGS += -llog  -lcutils -lglib-2.0 -lion -lqdMetaData
+libOmxVdec_la_LDFLAGS += -L$(top_builddir)/libc2dcolorconvert  -L$(top_builddir)/libplatformconfig -L$(top_builddir)/libarbitrarybytes
+libOmxVdec_la_LDFLAGS += -lc2dcolorconvert -lplatformconfig -larbitrarybytes

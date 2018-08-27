@@ -21,6 +21,7 @@
 #include "cutils/native_handle.h"
 #include <media/hardware/MetadataBufferType.h>
 
+typedef const native_handle_t* buffer_handle_t;
 namespace android {
 
 #ifdef USE_NATIVE_HANDLE_SOURCE
