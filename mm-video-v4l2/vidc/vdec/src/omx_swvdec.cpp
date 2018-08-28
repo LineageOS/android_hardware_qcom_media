@@ -4825,12 +4825,13 @@ void omx_swvdec::ion_flush_op(unsigned int index)
 
         for (unsigned int i=0; i<2; i++)
         {
-            int ret = ioctl(m_buffer_array_op[index].ion_info.data_fd,
+            int ret = ioctl(m_buffer_array_op[index].buffer_swvdec.fd,
                       DMA_BUF_IOCTL_SYNC, &dma_buf_sync_data[i]);
             if (ret < 0)
             {
-                OMX_SWVDEC_LOG_ERROR("Cache %s failed: %s\n",
+                OMX_SWVDEC_LOG_ERROR("Cache %s failed for fd %d : %s\n",
                                   (i==0) ? "START" : "END",
+                                  m_buffer_array_op[index].buffer_swvdec.fd,
                                   strerror(errno));
                 goto ion_flush_op_exit;
             }
