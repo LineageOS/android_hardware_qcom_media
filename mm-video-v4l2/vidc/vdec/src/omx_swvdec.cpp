@@ -4900,11 +4900,18 @@ void omx_swvdec::ion_flush_op(unsigned int index)
                            flush_data.vaddr,
                            flush_data.length);
 
-        rc = ioctl(fd, ION_IOC_CUSTOM, &custom_data);
-
-        if (rc < 0)
+        if(flush_data.fd && flush_data.vaddr)
         {
-            OMX_SWVDEC_LOG_ERROR("ioctl() for clean cache failed");
+            rc = ioctl(fd, ION_IOC_CUSTOM, &custom_data);
+            if (rc < 0)
+            {
+                OMX_SWVDEC_LOG_ERROR("ioctl() for clean cache failed"
+                            "handle %d, fd %d, vaddr %p, length %d",
+                            flush_data.handle,
+                            flush_data.fd,
+                            flush_data.vaddr,
+                            flush_data.length);
+            }
         }
 
         close(fd);
