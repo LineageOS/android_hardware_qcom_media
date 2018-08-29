@@ -506,7 +506,7 @@ bool inline venc_dev::venc_validate_range(OMX_S32 id, OMX_S32 val) {
         if (val >= cap.minimum && val <= cap.maximum) {
             return true;
         } else {
-            DEBUG_PRINT_ERROR("id = %u, value = %u, min = %u, max = %u",
+            DEBUG_PRINT_INFO("id = %u, value = %u, min = %u, max = %u",
                 cap.id, val, cap.minimum, cap.maximum);
         }
     }
@@ -5705,7 +5705,7 @@ unsigned long venc_dev::venc_get_color_format(OMX_COLOR_FORMATTYPE eColorFormat)
         format = V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010_VENUS;
         break;
     default:
-        DEBUG_PRINT_ERROR("Unsupported eColorFormat %#x", eColorFormat);
+        DEBUG_PRINT_INFO("WARN: Unsupported eColorFormat %#x", eColorFormat);
         format = V4L2_DEFAULT_OUTPUT_COLOR_FMT;
         break;
     }
@@ -6789,14 +6789,14 @@ bool venc_dev::venc_validate_temporal_extn(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYER
 
     if (!venc_validate_range(V4L2_CID_MPEG_VIDC_VIDEO_HIER_B_NUM_LAYERS, temporal_settings.nBLayerCountMax - 1) &&
         (temporal_settings.nBLayerCountMax > 0)) {
-        DEBUG_PRINT_ERROR("TemporalLayer: Invalid settings, hardware doesn't"
+        DEBUG_PRINT_INFO("WARN: TemporalLayer: Invalid settings, hardware doesn't"
                     " support %u HB layers", temporal_settings.nBLayerCountMax);
         return false;
     }
 
     if (!venc_validate_range(V4L2_CID_MPEG_VIDC_VIDEO_HIER_P_NUM_LAYERS, temporal_settings.nLayerCountMax - 1) &&
         !venc_validate_range(V4L2_CID_MPEG_VIDC_VIDEO_HYBRID_HIERP_MODE, temporal_settings.nLayerCountMax - 1)) {
-        DEBUG_PRINT_ERROR("TemporalLayer: Invalid settings, hardware doesn't"
+        DEBUG_PRINT_INFO("WARN: TemporalLayer: Invalid settings, hardware doesn't"
                     " support %u temporal layers", temporal_settings.nLayerCountMax);
         return false;
     }
