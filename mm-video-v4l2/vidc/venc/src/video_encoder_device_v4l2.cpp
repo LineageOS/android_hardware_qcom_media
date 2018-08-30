@@ -198,6 +198,8 @@ venc_dev::venc_dev(class omx_venc *venc_class)
 
     mUseAVTimerTimestamps = false;
     mUseLinearColorFormat = false;
+    Platform::Config::getInt32(Platform::vidc_enc_linear_color_format,
+            (int32_t *)&mUseLinearColorFormat, 0);
 
     profile_level_converter::init();
 }
