@@ -142,6 +142,7 @@ static const char* MEM_DEVICE = "/dev/ion";
 #endif
 
 void* message_thread_enc(void *);
+bool is_ubwc_interlaced(private_handle_t *handle);
 
 enum omx_venc_extradata_types {
     VENC_EXTRADATA_SLICEINFO = 0x100,
