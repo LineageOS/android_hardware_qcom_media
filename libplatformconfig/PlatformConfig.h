@@ -60,6 +60,7 @@ typedef enum {
     vidc_enc_csc_custom_matrix,
     vidc_dec_arb_mode_override,
     vidc_perf_control_enable,
+    vidc_enc_linear_color_format,
 } Config_t;
 
 struct configStr {
@@ -78,6 +79,7 @@ static const struct configStr configStrMap[] = {
     {vidc_enc_csc_custom_matrix, "vidc_enc_csc_custom_matrix"},
     {vidc_dec_arb_mode_override, "vidc_dec_arb_mode_override"},
     {vidc_perf_control_enable, "vidc_perf_control_enable"},
+    {vidc_enc_linear_color_format, "vidc_enc_linear_color_format"},
 };
 
 class Config {

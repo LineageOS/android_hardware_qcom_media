@@ -665,6 +665,9 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     /* Set Color Space Conversion */
     OMX_QTIIndexParamColorSpaceConversion = 0x7F000078,
 
+    /* Enable linear color format */
+    OMX_QTIIndexParamEnableLinearColorFormat = 0x7F000079,
+
     /* Capabilities */
     OMX_QTIIndexParamCapabilitiesVTDriverVersion = 0x7F100000,
 

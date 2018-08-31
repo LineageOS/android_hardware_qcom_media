@@ -593,6 +593,7 @@ class venc_dev
         bool mUseAVTimerTimestamps;
         bool venc_set_hdr_info(const MasteringDisplay&, const ContentLightLevel&);
         bool mIsGridset;
+        bool mUseLinearColorFormat;
 };
 
 enum instance_state {

@@ -141,6 +141,9 @@ void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
 
     ADD_EXTENSION("qti-ext-enc-bitrate-mode", OMX_IndexParamVideoBitrate, OMX_DirOutput)
     ADD_PARAM_END("value", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-enc-linear-color-format", OMX_QTIIndexParamEnableLinearColorFormat, OMX_DirInput)
+    ADD_PARAM_END("value", OMX_AndroidVendorValueInt32)
 }
 
 OMX_ERRORTYPE omx_video::get_vendor_extension_config(
@@ -362,6 +365,11 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
         case OMX_IndexParamVideoBitrate:
         {
             setStatus &= vExt.setParamInt32(ext, "value", m_sParamBitrate.eControlRate);
+            break;
+        }
+        case OMX_QTIIndexParamEnableLinearColorFormat:
+        {
+            setStatus &= vExt.setParamInt32(ext, "value", m_sParamLinearColorFormat.bEnable);
             break;
         }
         default:
@@ -902,6 +910,25 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
                 DEBUG_PRINT_ERROR("set_param: OMX_IndexParamVideoBitrate failed !");
             }
 
+            break;
+        }
+        case OMX_QTIIndexParamEnableLinearColorFormat:
+        {
+            QOMX_ENABLETYPE linearColor;
+            memcpy(&linearColor, &m_sParamLinearColorFormat, sizeof(QOMX_ENABLETYPE));
+            valueSet |= vExt.readParamInt32(ext, "value", (OMX_S32 *)&(linearColor.bEnable));
+            if (!valueSet) {
+                break;
+            }
+
+            DEBUG_PRINT_HIGH("VENDOR-EXT: set_param: OMX_QTIIndexParamEnableLinearColorFormat : %d",
+                                linearColor.bEnable);
+
+            err = set_parameter(
+                   NULL, (OMX_INDEXTYPE)OMX_QTIIndexParamEnableLinearColorFormat, &linearColor);
+            if (err != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("set_param: OMX_QTIIndexParamEnableLinearColorFormat failed !");
+            }
             break;
         }
         default:
