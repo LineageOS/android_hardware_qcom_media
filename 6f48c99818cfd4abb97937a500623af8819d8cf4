@@ -1,0 +1,22 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "db7dd2f1_0cfb71f1",
+        "filename": "mm-core/inc/qc_omx_msg.h",
+        "patchSetId": 4
+      },
+      "lineNbr": 82,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-09-01T19:44:36Z",
+      "side": 1,
+      "message": "wrong log header, it should be log/log.h",
+      "parentUuid": "",
+      "revId": "6f48c99818cfd4abb97937a500623af8819d8cf4",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
