@@ -3678,5 +3678,8 @@ void omx_venc::init_sw_vendor_extensions(VendorExtensionStore &store) {
     ADD_EXTENSION("qti-ext-enc-timestamp-source-avtimer", OMX_QTIIndexParamEnableAVTimerTimestamps,
             OMX_DirOutput)
     ADD_PARAM_END("enable", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-enc-bitrate-mode", OMX_IndexParamVideoBitrate, OMX_DirOutput)
+    ADD_PARAM_END("value", OMX_AndroidVendorValueInt32)
 }
 
