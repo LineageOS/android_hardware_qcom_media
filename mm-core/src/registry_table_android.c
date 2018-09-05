@@ -44,7 +44,6 @@ omx_core_cb_type core[] =
     OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.avc.secure", "libOmxVdec.so", "video_decoder.avc"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.mpeg2", "libOmxVdec.so", "video_decoder.mpeg2"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.mpeg2.secure", "libOmxVdec.so", "video_decoder.mpeg2"),
-    OMX_REGISTRY_ENTRY("OMX.qti.video.decoder.vc1sw", "libOmxSwVdec.so", "video_decoder.vc1"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.hevc", "libOmxVdec.so", "video_decoder.hevc"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.hevc.secure", "libOmxVdec.so", "video_decoder.hevc"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.vp8", "libOmxVdec.so", "video_decoder.vp8"),
@@ -87,6 +86,10 @@ omx_core_cb_type core[] =
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.tme", "libOmxVenc.so", "video_encoder.tme"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.tme.secure", "libOmxVenc.so", "video_encoder.tme"),
 #endif //_STEPPE_
+
+#ifndef _STEPPE_
+    OMX_REGISTRY_ENTRY("OMX.qti.video.decoder.vc1sw", "libOmxSwVdec.so", "video_decoder.vc1"),
+#endif
     OMX_REGISTRY_ENTRY("OMX.QCOM.CUST.COMP.START", NULL, NULL),
     OMX_REGISTRY_ENTRY("OMX.qcom.file.muxer", "libOmxMux.so", "container_muxer.mp2"),
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.aac", "libOmxAacDec.so", "audio_decoder.aac"),
