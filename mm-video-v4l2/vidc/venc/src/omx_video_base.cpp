@@ -2164,6 +2164,14 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     m_sParamConsumerUsage);
                 break;
             }
+        case OMX_QTIIndexParamVideoEnableBlur:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, OMX_QTI_VIDEO_CONFIG_BLURINFO);
+                OMX_QTI_VIDEO_CONFIG_BLURINFO *pBlurInfo =
+                    reinterpret_cast<OMX_QTI_VIDEO_CONFIG_BLURINFO *>(paramData);
+                memcpy(pBlurInfo, &m_blurInfo, sizeof(OMX_QTI_VIDEO_CONFIG_BLURINFO));
+                break;
+            }
         case OMX_IndexParamVideoSliceFMO:
         default:
             {
@@ -2336,7 +2344,7 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
                OMX_QTI_VIDEO_CONFIG_BLURINFO* pParam =
                    reinterpret_cast<OMX_QTI_VIDEO_CONFIG_BLURINFO*>(configData);
                DEBUG_PRINT_LOW("get_config: OMX_QTIIndexConfigVideoBlurResolution");
-               memcpy(pParam, &m_blurInfo, sizeof(m_blurInfo));
+               memcpy(pParam, &m_blurInfo, sizeof(OMX_QTI_VIDEO_CONFIG_BLURINFO));
                break;
            }
        case OMX_QTIIndexConfigDescribeColorAspects:

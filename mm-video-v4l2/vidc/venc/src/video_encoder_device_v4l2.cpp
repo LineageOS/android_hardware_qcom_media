@@ -2867,12 +2867,23 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 QOMX_ENABLETYPE *pParam = (QOMX_ENABLETYPE *)paramData;
                 csc_enable = pParam->bEnable;
                 DEBUG_PRINT_INFO("CSC settings: Enabled : %d ", pParam->bEnable);
+                break;
             }
         case OMX_QTIIndexParamEnableLinearColorFormat:
             {
                 QOMX_ENABLETYPE *pParam = (QOMX_ENABLETYPE *)paramData;
                 mUseLinearColorFormat = pParam->bEnable;
                 DEBUG_PRINT_INFO("Linear Color Format Enabled : %d ", pParam->bEnable);
+                break;
+            }
+        case OMX_QTIIndexParamVideoEnableBlur:
+            {
+                OMX_QTI_VIDEO_CONFIG_BLURINFO *pParam = (OMX_QTI_VIDEO_CONFIG_BLURINFO *)paramData;
+                if (!venc_set_blur_resolution(pParam)) {
+                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamVideoEnableBlur failed");
+                    return false;
+                }
+                break;
             }
         default:
             DEBUG_PRINT_ERROR("ERROR: Unsupported parameter in venc_set_param: %u",
@@ -3156,7 +3167,7 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
         {
              OMX_QTI_VIDEO_CONFIG_BLURINFO *blur = (OMX_QTI_VIDEO_CONFIG_BLURINFO *)configData;
              if (blur->nPortIndex == (OMX_U32)PORT_INDEX_IN) {
-                 DEBUG_PRINT_LOW("Set_config: blur resolution: %d", blur->eTargetResol);
+                 DEBUG_PRINT_LOW("Set_config: blur resolution: %u", blur->nBlurInfo);
                  if(!venc_set_blur_resolution(blur)) {
                     DEBUG_PRINT_ERROR("Failed to set Blur Resolution");
                     return false;
@@ -6463,31 +6474,17 @@ bool venc_dev::venc_set_blur_resolution(OMX_QTI_VIDEO_CONFIG_BLURINFO *blurInfo)
 
     int blur_width = 0, blur_height = 0;
 
-    switch (blurInfo->eTargetResol) {
-        case BLUR_RESOL_DISABLED:
+    switch (blurInfo->nBlurInfo) {
+        case 0:
             blur_width = 0;
             blur_height = 0;
-            break;
-        case BLUR_RESOL_240:
-            blur_width = 426;
-            blur_height = 240;
-            break;
-        case BLUR_RESOL_480:
-            blur_width = 854;
-            blur_height = 480;
-            break;
-        case BLUR_RESOL_720:
-            blur_width = 1280;
-            blur_height = 720;
-            break;
-        case BLUR_RESOL_1080:
-            blur_width = 1920;
-            blur_height = 1080;
-            break;
+        case 1:
+            blur_width = 1;
+            blur_height = 1;
         default:
-            blur_width = blurInfo->eTargetResol >> 16;
-            blur_height = blurInfo->eTargetResol & 0xFFFF;
-            DEBUG_PRINT_LOW("Custom blur resolution %dx%d", blur_width, blur_height);
+            blur_width = blurInfo->nBlurInfo >> 16;
+            blur_height = blurInfo->nBlurInfo & 0xFFFF;
+            DEBUG_PRINT_LOW("Custom blur resolution %ux%u", blur_width, blur_height);
             break;
     }
 
@@ -6505,7 +6502,7 @@ bool venc_dev::venc_set_blur_resolution(OMX_QTI_VIDEO_CONFIG_BLURINFO *blurInfo)
         DEBUG_PRINT_ERROR("Failed to set blur resoltion");
         return false;
     }
-    DEBUG_PRINT_LOW("Blur resolution set = %d x %d", blur_width, blur_height);
+    DEBUG_PRINT_LOW("Blur resolution set = %u x %u", blur_width, blur_height);
     return true;
 
 }
