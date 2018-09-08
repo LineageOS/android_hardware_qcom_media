@@ -669,7 +669,7 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     OMX_QTIIndexParamEnableLinearColorFormat = 0x7F000079,
 
     /* Enable Blur */
-    OMX_QTIIndexParamVideoEnableBlur = 0x7F10000A,
+    OMX_QTIIndexParamVideoEnableBlur = 0x7F00007A,
 
     /* Capabilities */
     OMX_QTIIndexParamCapabilitiesVTDriverVersion = 0x7F100000,
@@ -681,7 +681,6 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     OMX_QTIIndexParamCapabilitiesMaxDownScaleRatio = 0x7F100003,
 
     OMX_QTIIndexParamCapabilitiesRotationSupport = 0x7F100004,
-
 };
 
 /**
