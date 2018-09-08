@@ -355,7 +355,7 @@ class venc_dev
         bool venc_get_output_log_flag();
         int venc_output_log_buffers(const char *buffer_addr, int buffer_len, uint64_t timestamp);
         int venc_input_log_buffers(OMX_BUFFERHEADERTYPE *buffer, int fd, int plane_offset,
-                        unsigned long inputformat);
+                        unsigned long inputformat, bool interlaced);
         int venc_extradata_log_buffers(char *buffer_addr, bool input);
         bool venc_set_bitrate_type(OMX_U32 type);
         bool venc_get_hevc_profile(OMX_U32* profile);
