@@ -27,14 +27,6 @@ OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --------------------------------------------------------------------------*/
 
-enum {
-    BLUR_STRENGTH_NONE     = 0,
-    BLUR_STRENGTH_MAX1080  = 25,
-    BLUR_STRENGTH_MAX720   = 50,
-    BLUR_STRENGTH_MAX480   = 75,
-    BLUR_STRENGTH_MAX240   = 100,
-};
-
 void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
 
     //TODO: add extensions based on Codec, m_platform and/or other capability queries
@@ -128,6 +120,8 @@ void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
     ADD_PARAM    ("qp-b", OMX_AndroidVendorValueInt32)
     ADD_PARAM_END("qp-b-enable", OMX_AndroidVendorValueInt32)
 
+    ADD_EXTENSION("qti-ext-enc-blurinfo", OMX_QTIIndexParamVideoEnableBlur, OMX_DirInput)
+    ADD_PARAM_END("info", OMX_AndroidVendorValueInt32)
     ADD_EXTENSION("qti-ext-enc-blurfilter", OMX_QTIIndexConfigVideoBlurResolution, OMX_DirInput)
     ADD_PARAM_END("strength", OMX_AndroidVendorValueInt32)
 
@@ -348,6 +342,7 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
             setStatus &= vExt.setParamInt32(ext, "qp-b-enable", ((m_QPSet >> 0x2) & 0x1));
             break;
         }
+        case OMX_QTIIndexParamVideoEnableBlur:
         case OMX_QTIIndexConfigVideoBlurResolution:
         {
             break;
@@ -830,37 +825,40 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
             }
             break;
         }
-        case OMX_QTIIndexConfigVideoBlurResolution:
+        case OMX_QTIIndexParamVideoEnableBlur:
         {
             OMX_QTI_VIDEO_CONFIG_BLURINFO blurInfo;
+
             memcpy(&blurInfo, &m_blurInfo, sizeof(OMX_QTI_VIDEO_CONFIG_BLURINFO));
-            OMX_S32 targetStrength = 0;
-            valueSet |= vExt.readParamInt32(ext, "strength", (OMX_S32 *)&(targetStrength));
+
+            valueSet |= vExt.readParamInt32(ext, "info", (OMX_S32 *)&(blurInfo.nBlurInfo));
             if (!valueSet) {
                 break;
             }
-            if (targetStrength <= BLUR_STRENGTH_NONE) {
-                blurInfo.eTargetResol = BLUR_RESOL_DISABLED;
+
+            DEBUG_PRINT_HIGH("VENDOR-EXT: set_param: OMX_QTIIndexParamVideoEnableBlur : %u",
+                             blurInfo.nBlurInfo);
+
+            err = set_parameter(
+                    NULL, (OMX_INDEXTYPE)OMX_QTIIndexParamVideoEnableBlur, &blurInfo);
+            if (err != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("set_param: OMX_QTIIndexParamVideoEnableBlur failed !");
             }
-            else if (targetStrength > BLUR_STRENGTH_NONE && targetStrength <= BLUR_STRENGTH_MAX1080) {
-                blurInfo.eTargetResol = BLUR_RESOL_1080;
-            }
-            else if (targetStrength >= BLUR_STRENGTH_MAX1080 && targetStrength <= BLUR_STRENGTH_MAX720) {
-                blurInfo.eTargetResol = BLUR_RESOL_720;
-            }
-            else if (targetStrength >= BLUR_STRENGTH_MAX720 && targetStrength <= BLUR_STRENGTH_MAX480 ) {
-                blurInfo.eTargetResol = BLUR_RESOL_480;
-            }
-            else if (targetStrength >= BLUR_STRENGTH_MAX480 && targetStrength <= BLUR_STRENGTH_MAX240) {
-                blurInfo.eTargetResol = BLUR_RESOL_240;
-            }
-            else {
-                // custom blur resolution, bit[31:16] for width, bit[15:0] for height
-                blurInfo.eTargetResol = (OMX_QTI_VIDEO_BLUR_RESOLUTION)targetStrength;
+            break;
+        }
+        case OMX_QTIIndexConfigVideoBlurResolution:
+        {
+            OMX_QTI_VIDEO_CONFIG_BLURINFO blurInfo;
+
+            memcpy(&blurInfo, &m_blurInfo, sizeof(OMX_QTI_VIDEO_CONFIG_BLURINFO));
+
+            valueSet |= vExt.readParamInt32(ext, "strength", (OMX_S32 *)&(blurInfo.nBlurInfo));
+            if (!valueSet) {
+                break;
             }
 
-            DEBUG_PRINT_HIGH("VENDOR-EXT: set_config: OMX_QTIIndexConfigVideoBlurResolution : %d",
-                    targetStrength);
+            DEBUG_PRINT_HIGH("VENDOR-EXT: set_config: OMX_QTIIndexConfigVideoBlurResolution : %u",
+                             blurInfo.nBlurInfo);
 
             err = set_config(
                     NULL, (OMX_INDEXTYPE)OMX_QTIIndexConfigVideoBlurResolution, &blurInfo);
