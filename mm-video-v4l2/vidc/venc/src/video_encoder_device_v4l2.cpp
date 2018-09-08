@@ -1453,6 +1453,9 @@ int venc_dev::venc_input_log_buffers(OMX_BUFFERHEADERTYPE *pbuffer, int fd, int 
             case V4L2_PIX_FMT_NV12:
                 color_format = COLOR_FMT_NV12;
                 break;
+            case V4L2_PIX_FMT_NV12_512:
+                color_format = COLOR_FMT_NV12_512;
+                break;
             case V4L2_PIX_FMT_NV12_UBWC:
                 color_format = COLOR_FMT_NV12_UBWC;
                 break;
@@ -2452,7 +2455,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 }
 
                 if (!venc_set_grid_enable()) {
-                    DEBUG_PRINT_ERROR("ERROR: Failed to set tile dimension");
+                    DEBUG_PRINT_ERROR("ERROR: Failed to set grid-enable");
                     return false;
                 }
                 break;
@@ -5227,7 +5230,7 @@ bool venc_dev::venc_set_grid_enable()
     int rc;
     struct v4l2_control control;
 
-    DEBUG_PRINT_LOW("venc_set_tile_dimension");
+    DEBUG_PRINT_LOW("venc_set_grid_enable");
     control.id = V4L2_CID_MPEG_VIDC_IMG_GRID_ENABLE;
     control.value = 1;
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
@@ -5722,6 +5725,9 @@ unsigned long venc_dev::venc_get_color_format(OMX_COLOR_FORMATTYPE eColorFormat)
         break;
     }
 
+    if (m_codec == OMX_VIDEO_CodingImageHEIC)
+        format = V4L2_PIX_FMT_NV12_512;
+
     return format;
 }
 
@@ -5764,6 +5770,9 @@ bool venc_dev::venc_set_color_format(OMX_COLOR_FORMATTYPE color_format)
             DEBUG_PRINT_HIGH("Default color format NV12 UBWC is set");
             break;
     }
+
+    if (m_codec == OMX_VIDEO_CodingImageHEIC)
+        m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV12_512;
 
     memset(&fmt, 0, sizeof(fmt));
     fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
