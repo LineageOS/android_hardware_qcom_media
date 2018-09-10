@@ -5247,8 +5247,8 @@ bool venc_dev::_venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames)
     struct v4l2_control control;
     char property_value[PROPERTY_VALUE_MAX] = {0};
 
-    if (m_sVenc_cfg.codectype != V4L2_PIX_FMT_H264 &&
-        m_sVenc_cfg.codectype != V4L2_PIX_FMT_HEVC &&
+    if ((m_sVenc_cfg.codectype != V4L2_PIX_FMT_H264 &&
+        m_sVenc_cfg.codectype != V4L2_PIX_FMT_HEVC) ||
         m_codec == OMX_VIDEO_CodingImageHEIC) {
         nBFrames = 0;
     }
