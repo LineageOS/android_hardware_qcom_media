@@ -88,6 +88,11 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define VENC_BFRAME_MAX_WIDTH       1920
 #define VENC_BFRAME_MAX_HEIGHT      1088
 #define VENC_INFINITE_GOP 0xFFFFFFF
+
+/* TODO: Use sanctioned vendor bits for HEIF
+ * once end to end 64-bit support is available.
+ */
+#define GRALLOC_USAGE_PRIVATE_HEIF_VIDEO (UINT32_C(1) << 27)
 #define GRALLOC_USAGE_PRIVATE_10BIT_VIDEO (UINT32_C(1) << 30)
 #undef LOG_TAG
 #define LOG_TAG "OMX-VENC: venc_dev"
@@ -6992,6 +6997,12 @@ void venc_dev::venc_get_consumer_usage(OMX_U32* usage) {
             *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
             DEBUG_PRINT_INFO("Clear UBWC consumer usage bits for P010");
         }
+    }
+
+    if (m_codec == OMX_VIDEO_CodingImageHEIC) {
+        DEBUG_PRINT_INFO("Clear UBWC and set HEIF consumer usage bit");
+        *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
+        *usage |= GRALLOC_USAGE_PRIVATE_HEIF_VIDEO;
     }
 
     DEBUG_PRINT_INFO("venc_get_consumer_usage 0x%x", *usage);
