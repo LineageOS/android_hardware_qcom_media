@@ -3509,7 +3509,8 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
                              OMX_VIDEO_HEVCProfileMain10HDR10 };
     int mpeg2_profiles[2] = { OMX_VIDEO_MPEG2ProfileSimple,
                               OMX_VIDEO_MPEG2ProfileMain};
-    int vp9_profiles[2] = { OMX_VIDEO_VP9Profile0,
+    int vp9_profiles[3] = { OMX_VIDEO_VP9Profile0,
+                            OMX_VIDEO_VP9Profile2,
                             OMX_VIDEO_VP9Profile2HDR};
 
     if (!profileLevelType)
@@ -3610,12 +3611,13 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
     /* Check if the profile is supported by driver or not  */
     /* During query caps of profile driver sends a mask of */
     /* of all v4l2 profiles supported(in the flags field)  */
-    if(output_capability != V4L2_PIX_FMT_HEVC) {
+    if((output_capability != V4L2_PIX_FMT_HEVC) &&
+         (output_capability != V4L2_PIX_FMT_VP9)) {
         if (!profile_level_converter::convert_omx_profile_to_v4l2(output_capability, profileLevelType->eProfile, &v4l2_profile)) {
             DEBUG_PRINT_ERROR("Invalid profile, cannot find corresponding omx profile");
             return OMX_ErrorHardware;
         }
-    }else { //convert omx profile to v4l2 profile for HEVC Main10 and Main10HDR10 profiles,seperately
+    }else if(output_capability == V4L2_PIX_FMT_HEVC) { //convert omx profile to v4l2 profile for HEVC Main10 and Main10HDR10 profiles,seperately
         switch (profileLevelType->eProfile) {
             case OMX_VIDEO_HEVCProfileMain:
                 v4l2_profile = V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN;
@@ -3628,8 +3630,20 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
                 DEBUG_PRINT_ERROR("Invalid profile, cannot find corresponding omx profile");
                 return OMX_ErrorHardware;
         }
+    }else { //convert omx profile to v4l2 profile for VP9 Profile2 and VP9 Profile2HDR profiles,seperately
+        switch (profileLevelType->eProfile) {
+            case OMX_VIDEO_VP9Profile0:
+                v4l2_profile = V4L2_MPEG_VIDC_VIDEO_VP9_PROFILE_P0;
+                break;
+            case OMX_VIDEO_VP9Profile2:
+            case OMX_VIDEO_VP9Profile2HDR:
+                v4l2_profile = V4L2_MPEG_VIDC_VIDEO_VP9_PROFILE_P2_10;
+                break;
+            default:
+                DEBUG_PRINT_ERROR("Invalid profile, cannot find corresponding omx profile");
+                return OMX_ErrorHardware;
+        }
     }
-
     if(!((profile_cap.flags >> v4l2_profile) & 0x1)) {
         DEBUG_PRINT_ERROR("%s: Invalid index corresponding profile not supported : %d ",__FUNCTION__, profileLevelType->eProfile);
         eRet = OMX_ErrorNoMore;
