@@ -903,8 +903,11 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 DEBUG_PRINT_LOW("set_parameter: OMX_IndexParamVideoAvc");
 
                 avc_param.nBFrames = 0;
+                avc_param.bEntropyCodingCABAC = (OMX_BOOL)(0);
+                avc_param.nCabacInitIdc = 0;
                 if ((pParam->eProfile == OMX_VIDEO_AVCProfileHigh)||
-                        (pParam->eProfile == OMX_VIDEO_AVCProfileMain)) {
+                    (pParam->eProfile == OMX_VIDEO_AVCProfileMain)||
+                    (pParam->eProfile == OMX_VIDEO_AVCProfileConstrainedHigh)) {
 
                     if (pParam->nBFrames) {
                         avc_param.nBFrames = pParam->nBFrames;
@@ -917,7 +920,7 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     avc_param.nCabacInitIdc = 0;
                 } else {
                     if (pParam->nBFrames) {
-                        DEBUG_PRINT_ERROR("Warning: B frames not supported");
+                        DEBUG_PRINT_HIGH("B frames not supported with profile %x", pParam->eProfile);
                     }
                 }
 
