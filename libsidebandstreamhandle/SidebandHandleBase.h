@@ -63,6 +63,9 @@ public:
     /*Producer use, get return buffer fd from Consumer */
     virtual status_t dequeueBuffer(int *idx, uint32_t msInterval) = 0;
 
+    /*Producer use, set setting_data to Consumer */
+    virtual status_t setColorData(color_data_t &color_data) = 0;
+
     /*Consumer use, get captured buffer Number */
     virtual status_t acquireBufferNumb(int *captured_unRead_bufNum) = 0;
 
@@ -71,6 +74,9 @@ public:
 
     /*Consumer use, send used buffer fd to Producer*/
     virtual status_t releaseBuffer(int idx) = 0;
+
+    /*Consumer use, get setting_data from Producer*/
+    virtual status_t getColorData(color_data_t *color_data) = 0;
 
 public:
     /*Consumer use, get Buffer width*/
