@@ -4372,6 +4372,54 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         }
                     } // Check OUTPUT Streaming
 
+                    struct UBWCStats cam_ubwc_stats[2];
+                    unsigned long long int compression_ratio = 1 << 16;
+
+                    if (getMetaData(handle, GET_UBWC_CR_STATS_INFO, (void *)cam_ubwc_stats) == 0) {
+                        if (cam_ubwc_stats[0].bDataValid) {
+                            switch (cam_ubwc_stats[0].version) {
+                            case UBWC_2_0:
+                            case UBWC_3_0:
+                                {
+                                    unsigned long long int sum = 0, weighted_sum = 0;
+
+                                    DEBUG_PRINT_HIGH("Field 0 : 32 Tile = %d 64 Tile = %d 96 Tile = %d "
+                                       "128 Tile = %d 160 Tile = %d 192 Tile = %d 256 Tile = %d\n",
+                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile32,
+                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile64,
+                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile96,
+                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile128,
+                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile160,
+                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile192,
+                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile256);
+
+                                    weighted_sum =
+                                        32  * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile32 +
+                                        64  * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile64 +
+                                        96  * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile96 +
+                                        128 * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile128 +
+                                        160 * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile160 +
+                                        192 * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile192 +
+                                        256 * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile256;
+
+                                    sum =
+                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile32 +
+                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile64 +
+                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile96 +
+                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile128 +
+                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile160 +
+                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile192 +
+                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile256;
+
+                                    compression_ratio = (weighted_sum && sum) ?
+                                        ((256 * sum) << 16) / weighted_sum : compression_ratio;
+                                }
+                                break;
+                            default:
+                                break;
+                            }
+                        }
+                    }
 
                     uint32_t encodePerfMode = 0;
                     if (getMetaData(handle, GET_VIDEO_PERF_MODE, &encodePerfMode) == 0) {
@@ -4383,11 +4431,12 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                     plane[0].data_offset = 0;
                     plane[0].length = handle->size;
                     plane[0].bytesused = handle->size;
+                    plane[0].reserved[2] = (unsigned long int)compression_ratio;
                     char v4l2ColorFormatStr[200];
                     get_v4l2_color_format_as_string(v4l2ColorFormatStr, sizeof(v4l2ColorFormatStr), m_sVenc_cfg.inputformat);
                     DEBUG_PRINT_LOW("venc_empty_buf: Opaque camera buf: fd = %d "
-                                ": filled %d of %d format 0x%lx (%s)", fd, plane[0].bytesused,
-                                plane[0].length, m_sVenc_cfg.inputformat, v4l2ColorFormatStr);
+                                ": filled %d of %d format 0x%lx (%s) CR %d", fd, plane[0].bytesused,
+                                plane[0].length, m_sVenc_cfg.inputformat, v4l2ColorFormatStr, plane[0].reserved[2]);
                 }
             } else {
                 // Metadata mode
