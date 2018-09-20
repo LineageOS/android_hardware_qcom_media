@@ -37,7 +37,21 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // ----------------------------------------------------------------------------
 namespace android {
 // ----------------------------------------------------------------------------
+#define BUF_QUEUE_FULL (android::UNKNOWN_ERROR + 9)
+#define BUF_QUEUE_EMPTY (android::UNKNOWN_ERROR + 10)
+#define BUF_QUEUE_NO_MORE_DATA (android::UNKNOWN_ERROR + 11)
+#define SETTING_NO_DATA_CHANGE (android::UNKNOWN_ERROR + 12)
 // ----------------------------------------------------------------------------
+
+typedef struct color_data {
+    uint32_t flags;
+    float hue;
+    float saturation;
+    float tone_cb;
+    float tone_cr;
+    float contrast;
+    float brightness;
+}color_data_t;
 
 struct SidebandHandleBase : public native_handle {
 public:
