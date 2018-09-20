@@ -3034,6 +3034,11 @@ SWVENC_STATUS omx_venc::swvenc_empty_buffer_done
     OMX_BUFFERHEADERTYPE* omxhdr = NULL;
 
     //omx_video *omx = reinterpret_cast<omx_video*>(p_client);
+    if (!p_ipbuffer) {
+        DEBUG_PRINT_ERROR("EBD: null buffer");
+        return SWVENC_S_NULL_POINTER;
+    }
+
     omxhdr = (OMX_BUFFERHEADERTYPE*)p_ipbuffer->p_client_data;
 
     DEBUG_PRINT_LOW("EBD: clientData (%p)", p_ipbuffer->p_client_data);
