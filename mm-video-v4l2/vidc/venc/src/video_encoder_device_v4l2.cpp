@@ -637,6 +637,8 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
     OMX_OTHER_EXTRADATATYPE *data = NULL;
     struct roidata roi;
     bool status = true;
+    OMX_U32 packet_size = 0;
+    OMX_U32 payload_size = 0;
 
     if (!EXTRADATA_IDX(num_input_planes)) {
         DEBUG_PRINT_LOW("Input extradata not enabled");
@@ -774,9 +776,9 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
         data->nDataSize = ALIGN(sizeof(struct msm_vidc_roi_deltaqp_payload),256)
                             + numBytesAligned;
         data->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) + data->nDataSize, 4);
-        if (data->nSize > input_extradata_info.buffer_size  - consumed_len) {
+        if (data->nSize > input_extradata_info.buffer_size  - filled_len) {
            DEBUG_PRINT_ERROR("Buffer size (%lu) is less than ROI extradata size (%u)",
-                             (input_extradata_info.buffer_size - consumed_len) ,data->nSize);
+                             (input_extradata_info.buffer_size - filled_len) ,data->nSize);
            status = false;
            goto bailout;
         }
@@ -822,14 +824,41 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
                 *pBuf++ = (1 << 11) | ((clientROI & 0x3F)<< 4);
             }
         }
+        filled_len += data->nSize;
         data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
-        consumed_len += data->nSize;
     }
 
     if (m_roi_enabled) {
         if (roi.dirty) {
             DEBUG_PRINT_LOW("free roidata with timestamp %lld us", roi.info.nTimeStamp);
             roi.dirty = false;
+        }
+    }
+
+    /* HDR10Plus MetaData information. Enabled by Default. */
+    payload_size = sizeof(struct msm_vidc_hdr10plus_metadata_payload) - sizeof(unsigned int)
+                                + colorData.dynamicMetaDataLen;
+    packet_size = (sizeof(OMX_OTHER_EXTRADATATYPE) + payload_size + 3)&(~3);
+
+    if (m_hdr10meta_enabled && (filled_len + packet_size <= input_extradata_info.buffer_size)) {
+        struct msm_vidc_hdr10plus_metadata_payload *payload;
+
+        data->nSize = packet_size;
+        data->nVersion.nVersion = OMX_SPEC_VERSION;
+        data->nPortIndex = 0;
+        data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_HDR10PLUS_METADATA;
+        data->nDataSize = payload_size;
+
+        payload = (struct  msm_vidc_hdr10plus_metadata_payload *)(data->data);
+        payload->size = colorData.dynamicMetaDataLen;
+        memcpy(payload->data, colorData.dynamicMetaDataPayload, colorData.dynamicMetaDataLen);
+
+        filled_len += data->nSize;
+        data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
+    } else {
+        if (m_hdr10meta_enabled) {
+            DEBUG_PRINT_HIGH("Insufficient size for HDR10Metadata: Required %u Available %lu",
+                             packet_size, (input_extradata_info.buffer_size - filled_len));
         }
     }
 
@@ -3539,6 +3568,28 @@ bool venc_dev::venc_set_vqzip_defaults()
 
     return true;
 }
+bool venc_dev::venc_set_extradata_hdr10metadata()
+{
+    struct v4l2_control control;
+
+    if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC &&
+        codec_profile.profile == V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10) {
+
+        control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
+        control.value = V4L2_MPEG_VIDC_EXTRADATA_HDR10PLUS_METADATA;
+
+        DEBUG_PRINT_HIGH("venc_set_extradata:: HDR10PLUS_METADATA");
+
+        if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
+            DEBUG_PRINT_ERROR("ERROR: Set extradata HDR10PLUS_METADATA failed %d", errno);
+            return false;
+        }
+        m_hdr10meta_enabled = true;
+        extradata = true;
+    }
+
+    return true;
+}
 
 unsigned venc_dev::venc_start(void)
 {
@@ -3586,6 +3637,8 @@ unsigned venc_dev::venc_start(void)
         DEBUG_PRINT_ERROR("Reconfiguring LTR mode failed");
         return 1;
     }
+
+    //venc_set_extradata_hdr10metadata();
 
     venc_config_print();
 
@@ -4141,9 +4194,11 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         // Moment of truth... actual colorspace is known here..
                         if (getMetaData(handle, GET_COLOR_METADATA, &colorData) == 0) {
                             DEBUG_PRINT_INFO("ENC_CONFIG: gralloc Color MetaData colorPrimaries=%d colorRange=%d "
-                                             "transfer=%d matrixcoefficients=%d",
+                                             "transfer=%d matrixcoefficients=%d"
+                                             "dynamicMetaDataValid %u dynamicMetaDataLen %u",
                                              colorData.colorPrimaries, colorData.range,
-                                             colorData.transfer, colorData.matrixCoefficients);
+                                             colorData.transfer, colorData.matrixCoefficients,
+                                             colorData.dynamicMetaDataValid, colorData.dynamicMetaDataLen);
                         }
 
                         struct v4l2_format fmt;
@@ -4263,7 +4318,14 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                             DEBUG_PRINT_ERROR("VIDIOC_REQBUFS OUTPUT_MPLANE Failed");
                             return false;
                         }
-                    }
+                    } else {
+                        if (m_hdr10meta_enabled) {
+                            if (getMetaData(handle, GET_COLOR_METADATA, &colorData) == 0) {
+                                DEBUG_PRINT_INFO("ENC_CONFIG: gralloc Color MetaData dynamicMetaDataValid=%u dynamicMetaDataLen=%u",
+                                                 colorData.dynamicMetaDataValid, colorData.dynamicMetaDataLen);
+                            }
+                        }
+                    } // Check OUTPUT Streaming
 
 
                     uint32_t encodePerfMode = 0;

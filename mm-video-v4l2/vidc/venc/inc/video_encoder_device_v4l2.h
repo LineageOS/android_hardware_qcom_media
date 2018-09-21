@@ -531,6 +531,7 @@ class venc_dev
         unsigned long venc_get_codectype(OMX_VIDEO_CODINGTYPE eCompressionFormat);
         bool venc_set_nal_size (OMX_VIDEO_CONFIG_NALSIZE *nalSizeInfo);
         bool venc_set_grid_enable();
+        bool venc_set_extradata_hdr10metadata();
 
         OMX_U32 pmem_free();
         OMX_U32 pmem_allocate(OMX_U32 size, OMX_U32 alignment, OMX_U32 count);
@@ -550,6 +551,8 @@ class venc_dev
         bool extradata;
         struct extradata_buffer_info input_extradata_info;
         struct extradata_buffer_info output_extradata_info;
+        bool m_hdr10meta_enabled;
+        ColorMetaData colorData= {};
 
         pthread_mutex_t pause_resume_mlock;
         pthread_cond_t pause_resume_cond;
