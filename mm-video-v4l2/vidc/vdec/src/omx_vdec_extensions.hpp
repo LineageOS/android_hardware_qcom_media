@@ -95,7 +95,7 @@ OMX_ERRORTYPE omx_vdec::get_vendor_extension_config(
         }
         case OMX_QTIIndexParamCapabilitiesVTDriverVersion:
         {
-            setStatus &= vExt.setParamInt32(ext, "number", 65536);
+            setStatus &= vExt.setParamInt32(ext, "number", VT_DRIVER_VERSION);
             break;
         }
         default:
