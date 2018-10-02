@@ -356,6 +356,7 @@ enum OMX_QCOM_VIDEO_CODINGTYPE
     QOMX_VIDEO_CodingMVC = 0x7FA30C07,
     QOMX_VIDEO_CodingVp9 = OMX_VIDEO_CodingVP9,   /**< keeping old enum for backwards compatibility*/
     QOMX_VIDEO_CodingTME = 0x7FA30C09,
+    QOMX_VIDEO_CodingImageHeic = OMX_VIDEO_CodingImageHEIC,
 };
 
 enum OMX_QCOM_EXTN_INDEXTYPE
