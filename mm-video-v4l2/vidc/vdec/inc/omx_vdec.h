@@ -120,11 +120,6 @@ extern "C" {
 #include "vidc_debug.h"
 #include "vidc_common.h"
 #include "vidc_vendor_extensions.h"
-#ifdef _ANDROID_
-#include <cutils/properties.h>
-#else
-#define PROPERTY_VALUE_MAX 92
-#endif
 extern "C" {
     OMX_API void * get_omx_component_factory_fn(void);
 }
@@ -464,26 +459,6 @@ struct video_decoder_capability {
     unsigned int max_width;
     unsigned int min_height;
     unsigned int max_height;
-};
-
-struct debug_cap {
-    bool in_buffer_log;
-    bool out_buffer_log;
-    bool out_cc_buffer_log;
-    bool out_meta_buffer_log;
-    char infile_name[PROPERTY_VALUE_MAX + 36];
-    char outfile_name[PROPERTY_VALUE_MAX + 36];
-    char ccoutfile_name[PROPERTY_VALUE_MAX + 36];
-    char out_ymetafile_name[PROPERTY_VALUE_MAX + 36];
-    char out_uvmetafile_name[PROPERTY_VALUE_MAX + 36];
-    char log_loc[PROPERTY_VALUE_MAX];
-    FILE *infile;
-    FILE *outfile;
-    FILE *ccoutfile;
-    FILE *out_ymeta_file;
-    FILE *out_uvmeta_file;
-    int64_t session_id;
-    int seq_count;
 };
 
 struct dynamic_buf_list {
@@ -911,13 +886,8 @@ class omx_vdec: public qc_omx_component
             OMX_U32 transfer, OMX_U32 matrix,
             ColorAspects *aspects);
         bool handle_color_space_info(void *data);
-        void print_debug_color_aspects(ColorAspects *aspects, const char *prefix);
-        void print_debug_hdr_color_info(HDRStaticInfo *hdr_info, const char *prefix);
-        void print_debug_hdr_color_info_mdata(ColorMetaData* color_mdata);
-        void print_debug_hdr10plus_metadata(ColorMetaData& color_mdata);
         bool handle_content_light_level_info(void* data);
         bool handle_mastering_display_color_info(void* data);
-        void print_debug_extradata(OMX_OTHER_EXTRADATATYPE *extra);
         void set_colormetadata_in_handle(ColorMetaData *color_mdata, unsigned int buf_index);
         void prepare_color_aspects_metadata(OMX_U32 primaries, OMX_U32 range,
                                             OMX_U32 transfer, OMX_U32 matrix,

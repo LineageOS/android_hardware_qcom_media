@@ -156,42 +156,6 @@ using namespace android;
 static OMX_U32 maxSmoothStreamingWidth = 1920;
 static OMX_U32 maxSmoothStreamingHeight = 1088;
 
-void print_omx_buffer(const char *str, OMX_BUFFERHEADERTYPE *pHeader)
-{
-    if (!pHeader)
-        return;
-
-    DEBUG_PRINT_HIGH("%s: Header %p buffer %p alloclen %d offset %d filledlen %d timestamp %lld flags %#x",
-        str, pHeader, pHeader->pBuffer, pHeader->nAllocLen,
-        pHeader->nOffset, pHeader->nFilledLen,
-        pHeader->nTimeStamp, pHeader->nFlags);
-}
-
-void print_v4l2_buffer(const char *str, struct v4l2_buffer *v4l2)
-{
-    if (!v4l2)
-        return;
-
-    if (v4l2->length == 1)
-        DEBUG_PRINT_HIGH(
-            "%s: %s: idx %2d userptr %#lx fd %d off %d size %d filled %d flags %#x\n",
-            str, v4l2->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE ?
-            "OUTPUT" : "CAPTURE", v4l2->index,
-            v4l2->m.planes[0].m.userptr, v4l2->m.planes[0].reserved[0],
-            v4l2->m.planes[0].reserved[1], v4l2->m.planes[0].length,
-            v4l2->m.planes[0].bytesused, v4l2->flags);
-    else
-        DEBUG_PRINT_HIGH(
-            "%s: %s: idx %2d userptr %#lx fd %d off %d size %d filled %d flags %#x, extradata: fd %d off %d size %d filled %d\n",
-            str, v4l2->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE ?
-            "OUTPUT" : "CAPTURE", v4l2->index,
-            v4l2->m.planes[0].m.userptr, v4l2->m.planes[0].reserved[0],
-            v4l2->m.planes[0].reserved[1], v4l2->m.planes[0].length,
-            v4l2->m.planes[0].bytesused, v4l2->m.planes[1].reserved[0],
-            v4l2->flags, v4l2->m.planes[1].reserved[1],
-            v4l2->m.planes[1].length, v4l2->m.planes[1].bytesused);
-}
-
 void* async_message_thread (void *input)
 {
     OMX_BUFFERHEADERTYPE *buffer;
@@ -2042,7 +2006,8 @@ int omx_vdec::log_input_buffers(const char *buffer_addr, int buffer_len, uint64_
     return 0;
 }
 
-int omx_vdec::log_cc_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
+int omx_vdec::log_cc_output_buffers(OMX_BUFFERHEADERTYPE *buffer)
+{
     if (client_buffers.client_buffers_invalid() ||
         !m_debug.out_cc_buffer_log || !buffer || !buffer->nFilledLen)
         return 0;
@@ -2064,7 +2029,8 @@ int omx_vdec::log_cc_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
     return 0;
 }
 
-int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
+int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer)
+{
     int buf_index = 0;
     char *temp = NULL;
     char *bufaddr = NULL;
@@ -3399,7 +3365,8 @@ ctxt -- Context information related to the self..
 RETURN VALUE
 NONE
 ==========================================================================*/
-void omx_vdec::notify_flush_done(void *ctxt) {
+void omx_vdec::notify_flush_done(void *ctxt)
+{
 
     omx_vdec *pThis = (omx_vdec *) ctxt;
 
@@ -3485,7 +3452,8 @@ bool omx_vdec::post_event(unsigned long p1,
     return bRet;
 }
 
-bool inline omx_vdec::vdec_query_cap(struct v4l2_queryctrl &cap) {
+bool inline omx_vdec::vdec_query_cap(struct v4l2_queryctrl &cap)
+{
 
     if (ioctl(drv_ctx.video_driver_fd, VIDIOC_QUERYCTRL, &cap)) {
         DEBUG_PRINT_ERROR("Query caps for id = %u failed\n", cap.id);
@@ -4117,7 +4085,8 @@ OMX_ERRORTYPE omx_vdec::use_android_native_buffer(OMX_IN OMX_HANDLETYPE hComp, O
 }
 #endif
 
-OMX_ERRORTYPE omx_vdec::enable_smoothstreaming() {
+OMX_ERRORTYPE omx_vdec::enable_smoothstreaming()
+{
     struct v4l2_control control;
     struct v4l2_format fmt;
     /*control.id = V4L2_CID_MPEG_VIDC_VIDEO_CONTINUE_DATA_TRANSFER;
@@ -6018,7 +5987,8 @@ OMX_ERRORTYPE  omx_vdec::use_output_buffer(
     return eRet;
 }
 
-OMX_ERRORTYPE omx_vdec::allocate_client_output_extradata_headers() {
+OMX_ERRORTYPE omx_vdec::allocate_client_output_extradata_headers()
+{
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
     OMX_BUFFERHEADERTYPE *bufHdr = NULL;
     int i = 0;
@@ -8177,7 +8147,8 @@ bool omx_vdec::allocate_output_done(void)
     return bRet;
 }
 
-bool omx_vdec::allocate_output_extradata_done(void) {
+bool omx_vdec::allocate_output_extradata_done(void)
+{
     bool bRet = false;
     unsigned j=0;
     unsigned nBufferCount = 0;
@@ -8302,7 +8273,8 @@ bool omx_vdec::release_input_done(void)
     return bRet;
 }
 
-bool omx_vdec::release_output_extradata_done(void) {
+bool omx_vdec::release_output_extradata_done(void)
+{
     bool bRet = false;
     unsigned i=0,j=0, buffer_count=0;
 
@@ -9810,7 +9782,8 @@ void omx_vdec::free_input_buffer_header()
 #endif
 }
 
-void omx_vdec::free_output_extradata_buffer_header() {
+void omx_vdec::free_output_extradata_buffer_header()
+{
     client_extradata = false;
     if (m_client_output_extradata_mem_ptr) {
         DEBUG_PRINT_LOW("Free extradata pmem Pointer area");
@@ -10566,13 +10539,6 @@ void omx_vdec::convert_color_space_info(OMX_U32 primaries, OMX_U32 range,
     }
 }
 
-void omx_vdec::print_debug_color_aspects(ColorAspects *a, const char *prefix) {
-    DEBUG_PRINT_HIGH("%s : Color aspects : Primaries = %d(%s) Range = %d(%s) Tx = %d(%s) Matrix = %d(%s)",
-                prefix, a->mPrimaries, asString(a->mPrimaries), a->mRange, asString(a->mRange),
-                a->mTransfer, asString(a->mTransfer), a->mMatrixCoeffs, asString(a->mMatrixCoeffs));
-
-}
-
 bool omx_vdec::handle_color_space_info(void *data)
 {
     ColorAspects tempAspects;
@@ -10714,52 +10680,6 @@ bool omx_vdec::handle_color_space_info(void *data)
         return true;
     }
     return false;
-}
-
-void omx_vdec::print_debug_hdr_color_info(HDRStaticInfo *hdr_info, const char *prefix)
-{
-    if (!hdr_info->mID) {
-        DEBUG_PRINT_LOW("%s : HDRstaticinfo MDC: mR.x = %d mR.y = %d", prefix,
-                         hdr_info->sType1.mR.x, hdr_info->sType1.mR.y);
-        DEBUG_PRINT_LOW("%s : HDRstaticinfo MDC: mG.x = %d mG.y = %d", prefix,
-                         hdr_info->sType1.mG.x, hdr_info->sType1.mG.y);
-        DEBUG_PRINT_LOW("%s : HDRstaticinfo MDC: mB.x = %d mB.y = %d", prefix,
-                         hdr_info->sType1.mB.x, hdr_info->sType1.mB.y);
-        DEBUG_PRINT_LOW("%s : HDRstaticinfo MDC: mW.x = %d mW.y = %d", prefix,
-                         hdr_info->sType1.mW.x, hdr_info->sType1.mW.y);
-        DEBUG_PRINT_LOW("%s : HDRstaticinfo MDC: maxDispLum = %d minDispLum = %d", prefix,
-                         hdr_info->sType1.mMaxDisplayLuminance, hdr_info->sType1.mMinDisplayLuminance);
-        DEBUG_PRINT_LOW("%s : HDRstaticinfo CLL: CLL = %d FLL = %d", prefix,
-                        hdr_info->sType1.mMaxContentLightLevel, hdr_info->sType1.mMaxFrameAverageLightLevel);
-    }
-
-}
-
-void omx_vdec::print_debug_hdr_color_info_mdata(ColorMetaData* color_mdata)
-{
-    DEBUG_PRINT_LOW("setMetaData COLOR_METADATA : color_primaries = %u, range = %u, transfer = %u, matrix = %u",
-                    color_mdata->colorPrimaries, color_mdata->range,
-                    color_mdata->transfer, color_mdata->matrixCoefficients);
-
-    for(uint8_t i = 0; i < 3; i++) {
-        for(uint8_t j = 0; j < 2; j++) {
-            DEBUG_PRINT_LOW("setMetadata COLOR_METADATA : rgbPrimaries[%d][%d] = %d", i, j, color_mdata->masteringDisplayInfo.primaries.rgbPrimaries[i][j]);
-        }
-    }
-
-    DEBUG_PRINT_LOW("setMetadata COLOR_METADATA : whitepoint[0] = %d whitepoint[1] = %d",
-                    color_mdata->masteringDisplayInfo.primaries.whitePoint[0],
-                    color_mdata->masteringDisplayInfo.primaries.whitePoint[1]);
-
-    DEBUG_PRINT_LOW("setMetadata COLOR_METADATA : maxDispLum = %d minDispLum = %d",
-                    color_mdata->masteringDisplayInfo.maxDisplayLuminance,
-                    color_mdata->masteringDisplayInfo.minDisplayLuminance);
-
-    DEBUG_PRINT_LOW("setMetadata COLOR_METADATA : maxCLL = %d maxFLL = %d",
-                    color_mdata->contentLightLevel.maxContentLightLevel,
-                    color_mdata->contentLightLevel.minPicAverageLightLevel);
-
-
 }
 
 bool omx_vdec::handle_content_light_level_info(void* data)
@@ -10942,17 +10862,6 @@ void omx_vdec::get_preferred_hdr_info(HDRStaticInfo& finalHDRInfo)
         preferredHDRInfo.sType1.mMaxContentLightLevel : defaultHDRInfo.sType1.mMaxContentLightLevel;
     finalHDRInfo.sType1.mMaxFrameAverageLightLevel = (preferredHDRInfo.sType1.mMaxFrameAverageLightLevel != 0) ?
         preferredHDRInfo.sType1.mMaxFrameAverageLightLevel : defaultHDRInfo.sType1.mMaxFrameAverageLightLevel;
-}
-
-void omx_vdec::print_debug_hdr10plus_metadata(ColorMetaData& color_mdata) {
-    DEBUG_PRINT_LOW("HDR10+ valid data length: %d", color_mdata.dynamicMetaDataLen);
-    for (uint32_t i = 0 ; i < color_mdata.dynamicMetaDataLen && i+3 < HDR_DYNAMIC_META_DATA_SZ; i=i+4) {
-        DEBUG_PRINT_LOW("HDR10+ mdata: %02X %02X %02X %02X", color_mdata.dynamicMetaDataPayload[i],
-            color_mdata.dynamicMetaDataPayload[i+1],
-            color_mdata.dynamicMetaDataPayload[i+2],
-            color_mdata.dynamicMetaDataPayload[i+3]);
-    }
-
 }
 
 bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
@@ -11485,210 +11394,6 @@ OMX_U32 omx_vdec::count_MB_in_extradata(OMX_OTHER_EXTRADATATYPE *extra)
     return ((num_MB_in_frame > 0)?(num_MB * 100 / num_MB_in_frame) : 0);
 }
 
-void omx_vdec::print_debug_extradata(OMX_OTHER_EXTRADATATYPE *extra)
-{
-    if (!m_debug_extradata || !extra)
-        return;
-
-
-    DEBUG_PRINT_HIGH(
-            "============== Extra Data ==============\n"
-            "           Size: %u\n"
-            "        Version: %u\n"
-            "      PortIndex: %u\n"
-            "           Type: %x\n"
-            "       DataSize: %u",
-            (unsigned int)extra->nSize, (unsigned int)extra->nVersion.nVersion,
-            (unsigned int)extra->nPortIndex, extra->eType, (unsigned int)extra->nDataSize);
-
-    if (extra->eType == (OMX_EXTRADATATYPE)OMX_ExtraDataInterlaceFormat) {
-        OMX_STREAMINTERLACEFORMAT *intfmt = (OMX_STREAMINTERLACEFORMAT *)(void *)extra->data;
-        DEBUG_PRINT_HIGH(
-                "------ Interlace Format ------\n"
-                "                Size: %u\n"
-                "             Version: %u\n"
-                "           PortIndex: %u\n"
-                " Is Interlace Format: %d\n"
-                "   Interlace Formats: %u\n"
-                "=========== End of Interlace ===========",
-                (unsigned int)intfmt->nSize, (unsigned int)intfmt->nVersion.nVersion, (unsigned int)intfmt->nPortIndex,
-                intfmt->bInterlaceFormat, (unsigned int)intfmt->nInterlaceFormats);
-    } else if (extra->eType == (OMX_EXTRADATATYPE)OMX_ExtraDataFrameInfo) {
-        OMX_QCOM_EXTRADATA_FRAMEINFO *fminfo = (OMX_QCOM_EXTRADATA_FRAMEINFO *)(void *)extra->data;
-
-        DEBUG_PRINT_HIGH(
-                "-------- Frame Format --------\n"
-                "             Picture Type: %d\n"
-                "           Interlace Type: %d\n"
-                " Pan Scan Total Frame Num: %u\n"
-                "   Concealed Macro Blocks: %u\n"
-                "        Recovery SEI Flag: %u\n"
-                "               frame rate: %u\n"
-                "               Time Stamp: %llu\n"
-                "           Aspect Ratio X: %u\n"
-                "           Aspect Ratio Y: %u",
-                fminfo->ePicType,
-                fminfo->interlaceType,
-                (unsigned int)fminfo->panScan.numWindows,
-                (unsigned int)fminfo->nConcealedMacroblocks,
-                (unsigned int)fminfo->nRecoverySeiFlag,
-                (unsigned int)fminfo->nFrameRate,
-                fminfo->nTimeStamp,
-                (unsigned int)fminfo->aspectRatio.aspectRatioX,
-                (unsigned int)fminfo->aspectRatio.aspectRatioY);
-
-        for (OMX_U32 i = 0; i < fminfo->panScan.numWindows; i++) {
-            DEBUG_PRINT_HIGH(
-                    "------------------------------"
-                    "     Pan Scan Frame Num: %u\n"
-                    "            Rectangle x: %d\n"
-                    "            Rectangle y: %d\n"
-                    "           Rectangle dx: %d\n"
-                    "           Rectangle dy: %d",
-                    (unsigned int)i, (unsigned int)fminfo->panScan.window[i].x, (unsigned int)fminfo->panScan.window[i].y,
-                    (unsigned int)fminfo->panScan.window[i].dx, (unsigned int)fminfo->panScan.window[i].dy);
-        }
-
-        DEBUG_PRINT_HIGH("========= End of Frame Format ==========");
-    } else if (extra->eType == (OMX_EXTRADATATYPE)OMX_ExtraDataFramePackingArrangement) {
-        OMX_QCOM_FRAME_PACK_ARRANGEMENT *framepack = (OMX_QCOM_FRAME_PACK_ARRANGEMENT *)(void *)extra->data;
-        DEBUG_PRINT_HIGH(
-                "------------------ Framepack Format ----------\n"
-                "                           id: %u \n"
-                "                  cancel_flag: %u \n"
-                "                         type: %u \n"
-                " quincunx_sampling_flagFormat: %u \n"
-                "  content_interpretation_type: %u \n"
-                "        spatial_flipping_flag: %u \n"
-                "          frame0_flipped_flag: %u \n"
-                "             field_views_flag: %u \n"
-                " current_frame_is_frame0_flag: %u \n"
-                "   frame0_self_contained_flag: %u \n"
-                "   frame1_self_contained_flag: %u \n"
-                "       frame0_grid_position_x: %u \n"
-                "       frame0_grid_position_y: %u \n"
-                "       frame1_grid_position_x: %u \n"
-                "       frame1_grid_position_y: %u \n"
-                "                reserved_byte: %u \n"
-                "            repetition_period: %u \n"
-                "               extension_flag: %u \n"
-                "================== End of Framepack ===========",
-                (unsigned int)framepack->id,
-                (unsigned int)framepack->cancel_flag,
-                (unsigned int)framepack->type,
-                (unsigned int)framepack->quincunx_sampling_flag,
-                (unsigned int)framepack->content_interpretation_type,
-                (unsigned int)framepack->spatial_flipping_flag,
-                (unsigned int)framepack->frame0_flipped_flag,
-                (unsigned int)framepack->field_views_flag,
-                (unsigned int)framepack->current_frame_is_frame0_flag,
-                (unsigned int)framepack->frame0_self_contained_flag,
-                (unsigned int)framepack->frame1_self_contained_flag,
-                (unsigned int)framepack->frame0_grid_position_x,
-                (unsigned int)framepack->frame0_grid_position_y,
-                (unsigned int)framepack->frame1_grid_position_x,
-                (unsigned int)framepack->frame1_grid_position_y,
-                (unsigned int)framepack->reserved_byte,
-                (unsigned int)framepack->repetition_period,
-                (unsigned int)framepack->extension_flag);
-    } else if (extra->eType == (OMX_EXTRADATATYPE)OMX_ExtraDataQP) {
-        OMX_QCOM_EXTRADATA_QP * qp = (OMX_QCOM_EXTRADATA_QP *)(void *)extra->data;
-        DEBUG_PRINT_HIGH(
-                "---- QP (Frame quantization parameter) ----\n"
-                "              Frame QP: %u \n"
-                "       Sum of Frame QP: %u \n"
-                "     Sum of Skipped QP: %u \n"
-                "    Num Skipped Blocks: %u \n"
-                "          Total Blocks: %u \n"
-                "================ End of QP ================\n",
-                (unsigned int)qp->nQP,(unsigned int)qp->nQPSum,
-                (unsigned int)qp->nSkipQPSum,(unsigned int)qp->nSkipNumBlocks,
-                (unsigned int)qp->nTotalNumBlocks);
-    } else if (extra->eType == (OMX_EXTRADATATYPE)OMX_ExtraDataInputBitsInfo) {
-        OMX_QCOM_EXTRADATA_BITS_INFO * bits = (OMX_QCOM_EXTRADATA_BITS_INFO *)(void *)extra->data;
-        DEBUG_PRINT_HIGH(
-                "--------- Input bits information --------\n"
-                "    Header bits: %u \n"
-                "     Frame bits: %u \n"
-                "===== End of Input bits information =====\n",
-                (unsigned int)bits->header_bits, (unsigned int)bits->frame_bits);
-    } else if (extra->eType == (OMX_EXTRADATATYPE)OMX_ExtraDataMP2UserData) {
-        OMX_QCOM_EXTRADATA_USERDATA *userdata = (OMX_QCOM_EXTRADATA_USERDATA *)(void *)extra->data;
-        OMX_U8 *data_ptr = (OMX_U8 *)userdata->data;
-        OMX_U32 userdata_size = extra->nDataSize - sizeof(userdata->type);
-        OMX_U32 i = 0;
-        DEBUG_PRINT_HIGH(
-                "--------------  Userdata  -------------\n"
-                "    Stream userdata type: %u\n"
-                "          userdata size: %u\n"
-                "    STREAM_USERDATA:",
-                (unsigned int)userdata->type, (unsigned int)userdata_size);
-                for (i = 0; i < userdata_size; i+=4) {
-                    DEBUG_PRINT_HIGH("        %x %x %x %x",
-                        data_ptr[i], data_ptr[i+1],
-                        data_ptr[i+2], data_ptr[i+3]);
-                }
-        DEBUG_PRINT_HIGH(
-                "=========== End of Userdata ===========");
-    } else if (extra->eType == (OMX_EXTRADATATYPE)OMX_ExtraDataVQZipSEI) {
-        OMX_QCOM_EXTRADATA_VQZIPSEI *vq = (OMX_QCOM_EXTRADATA_VQZIPSEI *)(void *)extra->data;
-        DEBUG_PRINT_HIGH(
-                "--------------  VQZip  -------------\n"
-                "    Size: %u\n",
-                (unsigned int)vq->nSize);
-        DEBUG_PRINT_HIGH( "=========== End of VQZip ===========");
-    } else if (extra->eType == (OMX_EXTRADATATYPE)OMX_ExtraDataOutputCropInfo) {
-        OMX_QCOM_OUTPUT_CROP *outputcrop_info = (OMX_QCOM_OUTPUT_CROP*)(void *)extra->data;
-        DEBUG_PRINT_HIGH(
-            "------------------ output crop ----------\n"
-            "                         left: %u \n"
-            "                          top: %u \n"
-            "                display_width: %u \n"
-            "               display_height: %u \n"
-            "                        width: %u \n"
-            "                       height: %u \n"
-            "                    frame_num: %u \n"
-            "                  bit_depth_y: %u \n"
-            "                  bit_depth_c: %u \n",
-            (unsigned int)outputcrop_info->left,
-            (unsigned int)outputcrop_info->top,
-            (unsigned int)outputcrop_info->display_width,
-            (unsigned int)outputcrop_info->display_height,
-            (unsigned int)outputcrop_info->width,
-            (unsigned int)outputcrop_info->height,
-            (unsigned int)outputcrop_info->frame_num,
-            (unsigned int)outputcrop_info->bit_depth_y,
-            (unsigned int)outputcrop_info->bit_depth_c);
-        for(unsigned int m=0; m<outputcrop_info->misr_info[0].misr_set; m++) {
-            DEBUG_PRINT_HIGH(
-            "     top field: misr_dpb_luma(%d): %u \n"
-            "   top field: misr_dpb_chroma(%d): %u \n"
-            "     top field: misr_opb_luma(%d): %u \n"
-            "   top field: misr_opb_chroma(%d): %u \n",
-            m, (unsigned int)outputcrop_info->misr_info[0].misr_dpb_luma[m],
-            m, (unsigned int)outputcrop_info->misr_info[0].misr_dpb_chroma[m],
-            m, (unsigned int)outputcrop_info->misr_info[0].misr_opb_luma[m],
-            m, (unsigned int)outputcrop_info->misr_info[0].misr_opb_chroma[m]);
-        }
-        for(unsigned int m=0; m<outputcrop_info->misr_info[1].misr_set; m++) {
-            DEBUG_PRINT_HIGH(
-            "  bottom field: misr_dpb_luma(%d): %u \n"
-            "bottom field: misr_dpb_chroma(%d): %u \n"
-            "  bottom field: misr_opb_luma(%d): %u \n"
-            "bottom field: misr_opb_chroma(%d): %u \n",
-            m, (unsigned int)outputcrop_info->misr_info[1].misr_dpb_luma[m],
-            m, (unsigned int)outputcrop_info->misr_info[1].misr_dpb_chroma[m],
-            m, (unsigned int)outputcrop_info->misr_info[1].misr_opb_luma[m],
-            m, (unsigned int)outputcrop_info->misr_info[1].misr_opb_chroma[m]);
-        }
-        DEBUG_PRINT_HIGH("================== End of output crop ===========");
-    } else if (extra->eType == OMX_ExtraDataNone) {
-        DEBUG_PRINT_HIGH("========== End of Terminator ===========");
-    } else {
-        DEBUG_PRINT_HIGH("======= End of Driver Extradata ========");
-    }
-}
-
 void omx_vdec::append_interlace_extradata(OMX_OTHER_EXTRADATATYPE *extra,
         OMX_U32 interlaced_format_type)
 {
@@ -11737,7 +11442,9 @@ void omx_vdec::append_interlace_extradata(OMX_OTHER_EXTRADATATYPE *extra,
         interlace_format->nInterlaceFormats = OMX_InterlaceFrameProgressive;
         drv_ctx.interlace = VDEC_InterlaceFrameProgressive;
     }
-    print_debug_extradata(extra);
+    if (m_debug_extradata) {
+        print_debug_extradata(extra);
+    }
 }
 
 void omx_vdec::append_frame_dimension_extradata(OMX_OTHER_EXTRADATATYPE *extra)
@@ -11836,7 +11543,9 @@ void omx_vdec::append_frame_info_extradata(OMX_OTHER_EXTRADATATYPE *extra,
         }
     }
     fill_aspect_ratio_info(aspect_ratio_info, frame_info);
-    print_debug_extradata(extra);
+    if (m_debug_extradata) {
+        print_debug_extradata(extra);
+    }
 }
 
 void omx_vdec::append_portdef_extradata(OMX_OTHER_EXTRADATATYPE *extra)
@@ -11857,15 +11566,17 @@ void omx_vdec::append_portdef_extradata(OMX_OTHER_EXTRADATATYPE *extra)
 }
 
 void omx_vdec::append_outputcrop_extradata(OMX_OTHER_EXTRADATATYPE *extra,
-        struct msm_vidc_output_crop_payload *output_crop_payload) {
+        struct msm_vidc_output_crop_payload *output_crop_payload)
+{
     extra->nSize = OMX_OUTPUTCROP_EXTRADATA_SIZE;
     extra->nVersion.nVersion = OMX_SPEC_VERSION;
     extra->nPortIndex = OMX_CORE_OUTPUT_PORT_INDEX;
     extra->eType = (OMX_EXTRADATATYPE)OMX_ExtraDataOutputCropInfo;
     extra->nDataSize = sizeof(OMX_QCOM_OUTPUT_CROP);
     memcpy(extra->data, output_crop_payload, extra->nDataSize);
-
-    print_debug_extradata(extra);
+    if (m_debug_extradata) {
+        print_debug_extradata(extra);
+    }
 }
 
 void omx_vdec::append_framepack_extradata(OMX_OTHER_EXTRADATATYPE *extra,
@@ -11889,7 +11600,9 @@ void omx_vdec::append_framepack_extradata(OMX_OTHER_EXTRADATATYPE *extra,
         sizeof(struct msm_vidc_s3d_frame_packing_payload));
     memcpy(&m_frame_pack_arrangement, framepack,
         sizeof(OMX_QCOM_FRAME_PACK_ARRANGEMENT));
-    print_debug_extradata(extra);
+    if (m_debug_extradata) {
+        print_debug_extradata(extra);
+    }
 }
 
 void omx_vdec::append_qp_extradata(OMX_OTHER_EXTRADATATYPE *extra,
@@ -11911,7 +11624,10 @@ void omx_vdec::append_qp_extradata(OMX_OTHER_EXTRADATATYPE *extra,
     qp->nSkipQPSum = qp_payload->skip_qp_sum;
     qp->nSkipNumBlocks = qp_payload->skip_num_blocks;
     qp->nTotalNumBlocks = qp_payload->total_num_blocks;
-    print_debug_extradata(extra);
+
+    if (m_debug_extradata) {
+        print_debug_extradata(extra);
+    }
 }
 
 void omx_vdec::append_bitsinfo_extradata(OMX_OTHER_EXTRADATATYPE *extra,
@@ -11930,7 +11646,10 @@ void omx_vdec::append_bitsinfo_extradata(OMX_OTHER_EXTRADATATYPE *extra,
     bits = (OMX_QCOM_EXTRADATA_BITS_INFO*)(void *)extra->data;
     bits->frame_bits = bits_payload->frame_bits;
     bits->header_bits = bits_payload->header_bits;
-    print_debug_extradata(extra);
+
+    if (m_debug_extradata) {
+        print_debug_extradata(extra);
+    }
 }
 
 void omx_vdec::append_user_extradata(OMX_OTHER_EXTRADATATYPE *extra,
@@ -11948,7 +11667,9 @@ void omx_vdec::append_user_extradata(OMX_OTHER_EXTRADATATYPE *extra,
     extra->nDataSize = userdata_size;
     if (extra->nDataSize && (p_user->nDataSize >= extra->nDataSize))
         memcpy(extra->data, p_user->data, extra->nDataSize);
-    print_debug_extradata(extra);
+    if (m_debug_extradata) {
+        print_debug_extradata(extra);
+    }
 }
 
 void omx_vdec::append_terminator_extradata(OMX_OTHER_EXTRADATATYPE *extra)
@@ -11962,7 +11683,9 @@ void omx_vdec::append_terminator_extradata(OMX_OTHER_EXTRADATATYPE *extra)
     extra->nDataSize = 0;
     extra->data[0] = 0;
 
-    print_debug_extradata(extra);
+    if (m_debug_extradata) {
+        print_debug_extradata(extra);
+    }
 }
 
 OMX_ERRORTYPE  omx_vdec::allocate_desc_buffer(OMX_U32 index)
@@ -12380,7 +12103,8 @@ OMX_BUFFERHEADERTYPE* omx_vdec::allocate_color_convert_buf::get_il_buf_hdr
 }
 
 OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::set_buffer_req(
-        OMX_U32 buffer_size, OMX_U32 actual_count) {
+        OMX_U32 buffer_size, OMX_U32 actual_count)
+{
     OMX_U32 expectedSize = enabled ? buffer_size_req : omx->drv_ctx.op_buf.buffer_size;
 
     if (buffer_size < expectedSize) {
@@ -12453,7 +12177,8 @@ bool omx_vdec::allocate_color_convert_buf::get_color_format(OMX_COLOR_FORMATTYPE
     return status;
 }
 
-void omx_vdec::send_codec_config() {
+void omx_vdec::send_codec_config()
+{
     if (codec_config_flag) {
         unsigned long p1 = 0; // Parameter - 1
         unsigned long p2 = 0; // Parameter - 2
@@ -12710,8 +12435,8 @@ OMX_ERRORTYPE omx_vdec::enable_adaptive_playback(unsigned long nMaxFrameWidth,
 }
 
 //static
-OMX_ERRORTYPE omx_vdec::describeColorFormat(OMX_PTR pParam) {
-
+OMX_ERRORTYPE omx_vdec::describeColorFormat(OMX_PTR pParam)
+{
 #ifndef FLEXYUV_SUPPORTED
     return OMX_ErrorUndefined;
 #else

@@ -30,9 +30,24 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define __VIDC_DEBUG_H__
 
 #ifdef _ANDROID_
+
 #include <cstdio>
+#include <string.h>
 #include <pthread.h>
 #include <sys/mman.h>
+extern "C" {
+#include <utils/Log.h>
+}
+
+#include <linux/videodev2.h>
+#include "OMX_Core.h"
+#include "vidc_common.h"
+#include <color_metadata.h>
+#define STRINGIFY_ENUMS
+#include "media/hardware/VideoAPI.h"
+
+using android::ColorAspects;
+using android::HDRStaticInfo;
 
 enum {
    PRIO_ERROR=0x1,
@@ -72,6 +87,26 @@ extern int debug_level;
 #define DEBUG_PRINT_HIGH printf
 #endif
 
+struct debug_cap {
+    bool in_buffer_log;
+    bool out_buffer_log;
+    bool out_cc_buffer_log;
+    bool out_meta_buffer_log;
+    char infile_name[PROPERTY_VALUE_MAX + 36];
+    char outfile_name[PROPERTY_VALUE_MAX + 36];
+    char ccoutfile_name[PROPERTY_VALUE_MAX + 36];
+    char out_ymetafile_name[PROPERTY_VALUE_MAX + 36];
+    char out_uvmetafile_name[PROPERTY_VALUE_MAX + 36];
+    char log_loc[PROPERTY_VALUE_MAX];
+    FILE *infile;
+    FILE *outfile;
+    FILE *ccoutfile;
+    FILE *out_ymeta_file;
+    FILE *out_uvmeta_file;
+    int64_t session_id;
+    int seq_count;
+};
+
 #define VALIDATE_OMX_PARAM_DATA(ptr, paramType)                                \
     {                                                                          \
         if (ptr == NULL) { return OMX_ErrorBadParameter; }                     \
@@ -104,6 +139,14 @@ extern int debug_level;
             return OMX_ErrorBadParameter;                                                         \
         }                                                                                         \
     }                                                                                             \
+
+void print_omx_buffer(const char *str, OMX_BUFFERHEADERTYPE *pHeader);
+void print_v4l2_buffer(const char *str, struct v4l2_buffer *v4l2);
+void print_debug_color_aspects(ColorAspects *a, const char *prefix);
+void print_debug_hdr_color_info(HDRStaticInfo *hdr_info, const char *prefix);
+void print_debug_hdr_color_info_mdata(ColorMetaData* color_mdata);
+void print_debug_hdr10plus_metadata(ColorMetaData& color_mdata);
+void print_debug_extradata(OMX_OTHER_EXTRADATATYPE *extra);
 
 class auto_lock {
     public:

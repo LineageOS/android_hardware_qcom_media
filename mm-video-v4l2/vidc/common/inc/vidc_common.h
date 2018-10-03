@@ -36,6 +36,11 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifdef _ANDROID_
 #include <gralloc_priv.h>
 #endif
+#ifdef _ANDROID_
+#include <cutils/properties.h>
+#else
+#define PROPERTY_VALUE_MAX 92
+#endif
 
 // BitMask Management logic
 #define BITS_PER_INDEX                          64
