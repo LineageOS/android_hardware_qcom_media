@@ -77,6 +77,7 @@ enum {
     kKeyBatchSize            = 'btch', //int32_t
     kKeyIsByteMode           = 'bytm', //int32_t
     kKeyUseSetBuffers        = 'setb', //bool (int32_t)
+    kKeyExtraFlag            = 'extf', //int32_t
 };
 
 enum {
