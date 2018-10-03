@@ -10,6 +10,8 @@ LOCAL_CFLAGS += -Wno-error
 LOCAL_C_INCLUDES := \
     $(TARGET_OUT_HEADERS)/qcom/display
 
+LOCAL_HEADER_LIBRARIES := generated_kernel_headers
+
 LOCAL_SHARED_LIBRARIES := liblog libdl
 
 LOCAL_MODULE_TAGS := optional
