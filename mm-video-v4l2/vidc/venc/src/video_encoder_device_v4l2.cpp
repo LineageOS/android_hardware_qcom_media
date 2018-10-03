@@ -164,6 +164,7 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     client_req_turbo_mode  = false;
     intra_period.num_pframes = 29;
     intra_period.num_bframes = 0;
+    m_hdr10meta_enabled = false;
 
     Platform::Config::getInt32(Platform::vidc_enc_log_in,
             (int32_t *)&m_debug.in_buffer_log, 0);
@@ -3573,6 +3574,7 @@ bool venc_dev::venc_set_extradata_hdr10metadata()
 {
     struct v4l2_control control;
 
+    /* HDR10 Metadata is enabled by default for HEVC Main10 profile. */
     if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC &&
         codec_profile.profile == V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10) {
 
@@ -3639,7 +3641,7 @@ unsigned venc_dev::venc_start(void)
         return 1;
     }
 
-    //venc_set_extradata_hdr10metadata();
+    venc_set_extradata_hdr10metadata();
 
     venc_config_print();
 
