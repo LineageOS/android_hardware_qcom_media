@@ -9913,7 +9913,7 @@ OMX_ERRORTYPE omx_vdec::get_buffer_req(vdec_allocatorproperty *buffer_prop)
 
     if (fmt.type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
         drv_ctx.num_planes = fmt.fmt.pix_mp.num_planes;
-    DEBUG_PRINT_HIGH("Buffer Size = %d",fmt.fmt.pix_mp.plane_fmt[0].sizeimage);
+    DEBUG_PRINT_HIGH("Buffer Size = %d, type = %d",fmt.fmt.pix_mp.plane_fmt[0].sizeimage, fmt.type);
 
     if (ret) {
         /*TODO: How to handle this case */
@@ -10061,6 +10061,13 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
     portDefn->eDomain    = OMX_PortDomainVideo;
     memset(&fmt, 0x0, sizeof(struct v4l2_format));
     if (0 == portDefn->nPortIndex) {
+        if (secure_mode) {
+            eRet = get_buffer_req(&drv_ctx.ip_buf);
+            if (eRet) {
+                DEBUG_PRINT_ERROR("%s:get_buffer_req(ip_buf) failed", __func__);
+                return eRet;
+            }
+        }
         portDefn->eDir =  OMX_DirInput;
         portDefn->nBufferCountActual = drv_ctx.ip_buf.actualcount;
         portDefn->nBufferCountMin    = drv_ctx.ip_buf.mincount;
