@@ -1478,8 +1478,8 @@ int venc_dev::venc_input_log_buffers(OMX_BUFFERHEADERTYPE *pbuffer, int fd, int 
     }
 
     if (m_debug.infile && pbuffer && pbuffer->nFilledLen) {
-        int stride, scanlines;
-        int color_format;
+        unsigned long stride, scanlines;
+        unsigned long color_format;
         unsigned long i, msize;
         unsigned char *pvirt = NULL, *ptemp = NULL;
         unsigned char *temp = (unsigned char *)pbuffer->pBuffer;
@@ -1542,6 +1542,23 @@ int venc_dev::venc_input_log_buffers(OMX_BUFFERHEADERTYPE *pbuffer, int fd, int 
             }
             for (i = 0; i < m_sVenc_cfg.input_height/2; i++) {
                 fwrite(ptemp, m_sVenc_cfg.input_width, 1, m_debug.infile);
+                ptemp += stride;
+            }
+        } else if (color_format == COLOR_FMT_NV12_512) {
+            stride = VENUS_Y_STRIDE(color_format, m_sVenc_cfg.input_width);
+            scanlines = VENUS_Y_SCANLINES(color_format, m_sVenc_cfg.input_height);
+
+            for (i = 0; i < scanlines; i++) {
+                fwrite(ptemp, stride, 1, m_debug.infile);
+                ptemp += stride;
+            }
+            if (metadatamode == 1) {
+                ptemp = pvirt + (stride * scanlines);
+            } else {
+                ptemp = (unsigned char *)pbuffer->pBuffer + (stride * scanlines);
+            }
+            for (i = 0; i < scanlines/2; i++) {
+                fwrite(ptemp, stride, 1, m_debug.infile);
                 ptemp += stride;
             }
         } else if (color_format == COLOR_FMT_RGBA8888) {
