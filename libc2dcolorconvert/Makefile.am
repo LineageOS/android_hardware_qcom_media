@@ -8,6 +8,7 @@ AM_CFLAGS += "-std=c++11"
 AM_CPPFLAGS = $(CPPFLAGS)
 AM_CPPFLAGS += -I$(WORKSPACE)/graphics/libdrm/freedreno/kgsl/
 AM_CPPFLAGS += -I$(WORKSPACE)/display/display-hal/gralloc/
+AM_CPPFLAGS += -I$(WORKSPACE)/hardware/libhardware/include/
 c_sources = C2DColorConverter.cpp
 h_sources = C2DColorConverter.h
 
