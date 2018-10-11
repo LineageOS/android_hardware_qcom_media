@@ -44,6 +44,10 @@ if TARGET_USES_ION
 AM_CPPFLAGS += -DUSE_ION
 endif
 
+if TARGET_USES_GBM
+AM_CPPFLAGS += -DUSE_GBM
+endif
+
 if MASTER_SIDE_CP_TARGET_LIST
 AM_CPPFLAGS += -DMASTER_SIDE_CP
 endif
@@ -59,6 +63,7 @@ AM_CPPFLAGS += -I$(top_srcdir)/mm-core/src/common/
 AM_CPPFLAGS += -I$(WORKSPACE)/graphics/libdrm/freedreno/kgsl/
 AM_CPPFLAGS += -I$(WORKSPACE)/display/display-hal/gralloc/
 AM_CPPFLAGS += -I$(WORKSPACE)/display/display-hal/libqdutils/
+AM_CPPFLAGS += -I$(WORKSPACE)/hardware/libhardware/include/
 AM_CPPFLAGS += -I${WORKSPACE}/frameworks/native/include/
 c_sources = src/ts_parser.cpp
 c_sources += src/omx_vdec_v4l2.cpp
