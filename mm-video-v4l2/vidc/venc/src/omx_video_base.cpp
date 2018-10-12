@@ -5360,7 +5360,8 @@ OMX_ERRORTYPE omx_video::push_input_buffer(OMX_HANDLETYPE hComp)
                 handle->format == QOMX_COLOR_Format32bitRGBA8888Compressed ||
                 handle->format == HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC ||
                 handle->format == HAL_PIXEL_FORMAT_NV21_ZSL ||
-                handle->format == QOMX_COLOR_FormatYVU420SemiPlanar);
+                handle->format == QOMX_COLOR_FormatYVU420SemiPlanar ||
+                handle->format == HAL_PIXEL_FORMAT_NV12_HEIF);
 
             Input_pmem_info.buffer = media_buffer;
             Input_pmem_info.fd = handle->fd;
