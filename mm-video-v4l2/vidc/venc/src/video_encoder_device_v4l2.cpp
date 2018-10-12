@@ -4093,6 +4093,9 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         if (handle->format == HAL_PIXEL_FORMAT_NV12_ENCODEABLE) {
                             m_sVenc_cfg.inputformat = isUBWC ? V4L2_PIX_FMT_NV12_UBWC : V4L2_PIX_FMT_NV12;
                             DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = NV12 %s", isUBWC ? "UBWC" : "Linear");
+                        } else if (handle->format == HAL_PIXEL_FORMAT_NV12_HEIF) {
+                            m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV12_512;
+                            DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = NV12_512");
                         } else if (handle->format == HAL_PIXEL_FORMAT_RGBA_8888) {
                             // In case of RGB, conversion to YUV is handled within encoder.
                             // Disregard the Colorspace in gralloc-handle in case of RGB and use
