@@ -1,14 +1,13 @@
 AM_CFLAGS = -Wall
 AM_CFLAGS += -Wundef
-AM_CFLAGS += -Wstrict-prototypes
 AM_CFLAGS += -Wno-trigraphs
 AM_CFLAGS += -g -O3
-AM_CFLAGS += "-include stdint.h"
 AM_CFLAGS += "-std=c++11"
 
 
 AM_CPPFLAGS = $(CPPFLAGS)
-
+AM_CPPFLAGS += -I$(WORKSPACE)/graphics/libdrm/freedreno/kgsl/
+AM_CPPFLAGS += -I$(WORKSPACE)/display/display-hal/gralloc/
 c_sources = C2DColorConverter.cpp
 h_sources = C2DColorConverter.h
 

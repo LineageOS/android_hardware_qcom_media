@@ -50,6 +50,11 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <gralloc_priv.h>
 #endif
 
+#ifdef _USE_GLIB_
+#include <glib.h>
+#define strlcpy g_strlcpy
+#endif
+
 #include <qdMetaData.h>
 #include <color_metadata.h>
 #include "PlatformConfig.h"
@@ -63,8 +68,13 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ALIGN(x, to_align) ((((unsigned long) x) + (to_align - 1)) & ~(to_align - 1))
 #define EXTRADATA_IDX(__num_planes) ((__num_planes) ? (__num_planes) - 1 : 0)
 #define MAXDPB 16
+#ifndef MIN
 #define MIN(x,y) (((x) < (y)) ? (x) : (y))
+#endif
+#ifndef MAX
 #define MAX(x,y) (((x) > (y)) ? (x) : (y))
+#endif
+
 #define ROUND(__sz, __align) (((__sz) + ((__align>>1))) & (~(__align-1)))
 #define MAX_PROFILE_PARAMS 6
 #define HEVC_MAIN_START 0
