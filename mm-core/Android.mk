@@ -16,6 +16,8 @@ ifeq ($(filter $(TARGET_BOARD_PLATFORM), msmnile),$(TARGET_BOARD_PLATFORM))
 OMXCORE_CFLAGS += -D_NILE_
 else ifeq ($(filter $(TARGET_BOARD_PLATFORM), $(MSMSTEPPE)),$(TARGET_BOARD_PLATFORM))
 OMXCORE_CFLAGS += -D_STEPPE_
+else ifeq ($(filter $(TARGET_BOARD_PLATFORM), $(TRINKET)),$(TARGET_BOARD_PLATFORM))
+OMXCORE_CFLAGS += -D_TRINKET_
 else
 OMXCORE_CFLAGS += -D_DEFAULT_
 endif
@@ -79,7 +81,7 @@ LOCAL_CFLAGS            := $(OMXCORE_CFLAGS)
 
 LOCAL_SRC_FILES         := src/common/omx_core_cmp.cpp
 LOCAL_SRC_FILES         += src/common/qc_omx_core.c
-ifneq (,$(filter msmnile $(MSMSTEPPE),$(TARGET_BOARD_PLATFORM)))
+ifneq (,$(filter msmnile $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)))
 LOCAL_SRC_FILES         += src/registry_table_android.c
 else
 LOCAL_SRC_FILES         += src/qc_registry_table_android.c
@@ -111,7 +113,7 @@ LOCAL_CFLAGS            := $(OMXCORE_CFLAGS)
 
 LOCAL_SRC_FILES         := src/common/omx_core_cmp.cpp
 LOCAL_SRC_FILES         += src/common/qc_omx_core.c
-ifneq (,$(filter msmnile $(MSMSTEPPE),$(TARGET_BOARD_PLATFORM)))
+ifneq (,$(filter msmnile $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)))
 LOCAL_SRC_FILES         += src/$(MM_CORE_TARGET)/registry_table.c
 else
 LOCAL_SRC_FILES         += src/$(MM_CORE_TARGET)/qc_registry_table.c
