@@ -907,7 +907,7 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 avc_param.nCabacInitIdc = 0;
                 if ((pParam->eProfile == OMX_VIDEO_AVCProfileHigh)||
                     (pParam->eProfile == OMX_VIDEO_AVCProfileMain)||
-                    (pParam->eProfile == OMX_VIDEO_AVCProfileConstrainedHigh)) {
+                    (pParam->eProfile == static_cast <OMX_VIDEO_AVCPROFILETYPE> (OMX_VIDEO_AVCProfileConstrainedHigh))) {
 
                     if (pParam->nBFrames) {
                         avc_param.nBFrames = pParam->nBFrames;
