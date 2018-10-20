@@ -82,8 +82,6 @@ ifeq ($(TARGET_USES_ION),true)
 libmm-venc-def += -DUSE_ION
 endif
 
-venc-inc       = $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
-
 ifeq ($(TARGET_USES_MEDIA_EXTENSIONS),true)
 libmm-venc-def += -DUSE_NATIVE_HANDLE_SOURCE
 endif
@@ -108,7 +106,8 @@ libmm-venc-inc      += frameworks/native/libs/nativebase/include
 libmm-venc-inc      += $(call project-path-for,qcom-media)/libc2dcolorconvert
 libmm-venc-inc      += $(call project-path-for,qcom-display)/libcopybit
 libmm-venc-inc      += frameworks/av/include/media/stagefright
-libmm-venc-inc      += $(venc-inc)
+
+LOCAL_HEADER_LIBRARIES := generated_kernel_headers
 
 LOCAL_MODULE                    := libOmxVenc
 LOCAL_MODULE_TAGS               := optional
@@ -129,8 +128,6 @@ else
 LOCAL_SRC_FILES   += src/video_encoder_device.cpp
 endif
 
-LOCAL_ADDITIONAL_DEPENDENCIES  := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
-
 LOCAL_SRC_FILES   += ../common/src/extra_data_handler.cpp
 
 include $(BUILD_SHARED_LIBRARY)
@@ -146,14 +143,14 @@ mm-venc-test720p-inc            += $(LOCAL_PATH)/inc
 mm-venc-test720p-inc            += $(OMX_VIDEO_PATH)/vidc/common/inc
 mm-venc-test720p-inc            += $(call project-path-for,qcom-media)/mm-core/inc
 mm-venc-test720p-inc            += $(call project-path-for,qcom-display)/libgralloc
-mm-venc-test720p-inc            += $(venc-inc)
+
+LOCAL_HEADER_LIBRARIES := generated_kernel_headers
 
 LOCAL_MODULE                    := mm-venc-omx-test720p
 LOCAL_MODULE_TAGS               := optional
 LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libmm-venc-def)
 LOCAL_C_INCLUDES                := $(mm-venc-test720p-inc)
-LOCAL_ADDITIONAL_DEPENDENCIES   := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 LOCAL_PRELINK_MODULE            := false
 LOCAL_SHARED_LIBRARIES          := libmm-omxcore libOmxVenc libbinder liblog
 
@@ -172,7 +169,8 @@ include $(CLEAR_VARS)
 
 venc-test-inc                   += $(LOCAL_PATH)/inc
 venc-test-inc                   += $(call project-path-for,qcom-display)/libgralloc
-venc-test-inc                   += $(venc-inc)
+
+LOCAL_HEADER_LIBRARIES := generated_kernel_headers
 
 LOCAL_MODULE                    := mm-video-encdrv-test
 LOCAL_MODULE_TAGS               := optional
@@ -180,7 +178,6 @@ LOCAL_VENDOR_MODULE             := true
 LOCAL_C_INCLUDES                := $(venc-test-inc)
 LOCAL_C_INCLUDES                += $(call project-path-for,qcom-media)/mm-core/inc
 
-LOCAL_ADDITIONAL_DEPENDENCIES   := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 LOCAL_PRELINK_MODULE            := false
 
 LOCAL_SRC_FILES                 := test/video_encoder_test.c
