@@ -101,8 +101,6 @@ ifneq (1,$(filter 1,$(shell echo "$$(( $(PLATFORM_SDK_VERSION) >= 18 ))" )))
 libOmxVdec-def += -DANDROID_JELLYBEAN_MR1=1
 endif
 
-vdec-inc          = $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
-
 ifeq ($(call is-platform-sdk-version-at-least, 22),true)
 # This feature is enabled for Android LMR1
 libOmxVdec-def += -DFLEXYUV_SUPPORTED
@@ -128,7 +126,6 @@ libmm-vdec-inc          += frameworks/native/include/media/hardware
 libmm-vdec-inc          += frameworks/native/libs/nativewindow/include/
 libmm-vdec-inc          += frameworks/native/libs/arect/include/
 libmm-vdec-inc          += frameworks/native/libs/nativebase/include
-libmm-vdec-inc          += $(vdec-inc)
 libmm-vdec-inc          += $(call project-path-for,qcom-display)/libqdutils
 libmm-vdec-inc      += $(call project-path-for,qcom-media)/libc2dcolorconvert
 libmm-vdec-inc      += $(call project-path-for,qcom-display)/libcopybit
@@ -153,6 +150,7 @@ LOCAL_CFLAGS                    += -Wno-error
 LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 
 LOCAL_HEADER_LIBRARIES := \
+    generated_kernel_headers \
     libnativebase_headers \
     libhardware_headers \
     media_plugin_headers \
@@ -174,7 +172,6 @@ endif
 
 LOCAL_SRC_FILES         += ../common/src/extra_data_handler.cpp
 LOCAL_SRC_FILES         += ../common/src/vidc_color_converter.cpp
-LOCAL_ADDITIONAL_DEPENDENCIES  := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 # omx_vdec_msm8974.cpp:9462:16: address of array 'extra->data' will always evaluate to 'true'
 LOCAL_CLANG_CFLAGS      += -Wno-pointer-bool-conversion
@@ -200,6 +197,8 @@ LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libOmxVdec-def)
 LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 
+LOCAL_HEADER_LIBRARIES := generated_kernel_headers
+
 LOCAL_PRELINK_MODULE    := false
 LOCAL_SHARED_LIBRARIES  := liblog libutils libui libbinder libcutils libdl
 
@@ -221,7 +220,6 @@ LOCAL_SRC_FILES         += src/hevc_utils.cpp
 
 LOCAL_SRC_FILES         += ../common/src/extra_data_handler.cpp
 LOCAL_SRC_FILES         += ../common/src/vidc_color_converter.cpp
-LOCAL_ADDITIONAL_DEPENDENCIES  := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 include $(BUILD_SHARED_LIBRARY)
 
@@ -235,7 +233,6 @@ include $(CLEAR_VARS)
 
 mm-vdec-test-inc    := $(call project-path-for,qcom-media)/mm-core/inc
 mm-vdec-test-inc    += $(LOCAL_PATH)/inc
-mm-vdec-test-inc    += $(vdec-inc)
 
 LOCAL_MODULE                    := mm-vdec-omx-test
 LOCAL_MODULE_TAGS               := optional
@@ -243,12 +240,13 @@ LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libOmxVdec-def)
 LOCAL_C_INCLUDES                := $(mm-vdec-test-inc)
 
+LOCAL_HEADER_LIBRARIES := generated_kernel_headers
+
 LOCAL_PRELINK_MODULE      := false
 LOCAL_SHARED_LIBRARIES    := libutils libui libOmxCore libOmxVdec libbinder libcutils
 
 LOCAL_SRC_FILES           := src/queue.c
 LOCAL_SRC_FILES           += test/omx_vdec_test.cpp
-LOCAL_ADDITIONAL_DEPENDENCIES  := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 include $(BUILD_EXECUTABLE)
 
@@ -259,18 +257,19 @@ include $(CLEAR_VARS)
 
 mm-vdec-drv-test-inc    := $(call project-path-for,qcom-media)/mm-core/inc
 mm-vdec-drv-test-inc    += $(LOCAL_PATH)/inc
-mm-vdec-drv-test-inc    += $(vdec-inc)
 
 LOCAL_MODULE                    := mm-video-driver-test
 LOCAL_MODULE_TAGS               := optional
 LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libOmxVdec-def)
 LOCAL_C_INCLUDES                := $(mm-vdec-drv-test-inc)
+
+LOCAL_HEADER_LIBRARIES := generated_kernel_headers
+
 LOCAL_PRELINK_MODULE            := false
 
 LOCAL_SRC_FILES                 := src/message_queue.c
 LOCAL_SRC_FILES                 += test/decoder_driver_test.c
-LOCAL_ADDITIONAL_DEPENDENCIES  := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 include $(BUILD_EXECUTABLE)
 

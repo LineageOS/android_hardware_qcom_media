@@ -11,15 +11,13 @@ LOCAL_C_INCLUDES := \
     $(TOP)/$(call project-path-for,qcom-display)/libcopybit \
     $(TARGET_OUT_HEADERS)/qcom/display/
 
-LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
-
 LOCAL_SHARED_LIBRARIES := libutils liblog libdl
+
+LOCAL_HEADER_LIBRARIES := generated_kernel_headers
 
 LOCAL_MODULE_TAGS := optional
 
 LOCAL_MODULE := libc2dcolorconvert
-
-LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 LOCAL_VENDOR_MODULE := true
 
