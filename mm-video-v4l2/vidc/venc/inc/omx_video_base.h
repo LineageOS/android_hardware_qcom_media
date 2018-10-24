@@ -221,6 +221,7 @@ class omx_video: public qc_omx_component
         OMX_BUFFERHEADERTYPE  *pdest_frame;
         bool secure_session;
         bool hier_b_enabled;
+        bool m_ubwc_supported;
         C2DColorConverter c2dcc;
         ColorMapping mMapPixelFormat2Converter;
 

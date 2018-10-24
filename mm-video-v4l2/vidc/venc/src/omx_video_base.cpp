@@ -227,6 +227,11 @@ omx_video::omx_video():
     psource_frame(NULL),
     pdest_frame(NULL),
     secure_session(false),
+#ifdef _UBWC_
+    m_ubwc_supported(true),
+#else
+    m_ubwc_supported(false),
+#endif
     mUsesColorConversion(false),
     mC2dSrcFmt(NO_COLOR_FORMAT),
     mC2dDestFmt(NO_COLOR_FORMAT),
@@ -5250,7 +5255,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
     if (buffer->nFilledLen > 0 && handle && !is_streamon_done((OMX_U32) PORT_INDEX_OUT)) {
 
         ColorConvertFormat c2dSrcFmt = RGBA8888;
-        ColorConvertFormat c2dDestFmt = NV12_UBWC;
+        ColorConvertFormat c2dDestFmt = m_ubwc_supported ? NV12_UBWC : NV12_128m;
 
         ColorMapping::const_iterator found =
              mMapPixelFormat2Converter.find(handle->format);
