@@ -3614,6 +3614,12 @@ bool venc_dev::venc_set_extradata_hdr10metadata()
         }
         m_hdr10meta_enabled = true;
         extradata = true;
+
+        //Get upated buffer requirement as enable extradata leads to two buffer planes
+        venc_get_buf_req (&venc_handle->m_sInPortDef.nBufferCountMin,
+                                 &venc_handle->m_sInPortDef.nBufferCountActual,
+                                 &venc_handle->m_sInPortDef.nBufferSize,
+                                 venc_handle->m_sInPortDef.nPortIndex);
     }
 
     return true;
