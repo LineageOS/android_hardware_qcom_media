@@ -104,6 +104,11 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #define GRALLOC_USAGE_PRIVATE_HEIF_VIDEO (UINT32_C(1) << 27)
 #define GRALLOC_USAGE_PRIVATE_10BIT_VIDEO (UINT32_C(1) << 30)
+
+#define REQUEST_LINEAR_COLOR_8_BIT   0x1
+#define REQUEST_LINEAR_COLOR_10_BIT  0x2
+#define REQUEST_LINEAR_COLOR_ALL     (REQUEST_LINEAR_COLOR_8_BIT | REQUEST_LINEAR_COLOR_10_BIT)
+
 #undef LOG_TAG
 #define LOG_TAG "OMX-VENC: venc_dev"
 
@@ -214,7 +219,6 @@ venc_dev::venc_dev(class omx_venc *venc_class)
 
     mUseAVTimerTimestamps = false;
     mIsGridset = false;
-    mUseLinearColorFormat = false;
     Platform::Config::getInt32(Platform::vidc_enc_linear_color_format,
             (int32_t *)&mUseLinearColorFormat, 0);
 
@@ -2941,7 +2945,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
         case OMX_QTIIndexParamEnableLinearColorFormat:
             {
                 QOMX_ENABLETYPE *pParam = (QOMX_ENABLETYPE *)paramData;
-                mUseLinearColorFormat = pParam->bEnable;
+                mUseLinearColorFormat = pParam->bEnable ? REQUEST_LINEAR_COLOR_ALL : 0;
                 DEBUG_PRINT_INFO("Linear Color Format Enabled : %d ", pParam->bEnable);
                 break;
             }
@@ -7082,18 +7086,19 @@ void venc_dev::venc_get_consumer_usage(OMX_U32* usage) {
     /* Initialize to zero & update as per required color format */
     *usage = 0;
 
-    /* TODO: NV12 color format addition pending */
-
     /* Configure UBWC as default */
     *usage |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
 
     if (hevc && eProfile == (OMX_U32)OMX_VIDEO_HEVCProfileMain10HDR10) {
         DEBUG_PRINT_INFO("Setting 10-bit consumer usage bits");
         *usage |= GRALLOC_USAGE_PRIVATE_10BIT_VIDEO;
-        if (mUseLinearColorFormat) {
+        if (mUseLinearColorFormat & REQUEST_LINEAR_COLOR_10_BIT) {
             *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
-            DEBUG_PRINT_INFO("Clear UBWC consumer usage bits for P010");
+            DEBUG_PRINT_INFO("Clear UBWC consumer usage bits as 10-bit linear color requested");
         }
+    } else if (mUseLinearColorFormat & REQUEST_LINEAR_COLOR_8_BIT) {
+        *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
+        DEBUG_PRINT_INFO("Clear UBWC consumer usage bits as 8-bit linear color requested");
     }
 
     if (m_codec == OMX_VIDEO_CodingImageHEIC) {
