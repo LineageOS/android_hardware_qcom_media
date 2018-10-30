@@ -4189,6 +4189,16 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
             DEBUG_PRINT_LOW("ETB (meta-gralloc) fd = %d, offset = %d, size = %d",
                     Input_pmem_info.fd, Input_pmem_info.offset,
                     Input_pmem_info.size);
+            // if input buffer dimensions is different from what is configured,
+            // reject the buffer
+            if (ALIGN((int)m_sInPortDef.format.video.nFrameWidth,32) != ALIGN(handle->unaligned_width,32) ||
+                    ALIGN((int)m_sInPortDef.format.video.nFrameHeight,32) != ALIGN(handle->unaligned_height,32)) {
+                ALOGE("Graphic buf size(%dx%d) does not match configured size(%ux%u)",
+                        handle->unaligned_width, handle->unaligned_height,
+                        m_sInPortDef.format.video.nFrameWidth, m_sInPortDef.format.video.nFrameHeight);
+                post_event ((unsigned long)buffer, 0, OMX_COMPONENT_GENERATE_EBD);
+                return OMX_ErrorNone;
+            }
         }
         if (dev_use_buf(PORT_INDEX_IN) != true) {
             DEBUG_PRINT_ERROR("ERROR: in dev_use_buf");
