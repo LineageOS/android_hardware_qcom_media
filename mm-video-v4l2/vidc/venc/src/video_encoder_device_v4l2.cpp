@@ -5827,6 +5827,9 @@ unsigned long venc_dev::venc_get_color_format(OMX_COLOR_FORMATTYPE eColorFormat)
     if (m_codec == OMX_VIDEO_CodingImageHEIC)
         format = V4L2_PIX_FMT_NV12_512;
 
+    if (m_codec == OMX_VIDEO_CodingImageHEIC)
+        format = V4L2_PIX_FMT_NV12_512;
+
     return format;
 }
 
@@ -5869,6 +5872,9 @@ bool venc_dev::venc_set_color_format(OMX_COLOR_FORMATTYPE color_format)
             DEBUG_PRINT_HIGH("Default color format NV12 UBWC is set");
             break;
     }
+
+    if (m_codec == OMX_VIDEO_CodingImageHEIC)
+        m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV12_512;
 
     if (m_codec == OMX_VIDEO_CodingImageHEIC)
         m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV12_512;
