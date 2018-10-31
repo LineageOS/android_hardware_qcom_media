@@ -220,6 +220,15 @@ OMX_ERRORTYPE omx_swvdec::component_init(OMX_STRING cmp_name)
                       "OMX.qti.video.decoder.wmvsw",
                       OMX_MAX_STRINGNAME_SIZE))))
     {
+        char property_value[PROPERTY_VALUE_MAX] = {0};
+        if(property_get("vendor.media.sm6150.version",property_value,0) &&
+                        (atoi(property_value) == 1))
+        {
+            OMX_SWVDEC_LOG_ERROR("VC1 decoder not supported on this target");
+            retval = OMX_ErrorInvalidComponentName;
+            goto component_init_exit;
+        }
+
         OMX_SWVDEC_LOG_LOW("video_decoder.vc1");
 
         strlcpy(m_cmp_name,              cmp_name, OMX_MAX_STRINGNAME_SIZE);
