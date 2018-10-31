@@ -32,6 +32,7 @@ TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_4 := msm8937
 TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_51 := msm8953 sdm660
 TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_52 := msm8996 msm8998 apq8098_latv
 TARGETS_THAT_DONOT_SUPPORT_TEMPORAL_LAYER := msm8909 msm8937
+TARGETS_THAT_SUPPORT_LTR := msm8998 sdm660
 
 ifeq ($(TARGET_BOARD_PLATFORM),msm8610)
 libmm-venc-def += -DMAX_RES_720P
@@ -67,6 +68,10 @@ endif
 
 ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_DONOT_SUPPORT_TEMPORAL_LAYER)),true)
 libmm-venc-def += -D_DISABLE_TEMPORAL_LAYER_
+endif
+
+ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_LTR)),true)
+libmm-venc-def += -DLTR_SUPPORT
 endif
 
 ifeq ($(TARGET_USES_ION),true)
