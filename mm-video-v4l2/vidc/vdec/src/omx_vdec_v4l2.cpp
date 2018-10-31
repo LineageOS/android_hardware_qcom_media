@@ -724,6 +724,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_fps_prev(0),
     m_drc_enable(0),
     in_reconfig(false),
+    c2d_enable_pending(false),
     m_display_id(NULL),
     client_extradata(0),
 #ifdef _ANDROID_
@@ -1480,6 +1481,7 @@ void omx_vdec::process_event_cb(void *ctxt)
                                     pThis->stream_off(OMX_CORE_OUTPUT_PORT_INDEX);
                                     OMX_ERRORTYPE eRet1 = pThis->get_buffer_req(&pThis->drv_ctx.op_buf);
                                     pThis->in_reconfig = false;
+                                    pThis->client_buffers.enable_color_conversion(pThis->c2d_enable_pending);
                                     if (eRet !=  OMX_ErrorNone) {
                                         DEBUG_PRINT_ERROR("set_buffer_req failed eRet = %d",eRet);
                                         pThis->omx_report_error();
@@ -12096,6 +12098,18 @@ OMX_ERRORTYPE omx_vdec::handle_demux_data(OMX_BUFFERHEADERTYPE *p_buf_hdr)
     return OMX_ErrorNone;
 }
 
+void omx_vdec::allocate_color_convert_buf::enable_color_conversion(bool enable) {
+    if (!omx) {
+        DEBUG_PRINT_HIGH("Invalid omx_vdec");
+        return;
+    }
+
+    if (!omx->in_reconfig)
+        enabled = enable;
+
+    omx->c2d_enable_pending = enable;
+}
+
 omx_vdec::allocate_color_convert_buf::allocate_color_convert_buf()
 {
     enabled = false;
@@ -12293,15 +12307,15 @@ bool omx_vdec::allocate_color_convert_buf::set_color_format(
             } else {
                    dest_format = NV12_128m;
             }
-            enabled = true;
+            enable_color_conversion(true);
         } else {
             DEBUG_PRINT_ERROR("Unsupported output color format for c2d (%d)",
                               dest_color_format);
             status = false;
-            enabled = false;
+            enable_color_conversion(false);
         }
     } else {
-        enabled = false;
+        enable_color_conversion(false);
     }
     pthread_mutex_unlock(&omx->c_lock);
     return status;

@@ -1155,6 +1155,7 @@ class omx_vdec: public qc_omx_component
 
         struct vdec_allocatorproperty op_buf_rcnfg;
         bool in_reconfig;
+        bool c2d_enable_pending;
         OMX_NATIVE_WINDOWTYPE m_display_id;
         OMX_U32 client_extradata;
 #ifdef _ANDROID_
@@ -1272,6 +1273,7 @@ class omx_vdec: public qc_omx_component
                         OMX_U32 bytes);
                 OMX_ERRORTYPE free_output_buffer(OMX_BUFFERHEADERTYPE *bufferHdr);
                 bool is_color_conversion_enabled() {return enabled;}
+                void enable_color_conversion(bool enable);
                 bool is_client_buffers_disabled() {return client_buffers_disabled;}
                 void set_client_buffers_disabled(bool val) {client_buffers_disabled = val;}
                 // Returns a specific C2D state, if true current buffers should undergo C2D conversion
