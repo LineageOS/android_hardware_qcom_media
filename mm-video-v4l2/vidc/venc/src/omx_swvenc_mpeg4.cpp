@@ -120,6 +120,7 @@ omx_venc::omx_venc()
     m_pIpbuffers = nullptr;
     set_format = false;
     update_offset = true;
+    m_ubwc_supported = false;
     EXIT_FUNC();
 }
 
