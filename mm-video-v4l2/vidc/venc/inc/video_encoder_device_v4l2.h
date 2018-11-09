@@ -597,6 +597,7 @@ class venc_dev
         bool venc_set_hdr_info(const MasteringDisplay&, const ContentLightLevel&);
         bool mIsGridset;
         OMX_U32 mUseLinearColorFormat;
+        bool mBitrateSavingsEnable;
 };
 
 enum instance_state {
