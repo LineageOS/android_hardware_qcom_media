@@ -196,6 +196,8 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     mIsGridset = false;
     Platform::Config::getInt32(Platform::vidc_enc_linear_color_format,
             (int32_t *)&mUseLinearColorFormat, 0);
+    Platform::Config::getInt32(Platform::vidc_enc_bitrate_savings_enable,
+            (int32_t *)&mBitrateSavingsEnable, 1);
 
     profile_level_converter::init();
 }

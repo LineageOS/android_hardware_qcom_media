@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -63,6 +63,7 @@ typedef enum {
     vidc_dec_arb_mode_override,
     vidc_perf_control_enable,
     vidc_enc_linear_color_format,
+    vidc_enc_bitrate_savings_enable,
 } Config_t;
 
 struct configStr {
@@ -84,6 +85,7 @@ static const struct configStr configStrMap[] = {
     {vidc_dec_arb_mode_override, "vidc_dec_arb_mode_override"},
     {vidc_perf_control_enable, "vidc_perf_control_enable"},
     {vidc_enc_linear_color_format, "vidc_enc_linear_color_format"},
+    {vidc_enc_bitrate_savings_enable, "vidc_enc_bitrate_savings_enable"},
 };
 
 class Config {
