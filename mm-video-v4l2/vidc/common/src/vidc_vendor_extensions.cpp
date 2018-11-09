@@ -36,6 +36,11 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OMX_VideoExt.h"
 #include "OMX_IndexExt.h"
 #include "vidc_vendor_extensions.h"
+#ifdef _USE_GLIB_
+#include <glib.h>
+#define strlcpy g_strlcpy
+#include <cutils/native_handle.h>
+#endif
 
 VendorExtension::VendorExtension(OMX_INDEXTYPE id, const char *name, OMX_DIRTYPE dir,
         const ParamListBuilder& p)

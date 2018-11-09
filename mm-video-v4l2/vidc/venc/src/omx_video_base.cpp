@@ -285,7 +285,7 @@ omx_video::omx_video():
     msg_thread_stop = false;
 
     OMX_INIT_STRUCT(&m_blurInfo, OMX_QTI_VIDEO_CONFIG_BLURINFO);
-    m_blurInfo.nPortIndex == (OMX_U32)PORT_INDEX_IN;
+    m_blurInfo.nPortIndex = (OMX_U32)PORT_INDEX_IN;
 
     mMapPixelFormat2Converter.insert({
             {HAL_PIXEL_FORMAT_RGBA_8888, RGBA8888},
