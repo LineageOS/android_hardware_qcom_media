@@ -58,6 +58,10 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ENABLE_P_QP 0x2
 #define ENABLE_B_QP 0x4
 
+#ifdef __LIBGBM__
+#define MAX_UBWC_STATS_LENGTH 32
+#endif
+
 enum hier_type {
     HIER_NONE = 0x0,
     HIER_P = 0x1,
@@ -288,6 +292,38 @@ enum rc_modes {
     RC_ALL = (RC_VBR_VFR | RC_VBR_CFR
         | RC_CBR_VFR | RC_CBR_CFR | RC_MBR_CFR | RC_MBR_VFR | RC_CQ)
 };
+
+#ifdef __LIBGBM__
+enum UBWC_Version {
+    UBWC_UNUSED      = 0,
+    UBWC_1_0         = 0x1,
+    UBWC_2_0         = 0x2,
+    UBWC_3_0         = 0x3,
+    UBWC_MAX_VERSION = 0xFF,
+};
+
+struct UBWC_2_0_Stats {
+    uint32_t nCRStatsTile32;  /**< UBWC Stats info for  32 Byte Tile */
+    uint32_t nCRStatsTile64;  /**< UBWC Stats info for  64 Byte Tile */
+    uint32_t nCRStatsTile96;  /**< UBWC Stats info for  96 Byte Tile */
+    uint32_t nCRStatsTile128; /**< UBWC Stats info for 128 Byte Tile */
+    uint32_t nCRStatsTile160; /**< UBWC Stats info for 160 Byte Tile */
+    uint32_t nCRStatsTile192; /**< UBWC Stats info for 192 Byte Tile */
+    uint32_t nCRStatsTile256; /**< UBWC Stats info for 256 Byte Tile */
+};
+
+struct UBWCStats {
+   enum UBWC_Version version; /* Union depends on this version. */
+   uint8_t bDataValid;      /* If [non-zero], CR Stats data is valid.
+                             * Consumers may use stats data.
+                             * If [zero], CR Stats data is invalid.
+                             * Consumers *Shall* not use stats data */
+   union {
+       struct UBWC_2_0_Stats ubwc_stats;
+       uint32_t reserved[MAX_UBWC_STATS_LENGTH]; /* This is for future */
+   };
+};
+#endif
 
 class venc_dev
 {

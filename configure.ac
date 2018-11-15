@@ -168,6 +168,12 @@ AC_ARG_ENABLE([target-sdmsteppe],
 AC_ARG_WITH([ion-headers],
         [AS_HELP_STRING([--with-ion-headers=DIR],[location of ion headers])],
         [CPPFLAGS="$CPPFLAGS -I$withval"])
+
+AC_ARG_ENABLE([targets-use-libgbm],
+        AC_HELP_STRING([--enable-targets-use-libgbm],
+                [Enable conditional compile for target targets_use_libgbm [default=no]]),
+        [targets_use_libgbm="${enableval}"])
+
 AM_CONDITIONAL(TARGET_MSM8953, [test "x$target_msm8953" = "xyes"])
 AM_CONDITIONAL(TARGET_MSM8909, [test "x$target_msm8909" = "xyes"])
 AM_CONDITIONAL(TARGET_MSM8996, [test "x$target_msm8996" = "xyes"])
@@ -181,6 +187,7 @@ AM_CONDITIONAL(TARGET_USES_MEDIA_EXTENSIONS, [test "x$target_uses_media_extensio
 AM_CONDITIONAL(MASTER_SIDE_CP_TARGET_LIST, [test "x$master_side_cp_target_list" = "xyes"])
 AM_CONDITIONAL(USE_GLIB, [test "x$use_glib" = "xyes"])
 AM_CONDITIONAL(BUILD_MM_VIDEO, [test "x$build_mm_video" = "xyes"])
+AM_CONDITIONAL(TARGET_USES_LIBGBM, [test "x$targets_use_libgbm" = "xyes"])
 AM_CONDITIONAL(TARGET_STEPPE, [test "x$target_sdmsteppe" = "xyes"])
 
 AC_ARG_WITH([glib],

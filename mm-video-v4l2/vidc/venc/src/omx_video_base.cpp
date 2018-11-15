@@ -41,7 +41,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define __STDC_FORMAT_MACROS //enables the format specifiers in inttypes.h
 #include <inttypes.h>
 #include <string.h>
+#ifndef __LIBGBM__
 #include <qdMetaData.h>
+#endif
 #include "omx_video_base.h"
 #include <stdlib.h>
 #include <errno.h>
@@ -51,7 +53,14 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sys/ioctl.h>
 #ifdef _ANDROID_ICS_
 #include <media/hardware/HardwareAPI.h>
+#ifndef __LIBGBM__
 #include <gralloc_priv.h>
+#endif
+#endif
+
+#ifdef __LIBGBM__
+#include <gbm.h>
+#include <gbm_priv.h>
 #endif
 #ifdef _USE_GLIB_
 #include <glib.h>
@@ -104,8 +113,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define SECURE_FLAGS_OUTPUT_BUFFER (ION_FLAG_SECURE | ION_FLAG_CP_BITSTREAM)
 #endif
 
+#ifndef __LIBGBM__ // TBD: Currently not available in libgbm headers. Will update after libgbm upgradation
 // Gralloc flag to indicate UBWC
 #define GRALLOC1_CONSUMER_USAGE_UBWC_FLAG GRALLOC1_CONSUMER_USAGE_PRIVATE_0
+#endif
 
 typedef struct OMXComponentCapabilityFlagsType {
     ////////////////// OMX COMPONENT CAPABILITY RELATED MEMBERS
@@ -286,12 +297,17 @@ omx_video::omx_video():
     msg_thread_stop = false;
 
     OMX_INIT_STRUCT(&m_blurInfo, OMX_QTI_VIDEO_CONFIG_BLURINFO);
-    m_blurInfo.nPortIndex == (OMX_U32)PORT_INDEX_IN;
+    m_blurInfo.nPortIndex = (OMX_U32)PORT_INDEX_IN;
 
     mMapPixelFormat2Converter.insert({
             {HAL_PIXEL_FORMAT_RGBA_8888, RGBA8888},
+#ifdef __LIBGBM__
+            {GBM_FORMAT_YCbCr_420_SP_VENUS_UBWC, NV12_UBWC},
+            {GBM_FORMAT_NV12_HEIF, NV12_512},
+#else
             {HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC, NV12_UBWC},
             {HAL_PIXEL_FORMAT_NV12_HEIF, NV12_512},
+#endif
                 });
 
     pthread_mutex_init(&m_lock, NULL);
@@ -4185,22 +4201,38 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
                     Input_pmem_info.size);
         } else {
             VideoGrallocMetadata *media_buffer = (VideoGrallocMetadata *)meta_buffer_hdr[nBufIndex].pBuffer;
+#ifdef __LIBGBM__
+            struct gbm_bo *handle = (struct gbm_bo *)media_buffer->pHandle;
+#else
             private_handle_t *handle = (private_handle_t *)media_buffer->pHandle;
+#endif
             Input_pmem_info.buffer = media_buffer;
+#ifdef __LIBGBM__
+            Input_pmem_info.fd = handle->ion_fd;
+#else
             Input_pmem_info.fd = handle->fd;
+#endif
             fd = Input_pmem_info.fd;
             Input_pmem_info.offset = 0;
             Input_pmem_info.size = handle->size;
             DEBUG_PRINT_LOW("ETB (meta-gralloc) fd = %d, offset = %d, size = %d",
                     Input_pmem_info.fd, Input_pmem_info.offset,
                     Input_pmem_info.size);
+#ifdef __LIBGBM__
             // if input buffer dimensions is different from what is configured,
             // reject the buffer
+            if (ALIGN((int)m_sInPortDef.format.video.nFrameWidth,32) != ALIGN(handle->aligned_width,32) ||
+                    ALIGN((int)m_sInPortDef.format.video.nFrameHeight,32) != ALIGN(handle->aligned_height,32)) {
+                ALOGE("GBM buf size(%dx%d) does not match configured size(%ux%u)",
+                        handle->aligned_width, handle->aligned_height,
+                        m_sInPortDef.format.video.nFrameWidth, m_sInPortDef.format.video.nFrameHeight);
+#else
             if (ALIGN((int)m_sInPortDef.format.video.nFrameWidth,32) != ALIGN(handle->unaligned_width,32) ||
                     ALIGN((int)m_sInPortDef.format.video.nFrameHeight,32) != ALIGN(handle->unaligned_height,32)) {
                 ALOGE("Graphic buf size(%dx%d) does not match configured size(%ux%u)",
                         handle->unaligned_width, handle->unaligned_height,
                         m_sInPortDef.format.video.nFrameWidth, m_sInPortDef.format.video.nFrameHeight);
+#endif
                 post_event ((unsigned long)buffer, 0, OMX_COMPONENT_GENERATE_EBD);
                 return OMX_ErrorNone;
             }
@@ -5132,9 +5164,17 @@ void omx_video::omx_release_meta_buffer(OMX_BUFFERHEADERTYPE *buffer)
                             Input_pmem.size);
                 } else if (media_ptr->buffer_type == kMetadataBufferTypeGrallocSource) {
                     VideoGrallocMetadata *media_ptr = (VideoGrallocMetadata *)buffer->pBuffer;
+#ifdef __LIBGBM__
+                    struct gbm_bo *handle = (struct gbm_bo *)media_ptr->pHandle;
+#else
                     private_handle_t *handle = (private_handle_t *)media_ptr->pHandle;
+#endif
                     Input_pmem.buffer = media_ptr;
+#ifdef __LIBGBM__
+                    Input_pmem.fd = handle->ion_fd;
+#else
                     Input_pmem.fd = handle->fd;
+#endif
                     Input_pmem.offset = 0;
                     Input_pmem.size = handle->size;
                 } else {
@@ -5152,26 +5192,49 @@ void omx_video::omx_release_meta_buffer(OMX_BUFFERHEADERTYPE *buffer)
 }
 #endif
 
+#ifdef __LIBGBM__
+bool is_ubwc_interlaced(struct gbm_bo *handle) {
+#else
 bool is_ubwc_interlaced(private_handle_t *handle) {
+#endif
     int interlace_flag = 0;
-
+#ifdef __LIBGBM__
+    if (gbm_perform(GBM_PERFORM_GET_METADATA, handle, GBM_METADATA_GET_INTERLACED, \
+                  &interlace_flag) == GBM_ERROR_NONE) {
+#else
     if (getMetaData(const_cast<private_handle_t *>(handle),
                   GET_PP_PARAM_INTERLACED, &interlace_flag)) {
+#endif
         interlace_flag = 0;
     }
+#ifdef __LIBGBM__
+    return (handle->format == GBM_FORMAT_YCbCr_420_SP_VENUS_UBWC) &&
+                !!interlace_flag;
+#else
     return (handle->format == HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC) &&
                 !!interlace_flag;
+#endif
 }
 
+#ifdef __LIBGBM__
+bool omx_video::is_conv_needed(struct gbm_bo *handle)
+{
+    bool bRet = false;
+    bool interlaced = is_ubwc_interlaced(handle);
+#else
 bool omx_video::is_conv_needed(private_handle_t *handle)
 {
     bool bRet = false;
     bool interlaced = is_ubwc_interlaced(handle);
-
+#endif
     if (!strncmp(m_platform, "msm8996", 7)) {
         bRet = handle->format == HAL_PIXEL_FORMAT_RGBA_8888 &&
+#ifdef __LIBGBM__
+            !(handle->usage_flags & GBM_BO_USAGE_UBWC_ALIGNED_QTI);
+#else
             !(handle->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED ||
               handle->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED_PI);
+#endif
     } else {
         bRet = handle->format == HAL_PIXEL_FORMAT_RGBA_8888;
     }
@@ -5182,7 +5245,11 @@ bool omx_video::is_conv_needed(private_handle_t *handle)
     bRet |= interlaced;
     DEBUG_PRINT_LOW("RGBA conversion %s. Format %d Flag %d interlace_flag = %d",
                                 bRet ? "Needed":"Not-Needed", handle->format,
+#ifdef __LIBGBM__
+                                handle->usage_flags, interlaced);
+#else
                                 handle->flags, interlaced);
+#endif
     return bRet;
 }
 
@@ -5198,7 +5265,11 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
     unsigned nBufIndex = 0;
     OMX_ERRORTYPE ret = OMX_ErrorNone;
     VideoGrallocMetadata *media_buffer; // This method primarily assumes gralloc-metadata
+#ifdef __LIBGBM__
+    struct gbm_bo *handle = NULL;
+#else
     private_handle_t *handle = NULL;
+#endif
     DEBUG_PRINT_LOW("ETBProxyOpaque: buffer[%p]", buffer);
 
     if (buffer == NULL) {
@@ -5246,7 +5317,11 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
         m_pCallbacks.EmptyBufferDone(hComp, m_app_data, buffer);
         return OMX_ErrorBadParameter;
     } else if (media_buffer) {
+#ifdef __LIBGBM__
+        handle = (struct gbm_bo *)media_buffer->pHandle;
+#else
         handle = (private_handle_t *)media_buffer->pHandle;
+#endif
     }
 
     /*Enable following code once private handle color format is
@@ -5271,7 +5346,11 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
         mUsesColorConversion = is_conv_needed(handle);
         bool interlaced = is_ubwc_interlaced(handle);
         int  full_range_flag = m_sConfigColorAspects.sAspects.mRange == ColorAspects::RangeFull ?
+#ifdef __LIBGBM__
+                               GBM_METADATA_COLOR_SPACE_ITU_R_601_FR : 0;
+#else
                                private_handle_t::PRIV_FLAGS_ITU_R_601_FR : 0;
+#endif
 
         if (m_sOutPortDef.format.video.eCompressionFormat == OMX_VIDEO_CodingImageHEIC)
             c2dDestFmt = NV12_512;
@@ -5283,7 +5362,11 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
                                 m_sInPortDef.format.video.nFrameWidth,
                                 m_sInPortDef.format.video.nFrameHeight,
                                 c2dSrcFmt, c2dDestFmt,
+#ifdef __LIBGBM__
+                                handle->usage_flags, handle->width)) {
+#else
                                 handle->flags, handle->width)) {
+#endif
             DEBUG_PRINT_HIGH("C2D setResolution (0x%X -> 0x%x) HxW (%dx%d) Stride (%d)",
                              c2dSrcFmt, c2dDestFmt,
                              m_sInPortDef.format.video.nFrameHeight,
@@ -5295,7 +5378,12 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
                                      m_sInPortDef.format.video.nFrameWidth,
                                      m_sInPortDef.format.video.nFrameHeight,
                                      c2dSrcFmt, c2dDestFmt,
+#ifdef __LIBGBM__
+                                     handle->usage_flags | full_range_flag, handle->width)) {
+#else
                                      handle->flags | full_range_flag, handle->width)) {
+#endif
+
                 m_pCallbacks.EmptyBufferDone(hComp,m_app_data,buffer);
                 DEBUG_PRINT_ERROR("SetResolution failed");
                 return OMX_ErrorBadParameter;
@@ -5501,19 +5589,37 @@ OMX_ERRORTYPE omx_video::push_input_buffer(OMX_HANDLETYPE hComp)
             ret = queue_meta_buffer(hComp);
         } else {
             VideoGrallocMetadata *media_buffer = (VideoGrallocMetadata *)psource_frame->pBuffer;
+#ifdef __LIBGBM__
+            struct gbm_bo *handle = (struct gbm_bo *)media_buffer->pHandle;
+            bool is_venus_supported_format = (handle->format == GBM_FORMAT_NV12_ENCODEABLE ||
+#else
             private_handle_t *handle = (private_handle_t *)media_buffer->pHandle;
             bool is_venus_supported_format = (handle->format == HAL_PIXEL_FORMAT_NV12_ENCODEABLE ||
+#endif
                 handle->format == QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m ||
                 handle->format == QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed ||
                 handle->format == QOMX_COLOR_FORMATYUV420SemiPlanarP010Venus ||
                 handle->format == QOMX_COLOR_Format32bitRGBA8888Compressed ||
+#ifdef __LIBGBM__
+                handle->format == GBM_FORMAT_YCbCr_420_TP10_UBWC ||
+                handle->format == GBM_FORMAT_NV21_ZSL ||
+#else
                 handle->format == HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC ||
                 handle->format == HAL_PIXEL_FORMAT_NV21_ZSL ||
+#endif
                 handle->format == QOMX_COLOR_FormatYVU420SemiPlanar ||
+#ifdef __LIBGBM__
+                handle->format == GBM_FORMAT_NV12_HEIF);
+#else
                 handle->format == HAL_PIXEL_FORMAT_NV12_HEIF);
+#endif
 
             Input_pmem_info.buffer = media_buffer;
+#ifdef __LIBGBM__
+            Input_pmem_info.fd = handle->ion_fd;
+#else
             Input_pmem_info.fd = handle->fd;
+#endif
             Input_pmem_info.offset = 0;
             Input_pmem_info.size = handle->size;
             m_graphicbuffer_size = Input_pmem_info.size;

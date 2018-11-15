@@ -33,8 +33,10 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <unordered_map>
 
 #include "OMX_QCOMExtns.h"
+#ifndef __LIBGBM__
 #ifdef _ANDROID_
 #include <gralloc_priv.h>
+#endif
 #endif
 
 // BitMask Management logic
