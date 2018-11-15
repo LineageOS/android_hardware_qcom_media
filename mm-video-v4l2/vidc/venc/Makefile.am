@@ -74,6 +74,7 @@ sources += src/omx_video_encoder.cpp
 sources += src/video_encoder_device_v4l2.cpp
 sources += $(top_srcdir)/mm-video-v4l2/vidc/common/src/vidc_common.cpp
 sources += $(top_srcdir)/mm-video-v4l2/vidc/common/src/vidc_vendor_extensions.cpp
+sources += $(top_srcdir)/libc2dcolorconvert/C2DColorConverter.cpp
 
 lib_LTLIBRARIES = libOmxVenc.la
 libOmxVenc_la_SOURCES = $(sources)
