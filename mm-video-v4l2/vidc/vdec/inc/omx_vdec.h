@@ -82,6 +82,12 @@ extern "C" {
 //#include <binder/MemoryHeapIon.h>
 //#else
 #endif
+
+#ifdef USE_GBM
+#include "gbm.h"
+#include "gbm_priv.h"
+#endif
+
 #ifndef NATIVE_BASE_DISABLE
 #include <nativebase/nativebase.h>
 #endif
@@ -416,6 +422,17 @@ struct vdec_ion {
 };
 #endif
 
+#ifdef USE_GBM
+struct vdec_gbm {
+    int gbm_device_fd;
+    struct gbm_device *gbm;
+    struct gbm_bo *bo;
+    unsigned long bo_fd;
+    unsigned long meta_fd;
+};
+#endif
+
+
 struct extradata_buffer_info {
     unsigned long buffer_size;
     char* uaddr;
@@ -448,6 +465,11 @@ struct video_driver_context {
     struct vdec_ion h264_mv;
     struct vdec_ion meta_buffer;
     struct vdec_ion meta_buffer_iommu;
+#endif
+#ifdef USE_GBM
+    int gbm_device_fd;
+    struct vdec_gbm *op_buf_gbm_info;
+    struct vdec_gbm *op_intermediate_buf_gbm_info;
 #endif
     struct vdec_framerate frame_rate;
     unsigned extradata;
@@ -974,6 +996,13 @@ class omx_vdec: public qc_omx_component
         void do_cache_operations(int fd);
 #endif
 
+#ifdef USE_GBM
+        bool alloc_map_gbm_memory(OMX_U32 w,OMX_U32 h,int gbm_device_fd,
+              struct vdec_gbm *gbm_info, int flag);
+        void free_gbm_memory(struct vdec_gbm *buf_gbm_info);
+#endif
+
+
 
         OMX_ERRORTYPE send_command_proxy(OMX_HANDLETYPE  hComp,
                 OMX_COMMANDTYPE cmd,
@@ -1306,6 +1335,10 @@ class omx_vdec: public qc_omx_component
 #ifdef USE_ION
                 struct vdec_ion op_buf_ion_info[MAX_COUNT];
 #endif
+#ifdef USE_GBM
+                struct vdec_gbm op_buf_gbm_info[MAX_COUNT];
+#endif
+
                 unsigned char *pmem_baseaddress[MAX_COUNT];
                 int pmem_fd[MAX_COUNT];
         };

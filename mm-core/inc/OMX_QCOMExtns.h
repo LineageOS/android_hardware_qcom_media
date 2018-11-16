@@ -272,6 +272,9 @@ typedef struct OMX_QCOM_PLATFORM_PRIVATE_PMEM_INFO
 {
     /** pmem file descriptor */
     unsigned long pmem_fd;
+#ifdef USE_GBM
+    unsigned long pmeta_fd;
+#endif
     /** Offset from pmem device base address */
     OMX_U32 offset;
     OMX_U32 size;
