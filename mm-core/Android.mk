@@ -8,6 +8,10 @@ OMXCORE_CFLAGS += -O0 -fno-inline -fno-short-enums
 OMXCORE_CFLAGS += -D_ANDROID_
 OMXCORE_CFLAGS += -U_ENABLE_QC_MSG_LOG_
 
+ifeq ($(VIDC_STUB_HAL),true)
+OMXCORE_CFLAGS += -DVIDC_STUB_HAL
+endif
+
 #===============================================================================
 #             Figure out the targets
 #===============================================================================
@@ -73,7 +77,9 @@ LOCAL_MODULE_TAGS       := optional
 LOCAL_VENDOR_MODULE     := true
 LOCAL_SHARED_LIBRARIES  := liblog libdl libcutils
 ifeq ($(call is-board-platform-in-list, $(MSM_VIDC_TARGET_LIST)),true)
+ifeq ($(VIDC_STUB_HAL),false)
 LOCAL_SHARED_LIBRARIES  += libplatformconfig
+endif
 endif
 LOCAL_CFLAGS            := $(OMXCORE_CFLAGS)
 
@@ -105,7 +111,9 @@ LOCAL_MODULE_TAGS       := optional
 LOCAL_VENDOR_MODULE     := true
 LOCAL_SHARED_LIBRARIES  := liblog libdl libcutils
 ifeq ($(call is-board-platform-in-list, $(MSM_VIDC_TARGET_LIST)),true)
+ifeq ($(VIDC_STUB_HAL),false)
 LOCAL_SHARED_LIBRARIES  += libplatformconfig
+endif
 endif
 LOCAL_CFLAGS            := $(OMXCORE_CFLAGS)
 
