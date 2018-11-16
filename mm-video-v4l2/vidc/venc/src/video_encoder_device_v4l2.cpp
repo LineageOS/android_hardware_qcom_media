@@ -856,7 +856,7 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
                                 + colorData.dynamicMetaDataLen;
     packet_size = (sizeof(OMX_OTHER_EXTRADATATYPE) + payload_size + 3)&(~3);
 
-    if (m_hdr10meta_enabled && (filled_len + packet_size <= input_extradata_info.buffer_size)) {
+    if (m_hdr10meta_enabled && (filled_len + packet_size <= input_extradata_info.buffer_size) && colorData.dynamicMetaDataLen > 0) {
         struct msm_vidc_hdr10plus_metadata_payload *payload;
 
         data->nSize = packet_size;
@@ -871,6 +871,8 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
 
         filled_len += data->nSize;
         data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
+    } else if (colorData.dynamicMetaDataLen == 0) {
+        DEBUG_PRINT_HIGH("DynamicMetaDataLength == 0 Skip writing metadata.");
     } else {
         if (m_hdr10meta_enabled) {
             DEBUG_PRINT_HIGH("Insufficient size for HDR10Metadata: Required %u Available %lu",
