@@ -664,7 +664,7 @@ void * C2DColorConverter::getMappedGPUAddr(int bufFD, void *bufPtr, size_t bufLe
 {
     C2D_STATUS status;
     void *gpuaddr = NULL;
-
+#ifdef KONA_TODO_UPDATE
     status = mC2DMapAddr(bufFD, bufPtr, bufLen, 0, KGSL_USER_MEM_TYPE_ION,
                          &gpuaddr);
     if (status != C2D_STATUS_OK) {
@@ -674,7 +674,12 @@ void * C2DColorConverter::getMappedGPUAddr(int bufFD, void *bufPtr, size_t bufLe
     }
     ALOGV("%s: c2d mapping created: gpuaddr %p fd %d ptr %p len %zu",
           __FUNCTION__, gpuaddr, bufFD, bufPtr, bufLen);
-
+#else
+    (void) status;
+    (void) bufFD;
+    (void) bufPtr;
+    (void) bufLen;
+#endif
     return gpuaddr;
 }
 

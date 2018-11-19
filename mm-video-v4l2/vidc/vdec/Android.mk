@@ -24,7 +24,8 @@ libmm-vdec-def += -D_ANDROID_ICS_
 libmm-vdec-def += -DPROCESS_EXTRADATA_IN_OUTPUT_PORT
 
 TARGETS_THAT_HAVE_VENUS_HEVC := apq8084 msm8994 msm8996
-TARGETS_THAT_DONT_NEED_SW_VDEC := msm8226 msm8916 msm8992 msm8996 sdm660 msm8998 msm8909
+# KONA_TODO_UPDATE: Disable SW codec for Kona for now
+TARGETS_THAT_DONT_NEED_SW_VDEC := msm8226 msm8916 msm8992 msm8996 sdm660 msm8998 msm8909 kona
 
 ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_HAVE_VENUS_HEVC)),true)
 libmm-vdec-def += -DVENUS_HEVC
@@ -67,6 +68,10 @@ libmm-vdec-inc      	+= $(TARGET_OUT_HEADERS)/mm-video/SwVdec
 libmm-vdec-inc      	+= $(TARGET_OUT_HEADERS)/mm-video/swvdec
 libmm-vdec-inc      	+= $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 libmm-vdec-inc      	+= $(TOP)/hardware/qcom/media/libarbitrarybytes/inc
+
+# TODO: Check if we need to change the path for dispaly header files
+libmm-vdec-inc      	+= $(TOP)/vendor/qcom/opensource/commonsys-intf/display/gralloc
+libmm-vdec-inc      	+= $(TOP)/vendor/qcom/opensource/commonsys-intf/display/include
 
 ifeq ($(PLATFORM_SDK_VERSION), 18)  #JB_MR2
 libmm-vdec-def += -DANDROID_JELLYBEAN_MR2=1

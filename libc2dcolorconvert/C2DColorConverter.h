@@ -33,7 +33,11 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <pthread.h>
+
+#ifdef KONA_TODO_UPDATE
 #include <linux/msm_kgsl.h>
+#endif
+
 #include <sys/ioctl.h>
 #include <utils/Log.h>
 #include <dlfcn.h>
