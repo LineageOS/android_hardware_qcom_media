@@ -20,6 +20,7 @@ AM_CPPFLAGS += -UOUTPUT_BUFFER_LOG
 AM_CPPFLAGS += -Werror
 AM_CPPFLAGS += -D_ANDROID_ICS_
 AM_CPPFLAGS += -DUSE_ION
+AM_CPPFLAGS += -Wno-enum-compare
 #AM_CPPFLAGS += "-include stdint.h"
 AM_CPPFLAGS += "-Dstrlcpy=g_strlcpy"
 AM_CPPFLAGS += "-Dstrlcat=g_strlcat"
@@ -64,6 +65,7 @@ AM_CPPFLAGS += -I$(top_srcdir)/libplatformconfig/
 AM_CPPFLAGS += -I$(WORKSPACE)/graphics/libdrm/freedreno/kgsl/
 AM_CPPFLAGS += -I$(WORKSPACE)/display/display-hal/gralloc/
 AM_CPPFLAGS += -I$(WORKSPACE)/display/display-hal/libqdutils/
+AM_CPPFLAGS += -I$(WORKSPACE)/hardware/libhardware/include/
 AM_CPPFLAGS += -I${WORKSPACE}/frameworks/native/include/
 sources = src/omx_video_base.cpp
 sources += src/omx_video_encoder.cpp
