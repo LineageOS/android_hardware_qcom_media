@@ -2068,13 +2068,8 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                             input_extradata_info.count = m_sInput_buff_property.actualcount + 1;
 
                         if (!downscalar_enabled) {
-                            if (m_rotation.rotation == 90 || m_rotation.rotation == 270) {
-                                m_sVenc_cfg.dvs_height = portDefn->format.video.nFrameWidth;
-                                m_sVenc_cfg.dvs_width = portDefn->format.video.nFrameHeight;
-                            } else {
-                                m_sVenc_cfg.dvs_height = portDefn->format.video.nFrameHeight;
-                                m_sVenc_cfg.dvs_width = portDefn->format.video.nFrameWidth;
-                            }
+                            m_sVenc_cfg.dvs_height = portDefn->format.video.nFrameHeight;
+                            m_sVenc_cfg.dvs_width = portDefn->format.video.nFrameWidth;
                         }
                         memset(&fmt, 0, sizeof(fmt));
                         fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
@@ -2153,10 +2148,6 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
 
                         if (num_output_planes > 1)
                             output_extradata_info.count = m_sOutput_buff_property.actualcount;
-
-                        //reset rotation as output port dimension is changed
-                        m_rotation.rotation = 0;
-                        venc_handle->m_sConfigFrameRotation.nRotation = 0;
                     } else {
                         DEBUG_PRINT_LOW("venc_set_param: OMX_IndexParamPortDefinition: parameters not changed on port %d",
                             portDefn->nPortIndex);
@@ -6156,7 +6147,6 @@ bool venc_dev::venc_set_vpe_rotation(OMX_S32 rotation_angle)
     int rc;
     struct v4l2_format fmt;
     struct v4l2_requestbuffers bufreq;
-    bool flip_dimensions = false;
 
     if ((OMX_S32)m_rotation.rotation == rotation_angle) {
         DEBUG_PRINT_HIGH("venc_set_vpe_rotation: rotation (%d) not changed", rotation_angle);
@@ -6164,23 +6154,15 @@ bool venc_dev::venc_set_vpe_rotation(OMX_S32 rotation_angle)
     }
 
     control.id = V4L2_CID_MPEG_VIDC_VIDEO_ROTATION;
-    if (rotation_angle == 0) {
+    if (rotation_angle == 0)
         control.value = V4L2_CID_MPEG_VIDC_VIDEO_ROTATION_NONE;
-        if (m_rotation.rotation == 90 || m_rotation.rotation == 270)
-            flip_dimensions = true;
-    } else if (rotation_angle == 90) {
+    else if (rotation_angle == 90)
         control.value = V4L2_CID_MPEG_VIDC_VIDEO_ROTATION_90;
-        if (m_rotation.rotation == 0 || m_rotation.rotation == 180)
-            flip_dimensions = true;
-    } else if (rotation_angle == 180) {
+    else if (rotation_angle == 180)
         control.value = V4L2_CID_MPEG_VIDC_VIDEO_ROTATION_180;
-        if (m_rotation.rotation == 90 || m_rotation.rotation == 270)
-            flip_dimensions = true;
-    } else if (rotation_angle == 270) {
+    else if (rotation_angle == 270)
         control.value = V4L2_CID_MPEG_VIDC_VIDEO_ROTATION_270;
-        if (m_rotation.rotation == 0 || m_rotation.rotation == 180)
-            flip_dimensions = true;
-    } else {
+    else {
         DEBUG_PRINT_ERROR("Failed to find valid rotation angle");
         return false;
     }
@@ -6195,36 +6177,6 @@ bool venc_dev::venc_set_vpe_rotation(OMX_S32 rotation_angle)
 
     /* successfully set rotation_angle, save it */
     m_rotation.rotation = rotation_angle;
-
-    memset(&fmt, 0, sizeof(fmt));
-    fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-    if (flip_dimensions) {
-        OMX_U32 nWidth = m_sVenc_cfg.dvs_height;
-        OMX_U32 nHeight = m_sVenc_cfg.dvs_width;
-        m_sVenc_cfg.dvs_height = nHeight;
-        m_sVenc_cfg.dvs_width = nWidth;
-        DEBUG_PRINT_LOW("Rotation (%u) Flipping wxh to %lux%lu",
-                rotation_angle, m_sVenc_cfg.dvs_width, m_sVenc_cfg.dvs_height);
-    }
-
-    fmt.fmt.pix_mp.height = m_sVenc_cfg.dvs_height;
-    fmt.fmt.pix_mp.width = m_sVenc_cfg.dvs_width;
-    fmt.fmt.pix_mp.pixelformat = m_sVenc_cfg.codectype;
-    if (ioctl(m_nDriver_fd, VIDIOC_S_FMT, &fmt)) {
-        DEBUG_PRINT_ERROR("Failed to set format on capture port");
-        return false;
-    }
-
-    m_sOutput_buff_property.datasize = fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
-    bufreq.memory = V4L2_MEMORY_USERPTR;
-    bufreq.count = m_sOutput_buff_property.actualcount;
-    bufreq.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-    if (ioctl(m_nDriver_fd,VIDIOC_REQBUFS, &bufreq)) {
-        DEBUG_PRINT_ERROR("ERROR: Request for o/p buffer count failed for rotation");
-            return false;
-    }
-    if (bufreq.count >= m_sOutput_buff_property.mincount)
-        m_sOutput_buff_property.actualcount = m_sOutput_buff_property.mincount = bufreq.count;
 
     return true;
 }

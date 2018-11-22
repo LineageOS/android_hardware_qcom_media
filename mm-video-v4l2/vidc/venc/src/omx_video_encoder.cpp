@@ -1921,10 +1921,6 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                     DEBUG_PRINT_ERROR("ERROR: un supported Rotation %u", (unsigned int)pParam->nRotation);
                     return OMX_ErrorUnsupportedSetting;
                 }
-                if (m_sConfigFrameRotation.nRotation == pParam->nRotation) {
-                    DEBUG_PRINT_HIGH("set_config: rotation (%d) not changed", pParam->nRotation);
-                    break;
-                }
 
                 if (handle->venc_set_config(configData,
                     OMX_IndexConfigCommonRotate) != true) {
@@ -1932,15 +1928,6 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                         return OMX_ErrorUnsupportedSetting;
                 }
                 m_sConfigFrameRotation.nRotation = pParam->nRotation;
-
-                // Update output-port resolution (since it might have been flipped by rotation)
-                if (handle->venc_get_dimensions(PORT_INDEX_OUT,
-                        &m_sOutPortDef.format.video.nFrameWidth,
-                        &m_sOutPortDef.format.video.nFrameHeight)) {
-                    DEBUG_PRINT_HIGH("set Rotation: updated dimensions = %u x %u",
-                            m_sOutPortDef.format.video.nFrameWidth,
-                            m_sOutPortDef.format.video.nFrameHeight);
-                }
                 break;
             }
         case OMX_QcomIndexConfigVideoFramePackingArrangement:
