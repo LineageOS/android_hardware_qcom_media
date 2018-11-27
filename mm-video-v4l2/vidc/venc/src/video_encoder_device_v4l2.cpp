@@ -3036,9 +3036,10 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
 
                     uint32_t encodePerfMode = 0;
                     if (getMetaData(handle, GET_VIDEO_PERF_MODE, &encodePerfMode) == 0) {
-                        if (encodePerfMode == OMX_TRUE) {
+                        if (encodePerfMode == OMX_TRUE)
                             buf.flags |= V4L2_BUF_FLAG_PERF_MODE;
-                        }
+                        // Clear SET_VIDEO_PERF_MODE in buffer handle
+                        clearMetaData(handle,SET_VIDEO_PERF_MODE);
                     }
                     fd = handle->fd;
                     plane[0].data_offset = 0;
