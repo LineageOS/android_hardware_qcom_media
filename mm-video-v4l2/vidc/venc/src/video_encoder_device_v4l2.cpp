@@ -4424,6 +4424,8 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                     if (getMetaData(handle, GET_VIDEO_PERF_MODE, &encodePerfMode) == 0) {
                         if (encodePerfMode == OMX_TRUE) {
                             buf.flags |= V4L2_QCOM_BUF_FLAG_PERF_MODE;
+                            //Clear SET_VIDEO_PERF_MODE in buffer handle
+                            clearMetaData(handle,SET_VIDEO_PERF_MODE);
                         }
                     }
                     fd = handle->fd;
