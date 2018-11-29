@@ -321,7 +321,7 @@ void* async_message_thread (void *input)
                 } else {
                     struct v4l2_decoder_cmd dec;
                     memset(&dec, 0, sizeof(dec));
-                    dec.cmd = V4L2_QCOM_CMD_SESSION_CONTINUE;
+                    dec.cmd = V4L2_CMD_SESSION_CONTINUE;
                     rc = ioctl(pfds[0].fd, VIDIOC_DECODER_CMD, &dec);
                     if (rc < 0) {
                         DEBUG_PRINT_ERROR("Session continue failed");
@@ -347,7 +347,7 @@ void* async_message_thread (void *input)
                 // To make this backward compatible fallback to old approach
                 // if the flush_type is not present.
                 vdec_msg.status_code=VDEC_S_SUCCESS;
-                if (!flush_type || (flush_type & V4L2_QCOM_CMD_FLUSH_OUTPUT)) {
+                if (!flush_type || (flush_type & V4L2_CMD_FLUSH_OUTPUT)) {
                     vdec_msg.msgcode=VDEC_MSG_RESP_FLUSH_INPUT_DONE;
                     DEBUG_PRINT_HIGH("VIDC Input Flush Done Recieved");
                     if (omx->async_message_process(input,&vdec_msg) < 0) {
@@ -356,7 +356,7 @@ void* async_message_thread (void *input)
                     }
                 }
 
-                if (!flush_type || (flush_type & V4L2_QCOM_CMD_FLUSH_CAPTURE)) {
+                if (!flush_type || (flush_type & V4L2_CMD_FLUSH_CAPTURE)) {
                     vdec_msg.msgcode=VDEC_MSG_RESP_FLUSH_OUTPUT_DONE;
                     DEBUG_PRINT_HIGH("VIDC Output Flush Done Recieved");
                     if (omx->async_message_process(input,&vdec_msg) < 0) {
@@ -3212,13 +3212,13 @@ bool omx_vdec::execute_omx_flush(OMX_U32 flushType)
     struct v4l2_decoder_cmd dec;
     DEBUG_PRINT_LOW("in %s, flushing %u", __func__, (unsigned int)flushType);
     memset((void *)&v4l2_buf,0,sizeof(v4l2_buf));
-    dec.cmd = V4L2_QCOM_CMD_FLUSH;
+    dec.cmd = V4L2_CMD_FLUSH;
 
     DEBUG_PRINT_HIGH("in %s: reconfig? %d", __func__, in_reconfig);
 
     if (in_reconfig && flushType == OMX_CORE_OUTPUT_PORT_INDEX) {
         output_flush_progress = true;
-        dec.flags = V4L2_QCOM_CMD_FLUSH_CAPTURE;
+        dec.flags = V4L2_CMD_FLUSH_CAPTURE;
     } else {
         /* XXX: The driver/hardware does not support flushing of individual ports
          * in all states. So we pretty much need to flush both ports internally,
@@ -3227,7 +3227,7 @@ bool omx_vdec::execute_omx_flush(OMX_U32 flushType)
          * we automatically omit sending the FLUSH done for the "opposite" port. */
         input_flush_progress = true;
         output_flush_progress = true;
-        dec.flags = V4L2_QCOM_CMD_FLUSH_OUTPUT | V4L2_QCOM_CMD_FLUSH_CAPTURE;
+        dec.flags = V4L2_CMD_FLUSH_OUTPUT | V4L2_CMD_FLUSH_CAPTURE;
     }
 
     if (ioctl(drv_ctx.video_driver_fd, VIDIOC_DECODER_CMD, &dec)) {
@@ -3686,12 +3686,12 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                if (!client_buffers.is_color_conversion_enabled()) {
                                    status = client_buffers.get_color_format(drv_color_format);
                                }
-
+#ifdef KONA_TODO_UPDATE
                                if (decide_dpb_buffer_mode()) {
                                    DEBUG_PRINT_ERROR("%s:decide_dpb_buffer_mode failed", __func__);
                                    return OMX_ErrorBadParameter;
                                }
-
+#endif
                               if (status) {
                                  if (!client_buffers.is_color_conversion_enabled()) {
                                          client_buffers.set_client_buffers_disabled(true);
@@ -4201,6 +4201,7 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                    bool port_format_changed = false;
                                    m_display_id = portDefn->format.video.pNativeWindow;
                                    unsigned int buffer_size;
+#ifdef KONA_TODO_UPDATE
                                    /* update output port resolution with client supplied dimensions
                                       in case scaling is enabled, else it follows input resolution set
                                    */
@@ -4208,6 +4209,8 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                        DEBUG_PRINT_ERROR("%s:decide_dpb_buffer_mode failed", __func__);
                                        return OMX_ErrorBadParameter;
                                    }
+#endif
+
                                    if (is_down_scalar_enabled) {
                                        DEBUG_PRINT_LOW("SetParam OP: WxH(%u x %u)",
                                                (unsigned int)portDefn->format.video.nFrameWidth,
@@ -4717,6 +4720,8 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                 }
                                break;
                            }
+#ifdef KONA_TODO_UPDATE
+            /* use V4L2_CID_MPEG_VIDC_VIDEO_DECODE_ORDER */
         case OMX_QcomIndexParamVideoDecoderPictureOrder: {
                                      VALIDATE_OMX_PARAM_DATA(paramData, QOMX_VIDEO_DECODER_PICTURE_ORDER);
                                      QOMX_VIDEO_DECODER_PICTURE_ORDER *pictureOrder =
@@ -4745,6 +4750,7 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                             pictureOrder->eOutputPictureOrder == QOMX_VIDEO_DECODE_ORDER;
                                      break;
                                  }
+#endif
         case OMX_QcomIndexParamConcealMBMapExtraData:
                                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
                                eRet = enable_extradata(OMX_MB_ERROR_MAP_EXTRADATA, false,
@@ -4800,6 +4806,7 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                 eRet = enable_extradata(OMX_VQZIPSEI_EXTRADATA, false,
                                     ((QOMX_ENABLETYPE *)paramData)->bEnable);
                                 break;
+#ifdef KONA_TODO_UPDATE
         case OMX_QcomIndexParamVideoSyncFrameDecodingMode: {
                                        DEBUG_PRINT_HIGH("set_parameter: OMX_QcomIndexParamVideoSyncFrameDecodingMode");
                                        DEBUG_PRINT_HIGH("set idr only decoding for thumbnail mode");
@@ -4833,7 +4840,7 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                        }
                                    }
                                    break;
-
+#endif
         case OMX_QcomIndexParamIndexExtraDataType: {
                                     VALIDATE_OMX_PARAM_DATA(paramData, QOMX_INDEXEXTRADATATYPE);
                                     QOMX_INDEXEXTRADATATYPE *extradataIndexType = (QOMX_INDEXEXTRADATATYPE *) paramData;
@@ -7507,7 +7514,7 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
 
     if (buffer->nFlags & OMX_BUFFERFLAG_EOS) {
         DEBUG_PRINT_HIGH("Input EOS reached") ;
-        buf.flags = V4L2_QCOM_BUF_FLAG_EOS;
+        buf.flags = V4L2_BUF_FLAG_EOS;
     }
 
 
@@ -7529,7 +7536,7 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
     //assumption is that timestamp is in milliseconds
     buf.timestamp.tv_sec = buffer->nTimeStamp / 1000000;
     buf.timestamp.tv_usec = (buffer->nTimeStamp % 1000000);
-    buf.flags |= (buffer->nFlags & OMX_BUFFERFLAG_CODECCONFIG) ? V4L2_QCOM_BUF_FLAG_CODECCONFIG: 0;
+    buf.flags |= (buffer->nFlags & OMX_BUFFERFLAG_CODECCONFIG) ? V4L2_BUF_FLAG_CODECCONFIG: 0;
 #ifdef KONA_TODO_UPDATE
     buf.flags |= (buffer->nFlags & OMX_BUFFERFLAG_DECODEONLY) ? V4L2_QCOM_BUF_FLAG_DECODEONLY: 0;
 #endif
@@ -8793,7 +8800,7 @@ int omx_vdec::async_message_process (void *context, void* message)
             }
             omxhdr = omx->m_inp_mem_ptr + v4l2_buf_ptr->index;
 
-            if (v4l2_buf_ptr->flags & V4L2_QCOM_BUF_INPUT_UNSUPPORTED) {
+            if (v4l2_buf_ptr->flags & V4L2_BUF_INPUT_UNSUPPORTED) {
                 DEBUG_PRINT_HIGH("Unsupported input");
                 omx->post_event ((unsigned)NULL, vdec_msg->status_code,\
                         OMX_COMPONENT_GENERATE_HARDWARE_ERROR);
@@ -8866,7 +8873,7 @@ int omx_vdec::async_message_process (void *context, void* message)
                    omxhdr->nTimeStamp = vdec_msg->msgdata.output_frame.time_stamp;
                    omxhdr->nFlags = 0;
 
-                   if (v4l2_buf_ptr->flags & V4L2_QCOM_BUF_FLAG_EOS) {
+                   if (v4l2_buf_ptr->flags & V4L2_BUF_FLAG_EOS) {
                         omxhdr->nFlags |= OMX_BUFFERFLAG_EOS;
                         //rc = -1;
                    }
@@ -8883,7 +8890,7 @@ int omx_vdec::async_message_process (void *context, void* message)
                        omxhdr->nFlags |= OMX_BUFFERFLAG_DECODEONLY;
                    }
 #endif
-                   if (v4l2_buf_ptr->flags & V4L2_QCOM_BUF_FLAG_READONLY) {
+                   if (v4l2_buf_ptr->flags & V4L2_BUF_FLAG_READONLY) {
                         omxhdr->nFlags |= OMX_BUFFERFLAG_READONLY;
                         DEBUG_PRINT_LOW("F_B_D: READONLY BUFFER - REFERENCE WITH F/W fd = %d",
                                         omx_ptr_outputbuffer[v4l2_buf_ptr->index].pmem_fd);
@@ -10779,8 +10786,8 @@ bool omx_vdec::handle_color_space_info(void *data)
                         display_info_payload->color_description_present_flag) {
                     convert_color_space_info(display_info_payload->color_primaries,
                             display_info_payload->video_full_range_flag,
-                            display_info_payload->transfer_characteristics,
-                            display_info_payload->matrix_coefficients,
+                            display_info_payload->transfer_char,
+                            display_info_payload->matrix_coeffs,
                             aspects);
                 }
             }
@@ -11266,6 +11273,7 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                     struct msm_vidc_s3d_frame_packing_payload *s3d_frame_packing_payload;
                     s3d_frame_packing_payload = (struct msm_vidc_s3d_frame_packing_payload *)(void *)data->data;
                     switch (s3d_frame_packing_payload->fpa_type) {
+#ifdef KONA_TODO_UPDATE
                         case MSM_VIDC_FRAMEPACK_SIDE_BY_SIDE:
                             if (s3d_frame_packing_payload->content_interprtation_type == 1)
                                 stereo_output_mode = HAL_3D_SIDE_BY_SIDE_L_R;
@@ -11279,6 +11287,7 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                         case MSM_VIDC_FRAMEPACK_TOP_BOTTOM:
                             stereo_output_mode = HAL_3D_TOP_BOTTOM;
                             break;
+#endif
                         default:
                             DEBUG_PRINT_ERROR("Unsupported framepacking type");
                             stereo_output_mode = HAL_NO_3D;
@@ -11312,9 +11321,11 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                         }
                     }
                     break;
+#ifdef KONA_TODO_UPDATE
                 case MSM_VIDC_EXTRADATA_UBWC_CR_STAT_INFO:
                     DEBUG_PRINT_LOW("MSM_VIDC_EXTRADATA_UBWC_CR_STAT_INFO not used. Ignoring.");
                     break;
+#endif
                 case MSM_VIDC_EXTRADATA_STREAM_USERDATA:
                     if(output_capability == V4L2_PIX_FMT_HEVC) {
                         struct msm_vidc_stream_userdata_payload* userdata_payload = (struct msm_vidc_stream_userdata_payload*)data->data;
@@ -11417,6 +11428,7 @@ OMX_ERRORTYPE omx_vdec::enable_extradata(OMX_U64 requested_extradata,
         bool is_internal, bool enable)
 {
     OMX_ERRORTYPE ret = OMX_ErrorNone;
+#ifdef KONA_TODO_UPDATE
     struct v4l2_control control;
     if (m_state != OMX_StateLoaded) {
         DEBUG_PRINT_ERROR("ERROR: enable extradata allowed in Loaded state only");
@@ -11508,7 +11520,7 @@ OMX_ERRORTYPE omx_vdec::enable_extradata(OMX_U64 requested_extradata,
                 DEBUG_PRINT_HIGH("Failed to set stream userdata extradata");
             }
         }
-#ifdef KONA_TODO_UPDATE
+
         if (requested_extradata & OMX_QP_EXTRADATA) {
             control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
             control.value = V4L2_MPEG_VIDC_EXTRADATA_FRAME_QP;
@@ -11516,7 +11528,7 @@ OMX_ERRORTYPE omx_vdec::enable_extradata(OMX_U64 requested_extradata,
                 DEBUG_PRINT_HIGH("Failed to set QP extradata");
             }
         }
-#endif
+
         if (requested_extradata & OMX_OUTPUTCROP_EXTRADATA) {
             control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
             control.value = V4L2_MPEG_VIDC_EXTRADATA_OUTPUT_CROP;
@@ -11573,6 +11585,11 @@ OMX_ERRORTYPE omx_vdec::enable_extradata(OMX_U64 requested_extradata,
         }
     }
     ret = get_buffer_req(&drv_ctx.op_buf);
+#else
+    (void) requested_extradata;
+    (void) is_internal;
+    (void) enable;
+#endif
     return ret;
 }
 
@@ -12739,16 +12756,18 @@ bool omx_vdec::prefetch_buffers(unsigned long prefetch_count,
     }
 
     regions.nr_sizes = prefetch_count;
+    // KONA_TODO_UPDATE: Do we need this macro condition
 #if TARGET_ION_ABI_VERSION >= 2
-    regions.sizes = (__u64)sizes;
+    regions.sizes = sizes;
 #else
     regions.sizes = sizes;
 #endif
     regions.vmid = ion_flag;
 
     prefetch_data.nr_regions = 1;
+    // KONA_TODO_UPDATE: Do we need this macro condition
 #if TARGET_ION_ABI_VERSION >= 2
-    prefetch_data.regions = (__u64)&regions;
+    prefetch_data.regions = &regions;
 #else
     prefetch_data.regions = &regions;
 #endif

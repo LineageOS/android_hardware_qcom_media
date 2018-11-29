@@ -184,7 +184,9 @@ codec_map profile_level_converter::profile_omx_to_v4l2_map ({
             {V4L2_PIX_FMT_HEVC, &profile_hevc_omx_to_v4l2},
             {V4L2_PIX_FMT_MPEG2, &profile_mpeg2_omx_to_v4l2},
             {V4L2_PIX_FMT_VP9, &profile_vp9_omx_to_v4l2},
+#ifdef KONA_TODO_UPDATE
             {V4L2_PIX_FMT_TME, &profile_tme_omx_to_v4l2},
+#endif
         });
 
 codec_map profile_level_converter::profile_v4l2_to_omx_map ({
@@ -192,7 +194,9 @@ codec_map profile_level_converter::profile_v4l2_to_omx_map ({
             {V4L2_PIX_FMT_HEVC, &profile_hevc_v4l2_to_omx},
             {V4L2_PIX_FMT_MPEG2, &profile_mpeg2_v4l2_to_omx},
             {V4L2_PIX_FMT_VP9, &profile_vp9_v4l2_to_omx},
+#ifdef KONA_TODO_UPDATE
             {V4L2_PIX_FMT_TME, &profile_tme_v4l2_to_omx},
+#endif
         });
 
 codec_map profile_level_converter::level_omx_to_v4l2_map ({
@@ -201,7 +205,9 @@ codec_map profile_level_converter::level_omx_to_v4l2_map ({
             {V4L2_PIX_FMT_MPEG2, &level_mpeg2_omx_to_v4l2},
             {V4L2_PIX_FMT_VP8, &level_vp8_omx_to_v4l2},
             {V4L2_PIX_FMT_VP9, &level_vp9_omx_to_v4l2},
+#ifdef KONA_TODO_UPDATE
             {V4L2_PIX_FMT_TME, &level_tme_omx_to_v4l2},
+#endif
         });
 
 codec_map profile_level_converter::level_v4l2_to_omx_map ({
@@ -210,7 +216,9 @@ codec_map profile_level_converter::level_v4l2_to_omx_map ({
             {V4L2_PIX_FMT_MPEG2, &level_mpeg2_v4l2_to_omx},
             {V4L2_PIX_FMT_VP8, &level_vp8_v4l2_to_omx},
             {V4L2_PIX_FMT_VP9, &level_vp9_v4l2_to_omx},
+#ifdef KONA_TODO_UPDATE
             {V4L2_PIX_FMT_TME, &level_tme_v4l2_to_omx},
+#endif
         });
 
 void reverse_map(pl_map source_map, pl_map &dest_map)
@@ -229,13 +237,17 @@ void profile_level_converter::init()
     reverse_map(profile_hevc_omx_to_v4l2, profile_hevc_v4l2_to_omx);
     reverse_map(profile_mpeg2_omx_to_v4l2, profile_mpeg2_v4l2_to_omx);
     reverse_map(profile_vp9_omx_to_v4l2, profile_vp9_v4l2_to_omx);
+#ifdef KONA_TODO_UPDATE
     reverse_map(profile_tme_omx_to_v4l2, profile_tme_v4l2_to_omx);
+#endif
     reverse_map(level_avc_omx_to_v4l2, level_avc_v4l2_to_omx);
     reverse_map(level_hevc_omx_to_v4l2, level_hevc_v4l2_to_omx);
     reverse_map(level_vp8_omx_to_v4l2, level_vp8_v4l2_to_omx);
     reverse_map(level_mpeg2_omx_to_v4l2, level_mpeg2_v4l2_to_omx);
     reverse_map(level_vp9_omx_to_v4l2, level_vp9_v4l2_to_omx);
+#ifdef KONA_TODO_UPDATE
     reverse_map(level_tme_omx_to_v4l2, level_tme_v4l2_to_omx);
+#endif
 }
 
 bool profile_level_converter::find_map(const codec_map &map, int key, pl_map **value_map)
