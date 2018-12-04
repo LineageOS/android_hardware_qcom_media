@@ -55,6 +55,10 @@ if MASTER_SIDE_CP_TARGET_LIST
 AM_CPPFLAGS += -DMASTER_SIDE_CP
 endif
 
+if TARGET_USES_LIBGBM
+AM_CPPFLAGS += -D__LIBGBM__
+endif
+
 AM_CPPFLAGS += -I$(top_srcdir)/mm-video-v4l2/vidc/common/inc/
 AM_CPPFLAGS += -I$(top_srcdir)/mm-video-v4l2/vidc/venc/inc/
 AM_CPPFLAGS += -I$(top_srcdir)/libc2dcolorconvert/
@@ -72,12 +76,13 @@ sources += src/omx_video_encoder.cpp
 sources += src/video_encoder_device_v4l2.cpp
 sources += $(top_srcdir)/mm-video-v4l2/vidc/common/src/vidc_common.cpp
 sources += $(top_srcdir)/mm-video-v4l2/vidc/common/src/vidc_vendor_extensions.cpp
+sources += $(top_srcdir)/libc2dcolorconvert/C2DColorConverter.cpp
 
 lib_LTLIBRARIES = libOmxVenc.la
 libOmxVenc_la_SOURCES = $(sources)
 libOmxVenc_la_CFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) -fPIC
 libOmxVenc_la_LDFLAGS = -module -shared -avoid-version
-libOmxVenc_la_LDFLAGS += -lstdc++ -lpthread -llog -lutils -lcutils -lglib-2.0 -lbase -ldl -lpthread -lion
+libOmxVenc_la_LDFLAGS += -lstdc++ -lpthread -llog -lutils -lcutils -lglib-2.0 -lbase -ldl -lpthread
 
-libOmxVenc_la_LDFLAGS += -L$(top_builddir)/libc2dcolorconvert  -L$(top_builddir)/libplatformconfig -L$(top_builddir)/libarbitrarybytes
-libOmxVenc_la_LDFLAGS += -lc2dcolorconvert -lplatformconfig -larbitrarybytes
+libOmxVenc_la_LDFLAGS += -L$(top_builddir)/libplatformconfig
+libOmxVenc_la_LDFLAGS += -lplatformconfig
