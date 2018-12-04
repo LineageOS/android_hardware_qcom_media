@@ -106,9 +106,7 @@ extern "C" {
 #define SZ_4K 0x1000
 #define SZ_1M 0x100000
 
-#define PREFETCH_PIXEL_BUFFER_SIZE VENUS_BUFFER_SIZE(COLOR_FMT_NV12_UBWC, 4096, 2160)
 #define PREFETCH_PIXEL_BUFFER_COUNT 16
-#define PREFETCH_NON_PIXEL_BUFFER_SIZE (200 * 1024 * 1024)
 #define PREFETCH_NON_PIXEL_BUFFER_COUNT 1
 
 #define Log2(number, power)  { OMX_U32 temp = number; power = 0; while( (0 == (temp & 0x1)) &&  power < 16) { temp >>=0x1; power++; } }
@@ -739,6 +737,8 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     stereo_output_mode(HAL_NO_3D),
     m_last_rendered_TS(-1),
     m_dec_hfr_fps(0),
+    m_dec_secure_prefetch_size_internal(0),
+    m_dec_secure_prefetch_size_output(0),
     m_arb_mode_override(0),
     m_queued_codec_config_count(0),
     secure_scaling_to_non_secure_opb(false),
@@ -787,6 +787,14 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     if (m_dec_hfr_fps) {
         m_last_rendered_TS = 0;
     }
+
+    Platform::Config::getInt32(Platform::vidc_dec_sec_prefetch_size_internal,
+            (int32_t *)&m_dec_secure_prefetch_size_internal, 0);
+    Platform::Config::getInt32(Platform::vidc_dec_sec_prefetch_size_output,
+            (int32_t *)&m_dec_secure_prefetch_size_output, 0);
+
+    DEBUG_PRINT_HIGH("Prefetch size internal = %d, output = %d",
+            m_dec_secure_prefetch_size_internal, m_dec_secure_prefetch_size_output);
 
     Platform::Config::getInt32(Platform::vidc_dec_arb_mode_override,
             (int32_t *)&m_arb_mode_override, 0);
@@ -1028,9 +1036,9 @@ omx_vdec::~omx_vdec()
         pthread_join(async_thread_id,NULL);
 
     if (m_prefetch_done & 0x1)
-        prefetch_buffers(PREFETCH_PIXEL_BUFFER_COUNT, PREFETCH_PIXEL_BUFFER_SIZE, ION_IOC_DRAIN, ION_FLAG_CP_PIXEL);
+        prefetch_buffers(PREFETCH_PIXEL_BUFFER_COUNT, m_dec_secure_prefetch_size_output, ION_IOC_DRAIN, ION_FLAG_CP_PIXEL);
     if (m_prefetch_done & 0x2)
-        prefetch_buffers(PREFETCH_NON_PIXEL_BUFFER_COUNT, PREFETCH_NON_PIXEL_BUFFER_SIZE, ION_IOC_DRAIN, ION_FLAG_CP_NON_PIXEL);
+        prefetch_buffers(PREFETCH_NON_PIXEL_BUFFER_COUNT, m_dec_secure_prefetch_size_internal, ION_IOC_DRAIN, ION_FLAG_CP_NON_PIXEL);
 
     unsubscribe_to_events(drv_ctx.video_driver_fd);
     close(m_poll_efd);
@@ -2645,8 +2653,8 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
             msg_thread_created = false;
             eRet = OMX_ErrorInsufficientResources;
         } else if (secure_mode) {
-            this->post_event(PREFETCH_PIXEL_BUFFER_COUNT, PREFETCH_PIXEL_BUFFER_SIZE, OMX_COMPONENT_GENERATE_ION_PREFETCH_PIXEL);
-            this->post_event(PREFETCH_NON_PIXEL_BUFFER_COUNT, PREFETCH_NON_PIXEL_BUFFER_SIZE, OMX_COMPONENT_GENERATE_ION_PREFETCH_NON_PIXEL);
+            this->post_event(PREFETCH_PIXEL_BUFFER_COUNT, m_dec_secure_prefetch_size_output, OMX_COMPONENT_GENERATE_ION_PREFETCH_PIXEL);
+            this->post_event(PREFETCH_NON_PIXEL_BUFFER_COUNT, m_dec_secure_prefetch_size_internal, OMX_COMPONENT_GENERATE_ION_PREFETCH_NON_PIXEL);
         }
     }
 

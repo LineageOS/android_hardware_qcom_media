@@ -1351,6 +1351,8 @@ class omx_vdec: public qc_omx_component
         void send_codec_config();
         OMX_TICKS m_last_rendered_TS;
         int32_t m_dec_hfr_fps;
+        int32_t m_dec_secure_prefetch_size_internal;
+        int32_t m_dec_secure_prefetch_size_output;
         int32_t m_arb_mode_override;
         volatile int32_t m_queued_codec_config_count;
         OMX_U32 current_perf_level;
