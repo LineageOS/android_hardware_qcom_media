@@ -56,6 +56,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "media/hardware/HardwareAPI.h"
 #include <unordered_map>
 #include <media/msm_media_info.h>
+#include <OMX_Core.h>
 
 #include <linux/msm_ion.h>
 #if TARGET_ION_ABI_VERSION >= 2
@@ -660,8 +661,6 @@ class omx_vdec: public qc_omx_component
         pthread_t async_thread_id;
         bool is_component_secure();
         OMX_BUFFERHEADERTYPE* get_omx_output_buffer_header(int index);
-        OMX_ERRORTYPE set_dpb(bool is_split_mode);
-        OMX_ERRORTYPE decide_dpb_buffer_mode();
         int dpb_bit_depth;
         bool check_supported_flexible_formats(OMX_COLOR_FORMATTYPE required_format);
         bool is_flexible_format;//To save status if required format is flexible color formats
@@ -1204,7 +1203,6 @@ class omx_vdec: public qc_omx_component
         OMX_FRAMESIZETYPE framesize;
         OMX_CONFIG_RECTTYPE rectangle;
         OMX_U32 prev_n_filled_len;
-        bool m_force_down_scalar;
         struct custom_buffersize {
             OMX_U32 input_buffersize;
         } m_custom_buffersize;
@@ -1242,11 +1240,6 @@ class omx_vdec: public qc_omx_component
         OMX_ERRORTYPE enable_smoothstreaming();
         OMX_ERRORTYPE enable_adaptive_playback(unsigned long width, unsigned long height);
         bool m_disable_ubwc_mode;
-        OMX_U32 m_downscalar_width;
-        OMX_U32 m_downscalar_height;
-        int decide_downscalar();
-        int enable_downscalar();
-        int disable_downscalar();
 
         unsigned int m_fill_output_msg;
         bool client_set_fps;
@@ -1420,8 +1413,6 @@ class omx_vdec: public qc_omx_component
         void get_preferred_hdr_info(HDRStaticInfo& preferredHDRInfo);
         bool vdec_query_cap(struct v4l2_queryctrl &cap);
 public:
-        bool is_down_scalar_enabled;
-        bool m_is_split_mode;
         bool m_buffer_error;
 };
 
