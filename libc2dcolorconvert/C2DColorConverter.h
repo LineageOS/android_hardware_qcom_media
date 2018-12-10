@@ -31,6 +31,7 @@
 #define C2D_ColorConverter_H_
 
 #include <stdlib.h>
+#include <stdint.h>
 #include <fcntl.h>
 #include <pthread.h>
 #include <linux/msm_kgsl.h>
@@ -40,7 +41,12 @@
 #include <string.h>
 #include <errno.h>
 #include <media/msm_media_info.h>
+#ifdef __LIBGBM__
+#include <gbm.h>
+#include <gbm_priv.h>
+#else
 #include <gralloc_priv.h>
+#endif
 #include <unordered_map>
 
 #include <c2d2.h>
