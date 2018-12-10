@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2009-2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2009-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -138,6 +138,15 @@ struct OMX_QCOM_PARAM_MEMMAPENTRYTYPE
 
 #define OMX_QCOM_PORTDEFN_EXTN   "OMX.QCOM.index.param.portdefn"
 /* Allowed APIs on the above Index: OMX_GetParameter() and OMX_SetParameter() */
+
+/*
+ * VT Driver Version Number definition
+ * Hexa Decimal: 0xPPPPYYMM
+ *               PPPP [2 Bytes] - Product ID
+ *               YY   [1 Byte ] - Year (last two digits of year {00..99})
+ *               MM   [1 Byte ] - Month (01..12)
+ */
+#define VT_DRIVER_VERSION 0x034D120B
 
 typedef enum OMX_QCOMMemoryRegion
 {
