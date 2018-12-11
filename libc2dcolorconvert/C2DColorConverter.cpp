@@ -353,6 +353,10 @@ int32_t C2DColorConverter::getDummySurfaceDef(ColorConvertFormat format,
         (*surfaceYUVDef)->phys2 = NULL;
         (*surfaceYUVDef)->plane2 = NULL;
 
+        if (mFlags & private_handle_t::PRIV_FLAGS_ITU_R_601_FR) {
+            (*surfaceYUVDef)->format |= C2D_FORMAT_BT601_FULLRANGE;
+        }
+
         if (format == YCbCr420P ||
             format == YCrCb420P) {
           ALOGI("%s: half stride for Cb Cr planes \n", __FUNCTION__);
