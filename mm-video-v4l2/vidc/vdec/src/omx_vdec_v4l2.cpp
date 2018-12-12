@@ -4350,11 +4350,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                 eRet = enable_extradata(OMX_EXTNUSER_EXTRADATA, false,
                                     ((QOMX_ENABLETYPE *)paramData)->bEnable);
                                 break;
-        case OMX_QTIIndexParamVQZipSEIExtraData:
-                               VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
-                                eRet = enable_extradata(OMX_VQZIPSEI_EXTRADATA, false,
-                                    ((QOMX_ENABLETYPE *)paramData)->bEnable);
-                                break;
         case OMX_QcomIndexParamVideoSyncFrameDecodingMode: {
                                        DEBUG_PRINT_HIGH("set_parameter: OMX_QcomIndexParamVideoSyncFrameDecodingMode");
                                        DEBUG_PRINT_HIGH("set idr only decoding for thumbnail mode");
@@ -4598,42 +4593,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             } else {
                 DEBUG_PRINT_ERROR("ERROR: Custom buffer size in not supported on output port");
                 eRet = OMX_ErrorBadParameter;
-            }
-            break;
-        }
-        case OMX_QTIIndexParamVQZIPSEIType:
-        {
-            VALIDATE_OMX_PARAM_DATA(paramData, OMX_QTI_VIDEO_PARAM_VQZIP_SEI_TYPE);
-            DEBUG_PRINT_LOW("set_parameter: OMX_QTIIndexParamVQZIPSEIType");
-            OMX_QTI_VIDEO_PARAM_VQZIP_SEI_TYPE *pParam =
-                (OMX_QTI_VIDEO_PARAM_VQZIP_SEI_TYPE *)paramData;
-                DEBUG_PRINT_LOW("Enable VQZIP SEI: %d", pParam->bEnable);
-
-            eRet = enable_extradata(OMX_VQZIPSEI_EXTRADATA, false,
-                ((QOMX_ENABLETYPE *)paramData)->bEnable);
-            if (eRet != OMX_ErrorNone) {
-                DEBUG_PRINT_ERROR("ERROR: Failed to set SEI Extradata");
-                eRet = OMX_ErrorBadParameter;
-                client_extradata = client_extradata & ~OMX_VQZIPSEI_EXTRADATA;
-                break;
-            }
-            eRet = enable_extradata(OMX_QP_EXTRADATA, false,
-                    ((QOMX_ENABLETYPE *)paramData)->bEnable);
-            if (eRet != OMX_ErrorNone) {
-                DEBUG_PRINT_ERROR("ERROR: Failed to set QP Extradata");
-                eRet = OMX_ErrorBadParameter;
-                client_extradata = client_extradata & ~OMX_VQZIPSEI_EXTRADATA;
-                client_extradata = client_extradata & ~OMX_QP_EXTRADATA;
-                break;
-            }
-            eRet = enable_extradata(OMX_FRAMEINFO_EXTRADATA, false,
-                        ((QOMX_ENABLETYPE *)paramData)->bEnable);
-            if (eRet != OMX_ErrorNone) {
-                DEBUG_PRINT_ERROR("ERROR: Failed to set FrameInfo Extradata");
-                eRet = OMX_ErrorBadParameter;
-                client_extradata = client_extradata & ~OMX_VQZIPSEI_EXTRADATA;
-                client_extradata = client_extradata & ~OMX_QP_EXTRADATA;
-                client_extradata = client_extradata & ~OMX_FRAMEINFO_EXTRADATA;
             }
             break;
         }

@@ -1381,17 +1381,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                         eRet = OMX_ErrorUnsupportedIndex;
                         break;
                     }
-                } else if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QTIIndexParamVQZipSEIExtraData) {
-                    if (pParam->nPortIndex == PORT_INDEX_IN) {
-                        mask = VENC_EXTRADATA_VQZIP;
-                        DEBUG_PRINT_HIGH("VQZIP extradata %s",
-                                ((pParam->bEnabled == OMX_TRUE) ? "enabled" : "disabled"));
-                    } else {
-                        DEBUG_PRINT_ERROR("set_parameter: VQZIP is "
-                                "valid for input port only");
-                        eRet = OMX_ErrorUnsupportedIndex;
-                        break;
-                    }
                 } else if (pParam->nIndex == (OMX_INDEXTYPE)OMX_ExtraDataVideoLTRInfo) {
                     if (pParam->nPortIndex == PORT_INDEX_OUT) {
                         if (pParam->bEnabled == OMX_TRUE)
@@ -1629,17 +1618,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                    return OMX_ErrorUnsupportedSetting;
                 }
                break;
-            }
-        case OMX_QTIIndexParamVQZIPSEIType:
-            {
-                VALIDATE_OMX_PARAM_DATA(paramData, OMX_QTI_VIDEO_PARAM_VQZIP_SEI_TYPE);
-                if (!handle->venc_set_param(paramData,
-                            (OMX_INDEXTYPE) OMX_QTIIndexParamVQZIPSEIType)) {
-                    DEBUG_PRINT_ERROR("ERROR: Setting VQZIP SEI type");
-                    return OMX_ErrorUnsupportedSetting;
-                }
-                m_sExtraData |= VENC_EXTRADATA_VQZIP;
-                break;
             }
         case OMX_QcomIndexParamVencAspectRatio:
             {
@@ -2481,11 +2459,6 @@ bool omx_venc::dev_get_capability_ltrcount(OMX_U32 *min, OMX_U32 *max, OMX_U32 *
 bool omx_venc::dev_get_vui_timing_info(OMX_U32 *enabled)
 {
     return handle->venc_get_vui_timing_info(enabled);
-}
-
-bool omx_venc::dev_get_vqzip_sei_info(OMX_U32 *enabled)
-{
-    return handle->venc_get_vqzip_sei_info(enabled);
 }
 
 bool omx_venc::dev_get_peak_bitrate(OMX_U32 *peakbitrate)

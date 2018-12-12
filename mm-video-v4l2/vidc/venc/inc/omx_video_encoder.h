@@ -87,7 +87,6 @@ class omx_venc: public omx_video
         bool dev_loaded_stop_done(void);
         bool dev_get_capability_ltrcount(OMX_U32 *, OMX_U32 *, OMX_U32 *);
         bool dev_get_vui_timing_info(OMX_U32 *);
-        bool dev_get_vqzip_sei_info(OMX_U32 *);
         bool dev_get_peak_bitrate(OMX_U32 *);
         bool dev_get_batch_size(OMX_U32 *);
         bool dev_get_temporal_layer_caps(OMX_U32 * /*nMaxLayers*/,

@@ -274,13 +274,6 @@ void print_debug_extradata(OMX_OTHER_EXTRADATATYPE *extra)
                 }
         DEBUG_PRINT_HIGH(
                 "=========== End of Userdata ===========");
-    } else if (extra->eType == (OMX_EXTRADATATYPE)OMX_ExtraDataVQZipSEI) {
-        OMX_QCOM_EXTRADATA_VQZIPSEI *vq = (OMX_QCOM_EXTRADATA_VQZIPSEI *)(void *)extra->data;
-        DEBUG_PRINT_HIGH(
-                "--------------  VQZip  -------------\n"
-                "    Size: %u\n",
-                (unsigned int)vq->nSize);
-        DEBUG_PRINT_HIGH( "=========== End of VQZip ===========");
     } else if (extra->eType == (OMX_EXTRADATATYPE)OMX_ExtraDataOutputCropInfo) {
         OMX_QCOM_OUTPUT_CROP *outputcrop_info = (OMX_QCOM_OUTPUT_CROP*)(void *)extra->data;
         DEBUG_PRINT_HIGH(

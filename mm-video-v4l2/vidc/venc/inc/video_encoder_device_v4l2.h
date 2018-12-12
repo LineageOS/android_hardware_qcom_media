@@ -35,9 +35,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "QComOMXMetadata.h"
 #include "OMX_QCOMExtns.h"
 #include "qc_omx_component.h"
-#ifdef _VQZIP_
-#include "VQZip.h"
-#endif
 
 #include "omx_video_common.h"
 #include "omx_video_base.h"
@@ -212,10 +209,6 @@ struct msm_venc_vui_timing_info {
     unsigned int enabled;
 };
 
-struct msm_venc_vqzip_sei_info {
-    unsigned int enabled;
-};
-
 struct msm_venc_peak_bitrate {
     unsigned int peakbitrate;
 };
@@ -268,7 +261,6 @@ struct extradata_buffer_info {
 #ifdef USE_ION
     struct venc_ion ion;
 #endif
-    bool vqzip_sei_found;
 };
 
 struct statistics {
@@ -333,7 +325,6 @@ class venc_dev
         bool venc_color_align(OMX_BUFFERHEADERTYPE *buffer, OMX_U32 width,
                         OMX_U32 height);
         bool venc_get_vui_timing_info(OMX_U32 *enabled);
-        bool venc_get_vqzip_sei_info(OMX_U32 *enabled);
         bool venc_get_peak_bitrate(OMX_U32 *peakbitrate);
         bool venc_get_batch_size(OMX_U32 *size);
         bool venc_get_temporal_layer_caps(OMX_U32 * /*nMaxLayers*/,
@@ -360,31 +351,6 @@ class venc_dev
         bool venc_set_bitrate_type(OMX_U32 type);
         bool venc_get_hevc_profile(OMX_U32* profile);
         void venc_get_consumer_usage(OMX_U32* usage);
-
-#ifdef _VQZIP_
-        class venc_dev_vqzip
-        {
-            public:
-                venc_dev_vqzip();
-                ~venc_dev_vqzip();
-                bool init();
-                void deinit();
-                struct VQZipConfig pConfig;
-                int tempSEI[300];
-                int fill_stats_data(void* pBuf, void *pStats);
-                typedef void (*vqzip_deinit_t)(void*);
-                typedef void* (*vqzip_init_t)(void);
-                typedef VQZipStatus (*vqzip_compute_stats_t)(void* const , const void * const , const VQZipConfig* ,VQZipStats*);
-            private:
-                pthread_mutex_t lock;
-                void *mLibHandle;
-                void *mVQZIPHandle;
-                vqzip_init_t mVQZIPInit;
-                vqzip_deinit_t mVQZIPDeInit;
-                vqzip_compute_stats_t mVQZIPComputeStats;
-        };
-        venc_dev_vqzip vqzip;
-#endif
 
         struct venc_debug_cap m_debug;
         OMX_U32 m_nDriver_fd;
@@ -455,7 +421,6 @@ class venc_dev
         struct msm_venc_idrperiod           idrperiod;
         struct msm_venc_slice_delivery      slice_mode;
         struct msm_venc_vui_timing_info     vui_timing_info;
-        struct msm_venc_vqzip_sei_info      vqzip_sei_info;
         struct msm_venc_peak_bitrate        peak_bitrate;
         struct msm_venc_ltrinfo             ltrinfo;
         struct msm_venc_vpx_error_resilience vpx_err_resilience;
@@ -507,10 +472,8 @@ class venc_dev
         bool venc_set_peak_bitrate(OMX_U32 nPeakBitrate);
         bool venc_set_searchrange();
         bool venc_set_vpx_error_resilience(OMX_BOOL enable);
-        bool venc_set_vqzip_sei_type(OMX_BOOL enable);
         bool venc_set_batch_size(OMX_U32 size);
         bool venc_calibrate_gop();
-        bool venc_set_vqzip_defaults();
         bool venc_get_index_from_fd(OMX_U32 buffer_fd, OMX_U32 *index);
         bool venc_set_hierp_layers(OMX_U32 hierp_layers);
         bool venc_set_baselayerid(OMX_U32 baseid);

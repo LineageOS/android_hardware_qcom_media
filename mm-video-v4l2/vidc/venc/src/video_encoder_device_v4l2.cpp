@@ -166,7 +166,6 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     is_searchrange_set = false;
     enable_mv_narrow_searchrange = false;
     supported_rc_modes = RC_ALL;
-    memset(&vqzip_sei_info, 0, sizeof(vqzip_sei_info));
     memset(&ltrinfo, 0, sizeof(ltrinfo));
     memset(&fd_list, 0, sizeof(fd_list));
     sess_priority.priority = 1;
@@ -648,7 +647,6 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
     int width = m_sVenc_cfg.input_width;
     OMX_TICKS nTimeStamp = buf.timestamp.tv_sec * 1000000 + buf.timestamp.tv_usec;
     int fd = buf.m.planes[0].reserved[0];
-    bool vqzip_sei_found = false;
     char *p_extradata = NULL;
     OMX_OTHER_EXTRADATATYPE *data = NULL;
     struct roidata roi;
@@ -742,10 +740,6 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
             data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
             break;
         }
-        case OMX_ExtraDataVQZipSEI:
-            DEBUG_PRINT_LOW("VQZIP SEI Found ");
-            input_extradata_info.vqzip_sei_found = true;
-            break;
         case OMX_ExtraDataFrameInfo:
         {
             OMX_QCOM_EXTRADATA_FRAMEINFO *frame_info = NULL;
@@ -884,24 +878,6 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
         }
     }
 
-#ifdef _VQZIP_
-    if (vqzip_sei_info.enabled && !input_extradata_info.vqzip_sei_found) {
-        DEBUG_PRINT_ERROR("VQZIP is enabled, But no VQZIP SEI found. Rejecting the session");
-        if (pVirt)
-            munmap(pVirt, size);
-        status = false;
-        goto bailout; //This should be treated as fatal error
-    }
-    if (vqzip_sei_info.enabled && pVirt) {
-        data->nSize = (sizeof(OMX_OTHER_EXTRADATATYPE) +  sizeof(struct VQZipStats) + 3)&(~3);
-        data->nVersion.nVersion = OMX_SPEC_VERSION;
-        data->nPortIndex = 0;
-        data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_YUVSTATS_INFO;
-        data->nDataSize = sizeof(struct VQZipStats);
-        vqzip.fill_stats_data((void*)pVirt, (void*) data->data);
-        data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
-    }
-#endif
         data->nSize = sizeof(OMX_OTHER_EXTRADATATYPE);
         data->nVersion.nVersion = OMX_SPEC_VERSION;
         data->eType = OMX_ExtraDataNone;
@@ -1802,16 +1778,6 @@ bool venc_dev::venc_open(OMX_U32 codec)
     resume_in_stopped = 0;
     metadatamode = 0;
 
-    if (m_sVenc_cfg.codectype != V4L2_PIX_FMT_TME) {
-        control.id = V4L2_CID_MPEG_VIDEO_HEADER_MODE;
-        control.value = V4L2_MPEG_VIDEO_HEADER_MODE_SEPARATE;
-
-        DEBUG_PRINT_LOW("Calling IOCTL to disable seq_hdr in sync_frame id=%d, val=%d", control.id, control.value);
-
-        if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control))
-            DEBUG_PRINT_ERROR("Failed to set control");
-    }
-
     struct v4l2_frmsizeenum frmsize;
 
     //Get the hardware capabilities
@@ -1909,10 +1875,6 @@ void venc_dev::venc_close()
         close(m_nDriver_fd);
         m_nDriver_fd = -1;
     }
-
-#ifdef _VQZIP_
-    vqzip.deinit();
-#endif
 
     if (m_debug.infile) {
         fclose(m_debug.infile);
@@ -3423,17 +3385,6 @@ bool venc_dev::venc_handle_empty_eos_buffer( void)
         struct v4l2_control control;
         int ret = 0;
 
-        /* If first ETB is an EOS with 0 filled length there is a limitation */
-        /* for which we need to combine sequence header with 1st frame       */
-        control.id = V4L2_CID_MPEG_VIDEO_HEADER_MODE;
-        control.value = V4L2_MPEG_VIDEO_HEADER_MODE_JOINED_WITH_1ST_FRAME;
-        DEBUG_PRINT_LOW("Combining sequence header with 1st frame ");
-        ret = ioctl(m_nDriver_fd,  VIDIOC_S_CTRL, &control);
-        if (ret) {
-            DEBUG_PRINT_ERROR("Failed to set header mode");
-            return false;
-        }
-
         buf_type=V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
 
         DEBUG_PRINT_HIGH("Calling streamon before issuing stop command for EOS");
@@ -3572,64 +3523,6 @@ unsigned venc_dev::venc_set_message_thread_id(pthread_t tid)
     return 0;
 }
 
-bool venc_dev::venc_set_vqzip_defaults()
-{
-    struct v4l2_control control;
-    int rc = 0, num_mbs_per_frame;
-
-    num_mbs_per_frame = m_sVenc_cfg.input_height * m_sVenc_cfg.input_width;
-
-    switch (num_mbs_per_frame) {
-    case OMX_CORE_720P_WIDTH  * OMX_CORE_720P_HEIGHT:
-    case OMX_CORE_1080P_WIDTH * OMX_CORE_1080P_HEIGHT:
-    case OMX_CORE_4KUHD_WIDTH * OMX_CORE_4KUHD_HEIGHT:
-    case OMX_CORE_4KDCI_WIDTH * OMX_CORE_4KDCI_HEIGHT:
-        break;
-    default:
-        DEBUG_PRINT_ERROR("VQZIP is not supported for this resoultion : %lu X %lu",
-            m_sVenc_cfg.input_width, m_sVenc_cfg.input_height);
-        return false;
-    }
-#ifdef KONA_TODO_UPDATE
-    /*
-     * V4L2_MPEG_VIDEO_BITRATE_MODE_RC_OFF: Is removed.
-     * RC_OFF will be controlled by this control:
-     * V4L2_CID_MPEG_VIDEO_FRAME_RC_ENABLE.
-     * MBR_VFR is removed: Deprecated
-     * If V4L2_CID_MPEG_VIDEO_FRAME_RC_ENABLE is off then we cannot use BITRATE_MODE
-     * to set rate control.
-     */
-    control.id = V4L2_CID_MPEG_VIDEO_BITRATE_MODE;
-    control.value = V4L2_MPEG_VIDEO_BITRATE_MODE_RC_OFF;
-    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-    if (rc)
-        DEBUG_PRINT_ERROR("Failed to set Rate Control OFF for VQZIP");
-#endif
-
-    control.id = V4L2_CID_MPEG_VIDEO_GOP_SIZE;
-    control.value = INT_MAX;
-
-    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-    if (rc)
-        DEBUG_PRINT_ERROR("Failed to set P frame period for VQZIP");
-
-    control.id = V4L2_CID_MPEG_VIDEO_B_FRAMES;
-    control.value = 0;
-
-    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-    if (rc)
-        DEBUG_PRINT_ERROR("Failed to set B frame period for VQZIP");
-#ifdef KONA_TODO_UPDATE
-    /* Delete - Hardcode to 1 in driver. */
-    control.id = V4L2_CID_MPEG_VIDC_VIDEO_IDR_PERIOD;
-    control.value = 1;
-
-    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-    if (rc)
-        DEBUG_PRINT_ERROR("Failed to set IDR period for VQZIP");
-#endif
-    return true;
-}
 bool venc_dev::venc_set_extradata_hdr10metadata()
 {
 #ifdef KONA_TODO_UPDATE
@@ -3668,9 +3561,6 @@ unsigned venc_dev::venc_start(void)
     struct v4l2_control control;
 
     memset(&control, 0, sizeof(control));
-
-    if (vqzip_sei_info.enabled && !venc_set_vqzip_defaults())
-        return 1;
 
     if (!venc_set_priority(sess_priority.priority)) {
         DEBUG_PRINT_ERROR("Failed to set priority");
@@ -4057,17 +3947,6 @@ bool venc_dev::venc_get_vui_timing_info(OMX_U32 *enabled)
         return false;
     } else {
         *enabled = vui_timing_info.enabled;
-        return true;
-    }
-}
-
-bool venc_dev::venc_get_vqzip_sei_info(OMX_U32 *enabled)
-{
-    if (!enabled) {
-        DEBUG_PRINT_ERROR("Null pointer error");
-        return false;
-    } else {
-        *enabled = vqzip_sei_info.enabled;
         return true;
     }
 }
@@ -4875,15 +4754,10 @@ bool venc_dev::venc_set_inband_video_header(OMX_BOOL enable)
 {
     struct v4l2_control control;
 
-    if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_TME) {
-        return false;
-    }
-
-    control.id = V4L2_CID_MPEG_VIDEO_HEADER_MODE;
+    control.id = V4L2_CID_MPEG_VIDEO_PREPEND_SPSPPS_TO_IDR;
+    control.value = V4L2_MPEG_MSM_VIDC_DISABLE;
     if(enable) {
-        control.value = V4L2_MPEG_VIDEO_HEADER_MODE_JOINED_WITH_1ST_FRAME;
-    } else {
-        control.value = V4L2_MPEG_VIDEO_HEADER_MODE_SEPARATE;
+        control.value = V4L2_MPEG_MSM_VIDC_ENABLE;
     }
 
     DEBUG_PRINT_HIGH("Set inband sps/pps: %d", enable);
@@ -5270,13 +5144,6 @@ bool venc_dev::venc_set_level(OMX_U32 eLevel)
         control.id = V4L2_CID_MPEG_VIDEO_HEVC_TIER;
         control.value = V4L2_MPEG_VIDEO_HEVC_LEVEL_UNKNOWN;
     }
-#ifdef KONA_TODO_UPDATE
-    /* TME not supported anymore */
-    else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_TME) {
-        control.id = V4L2_CID_MPEG_VIDC_VIDEO_TME_LEVEL;
-        control.value = V4L2_MPEG_VIDC_VIDEO_TME_LEVEL_INTEGER;
-    }
-#endif
     else {
         DEBUG_PRINT_ERROR("Wrong CODEC");
         return false;
@@ -5824,16 +5691,12 @@ bool venc_dev::venc_set_target_bitrate(OMX_U32 nTargetBitrate)
             (unsigned int)nTargetBitrate);
     struct v4l2_control control;
     int rc = 0;
+    OMX_U32 ids[2] = {
+        V4L2_CID_MPEG_VIDC_COMPRESSION_QUALITY,
+        V4L2_CID_MPEG_VIDEO_BITRATE
+    };
 
-    if (vqzip_sei_info.enabled) {
-        DEBUG_PRINT_HIGH("For VQZIP 1.0, Bitrate setting is not supported");
-        return true;
-    }
-
-    if (rate_ctrl.rcmode == V4L2_MPEG_VIDEO_BITRATE_MODE_CQ)
-        control.id =  V4L2_CID_MPEG_VIDC_COMPRESSION_QUALITY;
-    else
-        control.id = V4L2_CID_MPEG_VIDEO_BITRATE;
+    control.id =  ids[!!(rate_ctrl.rcmode ^ V4L2_MPEG_VIDEO_BITRATE_MODE_CQ)];
     control.value = nTargetBitrate;
 
     DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
@@ -5845,28 +5708,28 @@ bool venc_dev::venc_set_target_bitrate(OMX_U32 nTargetBitrate)
 
     DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
 
-    if (control.id == V4L2_CID_MPEG_VIDC_COMPRESSION_QUALITY)
-        return true;
+    if (rate_ctrl.rcmode != V4L2_MPEG_VIDEO_BITRATE_MODE_CQ) {
+        m_sVenc_cfg.targetbitrate = control.value;
+        bitrate.target_bitrate = control.value;
 
-    m_sVenc_cfg.targetbitrate = control.value;
-    bitrate.target_bitrate = control.value;
+        // Configure layer-wise bitrate if temporal layers are enabled and layer-wise distribution
+        //  has been specified
+        if (temporal_layers_config.bIsBitrateRatioValid && temporal_layers_config.nPLayers) {
+            OMX_U32 layerBitrates[OMX_VIDEO_MAX_HP_LAYERS] = {0},
+                    numLayers = temporal_layers_config.nPLayers + temporal_layers_config.nBLayers;
 
-    // Configure layer-wise bitrate if temporal layers are enabled and layer-wise distribution
-    //  has been specified
-    if (temporal_layers_config.bIsBitrateRatioValid && temporal_layers_config.nPLayers) {
-        OMX_U32 layerBitrates[OMX_VIDEO_MAX_HP_LAYERS] = {0},
-                numLayers = temporal_layers_config.nPLayers + temporal_layers_config.nBLayers;
-
-        DEBUG_PRINT_LOW("TemporalLayer: configuring layerwise bitrate");
-        for (OMX_U32 i = 0; i < numLayers; ++i) {
-            layerBitrates[i] =
-                    (temporal_layers_config.nTemporalLayerBitrateFraction[i] * bitrate.target_bitrate) / 100;
-            DEBUG_PRINT_LOW("TemporalLayer: layer[%u] ratio=%u%% bitrate=%u(of %ld)",
-                    i, temporal_layers_config.nTemporalLayerBitrateFraction[i],
-                    layerBitrates[i], bitrate.target_bitrate);
-        }
-        if (!venc_set_layer_bitrates((OMX_U32 *)layerBitrates, numLayers)) {
-            return false;
+            DEBUG_PRINT_LOW("TemporalLayer: configuring layerwise bitrate");
+            for (OMX_U32 i = 0; i < numLayers; ++i) {
+                layerBitrates[i] =
+                   (temporal_layers_config.nTemporalLayerBitrateFraction[i] *
+                                                           bitrate.target_bitrate) / 100;
+                DEBUG_PRINT_LOW("TemporalLayer: layer[%u] ratio=%u%% bitrate=%u(of %ld)",
+                        i, temporal_layers_config.nTemporalLayerBitrateFraction[i],
+                        layerBitrates[i], bitrate.target_bitrate);
+            }
+            if (!venc_set_layer_bitrates((OMX_U32 *)layerBitrates, numLayers)) {
+                return false;
+            }
         }
     }
 
@@ -5882,12 +5745,6 @@ bool venc_dev::venc_set_encode_framerate(OMX_U32 encode_framerate)
     parm.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
     parm.parm.output.timeperframe.numerator = frame_rate_cfg.fps_denominator;
     parm.parm.output.timeperframe.denominator = frame_rate_cfg.fps_numerator;
-
-    if (vqzip_sei_info.enabled) {
-        DEBUG_PRINT_HIGH("For VQZIP 1.0, Framerate setting is not supported");
-        return true;
-    }
-
 
     if (frame_rate_cfg.fps_numerator > 0)
         rc = ioctl(m_nDriver_fd, VIDIOC_S_PARM, &parm);
@@ -6403,16 +6260,21 @@ bool venc_dev::venc_set_ratectrl_cfg(OMX_VIDEO_CONTROLRATETYPE eControlRate)
     bool status = true;
     struct v4l2_control control;
     int rc = 0;
-    control.id = V4L2_CID_MPEG_VIDEO_BITRATE_MODE;
 
+    control.id = V4L2_CID_MPEG_VIDEO_FRAME_RC_ENABLE;
+    control.value = !!((OMX_U32)eControlRate ^ (OMX_U32)OMX_Video_ControlRateDisable);
+    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
+    if (rc) {
+        DEBUG_PRINT_ERROR("Failed to set RC_ENABLE");
+        return false;
+    }
+
+    control.id = V4L2_CID_MPEG_VIDEO_BITRATE_MODE;
     int temp = eControlRate;
     switch ((OMX_U32)eControlRate) {
-#ifdef KONA_TODO_UPDATE
-        /* Delete. V4L2_CID_MPEG_VIDEO_FRAME_RC_ENABLE is used to control */
         case OMX_Video_ControlRateDisable:
-            control.value = V4L2_MPEG_VIDEO_BITRATE_MODE_RC_OFF;
+            status = false;
             break;
-#endif
         case OMX_Video_ControlRateVariableSkipFrames:
             (supported_rc_modes & RC_VBR_VFR) ?
                 control.value = V4L2_MPEG_VIDEO_BITRATE_MODE_VBR :
@@ -6467,20 +6329,6 @@ bool venc_dev::venc_set_ratectrl_cfg(OMX_VIDEO_CONTROLRATETYPE eControlRate)
 
         rate_ctrl.rcmode = control.value;
     }
-
-#ifdef _VQZIP_
-    if (eControlRate == OMX_Video_ControlRateVariable && (supported_rc_modes & RC_VBR_CFR)
-            && m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264) {
-        /* Enable VQZIP SEI by default for camcorder RC modes */
-
-        control.id = V4L2_CID_MPEG_VIDC_VIDEO_VQZIP_SEI;
-        control.value = V4L2_CID_MPEG_VIDC_VIDEO_VQZIP_SEI_ENABLE;
-        DEBUG_PRINT_HIGH("Set VQZIP SEI:");
-        if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control) < 0) {
-            DEBUG_PRINT_HIGH("Non-Fatal: Request to set VQZIP failed");
-        }
-    }
-#endif
 
     return status;
 }
@@ -7663,86 +7511,3 @@ bool venc_dev::venc_set_hdr_info(const MasteringDisplay& mastering_disp_info,
     return true;
 }
 
-#ifdef _VQZIP_
-venc_dev::venc_dev_vqzip::venc_dev_vqzip()
-{
-    mLibHandle = NULL;
-    pthread_mutex_init(&lock, NULL);
-}
-
-bool venc_dev::venc_dev_vqzip::init()
-{
-    bool status = true;
-    if (mLibHandle) {
-        DEBUG_PRINT_ERROR("VQZIP init called twice");
-        status = false;
-    }
-    if (status) {
-        mLibHandle = dlopen("libvqzip.so", RTLD_NOW);
-        if (mLibHandle) {
-            mVQZIPInit = (vqzip_init_t)
-                dlsym(mLibHandle,"VQZipInit");
-            mVQZIPDeInit = (vqzip_deinit_t)
-                dlsym(mLibHandle,"VQZipDeInit");
-            mVQZIPComputeStats = (vqzip_compute_stats_t)
-                dlsym(mLibHandle,"VQZipComputeStats");
-            if (!mVQZIPInit || !mVQZIPDeInit || !mVQZIPComputeStats)
-                status = false;
-        } else {
-            DEBUG_PRINT_ERROR("FATAL ERROR: could not dlopen libvqzip.so: %s", dlerror());
-            status = false;
-        }
-        if (status) {
-            mVQZIPHandle = mVQZIPInit();
-        }
-    }
-    if (!status && mLibHandle) {
-        dlclose(mLibHandle);
-        mLibHandle = NULL;
-        mVQZIPHandle = NULL;
-        mVQZIPInit = NULL;
-        mVQZIPDeInit = NULL;
-        mVQZIPComputeStats = NULL;
-    }
-    return status;
-}
-
-int venc_dev::venc_dev_vqzip::fill_stats_data(void* pBuf, void* extraData)
-{
-    VQZipStatus result;
-    VQZipStats *pStats = (VQZipStats *)extraData;
-    pConfig.pSEIPayload = NULL;
-    unsigned long size;
-
-    if (!pBuf || !pStats || !mVQZIPHandle) {
-        DEBUG_PRINT_ERROR("Invalid data passed to stats function");
-    }
-    result = mVQZIPComputeStats(mVQZIPHandle, (void* )pBuf, &pConfig, pStats);
-    return result;
-}
-
-void venc_dev::venc_dev_vqzip::deinit()
-{
-    if (mLibHandle) {
-        pthread_mutex_lock(&lock);
-        dlclose(mLibHandle);
-        mVQZIPDeInit(mVQZIPHandle);
-        mLibHandle = NULL;
-        mVQZIPHandle = NULL;
-        mVQZIPInit = NULL;
-        mVQZIPDeInit = NULL;
-        mVQZIPComputeStats = NULL;
-        pthread_mutex_unlock(&lock);
-    }
-}
-
-venc_dev::venc_dev_vqzip::~venc_dev_vqzip()
-{
-    DEBUG_PRINT_HIGH("Destroy C2D instance");
-    if (mLibHandle) {
-        dlclose(mLibHandle);
-    }
-    mLibHandle = NULL;
-    pthread_mutex_destroy(&lock);
-}
-#endif
