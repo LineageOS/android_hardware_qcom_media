@@ -5130,6 +5130,7 @@ bool venc_dev::venc_set_level(OMX_U32 eLevel)
 {
     int rc;
     struct v4l2_control control;
+    unsigned int tier = V4L2_MPEG_VIDEO_HEVC_TIER_HIGH;
 
     DEBUG_PRINT_LOW("venc_set_level:: eLevel = %u",
                     (unsigned int)eLevel);
@@ -5141,32 +5142,53 @@ bool venc_dev::venc_set_level(OMX_U32 eLevel)
         control.id = V4L2_CID_MPEG_VIDC_VIDEO_VP8_PROFILE_LEVEL;
         control.value = V4L2_MPEG_VIDC_VIDEO_VP8_UNUSED;
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
-        control.id = V4L2_CID_MPEG_VIDEO_HEVC_TIER;
+        control.id = V4L2_CID_MPEG_VIDEO_HEVC_LEVEL;
         control.value = V4L2_MPEG_VIDEO_HEVC_LEVEL_UNKNOWN;
+        profile_level.tier = tier;
     }
     else {
         DEBUG_PRINT_ERROR("Wrong CODEC");
         return false;
     }
 
-    /* If OMX_VIDEO_LEVEL_UNKNOWN then set default values assigned above  */
+    /* Set default level */
+    profile_level.level = control.value;
     if (eLevel != OMX_VIDEO_LEVEL_UNKNOWN) {
-        if (!profile_level_converter::convert_omx_level_to_v4l2(m_sVenc_cfg.codectype, eLevel, &control.value)) {
-            DEBUG_PRINT_LOW("Warning: Cannot find v4l2 level for OMX level : %d Codec : %lu Setting unknown level",
+        if (!profile_level_converter::convert_omx_level_to_v4l2(m_sVenc_cfg.codectype, eLevel, &control.value, &tier)) {
+            DEBUG_PRINT_LOW("Warning: Cannot find v4l2 level for OMX level : %d" \
+                            " Codec : %lu Setting unknown level",
                               eLevel, m_sVenc_cfg.codectype);
+        } else {
+            DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d",
+                                                    control.id, control.value);
+            rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
+            if (rc) {
+                DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d",
+                                                    control.id, control.value);
+                return false;
+            }
+            DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d",
+                                                    control.id, control.value);
+
+            if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
+                struct v4l2_control control_tier = {
+                    .id = V4L2_CID_MPEG_VIDEO_HEVC_TIER,
+                    .value = (signed int)tier
+                };
+                DEBUG_PRINT_ERROR("Calling IOCTL set tier control for HEVC, id %#x, value %d",
+                                  control_tier.id, control_tier.value);
+
+                rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control_tier);
+                if (rc) {
+                    DEBUG_PRINT_ERROR("Failed to set tier control for HEVC, id %#x, value %d",
+                                      control_tier.id, control_tier.value);
+                } else {
+                    profile_level.tier = control_tier.value;
+                }
+            }
+            profile_level.level = control.value;
         }
     }
-
-    DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
-    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-    if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
-        return false;
-    }
-
-    DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
-
-    profile_level.level = control.value;
 
     return true;
 }
@@ -7269,46 +7291,58 @@ bool venc_dev::venc_get_profile_level(OMX_U32 *eProfile,OMX_U32 *eLevel)
             return status;
         }
 
-        /* KONA_TODO_UPDATE: Set V4L2_MPEG_VIDEO_HEVC_TIER HIGH or MAIN */
         switch (profile_level.level) {
             case V4L2_MPEG_VIDEO_HEVC_LEVEL_1:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel1;
+                *eLevel = (profile_level.tier == V4L2_MPEG_VIDEO_HEVC_TIER_MAIN)?
+                                     OMX_VIDEO_HEVCMainTierLevel1:OMX_VIDEO_HEVCHighTierLevel1;
                 break;
             case V4L2_MPEG_VIDEO_HEVC_LEVEL_2:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel2;
+                *eLevel = (profile_level.tier == V4L2_MPEG_VIDEO_HEVC_TIER_MAIN)?
+                                     OMX_VIDEO_HEVCMainTierLevel2:OMX_VIDEO_HEVCHighTierLevel2;
                 break;
             case V4L2_MPEG_VIDEO_HEVC_LEVEL_2_1:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel21;
+                *eLevel = (profile_level.tier == V4L2_MPEG_VIDEO_HEVC_TIER_MAIN)?
+                                     OMX_VIDEO_HEVCMainTierLevel21:OMX_VIDEO_HEVCHighTierLevel21;
                 break;
             case V4L2_MPEG_VIDEO_HEVC_LEVEL_3:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel3;
+                *eLevel = (profile_level.tier == V4L2_MPEG_VIDEO_HEVC_TIER_MAIN)?
+                                     OMX_VIDEO_HEVCMainTierLevel3:OMX_VIDEO_HEVCHighTierLevel3;
                 break;
             case V4L2_MPEG_VIDEO_HEVC_LEVEL_3_1:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel31;
+                *eLevel = (profile_level.tier == V4L2_MPEG_VIDEO_HEVC_TIER_MAIN)?
+                                     OMX_VIDEO_HEVCMainTierLevel31:OMX_VIDEO_HEVCHighTierLevel31;
                 break;
             case V4L2_MPEG_VIDEO_HEVC_LEVEL_4:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel4;
+                *eLevel = (profile_level.tier == V4L2_MPEG_VIDEO_HEVC_TIER_MAIN)?
+                                     OMX_VIDEO_HEVCMainTierLevel4:OMX_VIDEO_HEVCHighTierLevel4;
                 break;
             case V4L2_MPEG_VIDEO_HEVC_LEVEL_4_1:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel41;
+                *eLevel = (profile_level.tier == V4L2_MPEG_VIDEO_HEVC_TIER_MAIN)?
+                                     OMX_VIDEO_HEVCMainTierLevel41:OMX_VIDEO_HEVCHighTierLevel41;
                 break;
             case V4L2_MPEG_VIDEO_HEVC_LEVEL_5:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel5;
+                *eLevel = (profile_level.tier == V4L2_MPEG_VIDEO_HEVC_TIER_MAIN)?
+                                     OMX_VIDEO_HEVCMainTierLevel5:OMX_VIDEO_HEVCHighTierLevel5;
                 break;
             case V4L2_MPEG_VIDEO_HEVC_LEVEL_5_1:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel51;
+                *eLevel = (profile_level.tier == V4L2_MPEG_VIDEO_HEVC_TIER_MAIN)?
+                                     OMX_VIDEO_HEVCMainTierLevel51:OMX_VIDEO_HEVCHighTierLevel51;
                 break;
             case V4L2_MPEG_VIDEO_HEVC_LEVEL_5_2:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel52;
+                *eLevel = (profile_level.tier == V4L2_MPEG_VIDEO_HEVC_TIER_MAIN)?
+                                     OMX_VIDEO_HEVCMainTierLevel52:OMX_VIDEO_HEVCHighTierLevel52;
                 break;
             case V4L2_MPEG_VIDEO_HEVC_LEVEL_6:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel6;
+                *eLevel = (profile_level.tier == V4L2_MPEG_VIDEO_HEVC_TIER_MAIN)?
+                                     OMX_VIDEO_HEVCMainTierLevel6:OMX_VIDEO_HEVCHighTierLevel6;
                 break;
             case V4L2_MPEG_VIDEO_HEVC_LEVEL_6_1:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel61;
+                *eLevel = (profile_level.tier == V4L2_MPEG_VIDEO_HEVC_TIER_MAIN)?
+                                     OMX_VIDEO_HEVCMainTierLevel61:OMX_VIDEO_HEVCHighTierLevel61;
                 break;
             case V4L2_MPEG_VIDEO_HEVC_LEVEL_6_2:
-                *eLevel = OMX_VIDEO_HEVCMainTierLevel62;
+                *eLevel = (profile_level.tier == V4L2_MPEG_VIDEO_HEVC_TIER_MAIN)?
+                                     OMX_VIDEO_HEVCMainTierLevel62:OMX_VIDEO_HEVCHighTierLevel62;
                 break;
             default:
                 *eLevel = OMX_VIDEO_HEVCHighTiermax;

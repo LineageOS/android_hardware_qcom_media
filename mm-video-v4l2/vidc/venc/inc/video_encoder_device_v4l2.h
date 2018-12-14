@@ -92,6 +92,7 @@ struct msm_venc_profile {
 };
 struct msm_venc_profilelevel {
     unsigned long    level;
+    unsigned long    tier;
 };
 
 struct msm_venc_sessionqp {

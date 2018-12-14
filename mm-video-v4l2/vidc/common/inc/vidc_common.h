@@ -104,7 +104,8 @@ class profile_level_converter {
     static bool convert_v4l2_profile_to_omx(int codec, int v4l2_profile, int *omx_profile);
     static bool convert_omx_profile_to_v4l2(int codec, int omx_profile, int *v4l2_profile);
     static bool convert_v4l2_level_to_omx(int codec, int v4l2_level, int *omx_level);
-    static bool convert_omx_level_to_v4l2(int codec, int omx_level, int *v4l2_level);
+    static bool find_tier(int codec, int omx_level, unsigned int *tire);
+    static bool convert_omx_level_to_v4l2(int codec, int omx_level, int *v4l2_level, unsigned int *tire);
 };
 
 void get_gralloc_format_as_string(char * buf, int buf_len, int format);

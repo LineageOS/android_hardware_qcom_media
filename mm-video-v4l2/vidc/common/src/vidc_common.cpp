@@ -108,39 +108,32 @@ pl_map profile_level_converter::level_avc_omx_to_v4l2 ({
 pl_map profile_level_converter::level_avc_v4l2_to_omx ({});
 
 pl_map profile_level_converter::level_hevc_omx_to_v4l2 ({
-#ifdef KONA_TODO_UPDATE
-        /*
-         * Use V4L2_MPEG_VIDEO_HEVC_TIER_MAIN = 0 and V4L2_MPEG_VIDEO_HEVC_TIER_HIGH = 1
-         * for MAIN and HIGH LEVEL respectively.
-         * and for level use V4L2_MPEG_VIDEO_HEVC_LEVEL_*
-         */
-            {OMX_VIDEO_HEVCMainTierLevel1, V4L2_MPEG_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_1},
-            {OMX_VIDEO_HEVCMainTierLevel2, V4L2_MPEG_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_2},
-            {OMX_VIDEO_HEVCMainTierLevel21, V4L2_MPEG_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_2_1},
-            {OMX_VIDEO_HEVCMainTierLevel3, V4L2_MPEG_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_3},
-            {OMX_VIDEO_HEVCMainTierLevel31, V4L2_MPEG_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_3_1},
-            {OMX_VIDEO_HEVCMainTierLevel4, V4L2_MPEG_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_4},
-            {OMX_VIDEO_HEVCMainTierLevel41, V4L2_MPEG_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_4_1},
-            {OMX_VIDEO_HEVCMainTierLevel5, V4L2_MPEG_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_5},
-            {OMX_VIDEO_HEVCMainTierLevel51, V4L2_MPEG_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_5_1},
-            {OMX_VIDEO_HEVCMainTierLevel52, V4L2_MPEG_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_5_2},
-            {OMX_VIDEO_HEVCMainTierLevel6, V4L2_MPEG_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_6},
-            {OMX_VIDEO_HEVCMainTierLevel61, V4L2_MPEG_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_6_1},
-            {OMX_VIDEO_HEVCMainTierLevel62, V4L2_MPEG_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_6_2},
-            {OMX_VIDEO_HEVCHighTierLevel1, V4L2_MPEG_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_1},
-            {OMX_VIDEO_HEVCHighTierLevel2, V4L2_MPEG_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_2},
-            {OMX_VIDEO_HEVCHighTierLevel21, V4L2_MPEG_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_2_1},
-            {OMX_VIDEO_HEVCHighTierLevel3, V4L2_MPEG_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_3},
-            {OMX_VIDEO_HEVCHighTierLevel31, V4L2_MPEG_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_3_1},
-            {OMX_VIDEO_HEVCHighTierLevel4, V4L2_MPEG_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_4},
-            {OMX_VIDEO_HEVCHighTierLevel41, V4L2_MPEG_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_4_1},
-            {OMX_VIDEO_HEVCHighTierLevel5, V4L2_MPEG_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_5},
-            {OMX_VIDEO_HEVCHighTierLevel51, V4L2_MPEG_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_5_1},
-            {OMX_VIDEO_HEVCHighTierLevel52, V4L2_MPEG_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_5_2},
-            {OMX_VIDEO_HEVCHighTierLevel6, V4L2_MPEG_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_6},
-            {OMX_VIDEO_HEVCHighTierLevel61, V4L2_MPEG_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_6_1},
-            {OMX_VIDEO_HEVCHighTierLevel62, V4L2_MPEG_VIDEO_HEVC_LEVEL_HIGH_TIER_LEVEL_6_2},
-#endif
+            {OMX_VIDEO_HEVCMainTierLevel1,  V4L2_MPEG_VIDEO_HEVC_LEVEL_1},
+            {OMX_VIDEO_HEVCMainTierLevel2,  V4L2_MPEG_VIDEO_HEVC_LEVEL_2},
+            {OMX_VIDEO_HEVCMainTierLevel21, V4L2_MPEG_VIDEO_HEVC_LEVEL_2_1},
+            {OMX_VIDEO_HEVCMainTierLevel3,  V4L2_MPEG_VIDEO_HEVC_LEVEL_3},
+            {OMX_VIDEO_HEVCMainTierLevel31, V4L2_MPEG_VIDEO_HEVC_LEVEL_3_1},
+            {OMX_VIDEO_HEVCMainTierLevel4,  V4L2_MPEG_VIDEO_HEVC_LEVEL_4},
+            {OMX_VIDEO_HEVCMainTierLevel41, V4L2_MPEG_VIDEO_HEVC_LEVEL_4_1},
+            {OMX_VIDEO_HEVCMainTierLevel5,  V4L2_MPEG_VIDEO_HEVC_LEVEL_5},
+            {OMX_VIDEO_HEVCMainTierLevel51, V4L2_MPEG_VIDEO_HEVC_LEVEL_5_1},
+            {OMX_VIDEO_HEVCMainTierLevel52, V4L2_MPEG_VIDEO_HEVC_LEVEL_5_2},
+            {OMX_VIDEO_HEVCMainTierLevel6,  V4L2_MPEG_VIDEO_HEVC_LEVEL_6},
+            {OMX_VIDEO_HEVCMainTierLevel61, V4L2_MPEG_VIDEO_HEVC_LEVEL_6_1},
+            {OMX_VIDEO_HEVCMainTierLevel62, V4L2_MPEG_VIDEO_HEVC_LEVEL_6_2},
+            {OMX_VIDEO_HEVCHighTierLevel1,  V4L2_MPEG_VIDEO_HEVC_LEVEL_1},
+            {OMX_VIDEO_HEVCHighTierLevel2,  V4L2_MPEG_VIDEO_HEVC_LEVEL_2},
+            {OMX_VIDEO_HEVCHighTierLevel21, V4L2_MPEG_VIDEO_HEVC_LEVEL_2_1},
+            {OMX_VIDEO_HEVCHighTierLevel3,  V4L2_MPEG_VIDEO_HEVC_LEVEL_3},
+            {OMX_VIDEO_HEVCHighTierLevel31, V4L2_MPEG_VIDEO_HEVC_LEVEL_3_1},
+            {OMX_VIDEO_HEVCHighTierLevel4,  V4L2_MPEG_VIDEO_HEVC_LEVEL_4},
+            {OMX_VIDEO_HEVCHighTierLevel41, V4L2_MPEG_VIDEO_HEVC_LEVEL_4_1},
+            {OMX_VIDEO_HEVCHighTierLevel5,  V4L2_MPEG_VIDEO_HEVC_LEVEL_5},
+            {OMX_VIDEO_HEVCHighTierLevel51, V4L2_MPEG_VIDEO_HEVC_LEVEL_5_1},
+            {OMX_VIDEO_HEVCHighTierLevel52, V4L2_MPEG_VIDEO_HEVC_LEVEL_5_2},
+            {OMX_VIDEO_HEVCHighTierLevel6,  V4L2_MPEG_VIDEO_HEVC_LEVEL_6},
+            {OMX_VIDEO_HEVCHighTierLevel61, V4L2_MPEG_VIDEO_HEVC_LEVEL_6_1},
+            {OMX_VIDEO_HEVCHighTierLevel62, V4L2_MPEG_VIDEO_HEVC_LEVEL_6_2},
         });
 
 pl_map profile_level_converter::level_hevc_v4l2_to_omx ({});
@@ -302,14 +295,41 @@ bool profile_level_converter::convert_v4l2_level_to_omx(int codec, int v4l2_leve
     return find_item(*level_map, v4l2_level, omx_level);
 }
 
-bool profile_level_converter::convert_omx_level_to_v4l2(int codec, int omx_level, int *v4l2_level)
+bool profile_level_converter::find_tier(int codec, int omx_level, unsigned int *tier)
+{
+    /* Default is HIGH tier */
+    *tier = V4L2_MPEG_VIDEO_HEVC_TIER_HIGH;
+
+    if(codec == V4L2_PIX_FMT_HEVC) {
+        unsigned int level_main_mask = OMX_VIDEO_HEVCMainTierLevel1  |
+                                       OMX_VIDEO_HEVCMainTierLevel2  |
+                                       OMX_VIDEO_HEVCMainTierLevel21 |
+                                       OMX_VIDEO_HEVCMainTierLevel3  |
+                                       OMX_VIDEO_HEVCMainTierLevel31 |
+                                       OMX_VIDEO_HEVCMainTierLevel4  |
+                                       OMX_VIDEO_HEVCMainTierLevel41 |
+                                       OMX_VIDEO_HEVCMainTierLevel5  |
+                                       OMX_VIDEO_HEVCMainTierLevel51 |
+                                       OMX_VIDEO_HEVCMainTierLevel52 |
+                                       OMX_VIDEO_HEVCMainTierLevel6  |
+                                       OMX_VIDEO_HEVCMainTierLevel61 |
+                                       OMX_VIDEO_HEVCMainTierLevel62;
+        unsigned int bit_set = level_main_mask & (unsigned int)omx_level;
+        if (bit_set && (bit_set & (bit_set-1)) == 0) {
+          *tier = V4L2_MPEG_VIDEO_HEVC_TIER_MAIN;
+        }
+    }
+    return true;
+}
+
+bool profile_level_converter::convert_omx_level_to_v4l2(int codec, int omx_level, int *v4l2_level, unsigned int *tier)
 {
     pl_map *level_map;
 
     if (!find_map(level_omx_to_v4l2_map, codec, &level_map))
         return false;
 
-    return find_item(*level_map, omx_level, v4l2_level);
+    return find_item(*level_map, omx_level, v4l2_level) && find_tier(codec, omx_level, tier);
 }
 
 void get_gralloc_format_as_string(char * buf, int buf_len, int format) {
