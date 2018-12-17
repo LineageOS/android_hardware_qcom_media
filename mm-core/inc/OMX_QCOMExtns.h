@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2009-2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2009-2017, 2019, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -697,6 +697,8 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     OMX_QTIIndexParamCapabilitiesRotationSupport = 0x7F100004,
 
     OMX_QTIIndexParamNativeRecorder = 0x7F100005,
+
+    OMX_QTIIndexParamVideoDecoderOutputFrameRate = 0x7F100006,
 };
 
 /**
@@ -1788,6 +1790,12 @@ typedef struct QOMX_VIDEO_CUSTOM_BUFFERSIZE {
         OMX_U32 nPortIndex;
         OMX_U32 nBufferSize;
 } QOMX_VIDEO_CUSTOM_BUFFERSIZE;
+
+typedef struct QOMX_VIDEO_OUTPUT_FRAME_RATE {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 fps;
+} QOMX_VIDEO_OUTPUT_FRAME_RATE;
 
 #define OMX_QCOM_INDEX_PARAM_VIDEO_SYNCFRAMEDECODINGMODE "OMX.QCOM.index.param.video.SyncFrameDecodingMode"
 #define OMX_QCOM_INDEX_PARAM_INDEXEXTRADATA "OMX.QCOM.index.param.IndexExtraData"
