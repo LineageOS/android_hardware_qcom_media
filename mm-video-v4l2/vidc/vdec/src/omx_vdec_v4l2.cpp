@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010 - 2018, The Linux Foundation. All rights reserved.
+Copyright (c) 2010 - 2019, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -786,15 +786,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
             (int32_t *)&m_debug.in_buffer_log, 0);
     Platform::Config::getInt32(Platform::vidc_dec_log_out,
             (int32_t *)&m_debug.out_buffer_log, 0);
-
-    Platform::Config::getInt32(Platform::vidc_dec_hfr_fps,
-            (int32_t *)&m_dec_hfr_fps, 0);
-
-    DEBUG_PRINT_HIGH("HFR fps value = %d", m_dec_hfr_fps);
-
-    if (m_dec_hfr_fps) {
-        m_last_rendered_TS = 0;
-    }
 
     Platform::Config::getInt32(Platform::vidc_dec_sec_prefetch_size_internal,
             (int32_t *)&m_dec_secure_prefetch_size_internal, 0);
@@ -5236,6 +5227,19 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             mClientSessionForSufficiency = true;
             mClientSetProfile = pParam->eProfile;
             mClientSetLevel = pParam->eLevel;
+            break;
+        }
+        case OMX_QTIIndexParamVideoDecoderOutputFrameRate:
+        {
+            VALIDATE_OMX_PARAM_DATA(paramData, QOMX_VIDEO_OUTPUT_FRAME_RATE);
+            DEBUG_PRINT_LOW("set_parameter: OMX_QTIIndexParamVideoDecoderOutputFrameRate");
+            QOMX_VIDEO_OUTPUT_FRAME_RATE *pParam = (QOMX_VIDEO_OUTPUT_FRAME_RATE*)paramData;
+            DEBUG_PRINT_LOW("set_parameter: decoder output-frame-rate %d", pParam->fps);
+            m_dec_hfr_fps=pParam->fps;
+            DEBUG_PRINT_HIGH("output-frame-rate value = %d", m_dec_hfr_fps);
+            if (m_dec_hfr_fps) {
+                m_last_rendered_TS = 0;
+            }
             break;
         }
         default: {
