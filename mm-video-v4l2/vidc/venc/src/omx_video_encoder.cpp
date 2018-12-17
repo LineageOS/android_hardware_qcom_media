@@ -603,7 +603,10 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     OMX_INIT_STRUCT(&m_sParamLinearColorFormat, QOMX_ENABLETYPE);
     m_sParamLinearColorFormat.bEnable = OMX_FALSE;
 
-    m_state                   = OMX_StateLoaded;
+    OMX_INIT_STRUCT(&m_sParamNativeRecorder, QOMX_ENABLETYPE);
+    m_sParamNativeRecorder.bEnable = OMX_FALSE;
+
+    m_state = OMX_StateLoaded;
     m_sExtraData = 0;
 
     if (eRet == OMX_ErrorNone) {
@@ -1769,6 +1772,17 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     return OMX_ErrorUnsupportedSetting;
                 }
                 memcpy(&m_blurInfo, paramData, sizeof(OMX_QTI_VIDEO_CONFIG_BLURINFO));
+                break;
+            }
+        case OMX_QTIIndexParamNativeRecorder:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
+                if (!handle->venc_set_param(paramData,
+                            (OMX_INDEXTYPE)OMX_QTIIndexParamNativeRecorder)) {
+                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamNativeRecorder failed");
+                    return OMX_ErrorUnsupportedSetting;
+                }
+                memcpy(&m_sParamNativeRecorder, paramData, sizeof(QOMX_ENABLETYPE));
                 break;
             }
         case OMX_IndexParamVideoSliceFMO:

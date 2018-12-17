@@ -3936,8 +3936,13 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
              if (!eRet && !ioctl(drv_ctx.video_driver_fd, VIDIOC_G_CTRL, &profile_control)) {
                 switch ((enum v4l2_mpeg_video_h264_profile)profile_control.value) {
                     case V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE:
-                    case V4L2_MPEG_VIDEO_H264_PROFILE_CONSTRAINED_BASELINE:
                         pParam->eProfile = OMX_VIDEO_AVCProfileBaseline;
+                        break;
+                    case V4L2_MPEG_VIDEO_H264_PROFILE_CONSTRAINED_BASELINE:
+                        pParam->eProfile = OMX_VIDEO_AVCProfileConstrainedBaseline;
+                        break;
+                    case V4L2_MPEG_VIDEO_H264_PROFILE_CONSTRAINED_HIGH:
+                        pParam->eProfile = OMX_VIDEO_AVCProfileConstrainedHigh;
                         break;
                     case V4L2_MPEG_VIDEO_H264_PROFILE_MAIN:
                         pParam->eProfile = OMX_VIDEO_AVCProfileMain;
@@ -3964,7 +3969,6 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     case V4L2_MPEG_VIDEO_H264_PROFILE_SCALABLE_HIGH_INTRA:
                     case V4L2_MPEG_VIDEO_H264_PROFILE_STEREO_HIGH:
                     case V4L2_MPEG_VIDEO_H264_PROFILE_MULTIVIEW_HIGH:
-                    case V4L2_MPEG_VIDEO_H264_PROFILE_CONSTRAINED_HIGH:
                         eRet = OMX_ErrorUnsupportedIndex;
                         break;
                 }
