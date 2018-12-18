@@ -1668,12 +1668,8 @@ bool venc_dev::venc_open(OMX_U32 codec)
     } else if (codec == QOMX_VIDEO_CodingTME) {
         m_sVenc_cfg.codectype = V4L2_PIX_FMT_TME;
     }
-    session_ipb_qp_values.min_i_qp = minqp;
-    session_ipb_qp_values.max_i_qp = maxqp;
-    session_ipb_qp_values.min_p_qp = minqp;
-    session_ipb_qp_values.max_p_qp = maxqp;
-    session_ipb_qp_values.min_b_qp = minqp;
-    session_ipb_qp_values.max_b_qp = maxqp;
+    session_ipb_qp_values.min_qp_packed = minqp | (minqp << 8) | (minqp << 16);
+    session_ipb_qp_values.max_qp_packed = maxqp | (maxqp << 8) | (maxqp << 16);
 
     int ret;
     ret = subscribe_to_events(m_nDriver_fd);
@@ -3713,10 +3709,8 @@ void venc_dev::venc_config_print()
     DEBUG_PRINT_HIGH("ENC_CONFIG: qpI: %ld, qpP: %ld, qpb: %ld enableqp : %ld",
             session_qp.iframeqp, session_qp.pframeqp, session_qp.bframeqp, session_qp.enableqp);
 
-    DEBUG_PRINT_HIGH("ENC_CONFIG: minIQP: %lu, maxIQP: %lu minPQP : %lu maxPQP : %lu minBQP : %lu maxBQP : %lu",
-            session_ipb_qp_values.min_i_qp, session_ipb_qp_values.max_i_qp,
-            session_ipb_qp_values.min_p_qp, session_ipb_qp_values.max_p_qp,
-            session_ipb_qp_values.min_b_qp, session_ipb_qp_values.max_b_qp);
+    DEBUG_PRINT_HIGH("ENC_CONFIG: minQP: %lu, maxQP: %lu",
+                     session_ipb_qp_values.min_qp_packed, session_ipb_qp_values.max_qp_packed);
 
     DEBUG_PRINT_HIGH("ENC_CONFIG: VOP_Resolution: %ld, Slice-Mode: %ld, Slize_Size: %ld",
             voptimecfg.voptime_resolution, multislice.mslice_mode,
@@ -5019,64 +5013,24 @@ bool venc_dev::venc_set_qp(OMX_U32 i_frame_qp, OMX_U32 p_frame_qp,OMX_U32 b_fram
 bool venc_dev::venc_set_session_qp_range(OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE* qp_range)
 {
     int rc;
-    struct v4l2_ext_control ctrl[7];
-    struct v4l2_ext_controls controls;
+    struct v4l2_control control[2];
 
-#ifdef KONA_TODO_UPDATE
-    /* Used for setting QP range.
-     * For now, we don't have way to change ranges for different frame types.
-     * Can use 8bits for each frame type in future to set this if needed.
-     */
-    ctrl[0].id = V4L2_CID_MPEG_VIDC_VIDEO_LAYER_ID;
-    ctrl[0].value = MSM_VIDC_ALL_LAYER_ID;
+    control[0].id = V4L2_CID_MPEG_VIDEO_HEVC_MIN_QP;
+    control[0].value = qp_range->minIQP | (qp_range->minPQP << 8) | (qp_range->minBQP << 16);
 
-    ctrl[1].id = V4L2_CID_MPEG_VIDC_VIDEO_I_FRAME_QP_MIN;
-    ctrl[1].value = qp_range->minIQP;
+    control[1].id = V4L2_CID_MPEG_VIDEO_HEVC_MAX_QP;
+    control[1].value = qp_range->maxIQP | (qp_range->maxPQP << 8) | (qp_range->maxBQP << 16);
 
-    ctrl[2].id = V4L2_CID_MPEG_VIDC_VIDEO_I_FRAME_QP_MAX;
-    ctrl[2].value = qp_range->maxIQP;
-
-    ctrl[3].id = V4L2_CID_MPEG_VIDC_VIDEO_P_FRAME_QP_MIN;
-    ctrl[3].value = qp_range->minPQP;
-
-    ctrl[4].id = V4L2_CID_MPEG_VIDC_VIDEO_P_FRAME_QP_MAX;
-    ctrl[4].value = qp_range->maxPQP;
-
-    ctrl[5].id = V4L2_CID_MPEG_VIDC_VIDEO_B_FRAME_QP_MIN;
-    ctrl[5].value = qp_range->minBQP;
-
-    ctrl[6].id = V4L2_CID_MPEG_VIDC_VIDEO_B_FRAME_QP_MAX;
-    ctrl[6].value = qp_range->maxBQP;
-
-    controls.count = 7;
-#else
-    ctrl[0].id = V4L2_CID_MPEG_VIDEO_HEVC_MIN_QP;
-    ctrl[0].value = qp_range->minIQP;
-
-    ctrl[1].id = V4L2_CID_MPEG_VIDEO_HEVC_MAX_QP;
-    ctrl[1].value = qp_range->maxIQP;
-    controls.count = 2;
-#endif
-    controls.ctrl_class = V4L2_CTRL_CLASS_MPEG;
-    controls.controls = ctrl;
-
-    if(ioctl(m_nDriver_fd, VIDIOC_S_EXT_CTRLS, &controls)) {
-        DEBUG_PRINT_ERROR("Failed to set QP range");
+    for(int i=0; i<2; i++) {
+        if(ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control[i])) {
+            DEBUG_PRINT_ERROR("Failed to set QP %s range", i==0?"MIN":"MAX");
             return false;
+        }
     }
 
-    session_ipb_qp_values.min_i_qp = qp_range->minIQP;
-    session_ipb_qp_values.max_i_qp = qp_range->maxIQP;
-#ifdef KONA_TODO_UPDATE
-    /* Used for setting QP range.
-     * For now, we don't have way to change ranges for different frame types.
-     * Can use 8bits for each frame type in future to set this if needed.
-     */
-    session_ipb_qp_values.min_p_qp = qp_range->minPQP;
-    session_ipb_qp_values.max_p_qp = qp_range->maxPQP;
-    session_ipb_qp_values.min_b_qp = qp_range->minBQP;
-    session_ipb_qp_values.max_b_qp = qp_range->maxBQP;
-#endif
+    session_ipb_qp_values.min_qp_packed = control[0].value;
+    session_ipb_qp_values.max_qp_packed = control[1].value;
+
     return true;
 }
 

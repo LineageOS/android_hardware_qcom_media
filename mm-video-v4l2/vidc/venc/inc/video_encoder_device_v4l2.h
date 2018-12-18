@@ -103,12 +103,8 @@ struct msm_venc_sessionqp {
 };
 
 struct msm_venc_ipb_qprange {
-    unsigned long    max_i_qp;
-    unsigned long    min_i_qp;
-    unsigned long    max_p_qp;
-    unsigned long    min_p_qp;
-    unsigned long    max_b_qp;
-    unsigned long    min_b_qp;
+    unsigned long    max_qp_packed;
+    unsigned long    min_qp_packed;
 };
 
 struct msm_venc_intraperiod {
