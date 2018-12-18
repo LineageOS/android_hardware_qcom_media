@@ -5971,70 +5971,39 @@ bool venc_dev::venc_calibrate_gop()
     return true;
 }
 
-#ifdef KONA_TODO_UPDATE
-/* Delete - If above upstream controls are not set for all layers then
- * it is cumulative. Or else it is layered bitrate.
- */
-bool venc_dev::venc_set_bitrate_type(OMX_U32 type)
-{
-    struct v4l2_control control;
-    int rc = 0;
-    control.id = V4L2_CID_MPEG_VIDC_VIDEO_VENC_BITRATE_TYPE;
-    control.value = type;
-    DEBUG_PRINT_LOW("Set Bitrate type to %s for %d \n", bitrate_type_string(type), type);
-    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-    if (rc) {
-        DEBUG_PRINT_ERROR("Request to set Bitrate type to %s failed",
-            bitrate_type_string(type));
-        return false;
-    }
-    return true;
-}
-#endif
-
 bool venc_dev::venc_set_layer_bitrates(OMX_U32 *layerBitrate, OMX_U32 numLayers)
 {
     DEBUG_PRINT_LOW("venc_set_layer_bitrates");
-    struct v4l2_ext_control ctrl[2];
-    struct v4l2_ext_controls controls;
+    struct v4l2_control ctrl;
     int rc = 0;
     OMX_U32 i;
-#ifdef KONA_TODO_UPDATE
-    if (!venc_set_bitrate_type(V4L2_MPEG_MSM_VIDC_ENABLE)) {
-        DEBUG_PRINT_ERROR("Failed to set layerwise bitrate type %d", rc);
-        return false;
-    }
-#endif
+    OMX_U32 ids[] = {
+        V4L2_CID_MPEG_VIDEO_HEVC_HIER_CODING_L0_BR,
+        V4L2_CID_MPEG_VIDEO_HEVC_HIER_CODING_L1_BR,
+        V4L2_CID_MPEG_VIDEO_HEVC_HIER_CODING_L2_BR,
+        V4L2_CID_MPEG_VIDEO_HEVC_HIER_CODING_L3_BR,
+        V4L2_CID_MPEG_VIDEO_HEVC_HIER_CODING_L4_BR,
+        V4L2_CID_MPEG_VIDEO_HEVC_HIER_CODING_L5_BR,
+        // V4L2_CID_MPEG_VIDEO_HEVC_HIER_CODING_L6_BR, /* Not supported */
+    };
 
-    for (OMX_U32 i = 0; i < numLayers && i < OMX_VIDEO_ANDROID_MAXTEMPORALLAYERS; ++i) {
+    for (OMX_U32 i = 0; i < std::min(numLayers, (OMX_U32)(sizeof(ids)/sizeof(ids[0]))); ++i) {
         if (!layerBitrate[i]) {
             DEBUG_PRINT_ERROR("Invalid bitrate settings for layer %d", i);
             return false;
         } else {
-#ifdef KONA_TODO_UPDATE
-            ctrl[0].id = V4L2_CID_MPEG_VIDC_VIDEO_LAYER_ID;
-            ctrl[0].value = i;
-            ctrl[1].id = V4L2_CID_MPEG_VIDC_VENC_PARAM_LAYER_BITRATE;
-            ctrl[1].value = layerBitrate[i];
+            ctrl.id = ids[i];
+            ctrl.value = layerBitrate[i];
 
-            controls.count = 2;
-#else
-             /* Do we need to set for L0 - L6? */
-            ctrl[0].id = V4L2_CID_MPEG_VIDEO_HEVC_HIER_CODING_L0_BR;
-            ctrl[0].value = layerBitrate[i];
-
-            controls.count = 1;
-#endif
-            controls.ctrl_class = V4L2_CTRL_CLASS_MPEG;
-            controls.controls = ctrl;
-
-            rc = ioctl(m_nDriver_fd, VIDIOC_S_EXT_CTRLS, &controls);
+            rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &ctrl);
             if (rc) {
-                DEBUG_PRINT_ERROR("Failed to set layerwise bitrate %d", rc);
+                DEBUG_PRINT_ERROR("Failed to set layerwise bitrate id=0x%X value=%d, error %d",
+                                  ctrl.id, ctrl.value, rc);
                 return false;
             }
 
-            DEBUG_PRINT_LOW("Layerwise bitrate configured successfully for layer : %u bitrate : %u ",i, layerBitrate[i]);
+            DEBUG_PRINT_LOW("Layerwise bitrate configured successfully for layer : %u bitrate : %u ",
+                            i, layerBitrate[i]);
         }
     }
     return true;
