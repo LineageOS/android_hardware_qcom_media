@@ -6543,45 +6543,17 @@ bool venc_dev::venc_set_roi_qp_info(OMX_QTI_VIDEO_CONFIG_ROIINFO *roiInfo)
 
 bool venc_dev::venc_set_blur_resolution(OMX_QTI_VIDEO_CONFIG_BLURINFO *blurInfo)
 {
-    struct v4l2_ext_control ctrl[2];
-    struct v4l2_ext_controls controls;
+    struct v4l2_control ctrl;
 
-    int blur_width = 0, blur_height = 0;
+    ctrl.id = V4L2_CID_MPEG_VIDC_VIDEO_BLUR_DIMENSIONS;
+    ctrl.value = blurInfo->nBlurInfo;
 
-    switch (blurInfo->nBlurInfo) {
-        case 0:
-            blur_width = 0;
-            blur_height = 0;
-        case 1:
-            blur_width = 1;
-            blur_height = 1;
-        default:
-            blur_width = blurInfo->nBlurInfo >> 16;
-            blur_height = blurInfo->nBlurInfo & 0xFFFF;
-            DEBUG_PRINT_LOW("Custom blur resolution %ux%u", blur_width, blur_height);
-            break;
-    }
-
-#ifdef KONA_TODO_UPDATE
-    /* Make one control for both dimensions. Sharing 16bit for width and 16bit for height */
-    ctrl[0].id = V4L2_CID_MPEG_VIDC_VIDEO_BLUR_WIDTH;
-    ctrl[0].value = blur_width;
-
-    ctrl[1].id = V4L2_CID_MPEG_VIDC_VIDEO_BLUR_HEIGHT;
-    ctrl[1].value = blur_height;
-
-    controls.count = 2;
-    controls.ctrl_class = V4L2_CTRL_CLASS_MPEG;
-    controls.controls = ctrl;
-
-    if(ioctl(m_nDriver_fd, VIDIOC_S_EXT_CTRLS, &controls)) {
+    if(ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &ctrl)) {
         DEBUG_PRINT_ERROR("Failed to set blur resoltion");
         return false;
     }
-    DEBUG_PRINT_LOW("Blur resolution set = %u x %u", blur_width, blur_height);
-#endif
-    return true;
 
+    return true;
 }
 
 bool venc_dev::venc_h264_transform_8x8(OMX_BOOL enable)
