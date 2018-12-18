@@ -78,6 +78,7 @@ enum {
     kKeyIsByteMode           = 'bytm', //int32_t
     kKeyUseSetBuffers        = 'setb', //bool (int32_t)
     kKeyExtraFlag            = 'extf', //int32_t
+    kKeyIsDRM                = 'idrm', //int32_t (bool)
 };
 
 enum {
