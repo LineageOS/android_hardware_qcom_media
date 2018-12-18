@@ -6123,29 +6123,34 @@ bool venc_dev::venc_set_markltr(OMX_U32 frameIdx)
     return true;
 }
 
-bool venc_dev::venc_set_mirror(OMX_U32 mirror)
+bool venc_dev::venc_set_mirror(OMX_MIRRORTYPE mirror)
 {
-#ifdef KONA_TODO_UPDATE
-    /* replace this with: V4L2_CID_HFLIP & V4L2_CID_VFLIP */
-
     DEBUG_PRINT_LOW("venc_set_mirror");
     int rc = true;
-    struct v4l2_control control;
+    struct v4l2_control control[2];
 
-    control.id = V4L2_CID_MPEG_VIDC_VIDEO_FLIP;
-    control.value = mirror;
+    control[0].id = V4L2_CID_VFLIP;
+    control[0].value = V4L2_MPEG_MSM_VIDC_DISABLE;
+    control[1].id = V4L2_CID_HFLIP;
+    control[1].value = V4L2_MPEG_MSM_VIDC_DISABLE;
 
-    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-    if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set mirror %d", rc);
-        return false;
+    if (mirror == OMX_MirrorVertical || mirror == OMX_MirrorBoth) {
+        control[0].value = V4L2_MPEG_MSM_VIDC_ENABLE;
+    }
+    if (mirror == OMX_MirrorHorizontal || mirror == OMX_MirrorBoth) {
+        control[1].value = V4L2_MPEG_MSM_VIDC_ENABLE;
     }
 
-    DEBUG_PRINT_LOW("Success IOCTL set control for id=%x, val=%d",
-                    control.id, control.value);
-#else
-    (void)mirror;
-#endif
+    for(int i=0; i<2; i++) {
+        rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control[i]);
+        if (rc) {
+            DEBUG_PRINT_ERROR("Failed to set mirror %d", rc);
+            return false;
+        }
+        DEBUG_PRINT_LOW("Success IOCTL set control for id=%x, val=%d",
+                        control[i].id, control[i].value);
+    }
+
     return true;
 }
 
