@@ -253,10 +253,6 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
         strlcpy((char *)m_cRole, "video_encoder.hevc", OMX_MAX_STRINGNAME_SIZE);
         codec_type = OMX_VIDEO_CodingHEVC;
         secure_session = true;
-    } else if (!strncmp((char *)m_nkind, "OMX.qcom.video.encoder.tme",    \
-                OMX_MAX_STRINGNAME_SIZE)) {
-        strlcpy((char *)m_cRole, "video_encoder.tme", OMX_MAX_STRINGNAME_SIZE);
-        codec_type = (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingTME;
     } else {
         DEBUG_PRINT_ERROR("ERROR: Unknown Component");
         eRet = OMX_ErrorInvalidComponentName;
@@ -450,8 +446,6 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
         m_sOutPortDef.format.video.eCompressionFormat =  OMX_VIDEO_CodingHEVC;
     } else if (codec_type == OMX_VIDEO_CodingImageHEIC) {
         m_sOutPortDef.format.video.eCompressionFormat =  OMX_VIDEO_CodingImageHEIC;
-    } else if (codec_type == (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingTME) {
-        m_sOutPortDef.format.video.eCompressionFormat =  (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingTME;
     }
 
     if (dev_get_buf_req(&m_sOutPortDef.nBufferCountMin,
@@ -483,8 +477,6 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
         m_sOutPortFormat.eCompressionFormat =  OMX_VIDEO_CodingHEVC;
     } else if (codec_type == OMX_VIDEO_CodingImageHEIC) {
         m_sOutPortFormat.eCompressionFormat =  OMX_VIDEO_CodingImageHEIC;
-    } else if (codec_type == (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingTME) {
-        m_sOutPortFormat.eCompressionFormat =  (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingTME;
     }
 
     // mandatory Indices for kronos test suite
@@ -537,13 +529,6 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     m_sParamHEVC.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
     m_sParamHEVC.eProfile =  OMX_VIDEO_HEVCProfileMain;
     m_sParamHEVC.eLevel =  OMX_VIDEO_HEVCMainTierLevel1;
-
-    // TME specific init
-    OMX_INIT_STRUCT(&m_sParamTME, QOMX_VIDEO_PARAM_TMETYPE);
-    m_sParamTME.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
-    m_sParamTME.eProfile = QOMX_VIDEO_TMEProfile0;
-    m_sParamTME.eLevel = QOMX_VIDEO_TMELevelInteger;
-    m_sParamTME.ePayloadVersion = tme_payload_version;
 
     // HEIC specific init
     OMX_INIT_STRUCT(&m_sParamAndroidImageGrid, OMX_VIDEO_PARAM_ANDROID_IMAGEGRIDTYPE);
@@ -687,11 +672,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
     } else {
         DEBUG_PRINT_ERROR("ERROR: Set Parameter called in Invalid State");
         return OMX_ErrorIncorrectStateOperation;
-    }
-
-    if (reject_param_for_TME_mode(paramIndex)) {
-        DEBUG_PRINT_ERROR("ERROR: Set Parameter 0x%x rejected in TME mode", (int)paramIndex);
-        return OMX_ErrorNone;
     }
 
     switch ((int)paramIndex) {
@@ -962,21 +942,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 memcpy(&m_sParamHEVC, pParam, sizeof(struct OMX_VIDEO_PARAM_HEVCTYPE));
                 break;
             }
-        case (OMX_INDEXTYPE)OMX_IndexParamVideoTme:
-            {
-                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_VIDEO_PARAM_TMETYPE);
-                QOMX_VIDEO_PARAM_TMETYPE* pParam = (QOMX_VIDEO_PARAM_TMETYPE*)paramData;
-                QOMX_VIDEO_PARAM_TMETYPE tme_param;
-                DEBUG_PRINT_LOW("set_parameter: OMX_IndexParamVideoTME");
-                memcpy(&tme_param, pParam, sizeof( struct QOMX_VIDEO_PARAM_TMETYPE));
-                if (handle->venc_set_param(&tme_param, (OMX_INDEXTYPE)OMX_IndexParamVideoTme) != true) {
-                    DEBUG_PRINT_ERROR("Failed : set_parameter: OMX_IndexParamVideoTme");
-                    return OMX_ErrorUnsupportedSetting;
-                }
-                memcpy(&m_sParamTME, pParam, sizeof(struct QOMX_VIDEO_PARAM_TMETYPE));
-                m_sParamTME.ePayloadVersion = tme_payload_version;
-                break;
-            }
         case OMX_IndexParamVideoAndroidImageGrid:
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_ANDROID_IMAGEGRIDTYPE);
@@ -1093,15 +1058,7 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                         DEBUG_PRINT_ERROR("ERROR: Setparameter: unknown Index %s", comp_role->cRole);
                         eRet = OMX_ErrorUnsupportedSetting;
                     }
-                } else if (!strncmp((char*)m_nkind, "OMX.qcom.video.encoder.tme", OMX_MAX_STRINGNAME_SIZE)) {
-                    if (!strncmp((const char*)comp_role->cRole,"video_encoder.tme",OMX_MAX_STRINGNAME_SIZE)) {
-                        strlcpy((char*)m_cRole,"video_encoder.tme",OMX_MAX_STRINGNAME_SIZE);
-                    } else {
-                        DEBUG_PRINT_ERROR("ERROR: Setparameter: unknown Index %s", comp_role->cRole);
-                        eRet = OMX_ErrorUnsupportedSetting;
-                    }
-                }
-                else {
+                } else {
                     DEBUG_PRINT_ERROR("ERROR: Setparameter: unknown param %s", m_nkind);
                     eRet = OMX_ErrorInvalidComponentName;
                 }
@@ -1830,11 +1787,6 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
     if (m_state == OMX_StateInvalid) {
         DEBUG_PRINT_ERROR("ERROR: config called in Invalid state");
         return OMX_ErrorIncorrectStateOperation;
-    }
-
-    if (reject_config_for_TME_mode(configIndex)) {
-        DEBUG_PRINT_ERROR("ERROR: config 0x%x rejected in TME mode", configIndex);
-        return OMX_ErrorNone;
     }
 
     // params will be validated prior to venc_init

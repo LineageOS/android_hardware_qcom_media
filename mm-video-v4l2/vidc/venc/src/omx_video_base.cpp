@@ -1467,61 +1467,6 @@ bool omx_video::post_event(unsigned long p1,
     return bRet;
 }
 
-bool omx_video::reject_param_for_TME_mode(int index) {
-    int allowed_params[] = {
-        OMX_IndexParamPortDefinition,
-        OMX_IndexParamVideoPortFormat,
-        OMX_IndexParamVideoInit,
-        OMX_IndexParamAudioInit,
-        OMX_IndexParamImageInit,
-        OMX_IndexParamOtherInit,
-        OMX_IndexParamStandardComponentRole,
-        OMX_IndexParamPriorityMgmt,
-        OMX_IndexParamCompBufferSupplier,
-        OMX_GoogleAndroidIndexAllocateNativeHandle,
-        OMX_QcomIndexPortDefn,
-        OMX_QcomIndexParamVideoMetaBufferMode,
-        OMX_QTIIndexParamLowLatencyMode,
-        OMX_IndexParamVideoTme,
-        OMX_IndexParamVideoProfileLevelQuerySupported,
-        OMX_IndexParamConsumerUsageBits
-    };
-
-    if (m_sOutPortFormat.eCompressionFormat != (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingTME) {
-        return false;
-    }
-
-    for (unsigned i = 0; i < (sizeof(allowed_params) / sizeof(int)); i++) {
-        if (index == allowed_params[i]) {
-            return false;
-        }
-    }
-    return true;
-}
-
-bool omx_video::reject_config_for_TME_mode(int index) {
-    int allowed_configs[] = {
-        OMX_IndexConfigVideoFramerate,
-        OMX_IndexConfigPriority,
-        OMX_IndexConfigOperatingRate,
-        OMX_IndexConfigTimePosition,
-        OMX_QcomIndexConfigPerfLevel,
-        OMX_QTIIndexConfigDescribeColorAspects,
-        OMX_IndexConfigAndroidVendorExtension
-    };
-
-    if (m_sOutPortFormat.eCompressionFormat != (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingTME) {
-        return false;
-    }
-
-    for (unsigned i = 0; i < (sizeof(allowed_configs) / sizeof(int)); i++) {
-        if (index == allowed_configs[i]) {
-            return false;
-        }
-    }
-    return true;
-}
-
 /* ======================================================================
    FUNCTION
    omx_venc::GetParameter
@@ -1551,11 +1496,6 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
     if (paramData == NULL) {
         DEBUG_PRINT_ERROR("ERROR: Get Param in Invalid paramData");
         return OMX_ErrorBadParameter;
-    }
-
-    if (reject_param_for_TME_mode(paramIndex)) {
-        DEBUG_PRINT_ERROR("ERROR: Set Parameter 0x%x rejected in TME mode", (int)paramIndex);
-        return OMX_ErrorNone;
     }
 
     switch ((int)paramIndex) {
@@ -1728,14 +1668,6 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 OMX_VIDEO_PARAM_HEVCTYPE* pParam = (OMX_VIDEO_PARAM_HEVCTYPE*)paramData;
                 DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoHevc");
                 memcpy(pParam, &m_sParamHEVC, sizeof(m_sParamHEVC));
-                break;
-            }
-        case (OMX_INDEXTYPE)OMX_IndexParamVideoTme:
-            {
-                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_VIDEO_PARAM_TMETYPE);
-                QOMX_VIDEO_PARAM_TMETYPE* pParam = (QOMX_VIDEO_PARAM_TMETYPE*)paramData;
-                DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoTme");
-                memcpy(pParam, &m_sParamTME, sizeof(m_sParamTME));
                 break;
             }
         case OMX_IndexParamVideoAndroidImageGrid:
@@ -2213,11 +2145,6 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
         return OMX_ErrorIncorrectStateOperation;
     }
 
-    if (reject_config_for_TME_mode(configIndex)) {
-        DEBUG_PRINT_ERROR("ERROR: config 0x%x rejected in TME mode", configIndex);
-        return OMX_ErrorNone;
-    }
-
     //@todo need to validate params
     switch ((int)configIndex) {
         case OMX_IndexConfigVideoBitrate:
@@ -2520,11 +2447,6 @@ OMX_ERRORTYPE  omx_video::get_extension_index(OMX_IN OMX_HANDLETYPE      hComp,
 
     if (extn_equals(paramName, OMX_QTI_INDEX_PARAM_VIDEO_CLIENT_EXTRADATA)) {
         *indexType = (OMX_INDEXTYPE)OMX_QTIIndexParamVideoClientExtradata;
-        return OMX_ErrorNone;
-    }
-
-    if (extn_equals(paramName, OMX_QTI_INDEX_PARAM_TME)) {
-        *indexType = (OMX_INDEXTYPE)OMX_IndexParamVideoTme;
         return OMX_ErrorNone;
     }
 
@@ -4471,16 +4393,7 @@ OMX_ERRORTYPE  omx_video::component_role_enum(OMX_IN OMX_HANDLETYPE hComp,
             DEBUG_PRINT_ERROR("ERROR: No more roles");
             eRet = OMX_ErrorNoMore;
         }
-    } else if (!strncmp((char*)m_nkind, "OMX.qcom.video.encoder.tme", OMX_MAX_STRINGNAME_SIZE)) {
-        if ((0 == index) && role) {
-            strlcpy((char *)role, "video_encoder.tme", OMX_MAX_STRINGNAME_SIZE);
-            DEBUG_PRINT_LOW("component_role_enum: role %s", role);
-        } else {
-            DEBUG_PRINT_ERROR("ERROR: No more roles");
-            eRet = OMX_ErrorNoMore;
-        }
-    }
-    else {
+    } else {
         DEBUG_PRINT_ERROR("ERROR: Querying Role on Unknown Component");
         eRet = OMX_ErrorInvalidComponentName;
     }

@@ -1360,10 +1360,8 @@ int venc_dev::venc_output_log_buffers(const char *buffer_addr, int buffer_len, u
         } else if(m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8) {
            size = snprintf(m_debug.outfile_name, PROPERTY_VALUE_MAX, "%s/output_enc_%lu_%lu_%p.ivf",
                            m_debug.log_loc, m_sVenc_cfg.input_width, m_sVenc_cfg.input_height, this);
-        } else if(m_sVenc_cfg.codectype == V4L2_PIX_FMT_TME) {
-           size = snprintf(m_debug.outfile_name, PROPERTY_VALUE_MAX, "%s/output_enc_%lu_%lu_%p.tme",
-                           m_debug.log_loc, m_sVenc_cfg.input_width, m_sVenc_cfg.input_height, this);
         }
+
         if ((size > PROPERTY_VALUE_MAX) && (size < 0)) {
              DEBUG_PRINT_ERROR("Failed to open output file: %s for logging size:%d",
                                 m_debug.outfile_name, size);
@@ -1665,9 +1663,8 @@ bool venc_dev::venc_open(OMX_U32 codec)
         else
             codec_profile.profile = V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN;
         profile_level.level = V4L2_MPEG_VIDEO_HEVC_LEVEL_1;
-    } else if (codec == QOMX_VIDEO_CodingTME) {
-        m_sVenc_cfg.codectype = V4L2_PIX_FMT_TME;
     }
+
     session_ipb_qp_values.min_qp_packed = minqp | (minqp << 8) | (minqp << 16);
     session_ipb_qp_values.max_qp_packed = maxqp | (maxqp << 8) | (maxqp << 16);
 
@@ -1807,20 +1804,7 @@ bool venc_dev::venc_open(OMX_U32 codec)
 
     input_extradata_info.port_index = OUTPUT_PORT;
     output_extradata_info.port_index = CAPTURE_PORT;
-#ifdef KONA_TODO_UPDATE
-    /* Delete TME related codes */
-    if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_TME) {
-        control.id = V4L2_CID_MPEG_VIDC_VIDEO_TME_PAYLOAD_VERSION;
-        ret = ioctl(m_nDriver_fd, VIDIOC_G_CTRL,&control);
 
-        if (ret) {
-            DEBUG_PRINT_ERROR("Failed to read TME version");
-            return false;
-        }
-        venc_handle->tme_payload_version = control.value;
-        DEBUG_PRINT_HIGH("TME version is 0x%x", control.value);
-    }
-#endif
     return true;
 }
 
@@ -2294,10 +2278,8 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                         }
                         m_sOutput_buff_property.datasize = fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
 
-                        if (m_sVenc_cfg.codectype != V4L2_PIX_FMT_TME) {
-                            if (!venc_set_target_bitrate(portDefn->format.video.nBitrate)) {
-                                return false;
-                            }
+                        if (!venc_set_target_bitrate(portDefn->format.video.nBitrate)) {
+                            return false;
                         }
 
                         bufreq.memory = V4L2_MEMORY_USERPTR;
@@ -2459,23 +2441,6 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 OMX_U32 nPFrames = pParam->nKeyFrameInterval > 0 ? pParam->nKeyFrameInterval - 1 : fps - 1;
                 if (!venc_set_intra_period (nPFrames, 0 /* nBFrames */)) {
                     DEBUG_PRINT_ERROR("ERROR: Request for setting intra period failed");
-                    return false;
-                }
-                break;
-            }
-            case (OMX_INDEXTYPE)OMX_IndexParamVideoTme:
-            {
-                DEBUG_PRINT_LOW("venc_set_param:OMX_IndexParamVideoTme");
-                QOMX_VIDEO_PARAM_TMETYPE * pParam = (QOMX_VIDEO_PARAM_TMETYPE*)paramData;
-
-                if (!venc_set_profile(pParam->eProfile)) {
-                    DEBUG_PRINT_ERROR("ERROR: Unsuccessful in updating Profile %d",
-                                        pParam->eProfile);
-                    return false;
-                }
-                if (!venc_set_level(pParam->eLevel)) {
-                    DEBUG_PRINT_ERROR("ERROR: Unsuccessful in updating level %d",
-                                      pParam->eLevel);
                     return false;
                 }
                 break;
@@ -5049,14 +5014,7 @@ bool venc_dev::venc_set_profile(OMX_U32 eProfile)
         return true;
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
         control.id = V4L2_CID_MPEG_VIDEO_HEVC_PROFILE;
-    }
-#ifdef KONA_TODO_UPDATE
-    /* TME not supported anymore */
-    else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_TME) {
-        control.id = V4L2_CID_MPEG_VIDC_VIDEO_TME_PROFILE;
-    }
-#endif
-    else {
+    } else {
         DEBUG_PRINT_ERROR("Wrong CODEC");
         return false;
     }
@@ -5753,9 +5711,6 @@ unsigned long venc_dev::venc_get_codectype(OMX_VIDEO_CODINGTYPE eCompressionForm
     case OMX_VIDEO_CodingHEVC:
     case OMX_VIDEO_CodingImageHEIC:
         codectype = V4L2_PIX_FMT_HEVC;
-        break;
-    case QOMX_VIDEO_CodingTME:
-        codectype = V4L2_PIX_FMT_TME;
         break;
     default:
         DEBUG_PRINT_ERROR("Unsupported eCompressionFormat %#x", eCompressionFormat);
