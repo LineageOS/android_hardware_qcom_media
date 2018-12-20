@@ -7323,80 +7323,48 @@ bool venc_dev::BatchInfo::isPending(int bufferId) {
 bool venc_dev::venc_set_hdr_info(const MasteringDisplay& mastering_disp_info,
                             const ContentLightLevel& content_light_level_info)
 {
-#ifdef KONA_TODO_UPDATE
-    struct v4l2_ext_control ctrl[13];
-    struct v4l2_ext_controls controls;
-    const unsigned int RGB_PRIMARY_TABLE[] = {
-        V4L2_CID_MPEG_VIDC_VENC_RGB_PRIMARY_00,
-        V4L2_CID_MPEG_VIDC_VENC_RGB_PRIMARY_01,
-        V4L2_CID_MPEG_VIDC_VENC_RGB_PRIMARY_10,
-        V4L2_CID_MPEG_VIDC_VENC_RGB_PRIMARY_11,
-        V4L2_CID_MPEG_VIDC_VENC_RGB_PRIMARY_20,
-        V4L2_CID_MPEG_VIDC_VENC_RGB_PRIMARY_21,
+    struct v4l2_control ctrl = {0, 0};
+    const unsigned int hdr_info[] = {
+        MSM_VIDC_RGB_PRIMARY_00,
+        MSM_VIDC_RGB_PRIMARY_01,
+        MSM_VIDC_RGB_PRIMARY_10,
+        MSM_VIDC_RGB_PRIMARY_11,
+        MSM_VIDC_RGB_PRIMARY_20,
+        MSM_VIDC_RGB_PRIMARY_21,
+        MSM_VIDC_WHITEPOINT_X,
+        MSM_VIDC_WHITEPOINT_Y,
+        MSM_VIDC_MAX_DISP_LUM,
+        MSM_VIDC_MIN_DISP_LUM,
+        MSM_VIDC_RGB_MAX_CLL,
+        MSM_VIDC_RGB_MAX_FLL
     };
 
-    memset(&controls, 0, sizeof(controls));
-    memset(ctrl, 0, sizeof(ctrl));
+    unsigned int values[] = {
+        mastering_disp_info.primaries.rgbPrimaries[0][0],
+        mastering_disp_info.primaries.rgbPrimaries[0][1],
+        mastering_disp_info.primaries.rgbPrimaries[1][0],
+        mastering_disp_info.primaries.rgbPrimaries[1][1],
+        mastering_disp_info.primaries.rgbPrimaries[2][0],
+        mastering_disp_info.primaries.rgbPrimaries[2][1],
+        mastering_disp_info.primaries.whitePoint[0],
+        mastering_disp_info.primaries.whitePoint[1],
+        mastering_disp_info.maxDisplayLuminance,
+        mastering_disp_info.minDisplayLuminance,
+        content_light_level_info.maxContentLightLevel,
+        content_light_level_info.minPicAverageLightLevel
+    };
 
-    controls.count = 11;
-    controls.ctrl_class = V4L2_CTRL_CLASS_MPEG;
-    controls.controls = ctrl;
+    ctrl.id = V4L2_CID_MPEG_VIDC_VENC_HDR_INFO;
 
-    ctrl[0].id = V4L2_CID_MPEG_VIDC_VENC_HDR_INFO;
-    ctrl[0].value = V4L2_MPEG_MSM_VIDC_ENABLE;
-
-    /* ctrl[1] - ctrl[6] */
-    for (int i = 0; i < 3; i++) {
-        int first_idx = 2*i+1;
-        int second_idx = 2*i+2;
-        ctrl[first_idx].id = RGB_PRIMARY_TABLE[first_idx-1];
-        ctrl[first_idx].value = mastering_disp_info.primaries.rgbPrimaries[i][0];
-
-        ctrl[second_idx].id = RGB_PRIMARY_TABLE[second_idx-1];
-        ctrl[second_idx].value = mastering_disp_info.primaries.rgbPrimaries[i][1];
+    for (unsigned int i = 0; i < (sizeof(hdr_info)/sizeof(hdr_info[0])); i++) {
+        ctrl.value = (unsigned int) ((values[i] & 0xFFFFFFF ) | (hdr_info[i] << 28));
+        if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &ctrl)) {
+            DEBUG_PRINT_ERROR("VIDIOC_S_CTRL failed for HDR Info : (%u) value %#X : %#X",
+                              i, hdr_info[i], values[i]);
+            return false;
+        }
     }
 
-    ctrl[7].id = V4L2_CID_MPEG_VIDC_VENC_WHITEPOINT_X;
-    ctrl[7].value = mastering_disp_info.primaries.whitePoint[0];
-
-    ctrl[8].id = V4L2_CID_MPEG_VIDC_VENC_WHITEPOINT_Y;
-    ctrl[8].value = mastering_disp_info.primaries.whitePoint[1];
-
-    ctrl[9].id = V4L2_CID_MPEG_VIDC_VENC_MAX_DISP_LUM;
-    ctrl[9].value = mastering_disp_info.maxDisplayLuminance;
-
-    ctrl[10].id = V4L2_CID_MPEG_VIDC_VENC_MIN_DISP_LUM;
-    ctrl[10].value = mastering_disp_info.minDisplayLuminance;
-
-    if (ioctl(m_nDriver_fd, VIDIOC_S_EXT_CTRLS, &controls)) {
-        DEBUG_PRINT_ERROR("VIDIOC_S_EXT_CTRLS failed for HDR Info : Disp SEI");
-        return false;
-    }
-
-    memset(&controls, 0, sizeof(controls));
-    memset(ctrl, 0, sizeof(ctrl));
-
-    controls.count = 3;
-    controls.ctrl_class = V4L2_CTRL_CLASS_MPEG;
-    controls.controls = ctrl;
-
-    ctrl[0].id = V4L2_CID_MPEG_VIDC_VENC_HDR_INFO;
-    ctrl[0].value = V4L2_MPEG_MSM_VIDC_ENABLE;
-
-    ctrl[1].id = V4L2_CID_MPEG_VIDC_VENC_MAX_CLL;
-    ctrl[1].value = content_light_level_info.maxContentLightLevel;
-
-    ctrl[2].id = V4L2_CID_MPEG_VIDC_VENC_MAX_FLL;
-    ctrl[2].value = content_light_level_info.minPicAverageLightLevel;
-
-    if (ioctl(m_nDriver_fd, VIDIOC_S_EXT_CTRLS, &controls)) {
-        DEBUG_PRINT_ERROR("VIDIOC_S_EXT_CTRLS failed for HDR Info : CLL SEI");
-        return false;
-    }
-#else
-    (void) mastering_disp_info;
-    (void) content_light_level_info;
-#endif
     return true;
 }
 
