@@ -1465,34 +1465,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter
             break;
         }
 
-        case OMX_QcomIndexEnableSliceDeliveryMode:
-        {
-            QOMX_EXTNINDEX_PARAMTYPE* pParam =
-                (QOMX_EXTNINDEX_PARAMTYPE*)paramData;
-            if (pParam->nPortIndex == PORT_INDEX_OUT)
-            {
-                //TBD: add setprop to swvenc once the support is added
-                #if 0
-                if (!handle->venc_set_param(paramData,
-                            (OMX_INDEXTYPE)OMX_QcomIndexEnableSliceDeliveryMode)) {
-                    DEBUG_PRINT_ERROR("ERROR: Request for setting slice delivery mode failed");
-                    RETURN( OMX_ErrorUnsupportedSetting;
-                }
-                #endif
-                {
-                    DEBUG_PRINT_ERROR("ERROR: Request for setting slice delivery mode failed");
-                    RETURN(OMX_ErrorUnsupportedSetting);
-                }
-            }
-            else
-            {
-                DEBUG_PRINT_ERROR("ERROR: OMX_QcomIndexEnableSliceDeliveryMode "
-                        "called on wrong port(%u)", pParam->nPortIndex);
-                RETURN(OMX_ErrorBadPortIndex);
-            }
-            break;
-        }
-
         case OMX_QcomIndexEnableH263PlusPType:
         {
             QOMX_EXTNINDEX_PARAMTYPE* pParam =

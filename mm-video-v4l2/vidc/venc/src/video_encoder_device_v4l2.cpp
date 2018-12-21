@@ -144,7 +144,6 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     output_extradata_info.ion.data_fd = -1;
     memset(&idrperiod, 0, sizeof(idrperiod));
     memset(&multislice, 0, sizeof(multislice));
-    memset (&slice_mode, 0 , sizeof(slice_mode));
     memset(&m_sVenc_cfg, 0, sizeof(m_sVenc_cfg));
     memset(&rate_ctrl, 0, sizeof(rate_ctrl));
     memset(&bitrate, 0, sizeof(bitrate));
@@ -2583,27 +2582,6 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
 
                 break;
             }
-#ifdef KONA_TODO_UPDATE
-        /* Delete Slice delivery mode - Not POR'ed */
-        case OMX_QcomIndexEnableSliceDeliveryMode:
-            {
-                QOMX_EXTNINDEX_PARAMTYPE* pParam =
-                    (QOMX_EXTNINDEX_PARAMTYPE*)paramData;
-
-                if (pParam->nPortIndex == PORT_INDEX_OUT) {
-                    if (venc_set_slice_delivery_mode(pParam->bEnable) == false) {
-                        DEBUG_PRINT_ERROR("Setting slice delivery mode failed");
-                        return false;
-                    }
-                } else {
-                    DEBUG_PRINT_ERROR("OMX_QcomIndexEnableSliceDeliveryMode "
-                            "called on wrong port(%u)", (unsigned int)pParam->nPortIndex);
-                    return false;
-                }
-
-                break;
-            }
-#endif
         case OMX_ExtraDataFrameDimension:
             {
                 DEBUG_PRINT_LOW("venc_set_param: OMX_ExtraDataFrameDimension");
@@ -3566,15 +3544,6 @@ unsigned venc_dev::venc_start(void)
     /* set buffercount before start */
     venc_reconfig_reqbufs();
     resume_in_stopped = 0;
-
-    /* Check if slice_delivery mode is enabled & max slices is sufficient for encoding complete frame */
-    if (slice_mode.enable && multislice.mslice_size &&
-            (m_sVenc_cfg.dvs_width *  m_sVenc_cfg.dvs_height)/(256 * multislice.mslice_size) >= MAX_SUPPORTED_SLICES_PER_FRAME) {
-        DEBUG_PRINT_ERROR("slice_mode: %lu, max slices (%lu) should be less than (%d)", slice_mode.enable,
-                (m_sVenc_cfg.dvs_width *  m_sVenc_cfg.dvs_height)/(256 * multislice.mslice_size),
-                MAX_SUPPORTED_SLICES_PER_FRAME);
-        return 1;
-    }
 
     if (m_codec == OMX_VIDEO_CodingImageHEIC && mIsGridset) {
         struct v4l2_format fmt;
@@ -4803,37 +4772,6 @@ bool venc_dev::venc_set_extradata(OMX_U32 extra_data, OMX_BOOL enable)
 
     return true;
 }
-
-#ifdef KONA_TODO_UPDATE
-/* Delete Slice delivery mode - Not POR'ed */
-bool venc_dev::venc_set_slice_delivery_mode(OMX_U32 enable)
-{
-    struct v4l2_control control;
-
-    if (enable) {
-        control.id = V4L2_CID_MPEG_VIDEO_MULTI_SLICE_DELIVERY_MODE;
-        control.value = 1;
-        DEBUG_PRINT_LOW("Set slice_delivery_mode: %d", control.value);
-
-        if (multislice.mslice_mode == V4L2_MPEG_VIDEO_MULTI_SICE_MODE_MAX_MB && m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264) {
-            if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
-                DEBUG_PRINT_ERROR("Request for setting slice delivery mode failed");
-                return false;
-            } else {
-                DEBUG_PRINT_LOW("Successfully set Slice delivery mode id: %d, value=%d", control.id, control.value);
-                slice_mode.enable = 1;
-            }
-        } else {
-            DEBUG_PRINT_ERROR("Failed to set slice delivery mode, slice_mode [%lu] "
-                    "is not MB BASED or [%lu] is not H264 codec ", multislice.mslice_mode,
-                    m_sVenc_cfg.codectype);
-        }
-    } else {
-        DEBUG_PRINT_ERROR("Slice_DELIVERY_MODE not enabled");
-    }
-    return true;
-}
-#endif
 
 bool venc_dev::venc_set_colorspace(OMX_U32 primaries, OMX_U32 range,
     OMX_U32 transfer_chars, OMX_U32 matrix_coeffs)

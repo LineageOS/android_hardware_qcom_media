@@ -1460,24 +1460,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 }
                 break;
             }
-        case OMX_QcomIndexEnableSliceDeliveryMode:
-            {
-                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_EXTNINDEX_PARAMTYPE);
-                QOMX_EXTNINDEX_PARAMTYPE* pParam =
-                    (QOMX_EXTNINDEX_PARAMTYPE*)paramData;
-                if (pParam->nPortIndex == PORT_INDEX_OUT) {
-                    if (!handle->venc_set_param(paramData,
-                                (OMX_INDEXTYPE)OMX_QcomIndexEnableSliceDeliveryMode)) {
-                        DEBUG_PRINT_ERROR("ERROR: Request for setting slice delivery mode failed");
-                        return OMX_ErrorUnsupportedSetting;
-                    }
-                } else {
-                    DEBUG_PRINT_ERROR("ERROR: OMX_QcomIndexEnableSliceDeliveryMode "
-                            "called on wrong port(%u)", (unsigned int)pParam->nPortIndex);
-                    return OMX_ErrorBadPortIndex;
-                }
-                break;
-            }
         case OMX_QcomIndexParamSequenceHeaderWithIDR:
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, PrependSPSPPSToIDRFramesParams);

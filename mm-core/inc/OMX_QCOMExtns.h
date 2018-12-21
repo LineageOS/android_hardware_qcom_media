@@ -445,8 +445,6 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     /*"OMX.QCOM.index.param.VideoMaxAllowedBitrateCheck"*/
     OMX_QcomIndexParamVideoMaxAllowedBitrateCheck = 0x7F00001E,
 
-    OMX_QcomIndexEnableSliceDeliveryMode = 0x7F00001F,
-
     /* "OMX.QCOM.index.param.video.ExtnUserExtraData" */
     OMX_QcomIndexEnableExtnUserData = 0x7F000020,
 
@@ -1766,7 +1764,6 @@ typedef struct QOMX_VIDEO_CUSTOM_BUFFERSIZE {
 
 #define OMX_QCOM_INDEX_PARAM_VIDEO_SYNCFRAMEDECODINGMODE "OMX.QCOM.index.param.video.SyncFrameDecodingMode"
 #define OMX_QCOM_INDEX_PARAM_INDEXEXTRADATA "OMX.QCOM.index.param.IndexExtraData"
-#define OMX_QCOM_INDEX_PARAM_VIDEO_SLICEDELIVERYMODE "OMX.QCOM.index.param.SliceDeliveryMode"
 #define OMX_QCOM_INDEX_PARAM_VIDEO_FRAMEPACKING_EXTRADATA "OMX.QCOM.index.param.video.FramePackingExtradata"
 #define OMX_QCOM_INDEX_PARAM_VIDEO_QP_EXTRADATA "OMX.QCOM.index.param.video.QPExtradata"
 #define OMX_QCOM_INDEX_PARAM_VIDEO_INPUTBITSINFO_EXTRADATA "OMX.QCOM.index.param.video.InputBitsInfoExtradata"

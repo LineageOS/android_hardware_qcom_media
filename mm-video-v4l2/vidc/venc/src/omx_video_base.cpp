@@ -2351,10 +2351,7 @@ OMX_ERRORTYPE  omx_video::get_extension_index(OMX_IN OMX_HANDLETYPE      hComp,
         DEBUG_PRINT_ERROR("ERROR: Get Extension Index in Invalid State");
         return OMX_ErrorInvalidState;
     }
-    if (extn_equals(paramName, "OMX.QCOM.index.param.SliceDeliveryMode")) {
-        *indexType = (OMX_INDEXTYPE)OMX_QcomIndexEnableSliceDeliveryMode;
-        return OMX_ErrorNone;
-    }
+
 #ifdef _ANDROID_ICS_
     if (extn_equals(paramName, "OMX.google.android.index.storeMetaDataInBuffers")) {
         *indexType = (OMX_INDEXTYPE)OMX_QcomIndexParamVideoMetaBufferMode;

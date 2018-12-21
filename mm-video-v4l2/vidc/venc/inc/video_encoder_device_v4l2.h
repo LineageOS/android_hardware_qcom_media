@@ -193,10 +193,6 @@ struct msm_venc_idrperiod {
     unsigned long idrperiod;
 };
 
-struct msm_venc_slice_delivery {
-    unsigned long enable;
-};
-
 struct msm_venc_ltrinfo {
     unsigned int enabled;
     unsigned int count;
@@ -416,7 +412,6 @@ class venc_dev
         struct msm_venc_voptimingcfg        voptimecfg;
         struct msm_venc_video_capability    capability;
         struct msm_venc_idrperiod           idrperiod;
-        struct msm_venc_slice_delivery      slice_mode;
         struct msm_venc_vui_timing_info     vui_timing_info;
         struct msm_venc_peak_bitrate        peak_bitrate;
         struct msm_venc_ltrinfo             ltrinfo;
@@ -451,7 +446,6 @@ class venc_dev
         bool venc_set_error_resilience(OMX_VIDEO_PARAM_ERRORCORRECTIONTYPE* error_resilience);
         bool venc_set_voptiming_cfg(OMX_U32 nTimeIncRes);
         void venc_config_print();
-        bool venc_set_slice_delivery_mode(OMX_U32 enable);
         bool venc_set_extradata(OMX_U32 extra_data, OMX_BOOL enable);
         bool venc_set_idr_period(OMX_U32 nIDRPeriod);
         bool venc_reconfigure_intra_period();
