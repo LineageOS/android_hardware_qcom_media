@@ -621,9 +621,6 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     /* Dither control for 10bit */
     OMX_QTIIndexParamDitherControl = 0x7F000069,
 
-    /* Suggest how big Iframe sizes should be */
-    OMX_QTIIndexParamIframeSizeType = 0x7F000070,
-
     /* use av-timer ticks as timestamp (used by VT-client) */
     OMX_QTIIndexParamEnableAVTimerTimestamps = 0x7F000071,
 

@@ -2781,25 +2781,6 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 DEBUG_PRINT_LOW("venc_set_param: OMX_QTIIndexParamDisablePQ: %d", pParam->bDisable);
                 break;
             }
-        case OMX_QTIIndexParamIframeSizeType:
-            {
-                QOMX_VIDEO_IFRAMESIZE* pParam =
-                    (QOMX_VIDEO_IFRAMESIZE *)paramData;
-                isCBR = rate_ctrl.rcmode == V4L2_MPEG_VIDEO_BITRATE_MODE_CBR_VFR ||
-                        rate_ctrl.rcmode == V4L2_MPEG_VIDEO_BITRATE_MODE_CBR;
-                if (!isCBR) {
-                    DEBUG_PRINT_ERROR("venc_set_param: OMX_QTIIndexParamIframeSizeType not allowed for this configuration isCBR(%d)",
-                        isCBR);
-                    return false;
-                }
-#ifdef KONA_TODO_UPDATE
-                if (!venc_set_iframesize_type(pParam->eType)) {
-                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamIframeSizeType failed");
-                    return false;
-                }
-#endif
-                break;
-            }
         case OMX_QTIIndexParamEnableAVTimerTimestamps:
             {
                 QOMX_ENABLETYPE *pParam = (QOMX_ENABLETYPE *)paramData;
@@ -6159,39 +6140,6 @@ bool venc_dev::venc_set_lowlatency_mode(OMX_BOOL enable)
 
     return true;
 }
-
-#ifdef KONA_TODO_UPDATE
-/* Delete - Deprecated */
-bool venc_dev::venc_set_iframesize_type(QOMX_VIDEO_IFRAMESIZE_TYPE type)
-{
-    struct v4l2_control control;
-    control.id = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_TYPE;
-
-    switch (type) {
-        case QOMX_IFRAMESIZE_DEFAULT:
-            control.value = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_DEFAULT;
-            break;
-        case QOMX_IFRAMESIZE_MEDIUM:
-            control.value = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_MEDIUM;
-            break;
-        case QOMX_IFRAMESIZE_HUGE:
-            control.value = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_HUGE;
-            break;
-        case QOMX_IFRAMESIZE_UNLIMITED:
-            control.value = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_UNLIMITED;
-            break;
-        default:
-            DEBUG_PRINT_INFO("Unknown Iframe Size found setting it to default");
-            control.value = V4L2_CID_MPEG_VIDC_VIDEO_IFRAME_SIZE_DEFAULT;
-    }
-
-    if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
-        DEBUG_PRINT_ERROR("Failed to set iframe size hint");
-        return false;
-    }
-    return true;
-}
-#endif
 
 bool venc_dev::venc_set_baselayerid(OMX_U32 baseid)
 {
