@@ -1499,14 +1499,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter
             break;
         }
 
-
-        case OMX_QcomIndexParamSetMVSearchrange:
-        {
-            DEBUG_PRINT_ERROR("ERROR: Setting Searchrange");
-            RETURN(OMX_ErrorUnsupportedSetting);
-            break;
-        }
-
         case OMX_QTIIndexParamEnableAVTimerTimestamps:
         {
             VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);

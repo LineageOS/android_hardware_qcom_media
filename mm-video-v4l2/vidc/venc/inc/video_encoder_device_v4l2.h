@@ -461,7 +461,6 @@ class venc_dev
         bool venc_set_hier_layers(QOMX_VIDEO_HIERARCHICALCODINGTYPE type, OMX_U32 num_layers);
         bool venc_set_vui_timing_info(OMX_BOOL enable);
         bool venc_set_peak_bitrate(OMX_U32 nPeakBitrate);
-        bool venc_set_searchrange();
         bool venc_set_vpx_error_resilience(OMX_BOOL enable);
         bool venc_set_batch_size(OMX_U32 size);
         bool venc_calibrate_gop();
@@ -512,8 +511,6 @@ class venc_dev
         pthread_cond_t pause_resume_cond;
         bool paused;
         int color_format;
-        bool is_searchrange_set;
-        bool enable_mv_narrow_searchrange;
         int supported_rc_modes;
         bool camera_mode_enabled;
         bool low_latency_mode;
