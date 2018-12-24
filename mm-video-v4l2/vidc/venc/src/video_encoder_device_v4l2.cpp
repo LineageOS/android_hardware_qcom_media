@@ -4509,8 +4509,10 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
 #endif
                         if (encodePerfMode == OMX_TRUE) {
                             buf.flags |= V4L2_QCOM_BUF_FLAG_PERF_MODE;
+#ifndef __LIBGBM__
                             //Clear SET_VIDEO_PERF_MODE in buffer handle
                             clearMetaData(handle,SET_VIDEO_PERF_MODE);
+#endif
                         }
                     }
 #ifdef __LIBGBM__
