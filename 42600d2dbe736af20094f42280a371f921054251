@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "24a9c4c7_cccd0021",
+        "filename": "mm-core/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 97,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2018-12-26T17:35:22Z",
+      "side": 1,
+      "message": "this lib isn\u0027t usually used, unless you\u0027ve explicitly added it to product packages. even then I don\u0027t think anything actually needs it...",
+      "revId": "42600d2dbe736af20094f42280a371f921054251",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
