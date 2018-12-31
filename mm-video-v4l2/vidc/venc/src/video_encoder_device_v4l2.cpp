@@ -6650,9 +6650,11 @@ bool venc_dev::venc_set_blur_resolution(OMX_QTI_VIDEO_CONFIG_BLURINFO *blurInfo)
         case 0:
             blur_width = 0;
             blur_height = 0;
+            [[fallthrough]];
         case 1:
             blur_width = 1;
             blur_height = 1;
+            [[fallthrough]];
         default:
             blur_width = blurInfo->nBlurInfo >> 16;
             blur_height = blurInfo->nBlurInfo & 0xFFFF;
