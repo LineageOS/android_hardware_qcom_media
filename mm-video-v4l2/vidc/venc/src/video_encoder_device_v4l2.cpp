@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2018, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2019, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -184,7 +184,6 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     operating_rate = 30;
     memset(&color_space, 0x0, sizeof(color_space));
     memset(&temporal_layers_config, 0x0, sizeof(temporal_layers_config));
-    client_req_disable_bframe   = false;
     bframe_implicitly_enabled = false;
     client_req_disable_temporal_layers  = false;
     client_req_turbo_mode  = false;
@@ -3042,7 +3041,6 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                         DEBUG_PRINT_ERROR("ERROR: Setting idr period failed");
                         return false;
                     }
-                    client_req_disable_bframe = (intraperiod->nBFrames == 0) ? true : false;
                 }
 
                 break;
@@ -5429,14 +5427,13 @@ bool venc_dev::venc_reconfigure_intra_period()
                     isValidLtrSetting   &&
                     isValidRcMode       &&
                     isValidCodec        &&
-                    !low_latency_mode   &&
-                    !client_req_disable_bframe;
+                    !low_latency_mode;
 
     DEBUG_PRINT_LOW("B-frame enablement = %u; Conditions for Resolution = %u, FPS = %u,"
                      "Operating rate = %u, Layer condition = %u, LTR = %u, RC = %u"
-                     "Codec/Profile = %u Client request to disable = %u LowLatency : %u \n isNativeRecorder : %u",
+                     "Codec/Profile = %u LowLatency : %u \n isNativeRecorder : %u",
                      enableBframes, isValidResolution, isValidFps, isValidOpRate,
-                     isValidLayerCount, isValidLtrSetting, isValidRcMode, isValidCodec, client_req_disable_bframe,
+                     isValidLayerCount, isValidLtrSetting, isValidRcMode, isValidCodec,
                      low_latency_mode, mIsNativeRecorder);
 
     if (enableBframes && intra_period.num_bframes == 0 && intra_period.num_pframes > VENC_BFRAME_MAX_COUNT
