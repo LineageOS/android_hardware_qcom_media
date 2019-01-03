@@ -255,8 +255,17 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
         secure_session = true;
     } else if (!strncmp((char *)m_nkind, "OMX.qcom.video.encoder.tme",    \
                 OMX_MAX_STRINGNAME_SIZE)) {
-        strlcpy((char *)m_cRole, "video_encoder.tme", OMX_MAX_STRINGNAME_SIZE);
-        codec_type = (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingTME;
+        char property_value[PROPERTY_VALUE_MAX] = {0};
+        if (property_get("vendor.media.sm6150.version",property_value,0) &&
+                    (atoi(property_value) == 1)) {
+            DEBUG_PRINT_LOW("TME is supported in Talos");
+            strlcpy((char *)m_cRole, "video_encoder.tme", OMX_MAX_STRINGNAME_SIZE);
+            codec_type = (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingTME;
+        }
+        else {
+            DEBUG_PRINT_LOW("TME is not supported");
+            eRet = OMX_ErrorInvalidComponentName;
+        }
     } else {
         DEBUG_PRINT_ERROR("ERROR: Unknown Component");
         eRet = OMX_ErrorInvalidComponentName;
