@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2018, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2019, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -156,6 +156,7 @@ enum omx_venc_extradata_types {
     VENC_EXTRADATA_YUV_STATS = 0x800,
     VENC_EXTRADATA_VQZIP = 0x02000000,
     VENC_EXTRADATA_ROI = 0x04000000,
+    VENC_EXTRADATA_FRAME_QP = 0x08000000,
 };
 
 struct output_metabuffer {

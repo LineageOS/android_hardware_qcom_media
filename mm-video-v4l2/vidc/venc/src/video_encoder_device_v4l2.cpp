@@ -649,6 +649,18 @@ void venc_dev::append_extradata_ltrinfo(OMX_OTHER_EXTRADATATYPE *p_extra,
     memcpy(p_extra->data, p_extradata->data, p_extradata->data_size);
 }
 
+
+void venc_dev::append_extradata_frameQPinfo(OMX_OTHER_EXTRADATATYPE *p_extra,
+            struct msm_vidc_extradata_header *p_extradata)
+{
+    p_extra->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) + p_extradata->data_size, 4);
+    p_extra->nVersion.nVersion = OMX_SPEC_VERSION;
+    p_extra->nPortIndex = OMX_DirOutput;
+    p_extra->eType = (OMX_EXTRADATATYPE) OMX_ExtraDataEncoderFrameQp;
+    p_extra->nDataSize = p_extradata->data_size;
+    memcpy(p_extra->data, p_extradata->data, p_extradata->data_size);
+}
+
 void venc_dev::append_extradata_none(OMX_OTHER_EXTRADATATYPE *p_extra)
 {
     p_extra->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE), 4);
@@ -1083,6 +1095,13 @@ bool venc_dev::handle_output_extradata(void *buffer, int index)
                 DEBUG_PRINT_LOW("LTRInfo Extradata = 0x%x", *((OMX_U32 *)p_extra->data));
                 break;
             }
+            case MSM_VIDC_EXTRADATA_FRAME_QP:
+                append_extradata_frameQPinfo(p_extra, p_extradata);
+                if(p_clientextra) {
+                    append_extradata_frameQPinfo(p_clientextra, p_extradata);
+                }
+                DEBUG_PRINT_LOW("FrameQP Extradata = %d", *((OMX_U32 *)p_extra->data));
+                break;
             case MSM_VIDC_EXTRADATA_NONE:
                 append_extradata_none(p_extra);
                 if(p_clientextra) {
@@ -2810,6 +2829,18 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
 
                 if (venc_set_extradata(OMX_ExtraDataVideoEncoderSliceInfo, extra_data) == false) {
                     DEBUG_PRINT_ERROR("ERROR: Setting OMX_ExtraDataVideoEncoderSliceInfo failed");
+                    return false;
+                }
+
+                extradata = true;
+                break;
+            }
+        case OMX_ExtraDataEncoderFrameQp:
+             {
+                DEBUG_PRINT_LOW("venc_set_param: OMX_ExtraDataEncoderFrameQp");
+                OMX_BOOL extra_data = *(OMX_BOOL *)(paramData);
+                if (venc_set_extradata(OMX_ExtraDataEncoderFrameQp, extra_data) == false) {
+                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_ExtraDataEncoderFrameQp failed");
                     return false;
                 }
 
@@ -5141,6 +5172,9 @@ bool venc_dev::venc_set_extradata(OMX_U32 extra_data, OMX_BOOL enable)
             control.value = V4L2_MPEG_VIDC_EXTRADATA_INPUT_CROP;
             break;
 #endif
+        case OMX_ExtraDataEncoderFrameQp:
+            control.value = V4L2_MPEG_VIDC_EXTRADATA_ENC_FRAME_QP;
+            break;
         default:
             DEBUG_PRINT_ERROR("Unrecognized extradata index 0x%x", (unsigned int)extra_data);
             return false;
