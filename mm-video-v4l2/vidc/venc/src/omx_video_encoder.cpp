@@ -2388,14 +2388,7 @@ bool omx_venc::dev_get_batch_size(OMX_U32 *size)
 
 bool omx_venc::dev_get_temporal_layer_caps(OMX_U32 *nMaxLayers,
         OMX_U32 *nMaxBLayers, OMX_VIDEO_ANDROID_TEMPORALLAYERINGPATTERNTYPE *eSupportedPattern) {
-#ifdef KONA_TODO_UPDATE
-    /* Do we need to remove this dev_get_temporal_layer_caps?  */
     return handle->venc_get_temporal_layer_caps(nMaxLayers, nMaxBLayers, eSupportedPattern);
-#else
-    (void) nMaxLayers;
-    (void) nMaxBLayers;
-    (void) eSupportedPattern;
-#endif
     return true;
 }
 

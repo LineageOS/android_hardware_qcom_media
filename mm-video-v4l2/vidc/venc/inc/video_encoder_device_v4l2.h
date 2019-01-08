@@ -59,7 +59,6 @@ enum hier_type {
     HIER_NONE = 0x0,
     HIER_P = 0x1,
     HIER_B = 0x2,
-    HIER_P_HYBRID = 0x3,
 };
 
 struct msm_venc_switch {
@@ -328,9 +327,7 @@ class venc_dev
         bool venc_check_for_hierp(OMX_VIDEO_ANDROID_TEMPORALLAYERINGPATTERNTYPE ePattern);
         int venc_find_hier_type(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE &temporalSettings);
         OMX_ERRORTYPE venc_disable_hp();
-        OMX_ERRORTYPE venc_disable_hhp();
         OMX_ERRORTYPE venc_set_hp(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE &temporalSettings);
-        OMX_ERRORTYPE venc_set_hhp(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE &temporalSettings);
         OMX_ERRORTYPE venc_set_bitrate_ratio(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE &temporalSettings);
         bool venc_validate_temporal_settings();
         bool venc_validate_temporal_extn(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE &temporalSettings);
@@ -341,7 +338,6 @@ class venc_dev
         int venc_input_log_buffers(OMX_BUFFERHEADERTYPE *buffer, int fd, int plane_offset,
                         unsigned long inputformat, bool interlaced);
         int venc_extradata_log_buffers(char *buffer_addr, bool input);
-        bool venc_set_bitrate_type(OMX_U32 type);
         bool venc_get_hevc_profile(OMX_U32* profile);
         void venc_get_consumer_usage(OMX_U32* usage);
 
