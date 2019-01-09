@@ -227,6 +227,11 @@ omx_video::omx_video():
     psource_frame(NULL),
     pdest_frame(NULL),
     secure_session(false),
+#ifdef _UBWC_
+    m_ubwc_supported(true),
+#else
+    m_ubwc_supported(false),
+#endif
     mUsesColorConversion(false),
     mC2dSrcFmt(NO_COLOR_FORMAT),
     mC2dDestFmt(NO_COLOR_FORMAT),
@@ -4189,6 +4194,16 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
             DEBUG_PRINT_LOW("ETB (meta-gralloc) fd = %d, offset = %d, size = %d",
                     Input_pmem_info.fd, Input_pmem_info.offset,
                     Input_pmem_info.size);
+            // if input buffer dimensions is different from what is configured,
+            // reject the buffer
+            if (ALIGN((int)m_sInPortDef.format.video.nFrameWidth,32) != ALIGN(handle->unaligned_width,32) ||
+                    ALIGN((int)m_sInPortDef.format.video.nFrameHeight,32) != ALIGN(handle->unaligned_height,32)) {
+                ALOGE("Graphic buf size(%dx%d) does not match configured size(%ux%u)",
+                        handle->unaligned_width, handle->unaligned_height,
+                        m_sInPortDef.format.video.nFrameWidth, m_sInPortDef.format.video.nFrameHeight);
+                post_event ((unsigned long)buffer, 0, OMX_COMPONENT_GENERATE_EBD);
+                return OMX_ErrorNone;
+            }
         }
         if (dev_use_buf(PORT_INDEX_IN) != true) {
             DEBUG_PRINT_ERROR("ERROR: in dev_use_buf");
@@ -5240,7 +5255,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
     if (buffer->nFilledLen > 0 && handle && !is_streamon_done((OMX_U32) PORT_INDEX_OUT)) {
 
         ColorConvertFormat c2dSrcFmt = RGBA8888;
-        ColorConvertFormat c2dDestFmt = NV12_UBWC;
+        ColorConvertFormat c2dDestFmt = m_ubwc_supported ? NV12_UBWC : NV12_128m;
 
         ColorMapping::const_iterator found =
              mMapPixelFormat2Converter.find(handle->format);
@@ -5494,7 +5509,8 @@ OMX_ERRORTYPE omx_video::push_input_buffer(OMX_HANDLETYPE hComp)
                 handle->format == QOMX_COLOR_Format32bitRGBA8888Compressed ||
                 handle->format == HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC ||
                 handle->format == HAL_PIXEL_FORMAT_NV21_ZSL ||
-                handle->format == QOMX_COLOR_FormatYVU420SemiPlanar);
+                handle->format == QOMX_COLOR_FormatYVU420SemiPlanar ||
+                handle->format == HAL_PIXEL_FORMAT_NV12_HEIF);
 
             Input_pmem_info.buffer = media_buffer;
             Input_pmem_info.fd = handle->fd;

@@ -42,6 +42,8 @@ omx_core_cb_type core[] =
     //Common entries
     OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.avc", "libOmxVdec.so", "video_decoder.avc"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.avc.dsmode", "libOmxVideoDSMode.so", "video_decoder.avc"),
+    OMX_REGISTRY_ENTRY("OMX.qti.video.decoder.vc1sw", "libOmxSwVdec.so", "video_decoder.vc1"),
+    OMX_REGISTRY_ENTRY("OMX.qti.video.decoder.wmvsw", "libOmxSwVdec.so", "video_decoder.vc1"),
     OMX_REGISTRY_ENTRY("OMX.qcom.file.muxer", "libOmxMux.so", "container_muxer.mp2"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.hevc", "libOmxVdec.so", "video_decoder.hevc"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.vp8", "libOmxVdec.so", "video_decoder.vp8"),
@@ -80,11 +82,6 @@ omx_core_cb_type core[] =
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.tme", "libOmxVenc.so", "video_encoder.tme"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.tme.secure", "libOmxVenc.so", "video_encoder.tme"),
 #endif //_STEPPE_
-
-#ifndef _STEPPE_
-    OMX_REGISTRY_ENTRY("OMX.qti.video.decoder.vc1sw", "libOmxSwVdec.so", "video_decoder.vc1"),
-    OMX_REGISTRY_ENTRY("OMX.qti.video.decoder.wmvsw", "libOmxSwVdec.so", "video_decoder.vc1"),
-#endif
 };
 
 const unsigned int SIZE_OF_CORE = sizeof(core) / sizeof(omx_core_cb_type);

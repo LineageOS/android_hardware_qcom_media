@@ -104,6 +104,11 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #define GRALLOC_USAGE_PRIVATE_HEIF_VIDEO (UINT32_C(1) << 27)
 #define GRALLOC_USAGE_PRIVATE_10BIT_VIDEO (UINT32_C(1) << 30)
+
+#define REQUEST_LINEAR_COLOR_8_BIT   0x1
+#define REQUEST_LINEAR_COLOR_10_BIT  0x2
+#define REQUEST_LINEAR_COLOR_ALL     (REQUEST_LINEAR_COLOR_8_BIT | REQUEST_LINEAR_COLOR_10_BIT)
+
 #undef LOG_TAG
 #define LOG_TAG "OMX-VENC: venc_dev"
 
@@ -174,6 +179,7 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     client_req_turbo_mode  = false;
     intra_period.num_pframes = 29;
     intra_period.num_bframes = 0;
+    m_hdr10meta_enabled = false;
 
     Platform::Config::getInt32(Platform::vidc_enc_log_in,
             (int32_t *)&m_debug.in_buffer_log, 0);
@@ -213,7 +219,6 @@ venc_dev::venc_dev(class omx_venc *venc_class)
 
     mUseAVTimerTimestamps = false;
     mIsGridset = false;
-    mUseLinearColorFormat = false;
     Platform::Config::getInt32(Platform::vidc_enc_linear_color_format,
             (int32_t *)&mUseLinearColorFormat, 0);
 
@@ -851,7 +856,7 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
                                 + colorData.dynamicMetaDataLen;
     packet_size = (sizeof(OMX_OTHER_EXTRADATATYPE) + payload_size + 3)&(~3);
 
-    if (m_hdr10meta_enabled && (filled_len + packet_size <= input_extradata_info.buffer_size)) {
+    if (m_hdr10meta_enabled && (filled_len + packet_size <= input_extradata_info.buffer_size) && colorData.dynamicMetaDataLen > 0) {
         struct msm_vidc_hdr10plus_metadata_payload *payload;
 
         data->nSize = packet_size;
@@ -866,6 +871,8 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
 
         filled_len += data->nSize;
         data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
+    } else if (colorData.dynamicMetaDataLen == 0) {
+        DEBUG_PRINT_HIGH("DynamicMetaDataLength == 0 Skip writing metadata.");
     } else {
         if (m_hdr10meta_enabled) {
             DEBUG_PRINT_HIGH("Insufficient size for HDR10Metadata: Required %u Available %lu",
@@ -2938,7 +2945,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
         case OMX_QTIIndexParamEnableLinearColorFormat:
             {
                 QOMX_ENABLETYPE *pParam = (QOMX_ENABLETYPE *)paramData;
-                mUseLinearColorFormat = pParam->bEnable;
+                mUseLinearColorFormat = pParam->bEnable ? REQUEST_LINEAR_COLOR_ALL : 0;
                 DEBUG_PRINT_INFO("Linear Color Format Enabled : %d ", pParam->bEnable);
                 break;
             }
@@ -3600,6 +3607,7 @@ bool venc_dev::venc_set_extradata_hdr10metadata()
 {
     struct v4l2_control control;
 
+    /* HDR10 Metadata is enabled by default for HEVC Main10 profile. */
     if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC &&
         codec_profile.profile == V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10) {
 
@@ -3614,6 +3622,12 @@ bool venc_dev::venc_set_extradata_hdr10metadata()
         }
         m_hdr10meta_enabled = true;
         extradata = true;
+
+        //Get upated buffer requirement as enable extradata leads to two buffer planes
+        venc_get_buf_req (&venc_handle->m_sInPortDef.nBufferCountMin,
+                                 &venc_handle->m_sInPortDef.nBufferCountActual,
+                                 &venc_handle->m_sInPortDef.nBufferSize,
+                                 venc_handle->m_sInPortDef.nPortIndex);
     }
 
     return true;
@@ -3666,7 +3680,7 @@ unsigned venc_dev::venc_start(void)
         return 1;
     }
 
-    //venc_set_extradata_hdr10metadata();
+    venc_set_extradata_hdr10metadata();
 
     venc_config_print();
 
@@ -4218,7 +4232,6 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                     }
 
                     if (!streaming[OUTPUT_PORT]) {
-                        ColorMetaData colorData= {};
                         // Moment of truth... actual colorspace is known here..
                         if (getMetaData(handle, GET_COLOR_METADATA, &colorData) == 0) {
                             DEBUG_PRINT_INFO("ENC_CONFIG: gralloc Color MetaData colorPrimaries=%d colorRange=%d "
@@ -4245,6 +4258,9 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         if (handle->format == HAL_PIXEL_FORMAT_NV12_ENCODEABLE) {
                             m_sVenc_cfg.inputformat = isUBWC ? V4L2_PIX_FMT_NV12_UBWC : V4L2_PIX_FMT_NV12;
                             DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = NV12 %s", isUBWC ? "UBWC" : "Linear");
+                        } else if (handle->format == HAL_PIXEL_FORMAT_NV12_HEIF) {
+                            m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV12_512;
+                            DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = NV12_512");
                         } else if (handle->format == HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC) {
                             m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV12_UBWC;
                             DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = NV12_UBWC");
@@ -4355,6 +4371,54 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         }
                     } // Check OUTPUT Streaming
 
+                    struct UBWCStats cam_ubwc_stats[2];
+                    unsigned long long int compression_ratio = 1 << 16;
+
+                    if (getMetaData(handle, GET_UBWC_CR_STATS_INFO, (void *)cam_ubwc_stats) == 0) {
+                        if (cam_ubwc_stats[0].bDataValid) {
+                            switch (cam_ubwc_stats[0].version) {
+                            case UBWC_2_0:
+                            case UBWC_3_0:
+                                {
+                                    unsigned long long int sum = 0, weighted_sum = 0;
+
+                                    DEBUG_PRINT_HIGH("Field 0 : 32 Tile = %d 64 Tile = %d 96 Tile = %d "
+                                       "128 Tile = %d 160 Tile = %d 192 Tile = %d 256 Tile = %d\n",
+                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile32,
+                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile64,
+                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile96,
+                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile128,
+                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile160,
+                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile192,
+                                       cam_ubwc_stats[0].ubwc_stats.nCRStatsTile256);
+
+                                    weighted_sum =
+                                        32  * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile32 +
+                                        64  * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile64 +
+                                        96  * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile96 +
+                                        128 * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile128 +
+                                        160 * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile160 +
+                                        192 * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile192 +
+                                        256 * cam_ubwc_stats[0].ubwc_stats.nCRStatsTile256;
+
+                                    sum =
+                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile32 +
+                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile64 +
+                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile96 +
+                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile128 +
+                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile160 +
+                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile192 +
+                                        cam_ubwc_stats[0].ubwc_stats.nCRStatsTile256;
+
+                                    compression_ratio = (weighted_sum && sum) ?
+                                        ((256 * sum) << 16) / weighted_sum : compression_ratio;
+                                }
+                                break;
+                            default:
+                                break;
+                            }
+                        }
+                    }
 
                     uint32_t encodePerfMode = 0;
                     if (getMetaData(handle, GET_VIDEO_PERF_MODE, &encodePerfMode) == 0) {
@@ -4366,11 +4430,12 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                     plane[0].data_offset = 0;
                     plane[0].length = handle->size;
                     plane[0].bytesused = handle->size;
+                    plane[0].reserved[2] = (unsigned long int)compression_ratio;
                     char v4l2ColorFormatStr[200];
                     get_v4l2_color_format_as_string(v4l2ColorFormatStr, sizeof(v4l2ColorFormatStr), m_sVenc_cfg.inputformat);
                     DEBUG_PRINT_LOW("venc_empty_buf: Opaque camera buf: fd = %d "
-                                ": filled %d of %d format 0x%lx (%s)", fd, plane[0].bytesused,
-                                plane[0].length, m_sVenc_cfg.inputformat, v4l2ColorFormatStr);
+                                ": filled %d of %d format 0x%lx (%s) CR %d", fd, plane[0].bytesused,
+                                plane[0].length, m_sVenc_cfg.inputformat, v4l2ColorFormatStr, plane[0].reserved[2]);
                 }
             } else {
                 // Metadata mode
@@ -6585,9 +6650,11 @@ bool venc_dev::venc_set_blur_resolution(OMX_QTI_VIDEO_CONFIG_BLURINFO *blurInfo)
         case 0:
             blur_width = 0;
             blur_height = 0;
+            [[fallthrough]];
         case 1:
             blur_width = 1;
             blur_height = 1;
+            [[fallthrough]];
         default:
             blur_width = blurInfo->nBlurInfo >> 16;
             blur_height = blurInfo->nBlurInfo & 0xFFFF;
@@ -7075,18 +7142,19 @@ void venc_dev::venc_get_consumer_usage(OMX_U32* usage) {
     /* Initialize to zero & update as per required color format */
     *usage = 0;
 
-    /* TODO: NV12 color format addition pending */
-
     /* Configure UBWC as default */
     *usage |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
 
     if (hevc && eProfile == (OMX_U32)OMX_VIDEO_HEVCProfileMain10HDR10) {
         DEBUG_PRINT_INFO("Setting 10-bit consumer usage bits");
         *usage |= GRALLOC_USAGE_PRIVATE_10BIT_VIDEO;
-        if (mUseLinearColorFormat) {
+        if (mUseLinearColorFormat & REQUEST_LINEAR_COLOR_10_BIT) {
             *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
-            DEBUG_PRINT_INFO("Clear UBWC consumer usage bits for P010");
+            DEBUG_PRINT_INFO("Clear UBWC consumer usage bits as 10-bit linear color requested");
         }
+    } else if (mUseLinearColorFormat & REQUEST_LINEAR_COLOR_8_BIT) {
+        *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
+        DEBUG_PRINT_INFO("Clear UBWC consumer usage bits as 8-bit linear color requested");
     }
 
     if (m_codec == OMX_VIDEO_CodingImageHEIC) {

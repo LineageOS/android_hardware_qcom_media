@@ -106,9 +106,7 @@ extern "C" {
 #define SZ_4K 0x1000
 #define SZ_1M 0x100000
 
-#define PREFETCH_PIXEL_BUFFER_SIZE VENUS_BUFFER_SIZE(COLOR_FMT_NV12_UBWC, 4096, 2160)
 #define PREFETCH_PIXEL_BUFFER_COUNT 16
-#define PREFETCH_NON_PIXEL_BUFFER_SIZE (200 * 1024 * 1024)
 #define PREFETCH_NON_PIXEL_BUFFER_COUNT 1
 
 #define Log2(number, power)  { OMX_U32 temp = number; power = 0; while( (0 == (temp & 0x1)) &&  power < 16) { temp >>=0x1; power++; } }
@@ -724,6 +722,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_fps_prev(0),
     m_drc_enable(0),
     in_reconfig(false),
+    c2d_enable_pending(false),
     m_display_id(NULL),
     client_extradata(0),
 #ifdef _ANDROID_
@@ -738,6 +737,8 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     stereo_output_mode(HAL_NO_3D),
     m_last_rendered_TS(-1),
     m_dec_hfr_fps(0),
+    m_dec_secure_prefetch_size_internal(0),
+    m_dec_secure_prefetch_size_output(0),
     m_arb_mode_override(0),
     m_queued_codec_config_count(0),
     secure_scaling_to_non_secure_opb(false),
@@ -786,6 +787,14 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     if (m_dec_hfr_fps) {
         m_last_rendered_TS = 0;
     }
+
+    Platform::Config::getInt32(Platform::vidc_dec_sec_prefetch_size_internal,
+            (int32_t *)&m_dec_secure_prefetch_size_internal, 0);
+    Platform::Config::getInt32(Platform::vidc_dec_sec_prefetch_size_output,
+            (int32_t *)&m_dec_secure_prefetch_size_output, 0);
+
+    DEBUG_PRINT_HIGH("Prefetch size internal = %d, output = %d",
+            m_dec_secure_prefetch_size_internal, m_dec_secure_prefetch_size_output);
 
     Platform::Config::getInt32(Platform::vidc_dec_arb_mode_override,
             (int32_t *)&m_arb_mode_override, 0);
@@ -921,6 +930,9 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     mClientSessionForSufficiency = false;
     mClientSetProfile = 0;
     mClientSetLevel = 0;
+#ifdef USE_GBM
+     drv_ctx.gbm_device_fd = -1;
+#endif
 }
 
 static const int event_type[] = {
@@ -1024,9 +1036,9 @@ omx_vdec::~omx_vdec()
         pthread_join(async_thread_id,NULL);
 
     if (m_prefetch_done & 0x1)
-        prefetch_buffers(PREFETCH_PIXEL_BUFFER_COUNT, PREFETCH_PIXEL_BUFFER_SIZE, ION_IOC_DRAIN, ION_FLAG_CP_PIXEL);
+        prefetch_buffers(PREFETCH_PIXEL_BUFFER_COUNT, m_dec_secure_prefetch_size_output, ION_IOC_DRAIN, ION_FLAG_CP_PIXEL);
     if (m_prefetch_done & 0x2)
-        prefetch_buffers(PREFETCH_NON_PIXEL_BUFFER_COUNT, PREFETCH_NON_PIXEL_BUFFER_SIZE, ION_IOC_DRAIN, ION_FLAG_CP_NON_PIXEL);
+        prefetch_buffers(PREFETCH_NON_PIXEL_BUFFER_COUNT, m_dec_secure_prefetch_size_internal, ION_IOC_DRAIN, ION_FLAG_CP_NON_PIXEL);
 
     unsubscribe_to_events(drv_ctx.video_driver_fd);
     close(m_poll_efd);
@@ -1480,6 +1492,7 @@ void omx_vdec::process_event_cb(void *ctxt)
                                     pThis->stream_off(OMX_CORE_OUTPUT_PORT_INDEX);
                                     OMX_ERRORTYPE eRet1 = pThis->get_buffer_req(&pThis->drv_ctx.op_buf);
                                     pThis->in_reconfig = false;
+                                    pThis->client_buffers.enable_color_conversion(pThis->c2d_enable_pending);
                                     if (eRet !=  OMX_ErrorNone) {
                                         DEBUG_PRINT_ERROR("set_buffer_req failed eRet = %d",eRet);
                                         pThis->omx_report_error();
@@ -2640,8 +2653,8 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
             msg_thread_created = false;
             eRet = OMX_ErrorInsufficientResources;
         } else if (secure_mode) {
-            this->post_event(PREFETCH_PIXEL_BUFFER_COUNT, PREFETCH_PIXEL_BUFFER_SIZE, OMX_COMPONENT_GENERATE_ION_PREFETCH_PIXEL);
-            this->post_event(PREFETCH_NON_PIXEL_BUFFER_COUNT, PREFETCH_NON_PIXEL_BUFFER_SIZE, OMX_COMPONENT_GENERATE_ION_PREFETCH_NON_PIXEL);
+            this->post_event(PREFETCH_PIXEL_BUFFER_COUNT, m_dec_secure_prefetch_size_output, OMX_COMPONENT_GENERATE_ION_PREFETCH_PIXEL);
+            this->post_event(PREFETCH_NON_PIXEL_BUFFER_COUNT, m_dec_secure_prefetch_size_internal, OMX_COMPONENT_GENERATE_ION_PREFETCH_NON_PIXEL);
         }
     }
 
@@ -3754,7 +3767,7 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                     // Also use default format-list if FLEXIBLE YUV is supported,
                                     // as the client negotiates the standard color-format if it needs to
                                     bool useNonSurfaceMode = false;
-#if defined(_ANDROID_) && !defined(FLEXYUV_SUPPORTED)
+#if defined(_ANDROID_) && !defined(FLEXYUV_SUPPORTED) && !defined(USE_GBM)
                                     useNonSurfaceMode = (m_enable_android_native_buffers == OMX_FALSE);
 #endif
                                     portFmt->eColorFormat = useNonSurfaceMode ?
@@ -5927,7 +5940,23 @@ OMX_ERRORTYPE  omx_vdec::use_output_buffer(
         } else
 #endif
             if (!ouput_egl_buffers && !m_use_output_pmem) {
-#ifdef USE_ION
+#ifdef USE_GBM
+               bool status = alloc_map_gbm_memory(
+                       drv_ctx.video_resolution.frame_width,
+                       drv_ctx.video_resolution.frame_height,
+                       drv_ctx.gbm_device_fd,
+                       &drv_ctx.op_buf_gbm_info[i],
+                       secure_mode ? SECURE_FLAGS_OUTPUT_BUFFER : 0);
+                if (status == false) {
+                    DEBUG_PRINT_ERROR("ION device fd is bad %d",
+                                      (int) drv_ctx.op_buf_ion_info[i].data_fd);
+                    return OMX_ErrorInsufficientResources;
+                }
+                drv_ctx.ptr_outputbuffer[i].pmem_fd = \
+                                     drv_ctx.op_buf_gbm_info[i].bo_fd;
+                if (intermediate)
+                   m_pmem_info[i].pmeta_fd = drv_ctx.op_buf_gbm_info[i].meta_fd;
+#elif defined USE_ION
                 bool status = alloc_map_ion_memory(
                         drv_ctx.op_buf.buffer_size, &drv_ctx.op_buf_ion_info[i],
                         secure_mode ? SECURE_FLAGS_OUTPUT_BUFFER : 0);
@@ -5944,7 +5973,9 @@ OMX_ERRORTYPE  omx_vdec::use_output_buffer(
                         (unsigned char *)ion_map(drv_ctx.ptr_outputbuffer[i].pmem_fd,
                                                  drv_ctx.op_buf.buffer_size);
                     if (drv_ctx.ptr_outputbuffer[i].bufferaddr == MAP_FAILED) {
-#ifdef USE_ION
+#ifdef USE_GBM
+                        free_gbm_memory(&drv_ctx.op_buf_gbm_info[i]);
+#elif defined USE_ION
                         free_ion_memory(&drv_ctx.op_buf_ion_info[i]);
 #endif
                         DEBUG_PRINT_ERROR("Unable to mmap output buffer");
@@ -5976,6 +6007,10 @@ OMX_ERRORTYPE  omx_vdec::use_output_buffer(
                 DEBUG_PRINT_LOW("vdec: use buf: pmem_fd=0x%lx",
                         pmem_info->pmem_fd);
                 drv_ctx.ptr_outputbuffer[i].pmem_fd = pmem_info->pmem_fd;
+#ifdef USE_GBM
+                if (intermediate)
+                   m_pmem_info[i].pmeta_fd = pmem_info->pmeta_fd;
+#endif
                 drv_ctx.ptr_outputbuffer[i].offset = pmem_info->offset;
                 drv_ctx.ptr_outputbuffer[i].bufferaddr = buff;
                 drv_ctx.ptr_outputbuffer[i].mmaped_size =
@@ -6319,7 +6354,10 @@ OMX_ERRORTYPE omx_vdec::free_output_buffer(OMX_BUFFERHEADERTYPE *bufferHdr,
          intermediate?drv_ctx.ptr_intermediate_outputbuffer:drv_ctx.ptr_outputbuffer;
     vdec_ion *omx_op_buf_ion_info =
         intermediate?drv_ctx.op_intermediate_buf_ion_info:drv_ctx.op_buf_ion_info;
-
+#ifdef USE_GBM
+    vdec_gbm *omx_op_buf_gbm_info =
+        intermediate?drv_ctx.op_intermediate_buf_gbm_info:drv_ctx.op_buf_gbm_info;
+#endif
     if (bufferHdr == NULL || omx_base_address == NULL) {
         return OMX_ErrorBadParameter;
     }
@@ -6360,10 +6398,13 @@ OMX_ERRORTYPE omx_vdec::free_output_buffer(OMX_BUFFERHEADERTYPE *bufferHdr,
                         omx_ptr_outputbuffer[index].bufferaddr = NULL;
                         omx_ptr_outputbuffer[index].mmaped_size = 0;
                     }
-                    omx_ptr_outputbuffer[index].pmem_fd = -1;
-#ifdef USE_ION
+#ifdef USE_GBM
+                    free_gbm_memory(&omx_op_buf_gbm_info[index]);
+#elif defined USE_ION
                     free_ion_memory(&omx_op_buf_ion_info[index]);
 #endif
+
+                    omx_ptr_outputbuffer[index].pmem_fd = -1;
                 }
 #ifdef _ANDROID_
             }
@@ -6675,6 +6716,10 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
         intermediate?&drv_ctx.ptr_intermediate_respbuffer:&drv_ctx.ptr_respbuffer;
     vdec_ion **omx_op_buf_ion_info =
         intermediate?&drv_ctx.op_intermediate_buf_ion_info:&drv_ctx.op_buf_ion_info;
+#ifdef USE_GBM
+    vdec_gbm **omx_op_buf_gbm_info =
+        intermediate?&drv_ctx.op_intermediate_buf_gbm_info:&drv_ctx.op_buf_gbm_info;
+#endif
 
     if (!*omx_base_address) {
         DEBUG_PRINT_HIGH("Allocate o/p buffer Header: Cnt(%d) Sz(%u)",
@@ -6715,7 +6760,20 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
             return OMX_ErrorInsufficientResources;
         }
 
-#ifdef USE_ION
+#ifdef USE_GBM
+        *omx_op_buf_gbm_info = (struct vdec_gbm *)\
+                      calloc (sizeof(struct vdec_gbm),
+                      drv_ctx.op_buf.actualcount);
+        if (!*omx_op_buf_gbm_info) {
+                 DEBUG_PRINT_ERROR("Failed to alloc op_buf_gbm_info");
+            return OMX_ErrorInsufficientResources;
+        }
+        drv_ctx.gbm_device_fd = open("/dev/dri/renderD128", O_RDWR | O_CLOEXEC);
+        if (drv_ctx.gbm_device_fd < 0) {
+           DEBUG_PRINT_ERROR("opening dri device for gbm failed with fd = %d", drv_ctx.gbm_device_fd);
+           return OMX_ErrorInsufficientResources;
+        }
+#elif defined USE_ION
         *omx_op_buf_ion_info = (struct vdec_ion *)\
                       calloc (sizeof(struct vdec_ion),
                               drv_ctx.op_buf.actualcount);
@@ -6794,7 +6852,18 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
                 free(*omx_ptr_respbuffer);
                 *omx_ptr_respbuffer = NULL;
             }
-#ifdef USE_ION
+#ifdef USE_GBM
+      if(drv_ctx.gbm_device_fd >= 0) {
+       DEBUG_PRINT_LOW("Close gbm device");
+       close(drv_ctx.gbm_device_fd);
+       drv_ctx.gbm_device_fd = -1;
+    }
+            if (*omx_op_buf_gbm_info) {
+                DEBUG_PRINT_LOW("Free o/p gbm context");
+                free(*omx_op_buf_gbm_info);
+                *omx_op_buf_gbm_info = NULL;
+            }
+#elif defined USE_ION
             if (*omx_op_buf_ion_info) {
                 DEBUG_PRINT_LOW("Free o/p ion context");
                 free(*omx_op_buf_ion_info);
@@ -6823,8 +6892,26 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
             int pmem_fd = -1;
             int fd = -1;
             unsigned char *pmem_baseaddress = NULL;
-
-#ifdef USE_ION
+#ifdef USE_GBM
+            int pmeta_fd = -1;
+            // Allocate output buffers as cached to improve performance of software-reading
+            // of the YUVs. Output buffers are cache-invalidated in driver.
+            // If color-conversion is involved, Only the C2D output buffers are cached, no
+            // need to cache the decoder's output buffers
+            int cache_flag = client_buffers.is_color_conversion_enabled() ? 0 : ION_FLAG_CACHED;
+            bool status = alloc_map_gbm_memory(
+                               drv_ctx.video_resolution.frame_width,
+                               drv_ctx.video_resolution.frame_height,
+                               drv_ctx.gbm_device_fd,
+                               &(*omx_op_buf_gbm_info)[i],
+                               (secure_mode && !secure_scaling_to_non_secure_opb) ?
+                                      SECURE_FLAGS_OUTPUT_BUFFER : cache_flag);
+            if (status == false) {
+                return OMX_ErrorInsufficientResources;
+            }
+            pmem_fd = (*omx_op_buf_gbm_info)[i].bo_fd;
+            pmeta_fd = (*omx_op_buf_gbm_info)[i].meta_fd;
+#elif defined USE_ION
             // Allocate output buffers as cached to improve performance of software-reading
             // of the YUVs. Output buffers are cache-invalidated in driver.
             // If color-conversion is involved, Only the C2D output buffers are cached, no
@@ -6844,13 +6931,18 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
                 if (pmem_baseaddress == MAP_FAILED) {
                     DEBUG_PRINT_ERROR("MMAP failed for Size %u",
                             (unsigned int)drv_ctx.op_buf.buffer_size);
-#ifdef USE_ION
+#ifdef USE_GBM
+                    free_gbm_memory(&(*omx_op_buf_gbm_info)[i]);
+#elif defined USE_ION
                     free_ion_memory(&(*omx_op_buf_ion_info)[i]);
 #endif
                     return OMX_ErrorInsufficientResources;
                 }
             }
             (*omx_ptr_outputbuffer)[i].pmem_fd = pmem_fd;
+#ifdef USE_GBM
+            m_pmem_info[i].pmeta_fd = pmeta_fd;
+#endif
             (*omx_ptr_outputbuffer)[i].offset = 0;
             (*omx_ptr_outputbuffer)[i].bufferaddr = pmem_baseaddress;
             (*omx_ptr_outputbuffer)[i].mmaped_size = drv_ctx.op_buf.buffer_size;
@@ -6863,7 +6955,10 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
 
             *bufferHdr = (*omx_base_address + i );
             if (secure_mode) {
-#ifdef USE_ION
+#ifdef USE_GBM
+                (*omx_ptr_outputbuffer)[i].bufferaddr =
+                    (OMX_U8 *)(intptr_t)(*omx_op_buf_gbm_info)[i].bo_fd;
+#elif defined USE_ION
                 (*omx_ptr_outputbuffer)[i].bufferaddr =
                     (OMX_U8 *)(intptr_t)(*omx_op_buf_ion_info)[i].data_fd;
 #endif
@@ -6909,7 +7004,6 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
                          i, (*bufferHdr), (*bufferHdr)->pBuffer, (*bufferHdr)->nAllocLen,
                          (*bufferHdr)->nOffset, (*omx_ptr_outputbuffer)[i].pmem_fd,
                          intermediate);
-
     return eRet;
 }
 
@@ -9606,6 +9700,85 @@ OMX_ERRORTYPE omx_vdec::push_input_hevc(OMX_HANDLETYPE hComp)
     return OMX_ErrorNone;
 }
 
+#ifdef USE_GBM
+bool omx_vdec::alloc_map_gbm_memory(OMX_U32 w,OMX_U32 h,int dev_fd,
+                 struct vdec_gbm *op_buf_gbm_info, int flag)
+{
+
+    uint32 flags = GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING;
+    struct gbm_device *gbm = NULL;
+    struct gbm_bo *bo = NULL;
+    int bo_fd = -1, meta_fd = -1;
+    if (!op_buf_gbm_info || dev_fd < 0 ) {
+        DEBUG_PRINT_ERROR("Invalid arguments to alloc_map_ion_memory");
+        return FALSE;
+    }
+
+    gbm = gbm_create_device(dev_fd);
+    if (gbm == NULL) {
+       DEBUG_PRINT_ERROR("create gbm device failed");
+       return FALSE;
+    } else {
+       DEBUG_PRINT_LOW( "Successfully created gbm device");
+    }
+    if (drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_UBWC)
+       flags |= GBM_BO_USAGE_UBWC_ALIGNED_QTI;
+
+    DEBUG_PRINT_LOW("create NV12 gbm_bo with width=%d, height=%d", w, h);
+    bo = gbm_bo_create(gbm, w, h,GBM_FORMAT_NV12,
+              flags);
+
+    if (bo == NULL) {
+      DEBUG_PRINT_ERROR("Create bo failed");
+      gbm_device_destroy(gbm);
+      return FALSE;
+    }
+
+    bo_fd = gbm_bo_get_fd(bo);
+    if (bo_fd < 0) {
+      DEBUG_PRINT_ERROR("Get bo fd failed");
+      gbm_bo_destroy(bo);
+      gbm_device_destroy(gbm);
+      return FALSE;
+    }
+
+    gbm_perform(GBM_PERFORM_GET_METADATA_ION_FD, bo, &meta_fd);
+    if (meta_fd < 0) {
+      DEBUG_PRINT_ERROR("Get bo meta fd failed");
+      gbm_bo_destroy(bo);
+      gbm_device_destroy(gbm);
+      return FALSE;
+    }
+    op_buf_gbm_info->gbm = gbm;
+    op_buf_gbm_info->bo = bo;
+    op_buf_gbm_info->bo_fd = bo_fd;
+    op_buf_gbm_info->meta_fd = meta_fd;
+
+    DEBUG_PRINT_LOW("allocate gbm bo fd meta fd  %p %d %d",bo,bo_fd,meta_fd);
+    return TRUE;
+}
+
+void omx_vdec::free_gbm_memory(struct vdec_gbm *buf_gbm_info)
+{
+    if(!buf_gbm_info) {
+      DEBUG_PRINT_ERROR(" GBM: free called with invalid fd/allocdata");
+      return;
+    }
+    DEBUG_PRINT_LOW("free gbm bo fd meta fd  %p %d %d",
+           buf_gbm_info->bo,buf_gbm_info->bo_fd,buf_gbm_info->meta_fd);
+
+    if (buf_gbm_info->bo)
+       gbm_bo_destroy(buf_gbm_info->bo);
+    buf_gbm_info->bo = NULL;
+
+    if (buf_gbm_info->gbm)
+       gbm_device_destroy(buf_gbm_info->gbm);
+    buf_gbm_info->gbm = NULL;
+
+    buf_gbm_info->bo_fd = -1;
+    buf_gbm_info->meta_fd = -1;
+}
+#endif
 #ifndef USE_ION
 bool omx_vdec::align_pmem_buffers(int pmem_fd, OMX_U32 buffer_size,
         OMX_U32 alignment)
@@ -9732,6 +9905,10 @@ void omx_vdec::free_output_buffer_header(bool intermediate)
         intermediate?&drv_ctx.ptr_intermediate_respbuffer:&drv_ctx.ptr_respbuffer;
     vdec_ion **omx_op_buf_ion_info =
         intermediate?&drv_ctx.op_intermediate_buf_ion_info:&drv_ctx.op_buf_ion_info;
+#ifdef USE_GBM
+    vdec_gbm **omx_op_buf_gbm_info =
+        intermediate?&drv_ctx.op_intermediate_buf_gbm_info:&drv_ctx.op_buf_gbm_info;
+#endif
 
     if (*omx_base_address) {
         free (*omx_base_address);
@@ -9751,7 +9928,19 @@ void omx_vdec::free_output_buffer_header(bool intermediate)
         free (*omx_ptr_outputbuffer);
         *omx_ptr_outputbuffer = NULL;
     }
-#ifdef USE_ION
+#ifdef USE_GBM
+    if (*omx_op_buf_gbm_info) {
+        DEBUG_PRINT_LOW("Free o/p gbm context");
+        free(*omx_op_buf_gbm_info);
+        *omx_op_buf_gbm_info = NULL;
+    }
+    if (drv_ctx.gbm_device_fd >= 0) {
+       DEBUG_PRINT_LOW("Close gbm device");
+       close(drv_ctx.gbm_device_fd);
+       drv_ctx.gbm_device_fd = -1;
+    }
+
+#elif defined USE_ION
     if (*omx_op_buf_ion_info) {
         DEBUG_PRINT_LOW("Free o/p ion context");
         free(*omx_op_buf_ion_info);
@@ -12096,6 +12285,18 @@ OMX_ERRORTYPE omx_vdec::handle_demux_data(OMX_BUFFERHEADERTYPE *p_buf_hdr)
     return OMX_ErrorNone;
 }
 
+void omx_vdec::allocate_color_convert_buf::enable_color_conversion(bool enable) {
+    if (!omx) {
+        DEBUG_PRINT_HIGH("Invalid omx_vdec");
+        return;
+    }
+
+    if (!omx->in_reconfig)
+        enabled = enable;
+
+    omx->c2d_enable_pending = enable;
+}
+
 omx_vdec::allocate_color_convert_buf::allocate_color_convert_buf()
 {
     enabled = false;
@@ -12293,15 +12494,15 @@ bool omx_vdec::allocate_color_convert_buf::set_color_format(
             } else {
                    dest_format = NV12_128m;
             }
-            enabled = true;
+            enable_color_conversion(true);
         } else {
             DEBUG_PRINT_ERROR("Unsupported output color format for c2d (%d)",
                               dest_color_format);
             status = false;
-            enabled = false;
+            enable_color_conversion(false);
         }
     } else {
-        enabled = false;
+        enable_color_conversion(false);
     }
     pthread_mutex_unlock(&omx->c_lock);
     return status;
