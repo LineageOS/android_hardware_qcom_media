@@ -72,6 +72,7 @@ omx_core_cb_type core[] =
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.aac", "libOmxAacDec.so", "audio_decoder.aac"),
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.multiaac", "libOmxAacDec.so", "audio_decoder.aac"),
     OMX_REGISTRY_ENTRY("OMX.qti.vdec.vpp", "libOmxVpp.so", "video_decoder.vpp"),
+    OMX_REGISTRY_ENTRY("OMX.qcom.audio.encoder.mpegh", "libOmxMpeghEncSw.so", "audio_encoder.mpegh"),
 
 #ifdef _NILE_
     //Entries specific to msmnile
