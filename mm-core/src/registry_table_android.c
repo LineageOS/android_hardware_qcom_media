@@ -89,9 +89,9 @@ omx_core_cb_type core[] =
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.tme.secure", "libOmxVenc.so", "video_encoder.tme"),
 #endif //_STEPPE_
 
-#ifndef _ATOLL_
+#if !defined(_ATOLL_) || !defined(_TRINKET)
     OMX_REGISTRY_ENTRY("OMX.qti.video.decoder.vc1sw", "libOmxSwVdec.so", "video_decoder.vc1"),
-#endif //_ATOLL_
+#endif //_ATOLL_ || _TRINKET_
 
     OMX_REGISTRY_ENTRY("OMX.QCOM.CUST.COMP.START", NULL, NULL),
     OMX_REGISTRY_ENTRY("OMX.qcom.file.muxer", "libOmxMux.so", "container_muxer.mp2"),
