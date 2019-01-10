@@ -12537,8 +12537,12 @@ OMX_BUFFERHEADERTYPE* omx_vdec::allocate_color_convert_buf::get_il_buf_hdr
         bool status = false;
         if (!omx->in_reconfig && !omx->output_flush_progress && bufadd->nFilledLen) {
             pthread_mutex_lock(&omx->c_lock);
-            omx->do_cache_operations(omx->drv_ctx.op_intermediate_buf_ion_info[index].data_fd);
 
+#ifdef USE_GBM
+            omx->do_cache_operations(omx->drv_ctx.op_intermediate_buf_gbm_info[index].bo_fd);
+#else
+            omx->do_cache_operations(omx->drv_ctx.op_intermediate_buf_ion_info[index].data_fd);
+#endif
             DEBUG_PRINT_INFO("C2D: Start color convertion");
             status = c2dcc.convertC2D(
                              omx->drv_ctx.ptr_intermediate_outputbuffer[index].pmem_fd,
@@ -12546,7 +12550,11 @@ OMX_BUFFERHEADERTYPE* omx_vdec::allocate_color_convert_buf::get_il_buf_hdr
                              omx->drv_ctx.ptr_outputbuffer[index].pmem_fd,
                              omx->m_out_mem_ptr[index].pBuffer,
                              omx->m_out_mem_ptr[index].pBuffer);
+#ifdef USE_GBM
+            omx->do_cache_operations(omx->drv_ctx.op_intermediate_buf_gbm_info[index].bo_fd);
+#else
             omx->do_cache_operations(omx->drv_ctx.op_intermediate_buf_ion_info[index].data_fd);
+#endif
             if (!status) {
                 DEBUG_PRINT_ERROR("Failed color conversion %d", status);
                 m_out_mem_ptr_client[index].nFilledLen = 0;
