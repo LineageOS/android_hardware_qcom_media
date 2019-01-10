@@ -562,22 +562,6 @@ void venc_dev::get_roi_for_timestamp(struct roidata &roi, OMX_TICKS timestamp)
     pthread_mutex_unlock(&m_roilock);
 }
 
-int venc_dev::append_mbi_extradata(void *dst, struct msm_vidc_extradata_header* src)
-{
-    OMX_QCOM_EXTRADATA_MBINFO *mbi = (OMX_QCOM_EXTRADATA_MBINFO *)dst;
-
-    if (!dst || !src)
-        return 0;
-
-    /* TODO: Once Venus 3XX target names are known, nFormat should 2 for those
-     * targets, since the payload format will be different */
-    mbi->nFormat = 2;
-    mbi->nDataSize = src->data_size;
-    memcpy(&mbi->data, &src->data, src->data_size);
-
-    return mbi->nDataSize + sizeof(*mbi);
-}
-
 inline int get_yuv_size(unsigned long fmt, int width, int height) {
     unsigned int y_stride, uv_stride, y_sclines,
                 uv_sclines, y_plane, uv_plane;
@@ -599,18 +583,6 @@ inline int get_yuv_size(unsigned long fmt, int width, int height) {
             break;
     }
     return size;
-}
-
-void venc_dev::append_extradata_mbidata(OMX_OTHER_EXTRADATATYPE *p_extra,
-            struct msm_vidc_extradata_header *p_extradata)
-{
-    OMX_U32 payloadSize = append_mbi_extradata(&p_extra->data, p_extradata);
-    p_extra->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) + payloadSize - sizeof(unsigned int), 4);
-    p_extra->nVersion.nVersion = OMX_SPEC_VERSION;
-    p_extra->nPortIndex = OMX_DirOutput;
-    p_extra->eType = (OMX_EXTRADATATYPE)OMX_ExtraDataVideoEncoderMBInfo;
-    p_extra->nDataSize = payloadSize;
-
 }
 
 void venc_dev::append_extradata_ltrinfo(OMX_OTHER_EXTRADATATYPE *p_extra,
@@ -693,33 +665,6 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
 
         DEBUG_PRINT_LOW("Extradata Type = 0x%x", (OMX_QCOM_EXTRADATATYPE)p_extra->eType);
         switch ((OMX_QCOM_EXTRADATATYPE)p_extra->eType) {
-        case OMX_ExtraDataFrameDimension:
-        {
-            struct msm_vidc_extradata_index *payload;
-            OMX_QCOM_EXTRADATA_FRAMEDIMENSION *framedimension_format;
-            data->nSize = (sizeof(OMX_OTHER_EXTRADATATYPE) + sizeof(struct msm_vidc_extradata_index) + 3)&(~3);
-            data->nVersion.nVersion = OMX_SPEC_VERSION;
-            data->nPortIndex = 0;
-            data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_INDEX;
-#ifdef KONA_TODO_UPDATE
-            data->nDataSize = sizeof(struct msm_vidc_input_crop_payload);
-#endif
-            framedimension_format = (OMX_QCOM_EXTRADATA_FRAMEDIMENSION *)p_extra->data;
-            payload = (struct msm_vidc_extradata_index *)(data->data);
-#ifdef KONA_TODO_UPDATE
-            payload->type = MSM_VIDC_EXTRADATA_INPUT_CROP;
-            payload->input_crop.left = framedimension_format->nDecWidth;
-            payload->input_crop.top = framedimension_format->nDecHeight;
-            payload->input_crop.width = framedimension_format->nActualWidth;
-            payload->input_crop.height = framedimension_format->nActualHeight;
-#endif
-            DEBUG_PRINT_LOW("Height = %d Width = %d Actual Height = %d Actual Width = %d",
-                framedimension_format->nDecWidth, framedimension_format->nDecHeight,
-                framedimension_format->nActualWidth, framedimension_format->nActualHeight);
-            filled_len += data->nSize;
-            data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
-            break;
-        }
         case OMX_ExtraDataQP:
         {
             OMX_QCOM_EXTRADATA_QP * qp_payload = NULL;
@@ -1014,17 +959,7 @@ bool venc_dev::handle_output_extradata(void *buffer, int index)
         }
 
         switch (p_extradata->type) {
-#ifdef KONA_TODO_UPDATE
-            case MSM_VIDC_EXTRADATA_METADATA_MBI:
-            {
-                append_extradata_mbidata(p_extra, p_extradata);
-                if(p_clientextra) {
-                     append_extradata_mbidata(p_clientextra, p_extradata);
-                }
-                DEBUG_PRINT_LOW("MBI Extradata = 0x%x", *((OMX_U32 *)p_extra->data));
-                break;
-            }
-            case MSM_VIDC_EXTRADATA_METADATA_LTR:
+            case MSM_VIDC_EXTRADATA_METADATA_LTRINFO:
             {
                 append_extradata_ltrinfo(p_extra, p_extradata);
                 if(p_clientextra) {
@@ -1033,7 +968,6 @@ bool venc_dev::handle_output_extradata(void *buffer, int index)
                 DEBUG_PRINT_LOW("LTRInfo Extradata = 0x%x", *((OMX_U32 *)p_extra->data));
                 break;
             }
-#endif
             case MSM_VIDC_EXTRADATA_NONE:
                 append_extradata_none(p_extra);
                 if(p_clientextra) {
@@ -2572,45 +2506,6 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
 
                 break;
             }
-        case OMX_ExtraDataFrameDimension:
-            {
-                DEBUG_PRINT_LOW("venc_set_param: OMX_ExtraDataFrameDimension");
-                OMX_BOOL extra_data = *(OMX_BOOL *)(paramData);
-
-                if (venc_set_extradata(OMX_ExtraDataFrameDimension, extra_data) == false) {
-                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_ExtraDataFrameDimension failed");
-                    return false;
-                }
-
-                extradata = true;
-                break;
-            }
-        case OMX_ExtraDataVideoEncoderSliceInfo:
-            {
-                DEBUG_PRINT_LOW("venc_set_param: OMX_ExtraDataVideoEncoderSliceInfo");
-                OMX_BOOL extra_data = *(OMX_BOOL *)(paramData);
-
-                if (venc_set_extradata(OMX_ExtraDataVideoEncoderSliceInfo, extra_data) == false) {
-                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_ExtraDataVideoEncoderSliceInfo failed");
-                    return false;
-                }
-
-                extradata = true;
-                break;
-            }
-        case OMX_ExtraDataVideoEncoderMBInfo:
-            {
-                DEBUG_PRINT_LOW("venc_set_param: OMX_ExtraDataVideoEncoderMBInfo");
-                OMX_BOOL extra_data =  *(OMX_BOOL *)(paramData);
-
-                if (venc_set_extradata(OMX_ExtraDataVideoEncoderMBInfo, extra_data) == false) {
-                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_ExtraDataVideoEncoderMBInfo failed");
-                    return false;
-                }
-
-                extradata = true;
-                break;
-            }
         case OMX_ExtraDataVideoLTRInfo:
             {
                 DEBUG_PRINT_LOW("venc_set_param: OMX_ExtraDataVideoLTRInfo");
@@ -2894,10 +2789,6 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                         return false;
                     }
 
-                    if (venc_set_idr_period(intraperiod->nIDRPeriod) == false) {
-                        DEBUG_PRINT_ERROR("ERROR: Setting idr period failed");
-                        return false;
-                    }
                     client_req_disable_bframe = (intraperiod->nBFrames == 0) ? true : false;
                 }
 
@@ -2957,10 +2848,6 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
 
                 if (venc_set_intra_period(avc_iperiod->nPFrames, intra_period.num_bframes) == false) {
                     DEBUG_PRINT_ERROR("ERROR: Setting intra period failed");
-                    return false;
-                }
-                if (venc_set_idr_period(avc_iperiod->nIDRPeriod) == false) {
-                    DEBUG_PRINT_ERROR("ERROR: Setting idr period failed");
                     return false;
                 }
                 break;
@@ -4460,13 +4347,7 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
 
             if (bufhdr->nFlags & OMX_BUFFERFLAG_EOS)
                 buf.flags |= V4L2_BUF_FLAG_EOS;
-#ifdef KONA_TODO_UPDATE
-            if (i != numBufs - 1) {
-                buf.flags |= V4L2_MSM_BUF_FLAG_DEFER;
-                DEBUG_PRINT_LOW("for buffer %d (etb #%d) in batch of %d, marking as defer",
-                        i, etb + 1, numBufs);
-            }
-#endif
+
             // timestamp differences from camera are in nano-seconds
             bufTimeStamp = bufhdr->nTimeStamp + MetaBufferUtil::getIntAt(hnd, i, MetaBufferUtil::INT_TIMESTAMP) / 1000;
 
@@ -4578,18 +4459,6 @@ bool venc_dev::venc_fill_buf(void *buffer, void *pmem_data_buf,unsigned index,un
         }
     }
 
-    if (mBatchSize) {
-        // Should always mark first buffer as DEFER, since 0 % anything is 0, just offset by 1
-        // This results in the first batch being of size mBatchSize + 1, but thats good because
-        // we need an extra FTB for the codec specific data.
-#ifdef KONA_TODO_UPDATE
-        if (!ftb || ftb % mBatchSize) {
-            buf.flags |= V4L2_MSM_BUF_FLAG_DEFER;
-            DEBUG_PRINT_LOW("for ftb buffer %d marking as defer", ftb + 1);
-        }
-#endif
-    }
-
     extra_idx = EXTRADATA_IDX(num_output_planes);
 
     if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
@@ -4690,14 +4559,9 @@ bool venc_dev::venc_set_extradata(OMX_U32 extra_data, OMX_BOOL enable)
 
     control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
     switch (extra_data) {
-#ifdef KONA_TODO_UPDATE
         case OMX_ExtraDataVideoLTRInfo:
-            control.value = V4L2_MPEG_VIDC_EXTRADATA_LTR;
+            control.value = EXTRADATA_ADVANCED;
             break;
-        case OMX_ExtraDataFrameDimension:
-            control.value = V4L2_MPEG_VIDC_EXTRADATA_INPUT_CROP;
-            break;
-#endif
         default:
             DEBUG_PRINT_ERROR("Unrecognized extradata index 0x%x", (unsigned int)extra_data);
             return false;
@@ -5106,18 +4970,6 @@ bool venc_dev::venc_reconfigure_intra_period()
 
     DEBUG_PRINT_LOW("Success IOCTL set control for V4L2_CID_MPEG_VIDEO_B_FRAMES value=%lu", intra_period.num_bframes);
 
-    if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264 ||
-        m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
-        /*
-         * This call is to ensure default idr period is set if client
-         * did not set it using index OMX_IndexConfigVideoAVCIntraPeriod.
-         */
-        if (venc_set_idr_period(idrperiod.idrperiod) == false) {
-            DEBUG_PRINT_ERROR("ERROR: Setting idr period failed");
-            return false;
-        }
-    }
-
     return true;
 }
 
@@ -5212,37 +5064,6 @@ bool venc_dev::_venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames)
     }
     DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
 
-    return true;
-}
-
-bool venc_dev::venc_set_idr_period(OMX_U32 nIDRPeriod)
-{
-    int rc = 0;
-    struct v4l2_control control;
-
-    if (m_sVenc_cfg.codectype != V4L2_PIX_FMT_H264 &&
-        m_sVenc_cfg.codectype != V4L2_PIX_FMT_HEVC) {
-        // don't return error if idr period is zero even though invalid codectype
-        if (!nIDRPeriod)
-            return true;
-
-        DEBUG_PRINT_ERROR("venc_set_idr_period: invalid codedtype (%#lx)",
-            m_sVenc_cfg.codectype);
-        return false;
-    }
-
-#ifdef KONA_TODO_UPDATE
-    /* Delete - Hardcode to 1 in driver.*/
-    DEBUG_PRINT_LOW("venc_set_idr_period: nIDRPeriod: %u", (unsigned int)nIDRPeriod);
-    control.id = V4L2_CID_MPEG_VIDC_VIDEO_IDR_PERIOD;
-    control.value = nIDRPeriod;
-    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-    if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
-        return false;
-    }
-    idrperiod.idrperiod = nIDRPeriod;
-#endif
     return true;
 }
 

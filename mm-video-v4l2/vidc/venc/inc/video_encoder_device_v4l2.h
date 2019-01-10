@@ -369,8 +369,6 @@ class venc_dev
         OMX_ERRORTYPE allocate_extradata(struct extradata_buffer_info *extradata_info, int flags);
         void free_extradata_all();
         void free_extradata(struct extradata_buffer_info *extradata_info);
-        int append_mbi_extradata(void *, struct msm_vidc_extradata_header*);
-        void append_extradata_mbidata(OMX_OTHER_EXTRADATATYPE *, struct msm_vidc_extradata_header *);
         void append_extradata_ltrinfo(OMX_OTHER_EXTRADATATYPE *, struct msm_vidc_extradata_header *);
         void append_extradata_none(OMX_OTHER_EXTRADATATYPE *);
         bool handle_output_extradata(void *, int);
@@ -443,7 +441,6 @@ class venc_dev
         bool venc_set_voptiming_cfg(OMX_U32 nTimeIncRes);
         void venc_config_print();
         bool venc_set_extradata(OMX_U32 extra_data, OMX_BOOL enable);
-        bool venc_set_idr_period(OMX_U32 nIDRPeriod);
         bool venc_reconfigure_intra_period();
         bool venc_reconfigure_intra_refresh_period();
         bool venc_reconfig_reqbufs();
