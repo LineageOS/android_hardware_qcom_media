@@ -353,6 +353,10 @@ int32_t C2DColorConverter::getDummySurfaceDef(ColorConvertFormat format,
         (*surfaceYUVDef)->phys2 = NULL;
         (*surfaceYUVDef)->plane2 = NULL;
 
+        if (mFlags & private_handle_t::PRIV_FLAGS_ITU_R_601_FR) {
+            (*surfaceYUVDef)->format |= C2D_FORMAT_BT601_FULLRANGE;
+        }
+
         if (format == YCbCr420P ||
             format == YCrCb420P) {
           ALOGI("%s: half stride for Cb Cr planes \n", __FUNCTION__);
@@ -591,20 +595,20 @@ size_t C2DColorConverter::calcSize(ColorConvertFormat format, size_t width, size
             break;
         case YCbCr420SP:
             alignedw = ALIGN(width, ALIGN16);
-            size = ALIGN((alignedw * height) + (ALIGN(width/2, ALIGN32) * (height/2) * 2), ALIGN4K);
+            size = ALIGN((alignedw * height) + (ALIGN((width+1)/2, ALIGN32) * ((height+1)/2) * 2), ALIGN4K);
             break;
         case YCbCr420P:
             alignedw = ALIGN(width, ALIGN16);
-            size = ALIGN((alignedw * height) + (ALIGN(width/2, ALIGN16) * (height/2) * 2), ALIGN4K);
+            size = ALIGN((alignedw * height) + (ALIGN((width+1)/2, ALIGN16) * ((height+1)/2) * 2), ALIGN4K);
             break;
         case YCrCb420P:
             alignedw = ALIGN(width, ALIGN16);
-            size = ALIGN((alignedw * height) + (ALIGN(width/2, ALIGN16) * (height/2) * 2), ALIGN4K);
+            size = ALIGN((alignedw * height) + (ALIGN((width+1)/2, ALIGN16) * ((height+1)/2) * 2), ALIGN4K);
             break;
         case YCbCr420Tile:
             alignedw = ALIGN(width, ALIGN128);
             alignedh = ALIGN(height, ALIGN32);
-            size = ALIGN(alignedw * alignedh, ALIGN8K) + ALIGN(alignedw * ALIGN(height/2, ALIGN32), ALIGN8K);
+            size = ALIGN(alignedw * alignedh, ALIGN8K) + ALIGN(alignedw * ALIGN((height+1)/2, ALIGN32), ALIGN8K);
             break;
         case NV12_2K: {
             alignedw = ALIGN(width, ALIGN16);
@@ -618,7 +622,7 @@ size_t C2DColorConverter::calcSize(ColorConvertFormat format, size_t width, size
         case NV12_128m:
             alignedw = ALIGN(width, ALIGN128);
             alignedh = ALIGN(height, ALIGN32);
-            size = ALIGN(alignedw * alignedh + (alignedw * ALIGN(height/2, ALIGN16)), ALIGN4K);
+            size = ALIGN(alignedw * alignedh + (alignedw * ALIGN((height+1)/2, ALIGN16)), ALIGN4K);
             break;
         case NV12_UBWC:
             size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12_UBWC, width, height);
@@ -823,8 +827,8 @@ int32_t C2DColorConverter::dumpOutput(char * filename, char mode) {
           //dump Cb/Cr
           base = (uint8_t *)dstSurfaceDef->plane1;
           stride = dstSurfaceDef->stride1;
-          for (size_t i = 0; i < sliceHeight/2;i++) { //will work only for the 420 ones
-            ret = write(fd, base, mDstWidth/2);
+          for (size_t i = 0; i < (sliceHeight+1)/2;i++) { //will work only for the 420 ones
+            ret = write(fd, base, (mDstWidth+1)/2);
             if (ret < 0) goto cleanup;
             base += stride;
           }
@@ -833,8 +837,8 @@ int32_t C2DColorConverter::dumpOutput(char * filename, char mode) {
           base = (uint8_t *)dstSurfaceDef->plane2;
           stride = dstSurfaceDef->stride2;
 
-          for (size_t i = 0; i < sliceHeight/2;i++) { //will work only for the 420 ones
-            ret = write(fd, base, mDstWidth/2);
+          for (size_t i = 0; i < (sliceHeight+1)/2;i++) { //will work only for the 420 ones
+            ret = write(fd, base, (mDstWidth+1)/2);
             if (ret < 0) goto cleanup;
             base += stride;
           }
@@ -843,7 +847,7 @@ int32_t C2DColorConverter::dumpOutput(char * filename, char mode) {
           /* dump chroma */
           base = (uint8_t *)dstSurfaceDef->plane1;
           stride = dstSurfaceDef->stride1;
-          for (size_t i = 0; i < sliceHeight/2;i++) { //will work only for the 420 ones
+          for (size_t i = 0; i < (sliceHeight+1)/2;i++) { //will work only for the 420 ones
             ret = write(fd, base, mDstWidth);
             if (ret < 0) goto cleanup;
             base += stride;

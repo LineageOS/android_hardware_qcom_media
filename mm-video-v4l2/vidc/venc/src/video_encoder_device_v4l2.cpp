@@ -4260,10 +4260,10 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                 }
             } else {
                 // color_format == 1 ==> RGBA to YUV Color-converted buffer
-                // Buffers color-converted via C2D have 601-Limited color
+                // Buffers color-converted via C2D have 601 color
                 if (!streaming[OUTPUT_PORT]) {
-                    DEBUG_PRINT_HIGH("Setting colorspace 601-L for Color-converted buffer");
-                    venc_set_colorspace(MSM_VIDC_BT601_6_625, 0 /*range-limited*/,
+                    DEBUG_PRINT_HIGH("Setting colorspace 601 for Color-converted buffer");
+                    venc_set_colorspace(MSM_VIDC_BT601_6_625, color_space.range,
                             MSM_VIDC_TRANSFER_601_6_525, MSM_VIDC_MATRIX_601_6_525);
                 }
                 plane[0].m.userptr = (unsigned long) bufhdr->pBuffer;
