@@ -3306,7 +3306,6 @@ unsigned venc_dev::venc_set_message_thread_id(pthread_t tid)
 
 bool venc_dev::venc_set_extradata_hdr10metadata()
 {
-#ifdef KONA_TODO_UPDATE
     struct v4l2_control control;
 
     /* HDR10 Metadata is enabled by default for HEVC Main10 profile. */
@@ -3314,7 +3313,7 @@ bool venc_dev::venc_set_extradata_hdr10metadata()
         codec_profile.profile == V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_10) {
 
         control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
-        control.value = V4L2_MPEG_VIDC_EXTRADATA_HDR10PLUS_METADATA;
+        control.value = EXTRADATA_ENC_INPUT_HDR10PLUS;
 
         DEBUG_PRINT_HIGH("venc_set_extradata:: HDR10PLUS_METADATA");
 
@@ -3331,7 +3330,6 @@ bool venc_dev::venc_set_extradata_hdr10metadata()
                                  &venc_handle->m_sInPortDef.nBufferSize,
                                  venc_handle->m_sInPortDef.nPortIndex);
     }
-#endif
     return true;
 }
 
