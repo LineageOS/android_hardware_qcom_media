@@ -35,6 +35,7 @@ TARGETS_THAT_NEED_SW_VDEC := msm8937 msm8909
 TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_42 := msm8937
 TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_51 := msm8953 sdm660
 TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_52 := msm8996 msm8998 apq8098_latv
+TARGETS_THAT_DOES_NOT_SUPPORT_HEVC_HDR_10 := msm8909 msm8937 msm8953
 
 ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_USE_HEVC_ADSP_HEAP)),true)
 libmm-vdec-def += -D_HEVC_USE_ADSP_HEAP_
@@ -67,6 +68,10 @@ endif
 
 ifeq ($(call is-platform-sdk-version-at-least,27),true) # O-MR1
 libmm-vdec-def += -D_ANDROID_O_MR1_DIVX_CHANGES
+endif
+
+ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_DOES_NOT_SUPPORT_HEVC_HDR_10)),true)
+libmm-vdec-def += -DHEVC_PROFILE_HDR10_NOT_SUPPORTED
 endif
 
 libmm-vdec-def += -D_QUERY_DISP_RES_
