@@ -865,12 +865,12 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_hypervisor = !!HYPERVISOR;
 
     property_value[0] = '\0';
-    property_get("vidc.dec.pf.size", property_value, "0");
+    property_get("vendor.vidc.dec.pf.size", property_value, "0");
     if (atoi(property_value))
         m_pf_info.size_limit = atoi(property_value);
 
     property_value[0] = '\0';
-    property_get("vidc.dec.pf.res", property_value, "0");
+    property_get("vendor.vidc.dec.pf.res", property_value, "0");
     if (atoi(property_value))
         m_pf_info.res_limit = atoi(property_value);
 }
