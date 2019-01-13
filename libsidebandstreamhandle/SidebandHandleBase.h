@@ -37,7 +37,21 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // ----------------------------------------------------------------------------
 namespace android {
 // ----------------------------------------------------------------------------
+#define BUF_QUEUE_FULL (android::UNKNOWN_ERROR + 9)
+#define BUF_QUEUE_EMPTY (android::UNKNOWN_ERROR + 10)
+#define BUF_QUEUE_NO_MORE_DATA (android::UNKNOWN_ERROR + 11)
+#define SETTING_NO_DATA_CHANGE (android::UNKNOWN_ERROR + 12)
 // ----------------------------------------------------------------------------
+
+typedef struct color_data {
+    uint32_t flags;
+    float hue;
+    float saturation;
+    float tone_cb;
+    float tone_cr;
+    float contrast;
+    float brightness;
+}color_data_t;
 
 struct SidebandHandleBase : public native_handle {
 public:
@@ -49,6 +63,9 @@ public:
     /*Producer use, get return buffer fd from Consumer */
     virtual status_t dequeueBuffer(int *idx, uint32_t msInterval) = 0;
 
+    /*Producer use, set setting_data to Consumer */
+    virtual status_t setColorData(color_data_t &color_data) = 0;
+
     /*Consumer use, get captured buffer Number */
     virtual status_t acquireBufferNumb(int *captured_unRead_bufNum) = 0;
 
@@ -57,6 +74,9 @@ public:
 
     /*Consumer use, send used buffer fd to Producer*/
     virtual status_t releaseBuffer(int idx) = 0;
+
+    /*Consumer use, get setting_data from Producer*/
+    virtual status_t getColorData(color_data_t *color_data) = 0;
 
 public:
     /*Consumer use, get Buffer width*/
