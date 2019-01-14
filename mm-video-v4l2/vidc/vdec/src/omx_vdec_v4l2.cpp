@@ -280,8 +280,8 @@ void* async_message_thread (void *input)
                          profile_level_converter::convert_v4l2_level_to_omx(
                                                          codec, ptr[10], &tmp_level)) {
                          event_fields_changed |= (omx->mClientSessionForSufficiency &&
-                                                  ((tmp_profile != (int)omx->mClientSetProfile) ||
-                                                   (tmp_level > (int)omx->mClientSetLevel)));
+                                                  ((tmp_profile != (int)omx->clientSet_profile_level.eProfile) ||
+                                                   (tmp_level > (int)omx->clientSet_profile_level.eLevel)));
                      }
                  }
 
@@ -304,8 +304,8 @@ void* async_message_thread (void *input)
                                      (tmp_color_space == omx_vdec::BT2020 ? "BT2020": "EXCEPT_BT2020"));
                     DEBUG_PRINT_HIGH("Client Session for sufficiency feature is %s", omx->mClientSessionForSufficiency ? "enabled": "disabled");
                     DEBUG_PRINT_HIGH("VIDC Port Reconfig Client (Profile,Level) = (%d,%d) bitstream(Profile,Level) = (%d,%d))",
-                                     omx->mClientSetProfile,
-                                     omx->mClientSetLevel,
+                                     omx->clientSet_profile_level.eProfile,
+                                     omx->clientSet_profile_level.eLevel,
                                      tmp_profile, tmp_level);
                     omx->dpb_bit_depth = ptr[2];
                     omx->m_progressive = ptr[3];
@@ -878,8 +878,8 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
 
     profile_level_converter::init();
     mClientSessionForSufficiency = false;
-    mClientSetProfile = 0;
-    mClientSetLevel = 0;
+    clientSet_profile_level.eProfile = 0;
+    clientSet_profile_level.eLevel = 0;
 #ifdef USE_GBM
      drv_ctx.gbm_device_fd = -1;
 #endif
@@ -3675,8 +3675,8 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             DEBUG_PRINT_LOW("get_parameter: OMX_QTIIndexParamClientConfiguredProfileLevelForSufficiency");
             OMX_VIDEO_PARAM_PROFILELEVELTYPE *pParam =
                 (OMX_VIDEO_PARAM_PROFILELEVELTYPE *) paramData;
-            pParam->eProfile = mClientSetProfile;
-            pParam->eLevel = mClientSetLevel;
+            pParam->eProfile = clientSet_profile_level.eProfile;
+            pParam->eLevel = clientSet_profile_level.eLevel;
             eRet = OMX_ErrorNone;
             break;
         }
@@ -4479,17 +4479,25 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                        }
                                    }
                                    break;
+        case OMX_QTIIndexParamClientConfiguredProfileLevelForSufficiency:
         case OMX_IndexParamVideoProfileLevelCurrent: {
-                                     VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_PROFILELEVELTYPE);
-                                     OMX_VIDEO_PARAM_PROFILELEVELTYPE* pParam =
-                                         (OMX_VIDEO_PARAM_PROFILELEVELTYPE*)paramData;
-                                     if (pParam) {
-                                         m_profile_lvl.eProfile = pParam->eProfile;
-                                         m_profile_lvl.eLevel = pParam->eLevel;
-                                     }
-                                     break;
+            VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_PROFILELEVELTYPE);
+            DEBUG_PRINT_LOW("set_parameter: OMX_QTIIndexParamClientConfiguredProfileLevelForSufficiency");
+            OMX_VIDEO_PARAM_PROFILELEVELTYPE *pParam = (OMX_VIDEO_PARAM_PROFILELEVELTYPE*)paramData;
 
-                                 }
+            if ((output_capability != V4L2_PIX_FMT_H264) ||
+                (output_capability != V4L2_PIX_FMT_HEVC)) {
+                DEBUG_PRINT_ERROR("set_parameter: Unsupported codec for client configured profile and level");
+                eRet = OMX_ErrorBadParameter;
+            }
+
+            DEBUG_PRINT_LOW("set_parameter: Client set profile is: %d", pParam->eProfile);
+            DEBUG_PRINT_LOW("set_parameter: Client set level is: %d", pParam->eLevel);
+            mClientSessionForSufficiency = true;
+            clientSet_profile_level.eProfile = pParam->eProfile;
+            clientSet_profile_level.eLevel = pParam->eLevel;
+            break;
+        }
         case OMX_QcomIndexParamVideoMetaBufferMode:
         {
             VALIDATE_OMX_PARAM_DATA(paramData, StoreMetaDataInBuffersParams);
@@ -4655,25 +4663,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             }
             m_dither_config = is_platform_tp10capture_supported() ? (dither_type)pParam->eDitherType : DITHER_ALL_COLORSPACE;
             DEBUG_PRINT_LOW("set_parameter: Final Dither Config is: %d", m_dither_config);
-            break;
-        }
-        case OMX_QTIIndexParamClientConfiguredProfileLevelForSufficiency:
-        {
-            VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_PROFILELEVELTYPE);
-            DEBUG_PRINT_LOW("set_parameter: OMX_QTIIndexParamClientConfiguredProfileLevelForSufficiency");
-            OMX_VIDEO_PARAM_PROFILELEVELTYPE *pParam = (OMX_VIDEO_PARAM_PROFILELEVELTYPE*)paramData;
-
-            if ((output_capability != V4L2_PIX_FMT_H264) ||
-                (output_capability != V4L2_PIX_FMT_HEVC)) {
-                DEBUG_PRINT_ERROR("set_parameter: Unsupported codec for client configured profile and level");
-                eRet = OMX_ErrorBadParameter;
-            }
-
-            DEBUG_PRINT_LOW("set_parameter: Client set profile is: %d", pParam->eProfile);
-            DEBUG_PRINT_LOW("set_parameter: Client set level is: %d", pParam->eLevel);
-            mClientSessionForSufficiency = true;
-            mClientSetProfile = pParam->eProfile;
-            mClientSetLevel = pParam->eLevel;
             break;
         }
         default: {

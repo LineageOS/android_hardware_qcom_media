@@ -687,8 +687,6 @@ class omx_vdec: public qc_omx_component
          */
         bool mClientSessionForSufficiency;
         bool isPortReconfigInsufficient;
-        OMX_U32 mClientSetProfile;
-        OMX_U32 mClientSetLevel;
         inline int get_session_codec_type();
 
     private:
@@ -1208,7 +1206,7 @@ class omx_vdec: public qc_omx_component
         bool msg_thread_created;
         bool async_thread_created;
 
-        OMX_VIDEO_PARAM_PROFILELEVELTYPE m_profile_lvl;
+        OMX_VIDEO_PARAM_PROFILELEVELTYPE clientSet_profile_level;
         QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE m_sParamLowLatency;
 
         //variables to handle dynamic buffer mode
