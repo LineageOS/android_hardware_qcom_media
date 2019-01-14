@@ -705,7 +705,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_arb_mode_override(0),
     m_queued_codec_config_count(0),
     secure_scaling_to_non_secure_opb(false),
-    m_force_compressed_for_dpb(true),
     m_is_display_session(false),
     m_prefetch_done(0),
     m_buffer_error(false)
@@ -4600,26 +4599,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             m_input_pass_buffer_fd = ((QOMX_ENABLETYPE *)paramData)->bEnable;
             if (m_input_pass_buffer_fd)
                 DEBUG_PRINT_LOW("Enable passing input buffer FD");
-            break;
-        }
-        case OMX_QTIIndexParamForceCompressedForDPB:
-        {
-            VALIDATE_OMX_PARAM_DATA(paramData, OMX_QTI_VIDEO_PARAM_FORCE_COMPRESSED_FOR_DPB_TYPE);
-            DEBUG_PRINT_LOW("set_parameter: OMX_QTIIndexParamForceCompressedForDPB");
-            OMX_QTI_VIDEO_PARAM_FORCE_COMPRESSED_FOR_DPB_TYPE *pParam =
-                (OMX_QTI_VIDEO_PARAM_FORCE_COMPRESSED_FOR_DPB_TYPE *)paramData;
-            if (m_disable_ubwc_mode) {
-                DEBUG_PRINT_ERROR("OMX_QTIIndexParamForceCompressedForDPB not supported when ubwc disabled");
-                eRet = OMX_ErrorUnsupportedSetting;
-                break;
-            }
-            if (!paramData) {
-               DEBUG_PRINT_ERROR("set_parameter: OMX_QTIIndexParamForceCompressedForDPB paramData NULL");
-               eRet = OMX_ErrorBadParameter;
-               break;
-            }
-
-            m_force_compressed_for_dpb = pParam->bEnable;
             break;
         }
         case OMX_QTIIndexParamForceUnCompressedForOPB:
