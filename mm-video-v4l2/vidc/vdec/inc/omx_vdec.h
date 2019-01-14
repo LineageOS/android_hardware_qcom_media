@@ -667,13 +667,6 @@ class omx_vdec: public qc_omx_component
         int m_progressive;
         bool is_mbaff;
 
-        enum dither_type {
-            DITHER_DISABLE = 0,
-            DITHER_COLORSPACE_EXCEPTBT2020,
-            DITHER_ALL_COLORSPACE
-        };
-        enum dither_type m_dither_config;
-
         enum color_space_type {
             BT2020 = 0,
             EXCEPT_BT2020,

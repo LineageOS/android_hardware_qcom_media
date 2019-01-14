@@ -869,9 +869,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_client_hdr_info.nPortIndex = (OMX_U32)OMX_CORE_INPUT_PORT_INDEX;
     m_internal_hdr_info.nPortIndex = (OMX_U32)OMX_CORE_OUTPUT_PORT_INDEX;
 
-    m_dither_config = DITHER_DISABLE;
-
-    DEBUG_PRINT_HIGH("Dither config is %d", m_dither_config);
     m_color_space = EXCEPT_BT2020;
 
     init_color_aspects_map();
@@ -3659,16 +3656,6 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             }
             break;
         }
-        case OMX_QTIIndexParamDitherControl:
-        {
-            VALIDATE_OMX_PARAM_DATA(paramData, QOMX_VIDEO_DITHER_CONTROL);
-            DEBUG_PRINT_LOW("get_parameter: QOMX_VIDEO_DITHER_CONTROL");
-            QOMX_VIDEO_DITHER_CONTROL *pParam =
-                (QOMX_VIDEO_DITHER_CONTROL *) paramData;
-            pParam->eDitherType = (QOMX_VIDEO_DITHERTYPE) m_dither_config;
-            eRet = OMX_ErrorNone;
-            break;
-        }
         case OMX_QTIIndexParamClientConfiguredProfileLevelForSufficiency:
         {
             VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_PROFILELEVELTYPE);
@@ -4647,22 +4634,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             }
             m_disable_ubwc_mode = pParam->bEnable;
             DEBUG_PRINT_LOW("set_parameter: UBWC %s for OPB", pParam->bEnable ? "disabled" : "enabled");
-            break;
-        }
-        case OMX_QTIIndexParamDitherControl:
-        {
-            VALIDATE_OMX_PARAM_DATA(paramData, QOMX_VIDEO_DITHER_CONTROL);
-            DEBUG_PRINT_LOW("set_parameter: OMX_QTIIndexParamDitherControl");
-            QOMX_VIDEO_DITHER_CONTROL *pParam = (QOMX_VIDEO_DITHER_CONTROL *)paramData;
-            DEBUG_PRINT_LOW("set_parameter: Dither Config from client is: %d", pParam->eDitherType);
-            if (( pParam->eDitherType < QOMX_DITHER_DISABLE ) ||
-                ( pParam->eDitherType > QOMX_DITHER_ALL_COLORSPACE)) {
-                DEBUG_PRINT_ERROR("set_parameter: DitherType outside the range");
-                eRet = OMX_ErrorBadParameter;
-                break;
-            }
-            m_dither_config = is_platform_tp10capture_supported() ? (dither_type)pParam->eDitherType : DITHER_ALL_COLORSPACE;
-            DEBUG_PRINT_LOW("set_parameter: Final Dither Config is: %d", m_dither_config);
             break;
         }
         default: {
