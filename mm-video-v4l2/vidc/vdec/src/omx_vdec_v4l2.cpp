@@ -685,7 +685,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     frm_int(0),
     m_fps_received(0),
     m_fps_prev(0),
-    m_drc_enable(0),
     in_reconfig(false),
     c2d_enable_pending(false),
     m_display_id(NULL),
@@ -704,8 +703,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_dec_hfr_fps(0),
     m_arb_mode_override(0),
     m_queued_codec_config_count(0),
-    secure_scaling_to_non_secure_opb(false),
-    m_is_display_session(false),
     m_prefetch_done(0),
     m_buffer_error(false)
 {
@@ -848,8 +845,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_smoothstreaming_height = 0;
     m_decode_order_mode = false;
     m_perf_control.perf_lock_acquire();
-    m_client_req_turbo_mode = false;
-    is_q6_platform = false;
     m_input_pass_buffer_fd = false;
     memset(&m_extradata_info, 0, sizeof(m_extradata_info));
     m_client_color_space.nPortIndex = (OMX_U32)OMX_CORE_INPUT_PORT_INDEX;
@@ -1927,7 +1922,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
     property_get("ro.board.platform", platform_name, "0");
     if (!strncmp(platform_name, "msm8610", 7)) {
         device_name = (OMX_STRING)"/dev/video/q6_dec";
-        is_q6_platform = true;
         maxSmoothStreamingWidth = 1280;
         maxSmoothStreamingHeight = 720;
     }
@@ -1961,7 +1955,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
     }
     drv_ctx.frame_rate.fps_numerator = DEFAULT_FPS;
     drv_ctx.frame_rate.fps_denominator = 1;
-    operating_frame_rate = DEFAULT_FPS;
     m_poll_efd = eventfd(0, 0);
     if (m_poll_efd < 0) {
         DEBUG_PRINT_ERROR("Failed to create event fd(%s)", strerror(errno));
@@ -2263,7 +2256,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         DEBUG_PRINT_INFO("omx_vdec::component_init() success : fd=%d",
                 drv_ctx.video_driver_fd);
     }
-    //memset(&h264_mv_buff,0,sizeof(struct h264_mv_buffer));
 
     OMX_INIT_STRUCT(&m_sParamLowLatency, QOMX_EXTNINDEX_VIDEO_LOW_LATENCY_MODE);
     m_sParamLowLatency.nNumFrames = 0;
@@ -3477,7 +3469,7 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                         GetAndroidNativeBufferUsageParams* nativeBuffersUsage = (GetAndroidNativeBufferUsageParams *) paramData;
                                         if (nativeBuffersUsage->nPortIndex == OMX_CORE_OUTPUT_PORT_INDEX) {
 
-                                            if (secure_mode && !secure_scaling_to_non_secure_opb) {
+                                            if (secure_mode) {
                                                 nativeBuffersUsage->nUsage = (GRALLOC_USAGE_PRIVATE_MM_HEAP | GRALLOC_USAGE_PROTECTED |
                                                         GRALLOC_USAGE_PRIVATE_UNCACHED);
                                             } else {
@@ -4874,15 +4866,6 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
         control.id = V4L2_CID_MPEG_VIDC_VIDEO_OPERATING_RATE;
         control.value = rate->nU32;
 
-        if (rate->nU32 == QOMX_VIDEO_HIGH_PERF_OPERATING_MODE) {
-            DEBUG_PRINT_LOW("Turbo mode requested");
-            m_client_req_turbo_mode = true;
-        } else {
-            operating_frame_rate = rate->nU32 >> 16;
-            m_client_req_turbo_mode = false;
-            DEBUG_PRINT_LOW("Operating Rate Set = %d fps",  operating_frame_rate);
-        }
-
         if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
             ret = errno == -EBUSY ? OMX_ErrorInsufficientResources :
                     OMX_ErrorUnsupportedSetting;
@@ -5286,7 +5269,7 @@ OMX_ERRORTYPE  omx_vdec::use_output_buffer(
             }
 
             if ((OMX_U32)handle->size < drv_ctx.op_buf.buffer_size) {
-                if (secure_mode && secure_scaling_to_non_secure_opb) {
+                if (secure_mode) {
                     DEBUG_PRINT_HIGH("Buffer size expected %u, got %u, but it's ok since we will never map it",
                         (unsigned int)drv_ctx.op_buf.buffer_size, (unsigned int)handle->size);
                 } else {
@@ -6289,8 +6272,7 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
                                drv_ctx.video_resolution.frame_height,
                                drv_ctx.gbm_device_fd,
                                &(*omx_op_buf_gbm_info)[i],
-                               (secure_mode && !secure_scaling_to_non_secure_opb) ?
-                                      SECURE_FLAGS_OUTPUT_BUFFER : cache_flag);
+                               (secure_mode) ? SECURE_FLAGS_OUTPUT_BUFFER : cache_flag);
             if (status == false) {
                 return OMX_ErrorInsufficientResources;
             }
@@ -6304,8 +6286,7 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
             int cache_flag = client_buffers.is_color_conversion_enabled() ? 0 : ION_FLAG_CACHED;
             bool status = alloc_map_ion_memory(drv_ctx.op_buf.buffer_size,
                                                &(*omx_op_buf_ion_info)[i],
-                    (secure_mode && !secure_scaling_to_non_secure_opb) ?
-                    SECURE_FLAGS_OUTPUT_BUFFER : cache_flag);
+                    (secure_mode) ? SECURE_FLAGS_OUTPUT_BUFFER : cache_flag);
             if (status == false) {
                 return OMX_ErrorInsufficientResources;
             }
@@ -7058,11 +7039,6 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer(OMX_IN OMX_HANDLETYPE  hComp,
             return OMX_ErrorBadParameter;
         }
 
-        if (handle->flags & private_handle_t::PRIV_FLAGS_DISP_CONSUMER) {
-            m_is_display_session = true;
-        } else {
-            m_is_display_session = false;
-        }
         buffer->nAllocLen = handle->size;
         DEBUG_PRINT_LOW("%s: buffer size = d-%d:b-%d",
                         __func__, (int)drv_ctx.op_buf.buffer_size, (int)handle->size);
@@ -7071,7 +7047,6 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer(OMX_IN OMX_HANDLETYPE  hComp,
             drv_ctx.op_buf.buffer_size = handle->size;
         }
 
-        DEBUG_PRINT_LOW("%s: m_is_display_session = %d", __func__, m_is_display_session);
     }
 
     if (client_buffers.is_color_conversion_enabled()) {

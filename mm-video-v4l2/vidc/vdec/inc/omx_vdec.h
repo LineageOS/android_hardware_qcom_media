@@ -1135,7 +1135,6 @@ class omx_vdec: public qc_omx_component
         OMX_U32 frm_int;
         OMX_U32 m_fps_received;
         float   m_fps_prev;
-        bool m_drc_enable;
 
         struct vdec_allocatorproperty op_buf_rcnfg;
         bool in_reconfig;
@@ -1151,18 +1150,7 @@ class omx_vdec: public qc_omx_component
         bool m_use_android_native_buffers;
         bool m_debug_extradata;
         bool m_disable_dynamic_buf_mode;
-        OMX_U32 m_conceal_color;
 #endif
-
-
-        struct h264_mv_buffer {
-            unsigned char* buffer;
-            int size;
-            int count;
-            int pmem_fd;
-            int offset;
-        };
-        h264_mv_buffer h264_mv_buff;
 
         struct meta_buffer {
             unsigned char* buffer;
@@ -1192,8 +1180,6 @@ class omx_vdec: public qc_omx_component
         struct custom_buffersize {
             OMX_U32 input_buffersize;
         } m_custom_buffersize;
-        bool m_power_hinted;
-        bool is_q6_platform;
         OMX_ERRORTYPE power_module_register();
         OMX_ERRORTYPE power_module_deregister();
         bool msg_thread_created;
@@ -1208,7 +1194,6 @@ class omx_vdec: public qc_omx_component
         OMX_U32 m_reconfig_height;
         bool m_smoothstreaming_mode;
         bool m_decode_order_mode;
-        bool m_client_req_turbo_mode;
 
         bool m_input_pass_buffer_fd;
         DescribeColorAspectsParams m_client_color_space;
@@ -1217,9 +1202,6 @@ class omx_vdec: public qc_omx_component
         // HDRStaticInfo defined in HardwareAPI.h
         DescribeHDRStaticInfoParams m_client_hdr_info;
         DescribeHDRStaticInfoParams m_internal_hdr_info;
-
-
-        OMX_U32 operating_frame_rate;
 
         OMX_U32 m_smoothstreaming_width;
         OMX_U32 m_smoothstreaming_height;
@@ -1303,8 +1285,6 @@ class omx_vdec: public qc_omx_component
         int32_t m_arb_mode_override;
         volatile int32_t m_queued_codec_config_count;
         OMX_U32 current_perf_level;
-        bool secure_scaling_to_non_secure_opb;
-        bool m_is_display_session;
 
         class perf_control {
             typedef int (*perf_lock_acquire_t)(int, int, int*, int);
