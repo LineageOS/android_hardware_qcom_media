@@ -117,9 +117,6 @@ extern "C" {
 #undef ALIGN
 #define ALIGN(x, to_align) ((((unsigned) x) + (to_align - 1)) & ~(to_align - 1))
 
-#define DEFAULT_EXTRADATA (OMX_INTERLACE_EXTRADATA | OMX_OUTPUTCROP_EXTRADATA \
-                           | OMX_DISPLAY_INFO_EXTRADATA | OMX_UBWC_CR_STATS_INFO_EXTRADATA)
-
 // Y=16(0-9bits), Cb(10-19bits)=Cr(20-29bits)=128, black by default
 #define DEFAULT_VIDEO_CONCEAL_COLOR_BLACK 0x8020010
 
@@ -688,7 +685,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     in_reconfig(false),
     c2d_enable_pending(false),
     m_display_id(NULL),
-    client_extradata(0),
 #ifdef _ANDROID_
     m_enable_android_native_buffers(OMX_FALSE),
     m_use_android_native_buffers(OMX_FALSE),
@@ -2190,12 +2186,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
 
         m_state = OMX_StateLoaded;
 
-        unsigned long long extradata_mask = DEFAULT_EXTRADATA;
-        if (eCompressionFormat == (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingHevc) {
-            extradata_mask |= OMX_HDR_COLOR_INFO_EXTRADATA | OMX_EXTNUSER_EXTRADATA;
-        }
-        enable_extradata(extradata_mask, true, true);
-
         eRet = get_buffer_req(&drv_ctx.ip_buf);
         DEBUG_PRINT_HIGH("Input Buffer Size =%u",(unsigned int)drv_ctx.ip_buf.buffer_size);
         get_buffer_req(&drv_ctx.op_buf);
@@ -3630,7 +3620,7 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             QOMX_EXTRADATA_ENABLE *pParam =
                 (QOMX_EXTRADATA_ENABLE *)paramData;
             if (pParam->nPortIndex == OMX_CORE_OUTPUT_EXTRADATA_INDEX) {
-                pParam->bEnable = client_extradata ? OMX_TRUE : OMX_FALSE;
+                pParam->bEnable = OMX_TRUE;
                 eRet = OMX_ErrorNone;
             } else {
                 eRet = OMX_ErrorUnsupportedIndex;
@@ -4259,55 +4249,22 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                      break;
                                  }
         case OMX_QcomIndexParamConcealMBMapExtraData:
-                               VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
-                               eRet = enable_extradata(OMX_MB_ERROR_MAP_EXTRADATA, false,
-                                       ((QOMX_ENABLETYPE *)paramData)->bEnable);
-                               break;
-        case OMX_QcomIndexParamFrameInfoExtraData:
-                               VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
-                               eRet = enable_extradata(OMX_FRAMEINFO_EXTRADATA, false,
-                                       ((QOMX_ENABLETYPE *)paramData)->bEnable);
-                               break;
-        case OMX_ExtraDataFrameDimension:
-                               VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
-                               eRet = enable_extradata(OMX_FRAMEDIMENSION_EXTRADATA, false,
-                                       ((QOMX_ENABLETYPE *)paramData)->bEnable);
-                               break;
         case OMX_QcomIndexParamInterlaceExtraData:
-                               VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
-                               eRet = enable_extradata(OMX_INTERLACE_EXTRADATA, false,
-                                       ((QOMX_ENABLETYPE *)paramData)->bEnable);
-                               break;
         case OMX_QcomIndexParamOutputCropExtraData:
+                               /* extradata default is set by default */
                                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
-                               eRet = enable_extradata(OMX_OUTPUTCROP_EXTRADATA, false,
-                                       ((QOMX_ENABLETYPE *)paramData)->bEnable);
                                break;
+
+
+        case OMX_QcomIndexParamFrameInfoExtraData:
+        case OMX_ExtraDataFrameDimension:
         case OMX_QcomIndexParamH264TimeInfo:
-                               VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
-                               eRet = enable_extradata(OMX_TIMEINFO_EXTRADATA, false,
-                                       ((QOMX_ENABLETYPE *)paramData)->bEnable);
-                               break;
         case OMX_QcomIndexParamVideoFramePackingExtradata:
-                               VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
-                               eRet = enable_extradata(OMX_FRAMEPACK_EXTRADATA, false,
-                                       ((QOMX_ENABLETYPE *)paramData)->bEnable);
-                               break;
         case OMX_QcomIndexParamVideoQPExtraData:
-                               VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
-                               eRet = enable_extradata(OMX_QP_EXTRADATA, false,
-                                       ((QOMX_ENABLETYPE *)paramData)->bEnable);
-                               break;
-        case OMX_QcomIndexParamVideoInputBitsInfoExtraData:
-                               VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
-                               eRet = enable_extradata(OMX_BITSINFO_EXTRADATA, false,
-                                       ((QOMX_ENABLETYPE *)paramData)->bEnable);
-                               break;
         case OMX_QcomIndexEnableExtnUserData:
                                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
-                                eRet = enable_extradata(OMX_EXTNUSER_EXTRADATA, false,
-                                    ((QOMX_ENABLETYPE *)paramData)->bEnable);
-                                break;
+                               eRet = enable_extradata(EXTRADATA_ADVANCED);
+                               break;
         case OMX_QcomIndexParamVideoSyncFrameDecodingMode: {
                                        DEBUG_PRINT_HIGH("set_parameter: OMX_QcomIndexParamVideoSyncFrameDecodingMode");
                                        DEBUG_PRINT_HIGH("set idr only decoding for thumbnail mode");
@@ -4344,17 +4301,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
         case OMX_QcomIndexParamIndexExtraDataType: {
                                     VALIDATE_OMX_PARAM_DATA(paramData, QOMX_INDEXEXTRADATATYPE);
                                     QOMX_INDEXEXTRADATATYPE *extradataIndexType = (QOMX_INDEXEXTRADATATYPE *) paramData;
-                                    if ((extradataIndexType->nIndex == OMX_IndexParamPortDefinition) &&
-                                            (extradataIndexType->bEnabled == OMX_TRUE) &&
-                                            (extradataIndexType->nPortIndex == 1)) {
-                                        DEBUG_PRINT_HIGH("set_parameter:  OMX_QcomIndexParamIndexExtraDataType SmoothStreaming");
-                                        eRet = enable_extradata(OMX_PORTDEF_EXTRADATA, false, extradataIndexType->bEnabled);
-                                    } else if ((extradataIndexType->nIndex == (OMX_INDEXTYPE)OMX_ExtraDataOutputCropInfo) &&
-                                            (extradataIndexType->bEnabled == OMX_TRUE) &&
-                                            (extradataIndexType->nPortIndex == OMX_CORE_OUTPUT_PORT_INDEX)) {
-                                        eRet = enable_extradata(OMX_OUTPUTCROP_EXTRADATA, false,
-                                            ((QOMX_ENABLETYPE *)paramData)->bEnable);
-                                    }
                                 }
                                 break;
         case OMX_QcomIndexParamEnableSmoothStreaming: {
@@ -4877,22 +4823,12 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
     } else if ((int)configIndex == (int)OMX_QTIIndexConfigDescribeColorAspects) {
         VALIDATE_OMX_PARAM_DATA(configData, DescribeColorAspectsParams);
         DescribeColorAspectsParams *params = (DescribeColorAspectsParams *)configData;
-        if (!DEFAULT_EXTRADATA & OMX_DISPLAY_INFO_EXTRADATA) {
-            enable_extradata(OMX_DISPLAY_INFO_EXTRADATA, false, true);
-        }
-
         print_debug_color_aspects(&(params->sAspects), "Set Config");
         memcpy(&m_client_color_space, params, sizeof(DescribeColorAspectsParams));
         return ret;
     } else if ((int)configIndex == (int)OMX_QTIIndexConfigDescribeHDRColorInfo) {
         VALIDATE_OMX_PARAM_DATA(configData, DescribeHDRStaticInfoParams);
         DescribeHDRStaticInfoParams *params = (DescribeHDRStaticInfoParams *)configData;
-        ret = enable_extradata(OMX_HDR_COLOR_INFO_EXTRADATA, false, true);
-        if (ret != OMX_ErrorNone) {
-            DEBUG_PRINT_ERROR("Failed to enable OMX_HDR_COLOR_INFO_EXTRADATA");
-            return ret;
-        }
-
         print_debug_hdr_color_info(&(params->sInfo), "Set Config HDR");
         memcpy(&m_client_hdr_info, params, sizeof(DescribeHDRStaticInfoParams));
         return ret;
@@ -5471,10 +5407,10 @@ OMX_ERRORTYPE  omx_vdec::use_client_output_extradata_buffer(
     (void) hComp;
 
     if (port != OMX_CORE_OUTPUT_EXTRADATA_INDEX ||
-            !client_extradata || bytes != buffer_size|| bufferHdr == NULL) {
+            bytes != buffer_size|| bufferHdr == NULL) {
         DEBUG_PRINT_ERROR("Bad Parameters PortIndex is - %d expected is- %d,"
-            "client_extradata - %d, bytes = %d expected is %d bufferHdr - %p", port,
-            OMX_CORE_OUTPUT_EXTRADATA_INDEX, client_extradata, bytes, buffer_size, bufferHdr);
+            "bytes = %d expected is %d bufferHdr - %p", port,
+            OMX_CORE_OUTPUT_EXTRADATA_INDEX, bytes, buffer_size, bufferHdr);
         eRet = OMX_ErrorBadParameter;
         return eRet;
     }
@@ -8695,13 +8631,8 @@ OMX_ERRORTYPE omx_vdec::push_input_h264 (OMX_HANDLETYPE hComp)
                 h264_parser->parse_nal((OMX_U8*)h264_scratch.pBuffer, h264_scratch.nFilledLen,
                         NALU_TYPE_SPS);
 #ifndef PROCESS_EXTRADATA_IN_OUTPUT_PORT
-                if (client_extradata & OMX_TIMEINFO_EXTRADATA)
-                    h264_parser->parse_nal((OMX_U8*)h264_scratch.pBuffer,
-                            h264_scratch.nFilledLen, NALU_TYPE_SEI);
-                else if (client_extradata & OMX_FRAMEINFO_EXTRADATA)
-                    // If timeinfo is present frame info from SEI is already processed
-                    h264_parser->parse_nal((OMX_U8*)h264_scratch.pBuffer,
-                            h264_scratch.nFilledLen, NALU_TYPE_SEI);
+                h264_parser->parse_nal((OMX_U8*)h264_scratch.pBuffer,
+                                       h264_scratch.nFilledLen, NALU_TYPE_SEI);
 #endif
                 m_frame_parser.mutils->isNewFrame(&h264_scratch, 0, isNewFrame);
                 nal_count++;
@@ -8709,8 +8640,7 @@ OMX_ERRORTYPE omx_vdec::push_input_h264 (OMX_HANDLETYPE hComp)
                     pdest_frame->nTimeStamp = h264_last_au_ts;
                     pdest_frame->nFlags = h264_last_au_flags;
 #ifdef PANSCAN_HDLR
-                    if (client_extradata & OMX_FRAMEINFO_EXTRADATA)
-                        h264_parser->update_panscan_data(h264_last_au_ts);
+                    h264_parser->update_panscan_data(h264_last_au_ts);
 #endif
                 }
                 if (m_frame_parser.mutils->nalu_type == NALU_TYPE_NON_IDR ||
@@ -8718,11 +8648,9 @@ OMX_ERRORTYPE omx_vdec::push_input_h264 (OMX_HANDLETYPE hComp)
                     h264_last_au_ts = h264_scratch.nTimeStamp;
                     h264_last_au_flags = h264_scratch.nFlags;
 #ifndef PROCESS_EXTRADATA_IN_OUTPUT_PORT
-                    if (client_extradata & OMX_TIMEINFO_EXTRADATA) {
-                        OMX_S64 ts_in_sei = h264_parser->process_ts_with_sei_vui(h264_last_au_ts);
-                        if (!VALID_TS(h264_last_au_ts))
-                            h264_last_au_ts = ts_in_sei;
-                    }
+                    OMX_S64 ts_in_sei = h264_parser->process_ts_with_sei_vui(h264_last_au_ts);
+                    if (!VALID_TS(h264_last_au_ts))
+                        h264_last_au_ts = ts_in_sei;
 #endif
                 } else
                     h264_last_au_ts = LLONG_MAX;
@@ -8846,11 +8774,10 @@ OMX_ERRORTYPE omx_vdec::push_input_h264 (OMX_HANDLETYPE hComp)
                         (unsigned int)pdest_frame->nFilledLen,pdest_frame->nTimeStamp);
                 DEBUG_PRINT_LOW("Push AU frame number %d to driver", frame_count++);
 #ifndef PROCESS_EXTRADATA_IN_OUTPUT_PORT
-                if (client_extradata & OMX_TIMEINFO_EXTRADATA) {
-                    OMX_S64 ts_in_sei = h264_parser->process_ts_with_sei_vui(pdest_frame->nTimeStamp);
-                    if (!VALID_TS(pdest_frame->nTimeStamp))
-                        pdest_frame->nTimeStamp = ts_in_sei;
-                }
+                OMX_S64 ts_in_sei = h264_parser->process_ts_with_sei_vui(pdest_frame->nTimeStamp);
+                if (!VALID_TS(pdest_frame->nTimeStamp))
+                    pdest_frame->nTimeStamp = ts_in_sei;
+
 #endif
                 /*Push the frame to the Decoder*/
                 if (empty_this_buffer_proxy(hComp,pdest_frame) != OMX_ErrorNone) {
@@ -9347,7 +9274,6 @@ void omx_vdec::free_input_buffer_header()
 
 void omx_vdec::free_output_extradata_buffer_header()
 {
-    client_extradata = false;
     if (m_client_output_extradata_mem_ptr) {
         DEBUG_PRINT_LOW("Free extradata pmem Pointer area");
         free(m_client_output_extradata_mem_ptr);
@@ -10527,12 +10453,10 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                                PP_PARAM_INTERLACED, (void*)&enable);
 
                     }
-                    if (client_extradata & OMX_INTERLACE_EXTRADATA) {
-                        if (p_client_extra) {
-                            append_interlace_extradata(p_client_extra, (payload->format & 0x1F));
-                            p_client_extra = (OMX_OTHER_EXTRADATATYPE *)
-                                (((OMX_U8 *)p_client_extra) + ALIGN(p_client_extra->nSize, 4));
-                        }
+                    if (p_client_extra) {
+                        append_interlace_extradata(p_client_extra, (payload->format & 0x1F));
+                        p_client_extra = (OMX_OTHER_EXTRADATATYPE *)
+                            (((OMX_U8 *)p_client_extra) + ALIGN(p_client_extra->nSize, 4));
                     }
                     break;
                 case MSM_VIDC_EXTRADATA_FRAME_RATE:
@@ -10592,11 +10516,9 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                                                  output_crop_payload->misr_info[1].misr_opb_chroma[m]);
                             }
                             memcpy(m_extradata_info.misr_info, output_crop_payload->misr_info, 2 * sizeof(msm_vidc_misr_info));
-                            if (client_extradata & OMX_OUTPUTCROP_EXTRADATA) {
-                                if (p_client_extra) {
-                                    append_outputcrop_extradata(p_client_extra, output_crop_payload);
-                                    p_client_extra = (OMX_OTHER_EXTRADATATYPE *)(((OMX_U8 *)p_client_extra) + ALIGN(p_client_extra->nSize, 4));
-                                }
+                            if (p_client_extra) {
+                                append_outputcrop_extradata(p_client_extra, output_crop_payload);
+                                p_client_extra = (OMX_OTHER_EXTRADATATYPE *)(((OMX_U8 *)p_client_extra) + ALIGN(p_client_extra->nSize, 4));
                             }
                         }
                     }
@@ -10649,31 +10571,25 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                     }
                     DEBUG_PRINT_LOW("setMetaData FRAMEPACKING : fpa_type = %u, content_interprtation_type = %u, stereo_output_mode= %d",
                         s3d_frame_packing_payload->fpa_type, s3d_frame_packing_payload->content_interprtation_type, stereo_output_mode);
-                    if (client_extradata & OMX_FRAMEPACK_EXTRADATA) {
-                        if (p_client_extra) {
-                            append_framepack_extradata(p_client_extra, s3d_frame_packing_payload);
-                            p_client_extra = (OMX_OTHER_EXTRADATATYPE *) (((OMX_U8 *) p_client_extra) + ALIGN(p_client_extra->nSize, 4));
-                        }
+                    if (p_client_extra) {
+                        append_framepack_extradata(p_client_extra, s3d_frame_packing_payload);
+                        p_client_extra = (OMX_OTHER_EXTRADATATYPE *) (((OMX_U8 *) p_client_extra) + ALIGN(p_client_extra->nSize, 4));
                     }
                     break;
                 case MSM_VIDC_EXTRADATA_FRAME_QP:
                     struct msm_vidc_frame_qp_payload *qp_payload;
                     qp_payload = (struct msm_vidc_frame_qp_payload*)(void *)data->data;
-                    if (client_extradata & OMX_QP_EXTRADATA) {
-                        if (p_client_extra) {
-                            append_qp_extradata(p_client_extra, qp_payload);
-                            p_client_extra = (OMX_OTHER_EXTRADATATYPE *) (((OMX_U8 *) p_client_extra) + ALIGN(p_client_extra->nSize, 4));
-                        }
+                    if (p_client_extra) {
+                        append_qp_extradata(p_client_extra, qp_payload);
+                        p_client_extra = (OMX_OTHER_EXTRADATATYPE *) (((OMX_U8 *) p_client_extra) + ALIGN(p_client_extra->nSize, 4));
                     }
                     break;
                 case MSM_VIDC_EXTRADATA_FRAME_BITS_INFO:
                     struct msm_vidc_frame_bits_info_payload *bits_info_payload;
                     bits_info_payload = (struct msm_vidc_frame_bits_info_payload*)(void *)data->data;
-                    if (client_extradata & OMX_BITSINFO_EXTRADATA) {
-                        if (p_client_extra) {
-                            append_bitsinfo_extradata(p_client_extra, bits_info_payload);
-                            p_client_extra = (OMX_OTHER_EXTRADATATYPE *) (((OMX_U8 *) p_client_extra) + ALIGN(p_client_extra->nSize, 4));
-                        }
+                    if (p_client_extra) {
+                        append_bitsinfo_extradata(p_client_extra, bits_info_payload);
+                        p_client_extra = (OMX_OTHER_EXTRADATATYPE *) (((OMX_U8 *) p_client_extra) + ALIGN(p_client_extra->nSize, 4));
                     }
                     break;
                 case MSM_VIDC_EXTRADATA_STREAM_USERDATA:
@@ -10691,11 +10607,9 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                             DEBUG_PRINT_HIGH("Copied %u bytes of HDR10+ extradata", payload_len);
                         }
                     }
-                    if (client_extradata & OMX_EXTNUSER_EXTRADATA) {
-                        if (p_client_extra) {
-                            append_user_extradata(p_client_extra, data);
-                            p_client_extra = (OMX_OTHER_EXTRADATATYPE *) (((OMX_U8 *) p_client_extra) + ALIGN(p_client_extra->nSize, 4));
-                        }
+                    if (p_client_extra) {
+                        append_user_extradata(p_client_extra, data);
+                        p_client_extra = (OMX_OTHER_EXTRADATATYPE *) (((OMX_U8 *) p_client_extra) + ALIGN(p_client_extra->nSize, 4));
                     }
                     break;
                 case MSM_VIDC_EXTRADATA_CONTENT_LIGHT_LEVEL_SEI:
@@ -10712,21 +10626,20 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
             consumed_len += data->nSize;
             data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
         }
-        if (client_extradata & OMX_FRAMEINFO_EXTRADATA) {
-            p_buf_hdr->nFlags |= OMX_BUFFERFLAG_EXTRADATA;
-            if (p_client_extra) {
-                append_frame_info_extradata(p_client_extra,
-                        num_conceal_MB, recovery_sei_flags, ((struct vdec_output_frameinfo *)p_buf_hdr->pOutputPortPrivate)->pic_type, frame_rate,
-                        time_stamp, panscan_payload,&((struct vdec_output_frameinfo *)
-                            p_buf_hdr->pOutputPortPrivate)->aspect_ratio_info);
-                p_client_extra = (OMX_OTHER_EXTRADATATYPE *) (((OMX_U8 *) p_client_extra) + ALIGN(p_client_extra->nSize, 4));
-            }
+        p_buf_hdr->nFlags |= OMX_BUFFERFLAG_EXTRADATA;
+        if (p_client_extra) {
+            append_frame_info_extradata(p_client_extra,
+                      num_conceal_MB, recovery_sei_flags,
+                      ((struct vdec_output_frameinfo *)p_buf_hdr->pOutputPortPrivate)->pic_type,
+                      frame_rate, time_stamp, panscan_payload,
+                      &((struct vdec_output_frameinfo *)
+                                  p_buf_hdr->pOutputPortPrivate)->aspect_ratio_info);
+            p_client_extra = (OMX_OTHER_EXTRADATATYPE *) (
+                                  ((OMX_U8 *) p_client_extra) + ALIGN(p_client_extra->nSize, 4));
         }
-        if (client_extradata & OMX_FRAMEDIMENSION_EXTRADATA) {
-            if (p_client_extra) {
-                append_frame_dimension_extradata(p_client_extra);
-                p_client_extra = (OMX_OTHER_EXTRADATATYPE *) (((OMX_U8 *) p_client_extra) + ALIGN(p_client_extra->nSize, 4));
-            }
+        if (p_client_extra) {
+            append_frame_dimension_extradata(p_client_extra);
+            p_client_extra = (OMX_OTHER_EXTRADATATYPE *) (((OMX_U8 *) p_client_extra) + ALIGN(p_client_extra->nSize, 4));
         }
 
         if(internal_hdr_info_changed_flag) {
@@ -10765,17 +10678,15 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
 
     }
 unrecognized_extradata:
-    if (client_extradata) {
-        p_buf_hdr->nFlags |= OMX_BUFFERFLAG_EXTRADATA;
-        if (p_client_extra) {
-            append_terminator_extradata(p_client_extra);
-        }
+    p_buf_hdr->nFlags |= OMX_BUFFERFLAG_EXTRADATA;
+    if (p_client_extra) {
+        append_terminator_extradata(p_client_extra);
     }
+
     return reconfig_event_sent;
 }
 
-OMX_ERRORTYPE omx_vdec::enable_extradata(OMX_U64 requested_extradata,
-        bool is_internal, bool enable)
+OMX_ERRORTYPE omx_vdec::enable_extradata(OMX_U64 requested_extradata)
 {
     OMX_ERRORTYPE ret = OMX_ErrorNone;
     struct v4l2_control control;
@@ -10783,158 +10694,18 @@ OMX_ERRORTYPE omx_vdec::enable_extradata(OMX_U64 requested_extradata,
         DEBUG_PRINT_ERROR("ERROR: enable extradata allowed in Loaded state only");
         return OMX_ErrorIncorrectStateOperation;
     }
-    DEBUG_PRINT_HIGH("NOTE: enable_extradata: actual[%u] requested[%u] enable[%d], is_internal: %d",
-            (unsigned int)client_extradata, (unsigned int)requested_extradata, enable, is_internal);
+    DEBUG_PRINT_HIGH("NOTE: requested[%u]", (unsigned int)requested_extradata);
 
-    if (!is_internal) {
-        if (enable)
-            client_extradata |= requested_extradata;
-        else
-            client_extradata = client_extradata & ~requested_extradata;
+
+    // Extradata default is enabled ib kernel by default
+    control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
+    control.value = requested_extradata                  ;
+    if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
+        DEBUG_PRINT_HIGH("Failed to enable extradata %#llX", requested_extradata);
+    } else {
+        DEBUG_PRINT_INFO("Extradata %#llX is enabled successfully.", requested_extradata);
     }
 
-    if (enable) {
-        if (requested_extradata & OMX_INTERLACE_EXTRADATA) {
-            control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
-            control.value = MSM_VIDC_EXTRADATA_INTERLACE_VIDEO;
-            if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
-                DEBUG_PRINT_HIGH("Failed to set interlaced extradata."
-                        " Quality of interlaced clips might be impacted.");
-            }
-        }
-        if (requested_extradata & OMX_FRAMEINFO_EXTRADATA) {
-            control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
-            control.value = MSM_VIDC_EXTRADATA_FRAME_RATE;
-            if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
-                DEBUG_PRINT_HIGH("Failed to set framerate extradata");
-            }
-            control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
-            control.value = MSM_VIDC_EXTRADATA_NUM_CONCEALED_MB;
-            if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
-                DEBUG_PRINT_HIGH("Failed to set concealed MB extradata");
-            }
-            control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
-            control.value = MSM_VIDC_EXTRADATA_RECOVERY_POINT_SEI;
-            if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
-                DEBUG_PRINT_HIGH("Failed to set recovery point SEI extradata");
-            }
-            control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
-            control.value = MSM_VIDC_EXTRADATA_PANSCAN_WINDOW;
-            if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
-                DEBUG_PRINT_HIGH("Failed to set panscan extradata");
-            }
-            control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
-            control.value = MSM_VIDC_EXTRADATA_ASPECT_RATIO;
-            if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
-                DEBUG_PRINT_HIGH("Failed to set panscan extradata");
-            }
-            if (output_capability == V4L2_PIX_FMT_MPEG2) {
-                control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
-                control.value =  MSM_VIDC_EXTRADATA_MPEG2_SEQDISP;
-                if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
-                    DEBUG_PRINT_HIGH("Failed to set panscan extradata");
-                }
-            }
-        }
-        if (requested_extradata & OMX_TIMEINFO_EXTRADATA) {
-            control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
-            control.value = MSM_VIDC_EXTRADATA_TIMESTAMP;
-            if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
-                DEBUG_PRINT_HIGH("Failed to set timeinfo extradata");
-            }
-        }
-        if (!secure_mode && (requested_extradata & OMX_FRAMEPACK_EXTRADATA)) {
-            if (output_capability == V4L2_PIX_FMT_H264) {
-                DEBUG_PRINT_HIGH("enable OMX_FRAMEPACK_EXTRADATA");
-                control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
-                control.value =  MSM_VIDC_EXTRADATA_S3D_FRAME_PACKING;
-                if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
-                    DEBUG_PRINT_HIGH("Failed to set S3D_FRAME_PACKING extradata");
-                }
-            } else {
-                DEBUG_PRINT_HIGH("OMX_FRAMEPACK_EXTRADATA supported for H264 only");
-            }
-        }
-        if (requested_extradata & OMX_QP_EXTRADATA) {
-            control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
-            control.value = MSM_VIDC_EXTRADATA_FRAME_QP;
-            if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
-                DEBUG_PRINT_HIGH("Failed to set QP extradata");
-            }
-        }
-        if (!secure_mode && (requested_extradata & OMX_EXTNUSER_EXTRADATA)) {
-            control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
-            control.value = MSM_VIDC_EXTRADATA_STREAM_USERDATA;
-            if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
-                DEBUG_PRINT_HIGH("Failed to set stream userdata extradata");
-            }
-        }
-
-        if (requested_extradata & OMX_QP_EXTRADATA) {
-            control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
-            control.value = MSM_VIDC_EXTRADATA_FRAME_QP;
-            if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
-                DEBUG_PRINT_HIGH("Failed to set QP extradata");
-            }
-        }
-
-        if (requested_extradata & OMX_OUTPUTCROP_EXTRADATA) {
-            control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
-            control.value = MSM_VIDC_EXTRADATA_OUTPUT_CROP;
-            DEBUG_PRINT_LOW("Enable output crop extra data");
-            if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
-                DEBUG_PRINT_HIGH("Failed to set output crop extradata");
-            }
-        }
-        /*
-        if (requested_extradata & OMX_UBWC_CR_STATS_INFO_EXTRADATA) {
-            control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
-            control.value = V4L2_MPEG_VIDC_EXTRADATA_UBWC_CR_STATS_INFO;
-            DEBUG_PRINT_LOW("Enable UBWC stats extra data");
-            if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
-                DEBUG_PRINT_HIGH("Failed to set output crop extradata");
-            }
-        }
-        */
-        if (requested_extradata & OMX_DISPLAY_INFO_EXTRADATA) {
-            control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
-            switch(output_capability) {
-                case V4L2_PIX_FMT_H264:
-                case V4L2_PIX_FMT_HEVC:
-                    control.value =  MSM_VIDC_EXTRADATA_VUI_DISPLAY_INFO;
-                    break;
-                case V4L2_PIX_FMT_VP8:
-                case V4L2_PIX_FMT_VP9:
-                    control.value = MSM_VIDC_EXTRADATA_VPX_COLORSPACE_INFO;
-                    break;
-                case V4L2_PIX_FMT_MPEG2:
-                    control.value = MSM_VIDC_EXTRADATA_MPEG2_SEQDISP;
-                    break;
-                default:
-                    DEBUG_PRINT_HIGH("Don't support Disp info for this codec : %s", drv_ctx.kind);
-                    return ret;
-            }
-
-            if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
-                DEBUG_PRINT_HIGH("Failed to set Display info extradata");
-            }
-        }
-        if (requested_extradata & OMX_HDR_COLOR_INFO_EXTRADATA) {
-            control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
-            if (output_capability == V4L2_PIX_FMT_HEVC) {
-                control.value = MSM_VIDC_EXTRADATA_MASTERING_DISPLAY_COLOUR_SEI;
-                if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
-                    DEBUG_PRINT_HIGH("Failed to set Display Colour SEI extradata");
-                }
-                control.value = MSM_VIDC_EXTRADATA_CONTENT_LIGHT_LEVEL_SEI;
-                if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
-                    DEBUG_PRINT_HIGH("Failed to set Content Light Level SEI extradata");
-                }
-            } else {
-                DEBUG_PRINT_HIGH("OMX_HDR_COLOR_INFO_EXTRADATA supported for HEVC only");
-            }
-        }
-    }
     ret = get_buffer_req(&drv_ctx.op_buf);
 
     return ret;
@@ -10963,9 +10734,6 @@ void omx_vdec::append_interlace_extradata(OMX_OTHER_EXTRADATATYPE *extra,
 {
     OMX_STREAMINTERLACEFORMAT *interlace_format;
 
-    if (!(client_extradata & OMX_INTERLACE_EXTRADATA)) {
-        return;
-    }
     if (!extra) {
        DEBUG_PRINT_ERROR("Error: append_interlace_extradata - invalid input");
        return;
@@ -11014,9 +10782,6 @@ void omx_vdec::append_interlace_extradata(OMX_OTHER_EXTRADATATYPE *extra,
 void omx_vdec::append_frame_dimension_extradata(OMX_OTHER_EXTRADATATYPE *extra)
 {
     OMX_QCOM_EXTRADATA_FRAMEDIMENSION *frame_dimension;
-    if (!(client_extradata & OMX_FRAMEDIMENSION_EXTRADATA)) {
-        return;
-    }
     extra->nSize = OMX_FRAMEDIMENSION_EXTRADATA_SIZE;
     extra->nVersion.nVersion = OMX_SPEC_VERSION;
     extra->nPortIndex = OMX_CORE_OUTPUT_PORT_INDEX;
@@ -11047,9 +10812,6 @@ void omx_vdec::append_frame_info_extradata(OMX_OTHER_EXTRADATATYPE *extra,
 {
     OMX_QCOM_EXTRADATA_FRAMEINFO *frame_info = NULL;
     struct msm_vidc_panscan_window *panscan_window;
-    if (!(client_extradata & OMX_FRAMEINFO_EXTRADATA)) {
-        return;
-    }
     extra->nSize = OMX_FRAMEINFO_EXTRADATA_SIZE;
     extra->nVersion.nVersion = OMX_SPEC_VERSION;
     extra->nPortIndex = OMX_CORE_OUTPUT_PORT_INDEX;
@@ -11238,9 +11000,6 @@ void omx_vdec::append_user_extradata(OMX_OTHER_EXTRADATATYPE *extra,
 
 void omx_vdec::append_terminator_extradata(OMX_OTHER_EXTRADATATYPE *extra)
 {
-    if (!client_extradata) {
-        return;
-    }
     extra->nSize = sizeof(OMX_OTHER_EXTRADATATYPE);
     extra->nVersion.nVersion = OMX_SPEC_VERSION;
     extra->eType = OMX_ExtraDataNone;

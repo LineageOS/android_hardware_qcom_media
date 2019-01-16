@@ -168,26 +168,26 @@ extern "C" {
 
 #define MIN_NUM_INPUT_OUTPUT_EXTRADATA_BUFFERS 32 // 32 (max cap when VPP enabled)
 
-#define OMX_FRAMEINFO_EXTRADATA 0x00010000
-#define OMX_INTERLACE_EXTRADATA 0x00020000
-#define OMX_TIMEINFO_EXTRADATA  0x00040000
-#define OMX_PORTDEF_EXTRADATA   0x00080000
-#define OMX_EXTNUSER_EXTRADATA  0x00100000
-#define OMX_FRAMEDIMENSION_EXTRADATA  0x00200000
-#define OMX_FRAMEPACK_EXTRADATA 0x00400000
-#define OMX_QP_EXTRADATA        0x00800000
-#define OMX_BITSINFO_EXTRADATA  0x01000000
-#define OMX_OUTPUTCROP_EXTRADATA 0x04000000
-#define OMX_MB_ERROR_MAP_EXTRADATA 0x08000000
+#define OMX_FRAMEINFO_EXTRADATA            0x000010000
+#define OMX_INTERLACE_EXTRADATA            0x000020000
+#define OMX_TIMEINFO_EXTRADATA             0x000040000
+#define OMX_PORTDEF_EXTRADATA              0x000080000
+#define OMX_EXTNUSER_EXTRADATA             0x000100000
+#define OMX_FRAMEDIMENSION_EXTRADATA       0x000200000
+#define OMX_FRAMEPACK_EXTRADATA            0x000400000
+#define OMX_QP_EXTRADATA                   0x000800000
+#define OMX_BITSINFO_EXTRADATA             0x001000000
+#define OMX_OUTPUTCROP_EXTRADATA           0x002000000
+#define OMX_MB_ERROR_MAP_EXTRADATA         0x004000000
 
-#define OMX_VUI_DISPLAY_INFO_EXTRADATA  0x08000000
-#define OMX_MPEG2_SEQDISP_INFO_EXTRADATA 0x10000000
-#define OMX_VPX_COLORSPACE_INFO_EXTRADATA  0x20000000
-#define OMX_VC1_SEQDISP_INFO_EXTRADATA  0x40000000
-#define OMX_DISPLAY_INFO_EXTRADATA  0x80000000
-#define OMX_HDR_COLOR_INFO_EXTRADATA  0x100000000
-#define OMX_UBWC_CR_STATS_INFO_EXTRADATA  0x200000000
-#define DRIVER_EXTRADATA_MASK   0x0000FFFF
+#define OMX_VUI_DISPLAY_INFO_EXTRADATA     0x008000000
+#define OMX_MPEG2_SEQDISP_INFO_EXTRADATA   0x010000000
+#define OMX_VPX_COLORSPACE_INFO_EXTRADATA  0x020000000
+#define OMX_VC1_SEQDISP_INFO_EXTRADATA     0x040000000
+#define OMX_DISPLAY_INFO_EXTRADATA         0x080000000
+#define OMX_HDR_COLOR_INFO_EXTRADATA       0x100000000
+#define OMX_UBWC_CR_STATS_INFO_EXTRADATA   0x200000000
+#define DRIVER_EXTRADATA_MASK              0x00000FFFF
 
 #define OMX_INTERLACE_EXTRADATA_SIZE ((sizeof(OMX_OTHER_EXTRADATATYPE) +\
             sizeof(OMX_STREAMINTERLACEFORMAT) + 3)&(~3))
@@ -239,15 +239,6 @@ extern "C" {
 #define VDEC_MSG_EVT_HW_OVERLOAD	(VDEC_MSG_BASE + 14)
 #define VDEC_MSG_EVT_MAX_CLIENTS	(VDEC_MSG_BASE + 15)
 #define VDEC_MSG_EVT_HW_UNSUPPORTED	(VDEC_MSG_BASE + 16)
-
-
-//  Define next macro with required values to enable default extradata,
-//    VDEC_EXTRADATA_MB_ERROR_MAP
-//    OMX_INTERLACE_EXTRADATA
-//    OMX_FRAMEINFO_EXTRADATA
-//    OMX_TIMEINFO_EXTRADATA
-
-//#define DEFAULT_EXTRADATA (OMX_FRAMEINFO_EXTRADATA|OMX_INTERLACE_EXTRADATA)
 
 using namespace android;
 
@@ -903,8 +894,7 @@ class omx_vdec: public qc_omx_component
                                             ColorMetaData *color_mdata);
         void append_interlace_extradata(OMX_OTHER_EXTRADATATYPE *extra,
                 OMX_U32 interlaced_format_type);
-        OMX_ERRORTYPE enable_extradata(OMX_U64 requested_extradata, bool is_internal,
-                bool enable = true);
+        OMX_ERRORTYPE enable_extradata(OMX_U64 requested_extradata);
         void append_frame_info_extradata(OMX_OTHER_EXTRADATATYPE *extra,
                 OMX_U32 num_conceal_mb,
                 OMX_U32 recovery_sei_flag,
@@ -1140,7 +1130,6 @@ class omx_vdec: public qc_omx_component
         bool in_reconfig;
         bool c2d_enable_pending;
         OMX_NATIVE_WINDOWTYPE m_display_id;
-        OMX_U32 client_extradata;
 #ifdef _ANDROID_
         bool perf_flag;
         OMX_U32 proc_frms, latency;
@@ -1352,7 +1341,6 @@ class omx_vdec: public qc_omx_component
                     unsigned long prefetch_size, unsigned ioctl_code,
                     unsigned ion_flag);
         unsigned char m_prefetch_done;
-
         client_extradata_info m_client_out_extradata_info;
 
         OMX_ERRORTYPE get_vendor_extension_config(

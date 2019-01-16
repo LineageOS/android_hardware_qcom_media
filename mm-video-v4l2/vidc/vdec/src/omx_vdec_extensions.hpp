@@ -80,13 +80,11 @@ OMX_ERRORTYPE omx_vdec::get_vendor_extension_config(
         {
             char exType[OMX_MAX_STRINGVALUE_SIZE + 1];
             memset (exType, 0, (sizeof(char)*OMX_MAX_STRINGVALUE_SIZE));
-            if ((OMX_BOOL)(client_extradata & OMX_OUTPUTCROP_EXTRADATA)){
-                const char * outputCropInfo = getStringForExtradataType(OMX_ExtraDataOutputCropInfo);
-                if (outputCropInfo != NULL &&
-                           (strlcat(exType, outputCropInfo,
-                                    OMX_MAX_STRINGVALUE_SIZE)) >= OMX_MAX_STRINGVALUE_SIZE) {
-                    DEBUG_PRINT_LOW("extradata string size exceeds size %d",OMX_MAX_STRINGVALUE_SIZE);
-                }
+            const char * outputCropInfo = getStringForExtradataType(OMX_ExtraDataOutputCropInfo);
+            if (outputCropInfo != NULL &&
+                (strlcat(exType, outputCropInfo,
+                         OMX_MAX_STRINGVALUE_SIZE)) >= OMX_MAX_STRINGVALUE_SIZE) {
+                DEBUG_PRINT_LOW("extradata string size exceeds size %d",OMX_MAX_STRINGVALUE_SIZE);
             }
 
             setStatus &= vExt.setParamString(ext, "types", exType);
