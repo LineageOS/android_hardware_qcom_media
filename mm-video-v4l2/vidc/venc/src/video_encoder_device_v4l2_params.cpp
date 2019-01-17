@@ -438,6 +438,14 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
             }
             break;
         }
+        case OMX_QTIIndexConfigVideoRoiRectRegionInfo:
+        {
+            if(!venc_set_roi_region_qp_info((OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_INFO *)configData)) {
+                DEBUG_PRINT_LOW("Failed to set ROI Region QP info");
+                return false;
+            }
+            break;
+        }
         default:
             DEBUG_PRINT_ERROR("Unsupported config index = %u", index);
             break;
