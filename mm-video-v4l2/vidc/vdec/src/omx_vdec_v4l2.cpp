@@ -280,8 +280,8 @@ void* async_message_thread (void *input)
                          profile_level_converter::convert_v4l2_level_to_omx(
                                                          codec, ptr[10], &tmp_level)) {
                          event_fields_changed |= (omx->mClientSessionForSufficiency &&
-                                                  ((tmp_profile != (int)omx->clientSet_profile_level.eProfile) ||
-                                                   (tmp_level > (int)omx->clientSet_profile_level.eLevel)));
+                                                  ((tmp_profile != (int)omx->get_clientSet_profile_level().eProfile) ||
+                                                   (tmp_level > (int)omx->get_clientSet_profile_level().eLevel)));
                      }
                  }
 
@@ -304,8 +304,8 @@ void* async_message_thread (void *input)
                                      (tmp_color_space == omx_vdec::BT2020 ? "BT2020": "EXCEPT_BT2020"));
                     DEBUG_PRINT_HIGH("Client Session for sufficiency feature is %s", omx->mClientSessionForSufficiency ? "enabled": "disabled");
                     DEBUG_PRINT_HIGH("VIDC Port Reconfig Client (Profile,Level) = (%d,%d) bitstream(Profile,Level) = (%d,%d))",
-                                     omx->clientSet_profile_level.eProfile,
-                                     omx->clientSet_profile_level.eLevel,
+                                     omx->get_clientSet_profile_level().eProfile,
+                                     omx->get_clientSet_profile_level().eLevel,
                                      tmp_profile, tmp_level);
                     omx->dpb_bit_depth = ptr[2];
                     omx->m_progressive = ptr[3];

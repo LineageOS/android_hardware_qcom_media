@@ -1379,6 +1379,10 @@ class omx_vdec: public qc_omx_component
         bool vdec_query_cap(struct v4l2_queryctrl &cap);
 public:
         bool m_buffer_error;
+        OMX_VIDEO_PARAM_PROFILELEVELTYPE get_clientSet_profile_level() {
+            return clientSet_profile_level;
+        }
+
 };
 
 enum instance_state {
