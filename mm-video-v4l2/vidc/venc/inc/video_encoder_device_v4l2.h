@@ -635,6 +635,12 @@ class venc_dev
         bool mIsGridset;
         OMX_U32 mUseLinearColorFormat;
         bool mBitrateSavingsEnable;
+
+        // the list to contain the region roi info
+        std::list<OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_INFO> mRoiRegionList;
+        bool venc_set_roi_region_qp_info(OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_INFO *roiRegionInfo);
+        OMX_U32 append_extradata_roi_region_qp_info(OMX_OTHER_EXTRADATATYPE *data,
+                OMX_TICKS timestamp, OMX_U32 freeSize);
 };
 
 enum instance_state {
