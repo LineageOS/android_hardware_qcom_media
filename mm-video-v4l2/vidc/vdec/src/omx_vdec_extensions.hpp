@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2017, 2019, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -42,6 +42,9 @@ void omx_vdec::init_vendor_extensions (VendorExtensionStore &store) {
 
     ADD_EXTENSION("qti-ext-dec-caps-vt-driver-version", OMX_QTIIndexParamCapabilitiesVTDriverVersion, OMX_DirOutput)
     ADD_PARAM_END("number", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-dec-output-frame-rate", OMX_QTIIndexParamVideoDecoderOutputFrameRate, OMX_DirOutput)
+    ADD_PARAM_END("value", OMX_AndroidVendorValueInt32)
 }
 
 
@@ -96,6 +99,11 @@ OMX_ERRORTYPE omx_vdec::get_vendor_extension_config(
         case OMX_QTIIndexParamCapabilitiesVTDriverVersion:
         {
             setStatus &= vExt.setParamInt32(ext, "number", VT_DRIVER_VERSION);
+            break;
+        }
+        case OMX_QTIIndexParamVideoDecoderOutputFrameRate:
+        {
+            setStatus &= vExt.setParamInt32(ext, "value", m_dec_hfr_fps);
             break;
         }
         default:
@@ -202,6 +210,19 @@ OMX_ERRORTYPE omx_vdec::set_vendor_extension_config(
                     DEBUG_PRINT_ERROR("set_config: OMX_QcomIndexParamIndexExtraDataType failed !");
                 }
             } while ((token = strtok_r(NULL, "|", &rest)));
+            break;
+        }
+        case OMX_QTIIndexParamVideoDecoderOutputFrameRate:
+        {
+            QOMX_VIDEO_OUTPUT_FRAME_RATE decOutputFrameRateParam;
+            OMX_INIT_STRUCT(&decOutputFrameRateParam, QOMX_VIDEO_OUTPUT_FRAME_RATE);
+            valueSet |= vExt.readParamInt32(ext, "value", (OMX_S32 *)&decOutputFrameRateParam.fps);
+            DEBUG_PRINT_HIGH("VENDOR-EXT: set_param: decoder output-frame-rate value =%d", decOutputFrameRateParam.fps);
+            err = set_parameter(
+                    NULL, (OMX_INDEXTYPE)OMX_QTIIndexParamVideoDecoderOutputFrameRate, &decOutputFrameRateParam);
+            if (err != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("set_param: OMX_QTIIndexParamVideoDecoderOutputFrameRate failed !");
+            }
             break;
         }
         case OMX_QTIIndexParamCapabilitiesVTDriverVersion:
