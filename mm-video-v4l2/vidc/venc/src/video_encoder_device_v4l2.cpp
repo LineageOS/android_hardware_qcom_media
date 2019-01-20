@@ -6715,20 +6715,20 @@ bool venc_dev::venc_set_nal_size (OMX_VIDEO_CONFIG_NALSIZE *nalSizeInfo) {
     struct v4l2_control sControl;
 
     DEBUG_PRINT_HIGH("set video stream format - nal size - %u", nalSizeInfo->nNaluBytes);
-    gControl.id = V4L2_CID_MPEG_VIDC_VIDEO_STREAM_FORMAT;
+    gControl.id = V4L2_CID_MPEG_VIDEO_HEVC_SIZE_OF_LENGTH_FIELD;
 
     if (ioctl(m_nDriver_fd, VIDIOC_G_CTRL, &gControl)) {
         DEBUG_PRINT_ERROR("get control: video stream format failed");
         return false;
     }
 
-    sControl.id = V4L2_CID_MPEG_VIDC_VIDEO_STREAM_FORMAT;
+    sControl.id = V4L2_CID_MPEG_VIDEO_HEVC_SIZE_OF_LENGTH_FIELD;
     switch (nalSizeInfo->nNaluBytes) {
             case 0:
-                sControl.value = V4L2_MPEG_VIDC_VIDEO_NAL_FORMAT_STARTCODES;
+                sControl.value = V4L2_MPEG_VIDEO_HEVC_SIZE_0;
                 break;
             case 4:
-                sControl.value = V4L2_MPEG_VIDC_VIDEO_NAL_FORMAT_FOUR_BYTE_LENGTH;
+                sControl.value = V4L2_MPEG_VIDEO_HEVC_SIZE_4;
                 break;
             default:
                 return false;
