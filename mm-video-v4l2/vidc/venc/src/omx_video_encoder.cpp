@@ -2684,9 +2684,9 @@ int omx_venc::dev_output_log_buffers(const char *buffer,
     return handle->venc_output_log_buffers(buffer, bufferlen, timestamp);
 }
 
-int omx_venc::dev_extradata_log_buffers(char *buffer, bool input)
+int omx_venc::dev_extradata_log_buffers(char *buffer, int index, bool input)
 {
-    return handle->venc_extradata_log_buffers(buffer, input);
+    return handle->venc_extradata_log_buffers(buffer, index, input);
 }
 
 bool omx_venc::dev_get_hevc_profile(OMX_U32* profile)

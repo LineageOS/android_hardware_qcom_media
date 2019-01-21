@@ -713,8 +713,10 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_poll_efd = -1;
     memset(&drv_ctx, 0, sizeof(drv_ctx));
     drv_ctx.video_driver_fd = -1;
-    drv_ctx.extradata_info.ion.data_fd = -1;
-    drv_ctx.extradata_info.ion.dev_fd = -1;
+    for (int i = 0; i < VIDEO_MAX_FRAME; i++) {
+        drv_ctx.extradata_info.ion[i].data_fd = -1;
+        drv_ctx.extradata_info.ion[i].dev_fd = -1;
+    }
     /* Assumption is that , to begin with , we have all the frames with decoder */
     DEBUG_PRINT_HIGH("In %u bit OMX vdec Constructor", (unsigned int)sizeof(long) * 8);
     memset(&m_debug,0,sizeof(m_debug));
@@ -5230,26 +5232,27 @@ OMX_ERRORTYPE omx_vdec::allocate_extradata()
 {
 #ifdef USE_ION
     if (drv_ctx.extradata_info.buffer_size) {
-        if (drv_ctx.extradata_info.ion.data_fd >= 0) {
-            free_extradata();
-        }
+        // free previous extradata if any
+        free_extradata();
 
-        drv_ctx.extradata_info.size = (drv_ctx.extradata_info.size + 4095) & (~4095);
-        // Decoder extradata is always uncached as buffer sizes are very small
-        bool status = alloc_map_ion_memory(
-                drv_ctx.extradata_info.size, &drv_ctx.extradata_info.ion, 0);
-        if (status == false) {
-            DEBUG_PRINT_ERROR("Failed to alloc extradata memory");
-            return OMX_ErrorInsufficientResources;
-        }
-        DEBUG_PRINT_HIGH("Allocated extradata size : %d fd: %d",
-            drv_ctx.extradata_info.size, drv_ctx.extradata_info.ion.data_fd);
-        drv_ctx.extradata_info.uaddr = ion_map(drv_ctx.extradata_info.ion.data_fd,
-                                               drv_ctx.extradata_info.size);
-        if (drv_ctx.extradata_info.uaddr == MAP_FAILED) {
-            DEBUG_PRINT_ERROR("Failed to map extradata memory");
-            free_ion_memory(&drv_ctx.extradata_info.ion);
-            return OMX_ErrorInsufficientResources;
+        for (int i = 0; i < drv_ctx.extradata_info.count; i++) {
+            drv_ctx.extradata_info.buffer_size = (drv_ctx.extradata_info.buffer_size + 4095) & (~4095);
+            // Decoder extradata is always uncached as buffer sizes are very small
+            bool status = alloc_map_ion_memory(
+                    drv_ctx.extradata_info.buffer_size, &drv_ctx.extradata_info.ion[i], 0);
+            if (status == false) {
+                DEBUG_PRINT_ERROR("Failed to alloc extradata memory");
+                return OMX_ErrorInsufficientResources;
+            }
+            DEBUG_PRINT_HIGH("Allocated extradata size : %lu fd: %d",
+                drv_ctx.extradata_info.buffer_size, drv_ctx.extradata_info.ion[i].data_fd);
+            drv_ctx.extradata_info.ion[i].uaddr = ion_map(drv_ctx.extradata_info.ion[i].data_fd,
+                                                   drv_ctx.extradata_info.buffer_size);
+            if (drv_ctx.extradata_info.ion[i].uaddr == MAP_FAILED) {
+                DEBUG_PRINT_ERROR("Failed to map extradata memory");
+                free_ion_memory(&drv_ctx.extradata_info.ion[i]);
+                return OMX_ErrorInsufficientResources;
+            }
         }
     }
 #endif
@@ -5259,13 +5262,15 @@ OMX_ERRORTYPE omx_vdec::allocate_extradata()
 void omx_vdec::free_extradata()
 {
 #ifdef USE_ION
-    if (drv_ctx.extradata_info.uaddr) {
-        ion_unmap(drv_ctx.extradata_info.ion.data_fd,
-                  (void *)drv_ctx.extradata_info.uaddr,
-                  drv_ctx.extradata_info.ion.alloc_data.len);
-        free_ion_memory(&drv_ctx.extradata_info.ion);
-        drv_ctx.extradata_info.uaddr = NULL;
-        drv_ctx.extradata_info.ion.data_fd = -1;
+    for (int i = 0; i < drv_ctx.extradata_info.count; i++) {
+        if (drv_ctx.extradata_info.ion[i].uaddr) {
+            ion_unmap(drv_ctx.extradata_info.ion[i].data_fd,
+                      (void *)drv_ctx.extradata_info.ion[i].uaddr,
+                      drv_ctx.extradata_info.ion[i].alloc_data.len);
+            free_ion_memory(&drv_ctx.extradata_info.ion[i]);
+            drv_ctx.extradata_info.ion[i].uaddr = NULL;
+            drv_ctx.extradata_info.ion[i].data_fd = -1;
+        }
     }
 #endif
 }
@@ -7272,13 +7277,13 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
     plane[0].data_offset = 0;
     extra_idx = EXTRADATA_IDX(drv_ctx.num_planes);
     if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
-        plane[extra_idx].bytesused = 0;
+        plane[extra_idx].bytesused = drv_ctx.extradata_info.buffer_size;
         plane[extra_idx].length = drv_ctx.extradata_info.buffer_size;
-        plane[extra_idx].m.userptr = (long unsigned int) (drv_ctx.extradata_info.uaddr + bufIndex * drv_ctx.extradata_info.buffer_size);
+        plane[extra_idx].m.userptr = (long unsigned int)drv_ctx.extradata_info.ion[bufIndex].uaddr;
 #ifdef USE_ION
-        plane[extra_idx].reserved[0] = drv_ctx.extradata_info.ion.data_fd;
+        plane[extra_idx].reserved[0] = drv_ctx.extradata_info.ion[bufIndex].data_fd;
 #endif
-        plane[extra_idx].reserved[1] = bufIndex * drv_ctx.extradata_info.buffer_size;
+        plane[extra_idx].reserved[1] = 0;
         plane[extra_idx].data_offset = 0;
     } else if (extra_idx >= VIDEO_MAX_PLANES) {
         DEBUG_PRINT_ERROR("Extradata index higher than expected: %u", extra_idx);
@@ -9588,15 +9593,14 @@ OMX_ERRORTYPE omx_vdec::get_buffer_req(vdec_allocatorproperty *buffer_prop)
         final_extra_data_size = (final_extra_data_size + buffer_prop->alignment - 1) &
             (~(buffer_prop->alignment - 1));
 
-        drv_ctx.extradata_info.size = buffer_prop->actualcount * final_extra_data_size;
         drv_ctx.extradata_info.count = buffer_prop->actualcount;
         drv_ctx.extradata_info.buffer_size = final_extra_data_size;
         buf_size = (buf_size + buffer_prop->alignment - 1)&(~(buffer_prop->alignment - 1));
         DEBUG_PRINT_LOW("GetBufReq UPDATE: ActCnt(%d) Size(%u) BufSize(%d)",
                 buffer_prop->actualcount, (unsigned int)buffer_prop->buffer_size, buf_size);
         if (extra_data_size)
-            DEBUG_PRINT_LOW("GetBufReq UPDATE: extradata: TotalSize(%d) BufferSize(%lu)",
-                drv_ctx.extradata_info.size, drv_ctx.extradata_info.buffer_size);
+            DEBUG_PRINT_LOW("GetBufReq UPDATE: extradata: count(%d) size(%lu)",
+                drv_ctx.extradata_info.count, drv_ctx.extradata_info.buffer_size);
 
         if (in_reconfig) // BufReq will be set to driver when port is disabled
             buffer_prop->buffer_size = buf_size;
@@ -10576,8 +10580,8 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
         return reconfig_event_sent;
     }
 
-    if (!drv_ctx.extradata_info.uaddr) {
-        DEBUG_PRINT_HIGH("NULL drv_ctx.extradata_info.uaddr");
+    if (!drv_ctx.extradata_info.ion[buf_index].uaddr) {
+        DEBUG_PRINT_HIGH("NULL drv_ctx.extradata_info.ion[buf_index].uaddr");
         return reconfig_event_sent;
     }
 
@@ -10586,7 +10590,7 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
         p_client_extra = (OMX_OTHER_EXTRADATATYPE *)((m_client_output_extradata_mem_ptr + buf_index)->pBuffer);
     }
 
-    p_extradata = drv_ctx.extradata_info.uaddr + buf_index * drv_ctx.extradata_info.buffer_size;
+    p_extradata = drv_ctx.extradata_info.ion[buf_index].uaddr;
 
     m_extradata_info.output_crop_updated = OMX_FALSE;
     data = (struct OMX_OTHER_EXTRADATATYPE *)p_extradata;
@@ -11822,8 +11826,7 @@ OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::set_buffer_req(
 
     omx->drv_ctx.op_buf.actualcount = actual_count;
     omx->drv_ctx.extradata_info.count = omx->drv_ctx.op_buf.actualcount;
-    omx->drv_ctx.extradata_info.size = omx->drv_ctx.extradata_info.count *
-            omx->drv_ctx.extradata_info.buffer_size;
+
     return omx->set_buffer_req(&(omx->drv_ctx.op_buf));
 }
 

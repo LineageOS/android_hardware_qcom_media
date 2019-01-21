@@ -245,13 +245,11 @@ enum v4l2_ports {
 
 struct extradata_buffer_info {
     unsigned long buffer_size;
-    char* uaddr;
     int count;
-    int size;
     OMX_BOOL allocated;
     enum v4l2_ports port_index;
 #ifdef USE_ION
-    struct venc_ion ion;
+    struct venc_ion ion[VIDEO_MAX_FRAME];
 #endif
 };
 
@@ -337,7 +335,7 @@ class venc_dev
         int venc_output_log_buffers(const char *buffer_addr, int buffer_len, uint64_t timestamp);
         int venc_input_log_buffers(OMX_BUFFERHEADERTYPE *buffer, int fd, int plane_offset,
                         unsigned long inputformat, bool interlaced);
-        int venc_extradata_log_buffers(char *buffer_addr, bool input);
+        int venc_extradata_log_buffers(char *buffer_addr, int index, bool input);
         bool venc_get_hevc_profile(OMX_U32* profile);
         void venc_get_consumer_usage(OMX_U32* usage);
 

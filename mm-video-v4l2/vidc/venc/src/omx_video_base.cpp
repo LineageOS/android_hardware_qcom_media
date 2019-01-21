@@ -4752,7 +4752,7 @@ OMX_ERRORTYPE omx_video::fill_buffer_done(OMX_HANDLETYPE hComp,
                 DEBUG_PRINT_ERROR("Failed to parse output extradata");
 
             dev_extradata_log_buffers((char *)(((unsigned long)buffer->pBuffer + buffer->nOffset +
-                        buffer->nFilledLen + 3) & (~3)), false);
+                        buffer->nFilledLen + 3) & (~3)), index, false);
         }
         m_pCallbacks.FillBufferDone (hComp,m_app_data,buffer);
     } else {
