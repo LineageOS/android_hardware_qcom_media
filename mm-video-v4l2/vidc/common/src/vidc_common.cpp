@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2017, 2018 The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -63,6 +63,8 @@ pl_map profile_level_converter::profile_hevc_omx_to_v4l2 ({
             {OMX_VIDEO_HEVCProfileMain,
                         V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN},
             {OMX_VIDEO_HEVCProfileMain10HDR10,
+                        V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10},
+            {OMX_VIDEO_HEVCProfileMain10HDR10Plus,
                         V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10},
             {OMX_VIDEO_HEVCProfileMainStill,
                         V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN_STILL_PIC},

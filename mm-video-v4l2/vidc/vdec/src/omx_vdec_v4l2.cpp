@@ -3508,9 +3508,10 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
                             QOMX_VIDEO_AVCProfileMain,
                             QOMX_VIDEO_AVCProfileConstrainedHigh,
                             QOMX_VIDEO_AVCProfileHigh };
-    int hevc_profiles[3] = { OMX_VIDEO_HEVCProfileMain,
+    int hevc_profiles[4] = { OMX_VIDEO_HEVCProfileMain,
                              OMX_VIDEO_HEVCProfileMain10,
-                             OMX_VIDEO_HEVCProfileMain10HDR10 };
+                             OMX_VIDEO_HEVCProfileMain10HDR10,
+                             OMX_VIDEO_HEVCProfileMain10HDR10Plus };
     int mpeg2_profiles[2] = { OMX_VIDEO_MPEG2ProfileSimple,
                               OMX_VIDEO_MPEG2ProfileMain};
     int vp9_profiles[3] = { OMX_VIDEO_VP9Profile0,
@@ -3628,6 +3629,7 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
                 break;
             case OMX_VIDEO_HEVCProfileMain10:
             case OMX_VIDEO_HEVCProfileMain10HDR10:
+            case OMX_VIDEO_HEVCProfileMain10HDR10Plus:
                 v4l2_profile = V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10;
                 break;
             default:
