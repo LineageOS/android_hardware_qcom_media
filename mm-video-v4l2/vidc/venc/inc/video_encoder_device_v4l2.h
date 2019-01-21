@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2012-2018, The Linux Foundation. All rights reserved.
+Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -501,7 +501,6 @@ class venc_dev
         struct msm_venc_color_space         color_space;
         msm_venc_temporal_layers            temporal_layers_config;
         OMX_BOOL                            downscalar_enabled;
-        bool client_req_disable_bframe;
         bool bframe_implicitly_enabled;
         bool client_req_disable_temporal_layers;
         bool client_req_turbo_mode;
@@ -634,6 +633,7 @@ class venc_dev
         bool venc_set_hdr_info(const MasteringDisplay&, const ContentLightLevel&);
         bool mIsGridset;
         OMX_U32 mUseLinearColorFormat;
+        bool mBitrateSavingsEnable;
 };
 
 enum instance_state {

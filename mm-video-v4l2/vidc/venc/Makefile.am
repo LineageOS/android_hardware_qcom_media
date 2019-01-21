@@ -68,7 +68,6 @@ AM_CPPFLAGS += -I$(top_srcdir)/libstagefrighthw/
 AM_CPPFLAGS += -I$(top_srcdir)/libplatformconfig/
 AM_CPPFLAGS += -I$(WORKSPACE)/graphics/libdrm/freedreno/kgsl/
 AM_CPPFLAGS += -I$(WORKSPACE)/display/display-hal/gralloc/
-AM_CPPFLAGS += -I$(WORKSPACE)/display/display-hal/libqdutils/
 AM_CPPFLAGS += -I$(WORKSPACE)/hardware/libhardware/include/
 AM_CPPFLAGS += -I${WORKSPACE}/frameworks/native/include/
 sources = src/omx_video_base.cpp

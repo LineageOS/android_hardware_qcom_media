@@ -62,7 +62,6 @@ AM_CPPFLAGS += -I$(top_srcdir)/mm-core/src/common/
 
 AM_CPPFLAGS += -I$(WORKSPACE)/graphics/libdrm/freedreno/kgsl/
 AM_CPPFLAGS += -I$(WORKSPACE)/display/display-hal/gralloc/
-AM_CPPFLAGS += -I$(WORKSPACE)/display/display-hal/libqdutils/
 AM_CPPFLAGS += -I$(WORKSPACE)/hardware/libhardware/include/
 AM_CPPFLAGS += -I${WORKSPACE}/frameworks/native/include/
 c_sources = src/ts_parser.cpp
