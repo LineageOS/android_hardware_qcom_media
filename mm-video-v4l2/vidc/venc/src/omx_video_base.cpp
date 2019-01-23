@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2018, Linux Foundation. All rights reserved.
+Copyright (c) 2010-2019, Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -1992,22 +1992,7 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 }
                 break;
             }
-        case OMX_QcomIndexParamPeakBitrate:
-            {
-                VALIDATE_OMX_PARAM_DATA(paramData, OMX_QCOM_VIDEO_PARAM_PEAK_BITRATE);
-                OMX_U32 peakbitrate;
-                OMX_QCOM_VIDEO_PARAM_PEAK_BITRATE *pParam =
-                    reinterpret_cast<OMX_QCOM_VIDEO_PARAM_PEAK_BITRATE*>(paramData);
-                DEBUG_PRINT_LOW("get_parameter: OMX_QcomIndexParamPeakBitrate");
-                if (!dev_get_peak_bitrate(&peakbitrate)) {
-                    DEBUG_PRINT_ERROR("Invalid entry returned from get_peak_bitrate %u",
-                        (unsigned int)pParam->nPeakBitrate);
-                } else {
-                    pParam->nPeakBitrate = peakbitrate;
-                }
-                break;
-            }
-         case OMX_QcomIndexParamBatchSize:
+        case OMX_QcomIndexParamBatchSize:
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, OMX_PARAM_U32TYPE);
                 OMX_PARAM_U32TYPE* batch =

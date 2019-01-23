@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -825,11 +825,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter
             OMX_VIDEO_PARAM_BITRATETYPE* pParam = (OMX_VIDEO_PARAM_BITRATETYPE*)paramData;
             DEBUG_PRINT_LOW("set_parameter: OMX_IndexParamVideoBitrate");
 
-            if (m_max_allowed_bitrate_check)
-            {
-               //TBD: to add bitrate check
-            }
-
             /* set the output bit-rate */
             Ret = swvenc_set_bit_rate(pParam->nTargetBitrate);
             if (Ret != SWVENC_S_SUCCESS)
@@ -1445,26 +1440,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter
             break;
         }
 
-        case OMX_QcomIndexParamVideoMaxAllowedBitrateCheck:
-        {
-            QOMX_EXTNINDEX_PARAMTYPE* pParam =
-                (QOMX_EXTNINDEX_PARAMTYPE*)paramData;
-            if (pParam->nPortIndex == PORT_INDEX_OUT)
-            {
-                m_max_allowed_bitrate_check =
-                    ((pParam->bEnable == OMX_TRUE) ? true : false);
-                DEBUG_PRINT_HIGH("set_parameter: max allowed bitrate check %s",
-                        ((pParam->bEnable == OMX_TRUE) ? "enabled" : "disabled"));
-            }
-            else
-            {
-                DEBUG_PRINT_ERROR("ERROR: OMX_QcomIndexParamVideoMaxAllowedBitrateCheck "
-                        " called on wrong port(%u)", pParam->nPortIndex);
-                RETURN(OMX_ErrorBadPortIndex);
-            }
-            break;
-        }
-
         case OMX_QcomIndexEnableH263PlusPType:
         {
             QOMX_EXTNINDEX_PARAMTYPE* pParam =
@@ -1481,13 +1456,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter
                         "called on wrong port(%u)", pParam->nPortIndex);
                 RETURN(OMX_ErrorBadPortIndex);
             }
-            break;
-        }
-
-        case OMX_QcomIndexParamPeakBitrate:
-        {
-            DEBUG_PRINT_ERROR("ERROR: Setting peak bitrate");
-            RETURN(OMX_ErrorUnsupportedSetting);
             break;
         }
 

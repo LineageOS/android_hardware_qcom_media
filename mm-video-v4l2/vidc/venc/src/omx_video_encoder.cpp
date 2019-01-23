@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2018, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2019, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -1443,23 +1443,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 memcpy(&m_sParamLTRCount, pParam, sizeof(m_sParamLTRCount));
                 break;
             }
-        case OMX_QcomIndexParamVideoMaxAllowedBitrateCheck:
-            {
-                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_EXTNINDEX_PARAMTYPE);
-                QOMX_EXTNINDEX_PARAMTYPE* pParam =
-                    (QOMX_EXTNINDEX_PARAMTYPE*)paramData;
-                if (pParam->nPortIndex == PORT_INDEX_OUT) {
-                    handle->m_max_allowed_bitrate_check =
-                        ((pParam->bEnable == OMX_TRUE) ? true : false);
-                    DEBUG_PRINT_HIGH("set_parameter: max allowed bitrate check %s",
-                            ((pParam->bEnable == OMX_TRUE) ? "enabled" : "disabled"));
-                } else {
-                    DEBUG_PRINT_ERROR("ERROR: OMX_QcomIndexParamVideoMaxAllowedBitrateCheck "
-                            " called on wrong port(%u)", (unsigned int)pParam->nPortIndex);
-                    return OMX_ErrorBadPortIndex;
-                }
-                break;
-            }
         case OMX_QcomIndexParamSequenceHeaderWithIDR:
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, PrependSPSPPSToIDRFramesParams);
@@ -1519,16 +1502,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 }
                 break;
             }
-        case OMX_QcomIndexParamPeakBitrate:
-            {
-                VALIDATE_OMX_PARAM_DATA(paramData, OMX_QCOM_VIDEO_PARAM_PEAK_BITRATE);
-                if (!handle->venc_set_param(paramData,
-                            (OMX_INDEXTYPE) OMX_QcomIndexParamPeakBitrate)) {
-                    DEBUG_PRINT_ERROR("ERROR: Setting peak bitrate");
-                    return OMX_ErrorUnsupportedSetting;
-                }
-                break;
-             }
         case OMX_QcomIndexParamBatchSize:
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, OMX_PARAM_U32TYPE);
@@ -1588,13 +1561,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 memcpy(&m_sConfigTemporalLayers.nBitrateRatios[0],
                         &m_sParamTemporalLayers.nBitrateRatios[0],
                         OMX_VIDEO_ANDROID_MAXTEMPORALLAYERS * sizeof(OMX_U32));
-                break;
-            }
-        case OMX_QTIIndexParamDisablePQ:
-            {
-                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_DISABLETYPE);
-                handle->venc_set_param(paramData,
-                        (OMX_INDEXTYPE)OMX_QTIIndexParamDisablePQ);
                 break;
             }
         case OMX_QTIIndexParamEnableAVTimerTimestamps:

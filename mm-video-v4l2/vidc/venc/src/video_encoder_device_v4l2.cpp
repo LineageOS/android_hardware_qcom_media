@@ -132,7 +132,6 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     color_format = 0;
     hw_overload = false;
     mBatchSize = 0;
-    deinterlace_enabled = false;
     m_roi_enabled = false;
     low_latency_mode = false;
     pthread_mutex_init(&m_roilock, NULL);
@@ -163,7 +162,6 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     memset(&voptimecfg, 0, sizeof(voptimecfg));
     memset(&capability, 0, sizeof(capability));
     memset(&m_debug,0,sizeof(m_debug));
-    supported_rc_modes = RC_ALL;
     memset(&ltrinfo, 0, sizeof(ltrinfo));
     memset(&fd_list, 0, sizeof(fd_list));
     sess_priority.priority = 1;
@@ -173,7 +171,6 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     client_req_disable_bframe   = false;
     bframe_implicitly_enabled = false;
     client_req_disable_temporal_layers  = false;
-    client_req_turbo_mode  = false;
     intra_period.num_pframes = 29;
     intra_period.num_bframes = 0;
     m_hdr10meta_enabled = false;
@@ -1618,10 +1615,6 @@ bool venc_dev::venc_open(OMX_U32 codec)
 
     property_get("ro.board.platform", platform_name, "0");
 
-    if (!strncmp(platform_name, "msm8610", 7)) {
-        device_name = (OMX_STRING)"/dev/video/q6_enc";
-        supported_rc_modes = (RC_ALL & ~RC_CBR_CFR);
-    }
     m_nDriver_fd = open (device_name, O_RDWR);
     if ((int)m_nDriver_fd < 0) {
         DEBUG_PRINT_ERROR("ERROR: Omx_venc::Comp Init Returning failure");
@@ -2645,19 +2638,6 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 }
                 break;
             }
-        case OMX_QcomIndexParamPeakBitrate:
-            {
-                OMX_QCOM_VIDEO_PARAM_PEAK_BITRATE *pParam =
-                        (OMX_QCOM_VIDEO_PARAM_PEAK_BITRATE *)paramData;
-                DEBUG_PRINT_LOW("Set peak bitrate: %u", (unsigned int)pParam->nPeakBitrate);
-                if(venc_set_peak_bitrate(pParam->nPeakBitrate) == false) {
-                    DEBUG_PRINT_ERROR("ERROR: Failed to set peak bitrate to %u", (unsigned int)pParam->nPeakBitrate);
-                    return false;
-                } else {
-                    peak_bitrate.peakbitrate = (unsigned int) pParam->nPeakBitrate;
-                }
-                break;
-            }
         case OMX_QcomIndexParamVideoLTRCount:
             {
                 DEBUG_PRINT_LOW("venc_set_param: OMX_QcomIndexParamVideoLTRCount");
@@ -2710,7 +2690,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                     return false;
                 }
                 control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
-                control.value = V4L2_CID_MPEG_VIDEO_HEVC_I_FRAME_QP;
+                control.value = EXTRADATA_ENC_INPUT_ROI;
                 DEBUG_PRINT_LOW("Setting param OMX_QTIIndexParamVideoEnableRoiInfo");
                 if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
                     DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamVideoEnableRoiInfo failed");
@@ -2742,12 +2722,6 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
 
                 venc_copy_temporal_settings(hierData);
 
-                break;
-            }
-        case OMX_QTIIndexParamDisablePQ:
-            {
-                QOMX_DISABLETYPE * pParam = (QOMX_DISABLETYPE *)paramData;
-                DEBUG_PRINT_LOW("venc_set_param: OMX_QTIIndexParamDisablePQ: %d", pParam->bDisable);
                 break;
             }
         case OMX_QTIIndexParamEnableAVTimerTimestamps:
@@ -2888,10 +2862,6 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                 OMX_U32 nFrameWidth;
                 if (!config_rotation) {
                    return false;
-                }
-                if (true == deinterlace_enabled) {
-                    DEBUG_PRINT_ERROR("ERROR: Rotation is not supported with deinterlacing");
-                    return false;
                 }
                 if (venc_set_vpe_rotation(config_rotation->nRotation) == false) {
                     DEBUG_PRINT_ERROR("ERROR: Dimension Change for Rotation failed");
@@ -5841,49 +5811,35 @@ bool venc_dev::venc_set_ratectrl_cfg(OMX_VIDEO_CONTROLRATETYPE eControlRate)
     int temp = eControlRate;
     switch ((OMX_U32)eControlRate) {
         case OMX_Video_ControlRateDisable:
-            status = false;
+            control.value = -1;
             break;
         case OMX_Video_ControlRateVariableSkipFrames:
-            (supported_rc_modes & RC_VBR_VFR) ?
-                control.value = V4L2_MPEG_VIDEO_BITRATE_MODE_VBR :
-                status = false;
+            control.value = V4L2_MPEG_VIDEO_BITRATE_MODE_VBR;
             break;
         case OMX_Video_ControlRateVariable:
-            (supported_rc_modes & RC_VBR_CFR) ?
-                control.value = V4L2_MPEG_VIDEO_BITRATE_MODE_VBR :
-                status = false;
+            control.value = V4L2_MPEG_VIDEO_BITRATE_MODE_VBR;
             break;
         case OMX_Video_ControlRateConstantSkipFrames:
-            (supported_rc_modes & RC_CBR_VFR) ?
-                control.value = V4L2_MPEG_VIDEO_BITRATE_MODE_CBR_VFR :
-                status = false;
+            control.value = V4L2_MPEG_VIDEO_BITRATE_MODE_CBR_VFR;
             break;
         case OMX_Video_ControlRateConstant:
-            (supported_rc_modes & RC_CBR_CFR) ?
-                control.value = V4L2_MPEG_VIDEO_BITRATE_MODE_CBR :
-                status = false;
+            control.value = V4L2_MPEG_VIDEO_BITRATE_MODE_CBR;
             break;
         case QOMX_Video_ControlRateMaxBitrate:
-            (supported_rc_modes & RC_MBR_CFR) ?
-                control.value = V4L2_MPEG_VIDEO_BITRATE_MODE_MBR:
-                status = false;
+            control.value = V4L2_MPEG_VIDEO_BITRATE_MODE_MBR;
             break;
         case QOMX_Video_ControlRateMaxBitrateSkipFrames:
-            (supported_rc_modes & RC_MBR_VFR) ?
-                control.value = V4L2_MPEG_VIDEO_BITRATE_MODE_MBR_VFR:
-                status = false;
+            control.value = V4L2_MPEG_VIDEO_BITRATE_MODE_MBR_VFR;
             break;
         case OMX_Video_ControlRateConstantQuality:
-            (supported_rc_modes & RC_CQ) ?
-                control.value = V4L2_MPEG_VIDEO_BITRATE_MODE_CQ:
-                status = false;
+            control.value = V4L2_MPEG_VIDEO_BITRATE_MODE_CQ;
             break;
         default:
             status = false;
             break;
     }
 
-    if (status) {
+    if (status && control.value != -1) {
 
         DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
         rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
@@ -6079,14 +6035,9 @@ bool venc_dev::venc_set_operatingrate(OMX_U32 rate) {
                 rate >> 16, hw_overload ? "HW overload" : strerror(errno));
         return false;
     }
-    if (rate == QOMX_VIDEO_HIGH_PERF_OPERATING_MODE) {
-        DEBUG_PRINT_LOW("Turbo mode requested");
-        client_req_turbo_mode = true;
-    } else {
-        operating_rate = rate >> 16;
-        client_req_turbo_mode = false;
-        DEBUG_PRINT_LOW("Operating Rate Set = %d fps",  rate >> 16);
-    }
+
+    operating_rate = rate >> 16;
+    DEBUG_PRINT_LOW("Operating Rate Set = %d fps",  rate >> 16);
 
     return true;
 }
