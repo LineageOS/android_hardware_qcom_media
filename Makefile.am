@@ -5,6 +5,10 @@ ACLOCAL_AMFLAGS = -I m4
 BUILD_COMPONENTS := mm-core
 BUILD_COMPONENTS += libplatformconfig
 
+if !SKIP_VDEC_BUILD
+BUILD_COMPONENTS += libc2dcolorconvert libarbitrarybytes
+endif
+
 if BUILD_MM_VIDEO
 BUILD_COMPONENTS += mm-video-v4l2
 endif

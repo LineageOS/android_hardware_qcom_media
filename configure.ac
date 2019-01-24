@@ -179,6 +179,11 @@ AC_ARG_ENABLE([targets-use-libgbm],
                 [Enable conditional compile for target targets_use_libgbm [default=no]]),
         [targets_use_libgbm="${enableval}"])
 
+AC_ARG_ENABLE([vdec-build],
+        AC_HELP_STRING([--enable-vdec-build],
+                [Enable conditional compile for video decoder [default=yes]]),
+        [skip_vdec_build="${enableval}"])
+
 AM_CONDITIONAL(TARGET_MSM8953, [test "x$target_msm8953" = "xyes"])
 AM_CONDITIONAL(TARGET_MSM8909, [test "x$target_msm8909" = "xyes"])
 AM_CONDITIONAL(TARGET_MSM8996, [test "x$target_msm8996" = "xyes"])
@@ -195,6 +200,7 @@ AM_CONDITIONAL(USE_GLIB, [test "x$use_glib" = "xyes"])
 AM_CONDITIONAL(BUILD_MM_VIDEO, [test "x$build_mm_video" = "xyes"])
 AM_CONDITIONAL(TARGET_USES_LIBGBM, [test "x$targets_use_libgbm" = "xyes"])
 AM_CONDITIONAL(TARGET_STEPPE, [test "x$target_sdmsteppe" = "xyes"])
+AM_CONDITIONAL(SKIP_VDEC_BUILD, [test "x$skip_vdec_build" = "xno"])
 
 AC_ARG_WITH([glib],
       AC_HELP_STRING([--with-glib],
@@ -213,10 +219,17 @@ AC_SUBST([CFLAGS])
 
 AC_CONFIG_FILES([ \
         Makefile \
-        mm-core/Makefile
+        mm-core/Makefile \
         mm-video-v4l2/Makefile \
         mm-video-v4l2/vidc/Makefile \
         mm-video-v4l2/vidc/venc/Makefile \
         libplatformconfig/Makefile \
         ])
+
+AM_COND_IF( [SKIP_VDEC_BUILD],[], [
+AC_CONFIG_FILES([ \
+        libc2dcolorconvert/Makefile \
+        libarbitrarybytes/Makefile \
+        mm-video-v4l2/vidc/vdec/Makefile \
+        ])])
 AC_OUTPUT
