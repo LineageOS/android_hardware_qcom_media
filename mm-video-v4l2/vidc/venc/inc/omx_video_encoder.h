@@ -99,7 +99,7 @@ class omx_venc: public omx_video
         bool dev_get_output_log_flag();
         int dev_output_log_buffers(const char *buffer_addr,
                                    int buffer_len, uint64_t timestamp);
-        int dev_extradata_log_buffers(char *buffer, bool input);
+        int dev_extradata_log_buffers(char *buffer, int index, bool input);
         bool dev_get_hevc_profile(OMX_U32* profile);
         void dev_get_color_format_as_string(char * buf, int buf_len, unsigned colorformat);
         void dev_get_consumer_usage(OMX_U32* usage);

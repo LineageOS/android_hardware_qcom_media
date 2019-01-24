@@ -294,7 +294,7 @@ class omx_video: public qc_omx_component
                         OMX_U32 height) = 0;
         virtual bool dev_get_output_log_flag() = 0;
         virtual int dev_output_log_buffers(const char *buffer_addr, int buffer_len, uint64_t timestamp) = 0;
-        virtual int dev_extradata_log_buffers(char *buffer_addr, bool input) = 0;
+        virtual int dev_extradata_log_buffers(char *buffer_addr, int index, bool input) = 0;
         virtual bool dev_get_hevc_profile(OMX_U32*) = 0;
         virtual bool dev_handle_client_input_extradata(void*) = 0;
         virtual void dev_get_color_format_as_string(char * buf, int buf_len, unsigned colorformat) = 0;

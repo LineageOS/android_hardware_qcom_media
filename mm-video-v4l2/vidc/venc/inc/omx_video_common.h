@@ -108,6 +108,7 @@ struct venc_debug_cap {
 struct venc_ion {
     int dev_fd;
     int data_fd;
+    char *uaddr;
     struct ion_allocation_data alloc_data;
 };
 
