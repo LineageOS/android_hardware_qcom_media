@@ -346,22 +346,10 @@ class venc_dev
         int m_poll_efd;
         int num_input_planes, num_output_planes;
         int etb, ebd, ftb, fbd;
-        struct recon_buffer {
-            unsigned char* virtual_address;
-            int pmem_fd;
-            int size;
-            int alignment;
-            int offset;
-#ifdef USE_ION
-            int ion_device_fd;
-            struct ion_allocation_data alloc_data;
-#endif
-        };
 
         int nPframes_cache;
         int stopped;
         int resume_in_stopped;
-        bool m_max_allowed_bitrate_check;
         pthread_t m_tid;
         bool async_thread_created;
         bool async_thread_force_stop;
@@ -375,7 +363,6 @@ class venc_dev
         bool handle_input_extradata(struct v4l2_buffer);
         bool venc_handle_client_input_extradata(void *);
         int venc_set_format(int);
-        bool deinterlace_enabled;
         bool hw_overload;
         bool is_gralloc_source_ubwc;
         bool is_camera_source_ubwc;
@@ -418,7 +405,6 @@ class venc_dev
         bool client_req_disable_bframe;
         bool bframe_implicitly_enabled;
         bool client_req_disable_temporal_layers;
-        bool client_req_turbo_mode;
 
         bool venc_query_cap(struct v4l2_queryctrl &cap);
         bool venc_validate_range(OMX_S32 id, OMX_S32 val);
@@ -483,16 +469,7 @@ class venc_dev
         OMX_U32 pmem_free();
         OMX_U32 pmem_allocate(OMX_U32 size, OMX_U32 alignment, OMX_U32 count);
         OMX_U32 venc_allocate_recon_buffers();
-        inline int clip2(int x) {
-            x = x -1;
-            x = x | x >> 1;
-            x = x | x >> 2;
-            x = x | x >> 4;
-            x = x | x >> 8;
-            x = x | x >> 16;
-            x = x + 1;
-            return x;
-        }
+
         int metadatamode;
         bool streaming[MAX_PORT];
         bool extradata;
@@ -505,7 +482,6 @@ class venc_dev
         pthread_cond_t pause_resume_cond;
         bool paused;
         int color_format;
-        int supported_rc_modes;
         bool camera_mode_enabled;
         bool low_latency_mode;
         struct roidata {

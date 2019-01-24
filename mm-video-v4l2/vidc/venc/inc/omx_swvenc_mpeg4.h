@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -73,7 +73,6 @@ class omx_venc: public omx_video
         SWVENC_HANDLE m_hSwVenc;
         SWVENC_CODEC  m_codec;
         swvenc_video_capability m_capability;
-        bool m_max_allowed_bitrate_check;
         bool m_stopped;
         bool set_format;
         bool update_offset;
