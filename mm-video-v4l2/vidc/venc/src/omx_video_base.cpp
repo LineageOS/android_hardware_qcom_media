@@ -2131,6 +2131,14 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 memcpy(pDownScalarParam, &m_sParamDownScalar, sizeof(m_sParamDownScalar));
                 break;
             }
+        case OMX_IndexParamVideoAndroidVp8Encoder:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_ANDROID_VP8ENCODERTYPE);
+                OMX_VIDEO_PARAM_ANDROID_VP8ENCODERTYPE *pVp8Params =
+                        reinterpret_cast<OMX_VIDEO_PARAM_ANDROID_VP8ENCODERTYPE*>(paramData);
+                memcpy(pVp8Params,&m_sParamVP8Encoder,sizeof(m_sParamVP8Encoder));
+                break;
+            }
         case OMX_IndexParamConsumerUsageBits:
             {
                 if (paramData == NULL) { return OMX_ErrorBadParameter; }
