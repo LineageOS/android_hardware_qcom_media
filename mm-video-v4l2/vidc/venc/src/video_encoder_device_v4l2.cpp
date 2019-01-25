@@ -4050,6 +4050,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                             switch (cam_ubwc_stats[0].version) {
                             case UBWC_2_0:
                             case UBWC_3_0:
+                            case UBWC_4_0:
                                 {
                                     unsigned long long int sum = 0, weighted_sum = 0;
 
