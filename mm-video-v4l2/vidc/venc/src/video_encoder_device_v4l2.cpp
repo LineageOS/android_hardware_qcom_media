@@ -6723,6 +6723,7 @@ bool venc_dev::venc_store_dynamic_config(OMX_INDEXTYPE config_type, OMX_PTR conf
             break;
         case OMX_IndexConfigVideoBitrate:
             memcpy(&newConfig.config_data.bitrate, config, sizeof(OMX_VIDEO_CONFIG_BITRATETYPE));
+            break;
         case OMX_QcomIndexConfigVideoLTRUse:
             memcpy(&newConfig.config_data.useltr, config, sizeof(OMX_QCOM_VIDEO_CONFIG_LTRUSE_TYPE));
             break;
