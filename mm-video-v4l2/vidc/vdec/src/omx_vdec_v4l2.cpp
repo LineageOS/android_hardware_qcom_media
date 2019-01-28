@@ -4612,30 +4612,6 @@ OMX_ERRORTYPE  omx_vdec::get_config(OMX_IN OMX_HANDLETYPE      hComp,
                                         rectangle.nWidth, rectangle.nHeight);
                                   break;
                               }
-        case OMX_QcomIndexConfigH264EntropyCodingCabac: {
-            VALIDATE_OMX_PARAM_DATA(configData, QOMX_VIDEO_H264ENTROPYCODINGTYPE);
-            QOMX_VIDEO_H264ENTROPYCODINGTYPE *coding = (QOMX_VIDEO_H264ENTROPYCODINGTYPE *)configData;
-            struct v4l2_control control;
-
-            if (drv_ctx.decoder_format != VDEC_CODECTYPE_H264) {
-                DEBUG_PRINT_ERROR("get_config of OMX_QcomIndexConfigH264EntropyCodingCabac only available for H264");
-                eRet = OMX_ErrorNotImplemented;
-                break;
-            }
-
-            control.id = V4L2_CID_MPEG_VIDEO_H264_ENTROPY_MODE;
-            if (!ioctl(drv_ctx.video_driver_fd, VIDIOC_G_CTRL, &control)) {
-                coding->bCabac = (OMX_BOOL)
-                    (control.value == V4L2_MPEG_VIDEO_H264_ENTROPY_MODE_CABAC);
-                /* We can't query driver at the moment for the cabac mode, so
-                 * just use 0xff...f as a place holder for future improvement */
-                coding->nCabacInitIdc = ~0;
-            } else {
-                eRet = OMX_ErrorUnsupportedIndex;
-            }
-
-            break;
-        }
         case OMX_QTIIndexConfigDescribeColorAspects:
         {
             VALIDATE_OMX_PARAM_DATA(configData, DescribeColorAspectsParams);
