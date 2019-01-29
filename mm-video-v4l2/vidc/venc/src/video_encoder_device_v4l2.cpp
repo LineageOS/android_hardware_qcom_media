@@ -2499,6 +2499,9 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                     DEBUG_PRINT_ERROR("ERROR: Unsuccessful in updating level to unknown");
                     return false;
                 }
+                if (!venc_set_extradata_hdr10metadata())
+                    DEBUG_PRINT_ERROR("ERROR: Setting HDR10PLUS extradata failed");
+
                 if (!venc_set_inloop_filter(OMX_VIDEO_AVCLoopFilterEnable))
                     DEBUG_PRINT_HIGH("WARN: Request for setting Inloop filter failed for HEVC encoder");
 
@@ -3698,8 +3701,6 @@ unsigned venc_dev::venc_start(void)
         DEBUG_PRINT_ERROR("Reconfiguring LTR mode failed");
         return 1;
     }
-
-    venc_set_extradata_hdr10metadata();
 
     venc_config_print();
 
