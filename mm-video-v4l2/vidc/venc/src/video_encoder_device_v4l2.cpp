@@ -2499,6 +2499,9 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                     DEBUG_PRINT_ERROR("ERROR: Unsuccessful in updating level to unknown");
                     return false;
                 }
+                if (!venc_set_extradata_hdr10metadata())
+                    DEBUG_PRINT_ERROR("ERROR: Setting HDR10PLUS extradata failed");
+
                 if (!venc_set_inloop_filter(OMX_VIDEO_AVCLoopFilterEnable))
                     DEBUG_PRINT_HIGH("WARN: Request for setting Inloop filter failed for HEVC encoder");
 
@@ -3698,8 +3701,6 @@ unsigned venc_dev::venc_start(void)
         DEBUG_PRINT_ERROR("Reconfiguring LTR mode failed");
         return 1;
     }
-
-    venc_set_extradata_hdr10metadata();
 
     venc_config_print();
 
@@ -7258,17 +7259,17 @@ void venc_dev::venc_get_consumer_usage(OMX_U32* usage) {
     if (hevc && eProfile == (OMX_U32)OMX_VIDEO_HEVCProfileMain10HDR10) {
         DEBUG_PRINT_INFO("Setting 10-bit consumer usage bits");
         *usage |= GRALLOC_USAGE_PRIVATE_10BIT_VIDEO;
-        if (mUseLinearColorFormat) {
+        if (mUseLinearColorFormat & REQUEST_LINEAR_COLOR_10_BIT) {
 #ifdef __LIBGBM__
-    *usage |= GBM_FORMAT_YCbCr_420_SP_VENUS_UBWC;
+            *usage &= ~GBM_FORMAT_YCbCr_420_SP_VENUS_UBWC;
 #else
-    *usage |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
+            *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
 #endif
-            DEBUG_PRINT_INFO("Clear UBWC consumer usage bits for P010");
+            DEBUG_PRINT_INFO("Clear UBWC consumer usage bits as 10-bit linear color requested");
         }
     } else if (mUseLinearColorFormat & REQUEST_LINEAR_COLOR_8_BIT) {
 #ifdef __LIBGBM__
-    *usage &= ~GBM_FORMAT_YCbCr_420_SP_VENUS_UBWC;
+        *usage &= ~GBM_FORMAT_YCbCr_420_SP_VENUS_UBWC;
 #else
         *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
 #endif
@@ -7278,9 +7279,9 @@ void venc_dev::venc_get_consumer_usage(OMX_U32* usage) {
     if (m_codec == OMX_VIDEO_CodingImageHEIC) {
         DEBUG_PRINT_INFO("Clear UBWC and set HEIF consumer usage bit");
 #ifdef __LIBGBM__
-    *usage &= ~GBM_FORMAT_YCbCr_420_SP_VENUS_UBWC;
+        *usage &= ~GBM_FORMAT_YCbCr_420_SP_VENUS_UBWC;
 #else
-    *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
+        *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
 #endif
         *usage |= GRALLOC_USAGE_PRIVATE_HEIF_VIDEO;
     }
