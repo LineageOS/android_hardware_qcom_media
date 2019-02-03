@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1e42094d_ddf2fc4b",
+        "filename": "mm-video-v4l2/vidc/common/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 32,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2019-02-03T18:33:11Z",
+      "side": 1,
+      "message": "libOmxVidcCommon is a static library. It doesn\u0027t get installed. Does this end up actually being necessary?",
+      "range": {
+        "startLine": 32,
+        "startChar": 0,
+        "endLine": 32,
+        "endChar": 19
+      },
+      "revId": "c55ac7913d69b828add22e15a1038a5a3add5224",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
