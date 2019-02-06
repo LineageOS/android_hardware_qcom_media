@@ -3853,19 +3853,17 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                                (unsigned int)frm_int, drv_ctx.frame_rate.fps_numerator /
                                                (float)drv_ctx.frame_rate.fps_denominator);
 
-                                       struct v4l2_outputparm oparm;
-                                       /*XXX: we're providing timing info as seconds per frame rather than frames
-                                        * per second.*/
-                                       oparm.timeperframe.numerator = drv_ctx.frame_rate.fps_denominator;
-                                       oparm.timeperframe.denominator = drv_ctx.frame_rate.fps_numerator;
+                                       struct v4l2_control control;
 
-                                       struct v4l2_streamparm sparm;
-                                       sparm.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
-                                       sparm.parm.output = oparm;
-                                       if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_PARM, &sparm)) {
-                                           DEBUG_PRINT_ERROR("Unable to convey fps info to driver, performance might be affected");
-                                           eRet = OMX_ErrorHardware;
-                                           break;
+                                       control.id =  V4L2_CID_MPEG_VIDC_VIDEO_FRAME_RATE;
+                                       control.value = drv_ctx.frame_rate.fps_numerator / drv_ctx.frame_rate.fps_denominator;
+                                       control.value <<= 16;
+                                       control.value |= (0x0000FFFF | drv_ctx.frame_rate.fps_numerator % drv_ctx.frame_rate.fps_denominator);
+                                       DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
+                                       ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control);
+                                       if (ret) {
+                                           DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
+                                           return OMX_ErrorHardware;
                                        }
                                    }
 
@@ -4717,19 +4715,17 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                     frm_int = drv_ctx.frame_rate.fps_denominator * 1e6 /
                         drv_ctx.frame_rate.fps_numerator;
 
-                    struct v4l2_outputparm oparm;
-                    /*XXX: we're providing timing info as seconds per frame rather than frames
-                     * per second.*/
-                    oparm.timeperframe.numerator = drv_ctx.frame_rate.fps_denominator;
-                    oparm.timeperframe.denominator = drv_ctx.frame_rate.fps_numerator;
+                    struct v4l2_control control;
 
-                    struct v4l2_streamparm sparm;
-                    sparm.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
-                    sparm.parm.output = oparm;
-                    if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_PARM, &sparm)) {
-                        DEBUG_PRINT_ERROR("Unable to convey fps info to driver, \
-                                performance might be affected");
-                        ret = OMX_ErrorHardware;
+                    control.id =  V4L2_CID_MPEG_VIDC_VIDEO_FRAME_RATE;
+                    control.value = drv_ctx.frame_rate.fps_numerator / drv_ctx.frame_rate.fps_denominator;
+                    control.value <<= 16;
+                    control.value |= (0x0000FFFF | drv_ctx.frame_rate.fps_numerator % drv_ctx.frame_rate.fps_denominator);
+                    DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
+                    if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
+                       DEBUG_PRINT_ERROR("Unable to convey fps info to driver, \
+                            performance might be affected");
+                       return OMX_ErrorHardware;
                     }
                     client_set_fps = true;
                 } else {
@@ -9870,20 +9866,17 @@ void omx_vdec::set_frame_rate(OMX_S64 act_timestamp)
                         (float)drv_ctx.frame_rate.fps_denominator);
                 /* We need to report the difference between this FBD and the previous FBD
                  * back to the driver for clock scaling purposes. */
-                struct v4l2_outputparm oparm;
-                /*XXX: we're providing timing info as seconds per frame rather than frames
-                 * per second.*/
-                oparm.timeperframe.numerator = drv_ctx.frame_rate.fps_denominator;
-                oparm.timeperframe.denominator = drv_ctx.frame_rate.fps_numerator;
+                struct v4l2_control control;
 
-                struct v4l2_streamparm sparm;
-                sparm.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
-                sparm.parm.output = oparm;
-                if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_PARM, &sparm)) {
-                    DEBUG_PRINT_ERROR("Unable to convey fps info to driver, \
+                control.id =  V4L2_CID_MPEG_VIDC_VIDEO_FRAME_RATE;
+                control.value = drv_ctx.frame_rate.fps_numerator / drv_ctx.frame_rate.fps_denominator;
+                control.value <<= 16;
+                control.value |= (0x0000FFFF | drv_ctx.frame_rate.fps_numerator % drv_ctx.frame_rate.fps_denominator);
+                DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
+                if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
+                   DEBUG_PRINT_ERROR("Unable to convey fps info to driver, \
                             performance might be affected");
                 }
-
             }
         }
     }
