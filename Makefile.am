@@ -13,4 +13,8 @@ if BUILD_MM_VIDEO
 BUILD_COMPONENTS += mm-video-v4l2
 endif
 
+if TARGET_HYPERVISOR
+BUILD_COMPONENTS += hypv-intercept
+endif
+
 SUBDIRS := $(BUILD_COMPONENTS)

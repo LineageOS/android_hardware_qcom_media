@@ -88,6 +88,10 @@ endif
 
 libmm-vdec-def += -DALLOCATE_OUTPUT_NATIVEHANDLE
 
+ifeq ($(ENABLE_HYP),true)
+libmm-vdec-def += -DHYPERVISOR
+libmm-vdec-inc += $(TOP)/hardware/qcom/media/hypv-intercept
+endif
 # ---------------------------------------------------------------------------------
 # 			Make the Shared library (libOmxVdec)
 # ---------------------------------------------------------------------------------
@@ -115,6 +119,9 @@ LOCAL_SHARED_LIBRARIES  += libc2dcolorconvert
 LOCAL_SHARED_LIBRARIES  += libqdMetaData
 LOCAL_SHARED_LIBRARIES  += libplatformconfig
 LOCAL_SHARED_LIBRARIES  += libarbitrarybytes
+ifeq ($(ENABLE_HYP),true)
+LOCAL_SHARED_LIBRARIES  += libhypv_intercept
+endif
 
 LOCAL_SRC_FILES         := src/ts_parser.cpp
 LOCAL_STATIC_LIBRARIES  := libOmxVidcCommon
