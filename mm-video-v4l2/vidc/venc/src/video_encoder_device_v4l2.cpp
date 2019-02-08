@@ -1637,13 +1637,12 @@ bool venc_dev::venc_open(OMX_U32 codec)
     struct v4l2_control control;
     OMX_STRING device_name = (OMX_STRING)"/dev/video33";
     char property_value[PROPERTY_VALUE_MAX] = {0};
-    char platform_name[PROPERTY_VALUE_MAX] = {0};
     FILE *soc_file = NULL;
     char buffer[10];
 
-    property_get("ro.board.platform", platform_name, "0");
+    property_get("ro.board.platform", m_platform_name, "0");
 
-    if (!strncmp(platform_name, "msm8610", 7)) {
+    if (!strncmp(m_platform_name, "msm8610", 7)) {
         device_name = (OMX_STRING)"/dev/video/q6_enc";
         supported_rc_modes = (RC_ALL & ~RC_CBR_CFR);
     }
@@ -7213,6 +7212,12 @@ void venc_dev::venc_get_consumer_usage(OMX_U32* usage) {
         DEBUG_PRINT_INFO("Clear UBWC and set HEIF consumer usage bit");
         *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
         *usage |= GRALLOC_USAGE_PRIVATE_HEIF_VIDEO;
+    }
+
+    if (!strncmp(m_platform_name, "trinket", 7)) {
+        if (m_sVenc_cfg.input_width < 640 || m_sVenc_cfg.input_height < 480) {
+            *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
+        }
     }
 
     DEBUG_PRINT_INFO("venc_get_consumer_usage 0x%x", *usage);

@@ -470,6 +470,7 @@ class venc_dev
         bool bframe_implicitly_enabled;
         bool client_req_disable_temporal_layers;
         bool client_req_turbo_mode;
+        char m_platform_name[PROPERTY_VALUE_MAX] = {0};
 
         bool venc_validate_range(OMX_S32 id, OMX_S32 val);
         bool venc_set_profile(OMX_U32 eProfile);
