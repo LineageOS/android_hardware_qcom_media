@@ -296,10 +296,18 @@ void* async_message_thread (void *input)
                  * let's handle as Sufficient. Ex : 1080 & 1088 or 2160 & 2176.
                  * When FBD comes, component updates the clients with actual
                  * resolution through set_buffer_geometry.
+                 * As the LCU size for HEVC is 32bit, we need 32 pixel alignment
+                 * for HEVC. For others, it should be 16.
                  */
 
-                 event_fields_changed |= (omx->drv_ctx.video_resolution.frame_height != ptr[7]);
-                 event_fields_changed |= (omx->drv_ctx.video_resolution.frame_width != ptr[8]);
+                uint32_t pixel_align = (codec  == V4L2_PIX_FMT_HEVC? 32:16);
+
+                event_fields_changed |= (ALIGN(omx->drv_ctx.video_resolution.frame_height,
+                                                         pixel_align) !=
+                                         ALIGN(ptr[0], pixel_align));
+                event_fields_changed |= (ALIGN(omx->drv_ctx.video_resolution.frame_width,
+                                                         pixel_align) !=
+                                         ALIGN(ptr[1], pixel_align));
 
                  if ((codec == V4L2_PIX_FMT_H264) ||
                      (codec  == V4L2_PIX_FMT_HEVC)) {
