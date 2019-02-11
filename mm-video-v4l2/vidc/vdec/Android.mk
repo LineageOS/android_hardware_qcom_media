@@ -124,6 +124,7 @@ LOCAL_SHARED_LIBRARIES  += libarbitrarybytes
 LOCAL_SRC_FILES         := src/ts_parser.cpp
 LOCAL_STATIC_LIBRARIES  := libOmxVidcCommon
 LOCAL_SRC_FILES         += src/omx_vdec_v4l2.cpp
+LOCAL_SRC_FILES         += src/omx_vdec_v4l2_params.cpp
 
 include $(BUILD_SHARED_LIBRARY)
 

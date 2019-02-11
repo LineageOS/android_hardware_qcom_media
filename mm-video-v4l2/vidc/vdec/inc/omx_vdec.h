@@ -150,6 +150,23 @@ extern "C" {
         (unsigned)((OMX_BUFFERHEADERTYPE *)bufHdr)->nFilledLen,\
         (unsigned)((OMX_BUFFERHEADERTYPE *)bufHdr)->nTimeStamp)
 
+#define DEFAULT_FPS 30
+#define MAX_SUPPORTED_FPS 240
+#define DEFAULT_WIDTH_ALIGNMENT 128
+#define DEFAULT_HEIGHT_ALIGNMENT 32
+
+#define SZ_4K 0x1000
+#define SZ_1M 0x100000
+
+#define Log2(number, power)  { OMX_U32 temp = number; power = 0; while( (0 == (temp & 0x1)) &&  power < 16) { temp >>=0x1; power++; } }
+#define Q16ToFraction(q,num,den) { OMX_U32 power; Log2(q,power);  num = q >> power; den = 0x1 << (16 - power); }
+#define EXTRADATA_IDX(__num_planes) ((__num_planes) ? (__num_planes) - 1 : 0)
+#undef ALIGN
+#define ALIGN(x, to_align) ((((unsigned) x) + (to_align - 1)) & ~(to_align - 1))
+
+// Y=16(0-9bits), Cb(10-19bits)=Cr(20-29bits)=128, black by default
+#define DEFAULT_VIDEO_CONCEAL_COLOR_BLACK 0x8020010
+
 #define OMX_CORE_CONTROL_CMDQ_SIZE   100
 #define OMX_CORE_QCIF_HEIGHT         144
 #define OMX_CORE_QCIF_WIDTH          176
