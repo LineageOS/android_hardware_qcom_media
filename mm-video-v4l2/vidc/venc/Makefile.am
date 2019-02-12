@@ -59,6 +59,10 @@ if TARGET_USES_LIBGBM
 AM_CPPFLAGS += -D__LIBGBM__
 endif
 
+if TARGETS_THAT_SUPPORT_UBWC
+AM_CPPFLAGS += -D_UBWC_
+endif
+
 AM_CPPFLAGS += -I$(top_srcdir)/mm-video-v4l2/vidc/common/inc/
 AM_CPPFLAGS += -I$(top_srcdir)/mm-video-v4l2/vidc/venc/inc/
 AM_CPPFLAGS += -I$(top_srcdir)/libc2dcolorconvert/
