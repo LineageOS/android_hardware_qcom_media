@@ -61,6 +61,7 @@ LOCAL_COPY_HEADERS      += inc/QCMetaData.h
 
 LOCAL_C_INCLUDES        := $(LOCAL_PATH)/src/common
 LOCAL_C_INCLUDES        += $(LOCAL_PATH)/inc
+LOCAL_C_INCLUDES        += $(TOP)/hardware/qcom/media/libplatformconfig
 
 LOCAL_HEADER_LIBRARIES := \
         libutils_headers
@@ -93,6 +94,7 @@ include $(CLEAR_VARS)
 
 LOCAL_C_INCLUDES        := $(LOCAL_PATH)/src/common
 LOCAL_C_INCLUDES        += $(LOCAL_PATH)/inc
+LOCAL_C_INCLUDES        += $(TOP)/hardware/qcom/media/libplatformconfig
 
 LOCAL_HEADER_LIBRARIES := \
         libutils_headers
