@@ -55,6 +55,24 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ENABLE_P_QP 0x2
 #define ENABLE_B_QP 0x4
 
+#define OMX_VIDEO_LEVEL_UNKNOWN 0
+
+#define VENC_BFRAME_MAX_COUNT       1
+#define VENC_BFRAME_MAX_FPS         60
+#define VENC_BFRAME_MAX_WIDTH       1920
+#define VENC_BFRAME_MAX_HEIGHT      1088
+#define VENC_INFINITE_GOP 0xFFFFFFF
+
+/* TODO: Use sanctioned vendor bits for HEIF
+ * once end to end 64-bit support is available.
+ */
+#define GRALLOC_USAGE_PRIVATE_HEIF_VIDEO (UINT32_C(1) << 27)
+#define GRALLOC_USAGE_PRIVATE_10BIT_VIDEO (UINT32_C(1) << 30)
+
+#define REQUEST_LINEAR_COLOR_8_BIT   0x1
+#define REQUEST_LINEAR_COLOR_10_BIT  0x2
+#define REQUEST_LINEAR_COLOR_ALL     (REQUEST_LINEAR_COLOR_8_BIT | REQUEST_LINEAR_COLOR_10_BIT)
+
 enum hier_type {
     HIER_NONE = 0x0,
     HIER_P = 0x1,
