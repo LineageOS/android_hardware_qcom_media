@@ -9,6 +9,9 @@ PRODUCT_COPY_FILES += device/qcom/kona/media_codecs_performance.xml:$(TARGET_COP
 endif #TARGET_ENABLE_QC_AV_ENHANCEMENTS
 
 PRODUCT_COPY_FILES += hardware/qcom/media/conf_files/kona/system_properties.xml:$(TARGET_COPY_OUT_VENDOR)/etc/system_properties.xml
+PRODUCT_COPY_FILES += \
+     device/qcom/kona/seccomp/mediacodec-seccomp.policy:$(TARGET_COPY_OUT_VENDOR)/etc/seccomp_policy/mediacodec.policy \
+     device/qcom/kona/seccomp/mediaextractor-seccomp.policy:$(TARGET_COPY_OUT_VENDOR)/etc/seccomp_policy/mediaextractor.policy \
 
 PRODUCT_PACKAGES += android.hardware.media.omx@1.0-impl
 
