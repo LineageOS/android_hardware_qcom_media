@@ -216,6 +216,7 @@ typedef enum OMX_VIDEO_HEVCPROFILETYPE {
     OMX_VIDEO_HEVCProfileMainStill    = 0x04,
     // Main10 profile with HDR SEI support.
     OMX_VIDEO_HEVCProfileMain10HDR10  = 0x1000,
+    OMX_VIDEO_HEVCProfileMain10HDR10Plus = 0x2000,
     OMX_VIDEO_HEVCProfileMax          = 0x7FFFFFFF
 } OMX_VIDEO_HEVCPROFILETYPE;
 

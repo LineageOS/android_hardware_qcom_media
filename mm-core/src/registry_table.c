@@ -86,6 +86,12 @@ omx_core_cb_type core[] =
     OMX_REGISTRY_ENTRY("OMX.qti.video.decoder.vc1sw", "libOmxSwVdec.so", "video_decoder.vc1"),
     OMX_REGISTRY_ENTRY("OMX.qti.video.decoder.wmvsw", "libOmxSwVdec.so", "video_decoder.vc1"),
 #endif //_TRINKET_
+
+#ifdef _TRINKET_
+    // Entries specific to msmtrinket
+    OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.tme", "libOmxVenc.so", "video_encoder.tme"),
+    OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.tme.secure", "libOmxVenc.so", "video_encoder.tme"),
+#endif //_TRINKET_
 };
 
 const unsigned int SIZE_OF_CORE = sizeof(core) / sizeof(omx_core_cb_type);

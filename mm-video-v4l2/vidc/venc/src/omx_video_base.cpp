@@ -2161,6 +2161,14 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 memcpy(pDownScalarParam, &m_sParamDownScalar, sizeof(m_sParamDownScalar));
                 break;
             }
+        case OMX_IndexParamVideoAndroidVp8Encoder:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_ANDROID_VP8ENCODERTYPE);
+                OMX_VIDEO_PARAM_ANDROID_VP8ENCODERTYPE *pVp8Params =
+                        reinterpret_cast<OMX_VIDEO_PARAM_ANDROID_VP8ENCODERTYPE*>(paramData);
+                memcpy(pVp8Params,&m_sParamVP8Encoder,sizeof(m_sParamVP8Encoder));
+                break;
+            }
         case OMX_IndexParamConsumerUsageBits:
             {
                /*                            Consumer usage bits
@@ -4226,8 +4234,8 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
 #ifdef __LIBGBM__
             // if input buffer dimensions is different from what is configured,
             // reject the buffer
-            if (ALIGN((int)m_sInPortDef.format.video.nFrameWidth,32) != ALIGN(handle->aligned_width,32) ||
-                    ALIGN((int)m_sInPortDef.format.video.nFrameHeight,32) != ALIGN(handle->aligned_height,32)) {
+            if (ALIGN((int)m_sInPortDef.format.video.nFrameWidth,32) != ALIGN(handle->width,32) ||
+                    ALIGN((int)m_sInPortDef.format.video.nFrameHeight,32) != ALIGN(handle->height,32)) {
                 ALOGE("GBM buf size(%dx%d) does not match configured size(%ux%u)",
                         handle->aligned_width, handle->aligned_height,
                         m_sInPortDef.format.video.nFrameWidth, m_sInPortDef.format.video.nFrameHeight);

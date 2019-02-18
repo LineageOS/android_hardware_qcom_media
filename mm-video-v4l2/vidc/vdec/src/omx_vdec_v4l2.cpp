@@ -3508,9 +3508,10 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
                             QOMX_VIDEO_AVCProfileMain,
                             QOMX_VIDEO_AVCProfileConstrainedHigh,
                             QOMX_VIDEO_AVCProfileHigh };
-    int hevc_profiles[3] = { OMX_VIDEO_HEVCProfileMain,
+    int hevc_profiles[4] = { OMX_VIDEO_HEVCProfileMain,
                              OMX_VIDEO_HEVCProfileMain10,
-                             OMX_VIDEO_HEVCProfileMain10HDR10 };
+                             OMX_VIDEO_HEVCProfileMain10HDR10,
+                             OMX_VIDEO_HEVCProfileMain10HDR10Plus };
     int mpeg2_profiles[2] = { OMX_VIDEO_MPEG2ProfileSimple,
                               OMX_VIDEO_MPEG2ProfileMain};
     int vp9_profiles[3] = { OMX_VIDEO_VP9Profile0,
@@ -3628,6 +3629,7 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
                 break;
             case OMX_VIDEO_HEVCProfileMain10:
             case OMX_VIDEO_HEVCProfileMain10HDR10:
+            case OMX_VIDEO_HEVCProfileMain10HDR10Plus:
                 v4l2_profile = V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10;
                 break;
             default:
@@ -4481,15 +4483,15 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                     }
                                     enum vdec_output_format op_format;
                                     if (portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
-                                                     QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m ||
-                                        portFmt->eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar) {
+                                                     QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m) {
                                         op_format = (enum vdec_output_format)VDEC_YUV_FORMAT_NV12;
                                         fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12;
                                         //check if the required color format is a supported flexible format
                                         is_flexible_format = check_supported_flexible_formats(portFmt->eColorFormat);
                                     } else if (portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
                                                    QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed ||
-                                               portFmt->eColorFormat == OMX_COLOR_FormatYUV420Planar) {
+                                               portFmt->eColorFormat == OMX_COLOR_FormatYUV420Planar ||
+                                        portFmt->eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar) {
                                         op_format = (enum vdec_output_format)VDEC_YUV_FORMAT_NV12_UBWC;
                                         fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12_UBWC;
                                         //check if the required color format is a supported flexible format
@@ -12300,14 +12302,14 @@ void omx_vdec::allocate_color_convert_buf::enable_color_conversion(bool enable) 
     }
 
     if (!omx->in_reconfig)
-        enabled = enable;
+        c2d_enabled = enable;
 
     omx->c2d_enable_pending = enable;
 }
 
 omx_vdec::allocate_color_convert_buf::allocate_color_convert_buf()
 {
-    enabled = false;
+    c2d_enabled = false;
     client_buffers_disabled = false;
     omx = NULL;
     init_members();
@@ -12369,7 +12371,7 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
         DEBUG_PRINT_ERROR("Invalid client in color convert");
         return false;
     }
-    if (!enabled) {
+    if (!is_color_conversion_enabled()) {
         DEBUG_PRINT_HIGH("No color conversion required");
         return true;
     }
@@ -12473,7 +12475,8 @@ bool omx_vdec::allocate_color_convert_buf::set_color_format(
         return false;
     }
     pthread_mutex_lock(&omx->c_lock);
-    status = get_color_format (drv_color_format);
+    enable_color_conversion(false);
+    status = get_color_format(drv_color_format);
 
     drv_colorformat_c2d_enable = (drv_color_format != dest_color_format) &&
         (drv_color_format != (OMX_COLOR_FORMATTYPE)
@@ -12510,6 +12513,8 @@ bool omx_vdec::allocate_color_convert_buf::set_color_format(
             enable_color_conversion(false);
         }
     } else {
+        DEBUG_PRINT_ERROR("Disabling C2D src_fmt = %d and dest_fmt = %d", drv_color_format,
+                    dest_color_format);
         enable_color_conversion(false);
     }
     pthread_mutex_unlock(&omx->c_lock);
@@ -12587,7 +12592,7 @@ OMX_BUFFERHEADERTYPE* omx_vdec::allocate_color_convert_buf::get_il_buf_hdr
 {
     bool status = true;
     pthread_mutex_lock(&omx->c_lock);
-    if (!enabled)
+    if (!is_color_conversion_enabled())
         buffer_size = omx->drv_ctx.op_buf.buffer_size;
     else {
         buffer_size = c2dcc.getBuffSize(C2D_OUTPUT);
@@ -12598,7 +12603,7 @@ OMX_BUFFERHEADERTYPE* omx_vdec::allocate_color_convert_buf::get_il_buf_hdr
 
 OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::set_buffer_req(
         OMX_U32 buffer_size, OMX_U32 actual_count) {
-    OMX_U32 expectedSize = enabled ? buffer_size_req : omx->drv_ctx.op_buf.buffer_size;
+    OMX_U32 expectedSize = is_color_conversion_enabled() ? buffer_size_req : omx->drv_ctx.op_buf.buffer_size;
 
     if (buffer_size < expectedSize) {
         DEBUG_PRINT_ERROR("OP Requirements: Client size(%u) insufficient v/s requested(%u)",
@@ -12611,7 +12616,7 @@ OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::set_buffer_req(
         return OMX_ErrorBadParameter;
     }
 
-    if (enabled) {
+    if (is_color_conversion_enabled()) {
         // disallow changing buffer size/count while we have active allocated buffers
         if (allocated_count > 0) {
             DEBUG_PRINT_ERROR("Cannot change C2D buffer size from %u to %u with %d active allocations",
@@ -12641,7 +12646,7 @@ bool omx_vdec::is_component_secure()
 bool omx_vdec::allocate_color_convert_buf::get_color_format(OMX_COLOR_FORMATTYPE &dest_color_format)
 {
     bool status = true;
-    if (!enabled) {
+    if (!is_color_conversion_enabled()) {
         for (auto& x: mMapOutput2DriverColorFormat) {
             DecColorMapping::const_iterator
                 found = mMapOutput2DriverColorFormat.find(omx->drv_ctx.output_format);
