@@ -35,6 +35,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "video_encoder_device_v4l2.h"
 #include "omx_video_encoder.h"
 #include "media/msm_vidc_utils.h"
+#ifdef HYPERVISOR
+#include "hypv_intercept.h"
+#endif
 #ifdef USE_ION
 #include <linux/msm_ion.h>
 #endif
@@ -74,6 +77,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <utils/Trace.h>
 
 #define YUV_STATS_LIBRARY_NAME "libgpustats.so" // UBWC case: use GPU library
+
+#ifdef HYPERVISOR
+#define ioctl(x, y, z) hypv_ioctl(x, y, z)
+#endif
 
 #undef ALIGN
 #define ALIGN(x, to_align) ((((unsigned long) x) + (to_align - 1)) & ~(to_align - 1))
@@ -1631,6 +1638,65 @@ bailout:
     return status;
 }
 
+#ifdef HYPERVISOR
+static int async_message_process_v4l2 (void *context, void* message)
+{
+    int rc = 0;
+    struct v4l2_buffer *v4l2_buf=NULL;
+    OMX_BUFFERHEADERTYPE* omxhdr = NULL;
+    struct venc_msg *vencmsg = (venc_msg *)message;
+    venc_dev *vencdev = reinterpret_cast<venc_dev*>(context);
+    omx_venc *omx = vencdev->venc_handle;
+    omx_video *omx_venc_base = (omx_video *)vencdev->venc_handle;
+
+    if (VEN_MSG_OUTPUT_BUFFER_DONE == vencmsg->msgcode) {
+        v4l2_buf = (struct v4l2_buffer *)vencmsg->buf.clientdata;
+        omxhdr=omx_venc_base->m_out_mem_ptr+v4l2_buf->index;
+        vencmsg->buf.len= v4l2_buf->m.planes->bytesused;
+        vencmsg->buf.offset = v4l2_buf->m.planes->data_offset;
+        vencmsg->buf.flags = 0;
+        vencmsg->buf.ptrbuffer = (OMX_U8 *)omx_venc_base->m_pOutput_pmem[v4l2_buf->index].buffer;
+        vencmsg->buf.clientdata=(void*)omxhdr;
+        vencmsg->buf.timestamp = (uint64_t) v4l2_buf->timestamp.tv_sec *
+                                 (uint64_t) 1000000 + (uint64_t) v4l2_buf->timestamp.tv_usec;
+
+        if (v4l2_buf->flags & V4L2_BUF_FLAG_KEYFRAME)
+            vencmsg->buf.flags |= OMX_BUFFERFLAG_SYNCFRAME;
+
+        if (v4l2_buf->flags & V4L2_BUF_FLAG_PFRAME) {
+            vencmsg->buf.flags |= OMX_VIDEO_PictureTypeP;
+        } else if (v4l2_buf->flags & V4L2_BUF_FLAG_BFRAME) {
+            vencmsg->buf.flags |= OMX_VIDEO_PictureTypeB;
+        }
+
+        if (v4l2_buf->flags & V4L2_QCOM_BUF_FLAG_CODECCONFIG)
+            vencmsg->buf.flags |= OMX_BUFFERFLAG_CODECCONFIG;
+
+        if (v4l2_buf->flags & V4L2_QCOM_BUF_FLAG_EOS)
+            vencmsg->buf.flags |= OMX_BUFFERFLAG_EOS;
+
+        if (vencdev->num_output_planes > 1 && v4l2_buf->m.planes->bytesused)
+            vencmsg->buf.flags |= OMX_BUFFERFLAG_EXTRADATA;
+
+        if (omxhdr->nFilledLen)
+            vencmsg->buf.flags |= OMX_BUFFERFLAG_ENDOFFRAME;
+        vencdev->fbd++;
+    } else if (VEN_MSG_INPUT_BUFFER_DONE == vencmsg->msgcode) {
+        v4l2_buf = (struct v4l2_buffer *)vencmsg->buf.clientdata;
+        vencdev->ebd++;
+        if (omx_venc_base->mUseProxyColorFormat && !omx_venc_base->mUsesColorConversion)
+            omxhdr = &omx_venc_base->meta_buffer_hdr[v4l2_buf->index];
+        else
+            omxhdr = &omx_venc_base->m_inp_mem_ptr[v4l2_buf->index];
+        vencmsg->buf.clientdata=(void*)omxhdr;
+        DEBUG_PRINT_LOW("sending EBD %p [id=%d]", omxhdr, v4l2_buf->index);
+    }
+    rc = omx->async_message_process((void *)omx, message);
+
+    return rc;
+}
+#endif
+
 bool venc_dev::venc_open(OMX_U32 codec)
 {
     int r, minqp = 0, maxqp = 127;
@@ -1647,7 +1713,16 @@ bool venc_dev::venc_open(OMX_U32 codec)
         device_name = (OMX_STRING)"/dev/video/q6_enc";
         supported_rc_modes = (RC_ALL & ~RC_CBR_CFR);
     }
-    m_nDriver_fd = open (device_name, O_RDWR);
+
+#ifdef HYPERVISOR
+    hvfe_callback_t hvfe_cb;
+    hvfe_cb.handler = async_message_process_v4l2;
+    hvfe_cb.context = (void *) this;
+    m_nDriver_fd = hypv_open(device_name, O_RDWR, &hvfe_cb);
+#else
+    m_nDriver_fd = open(device_name, O_RDWR);
+#endif
+
     if ((int)m_nDriver_fd < 0) {
         DEBUG_PRINT_ERROR("ERROR: Omx_venc::Comp Init Returning failure");
         return false;
@@ -1910,7 +1985,11 @@ void venc_dev::venc_close()
         DEBUG_PRINT_HIGH("venc_close X");
         unsubscribe_to_events(m_nDriver_fd);
         close(m_poll_efd);
+#ifdef HYPERVISOR
+        hypv_close(m_nDriver_fd);
+#else
         close(m_nDriver_fd);
+#endif
         m_nDriver_fd = -1;
     }
 
