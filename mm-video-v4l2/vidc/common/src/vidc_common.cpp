@@ -70,7 +70,14 @@ pl_map profile_level_converter::profile_hevc_omx_to_v4l2 ({
                         V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN_STILL_PIC},
         });
 
-pl_map profile_level_converter::profile_hevc_v4l2_to_omx ({});
+pl_map profile_level_converter::profile_hevc_v4l2_to_omx ({
+            {V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN,
+                        OMX_VIDEO_HEVCProfileMain},
+            {V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10,
+                        OMX_VIDEO_HEVCProfileMain10HDR10},
+            {V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN_STILL_PIC,
+                        OMX_VIDEO_HEVCProfileMainStill},
+        });
 
 pl_map profile_level_converter::profile_mpeg2_omx_to_v4l2 ({
             {OMX_VIDEO_MPEG2ProfileSimple,
@@ -244,7 +251,6 @@ void reverse_map(pl_map source_map, pl_map &dest_map)
 void profile_level_converter::init()
 {
     reverse_map(profile_avc_omx_to_v4l2, profile_avc_v4l2_to_omx);
-    reverse_map(profile_hevc_omx_to_v4l2, profile_hevc_v4l2_to_omx);
     reverse_map(profile_mpeg2_omx_to_v4l2, profile_mpeg2_v4l2_to_omx);
     reverse_map(profile_vp9_omx_to_v4l2, profile_vp9_v4l2_to_omx);
     reverse_map(profile_tme_omx_to_v4l2, profile_tme_v4l2_to_omx);
