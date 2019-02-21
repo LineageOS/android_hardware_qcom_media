@@ -76,16 +76,17 @@ omx_core_cb_type core[] =
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.encoder.qcelp13", "libOmxQcelp13Enc.so", "audio_encoder.qcelp13"),
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.encoder.evrc", "libOmxEvrcEnc.so", "audio_encoder.evrc"),
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.encoder.amrnb", "libOmxAmrEnc.so", "audio_encoder.amrnb"),
-    OMX_REGISTRY_ENTRY("OMX.qti.vdec.vpp", "libOmxVpp.so", "iv_processor.yuv"),
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.multiaac", "libOmxAacDec.so", "audio_decoder.aac"),
 #ifdef _NILE_
     //Entries specific to msmnile
+    OMX_REGISTRY_ENTRY("OMX.qti.vdec.vpp", "libOmxVpp.so", "iv_processor.yuv"),
 #endif
 
 #ifdef _STEPPE_
     //Entries specific to msmsteppe
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.tme", "libOmxVenc.so", "video_encoder.tme"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.tme.secure", "libOmxVenc.so", "video_encoder.tme"),
+    OMX_REGISTRY_ENTRY("OMX.qti.vdec.vpp", "libOmxVpp.so", "iv_processor.yuv"),
 #endif //_STEPPE_
 
 #ifndef _TRINKET_
