@@ -625,7 +625,8 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 temporal_layers_config.nMaxLayers = hierData.nLayerCountMax;
                 temporal_layers_config.nMaxBLayers = hierData.nBLayerCountMax;
                 temporal_layers_config.nBLayers = hierData.nBLayerCountActual;
-                temporal_layers_config.bIsBitrateRatioValid = hierData.bBitrateRatiosSpecified;
+                // Resetting to zero as we are sending all bitrate ratios to kernel
+                memset(&temporal_layers_config.nTemporalLayerBitrateRatio, 0x0, sizeof(OMX_U32)*OMX_VIDEO_ANDROID_MAXTEMPORALLAYERS);
                 for (OMX_U32 i = 0; i < temporal_layers_config.nPLayers; ++i) {
                     temporal_layers_config.nTemporalLayerBitrateRatio[i] = hierData.nBitrateRatios[i];
                 }

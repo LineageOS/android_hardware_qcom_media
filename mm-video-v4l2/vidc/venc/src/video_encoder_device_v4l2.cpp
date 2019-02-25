@@ -2260,7 +2260,8 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                 temporal_layers_config.ePattern = pParam->ePattern;
                 temporal_layers_config.hier_mode = HIER_P;
                 temporal_layers_config.nBLayers = 0;
-                temporal_layers_config.bIsBitrateRatioValid = pParam->bBitrateRatiosSpecified;
+                // Resetting to zero as we are sending all bitrate ratios to kernel
+                memset(&temporal_layers_config.nTemporalLayerBitrateRatio, 0x0, sizeof(OMX_U32)*OMX_VIDEO_ANDROID_MAXTEMPORALLAYERS);
                 for (OMX_U32 i = 0; i < temporal_layers_config.nPLayers; ++i) {
                     temporal_layers_config.nTemporalLayerBitrateRatio[i] = pParam->nBitrateRatios[i];
                 }
@@ -4804,30 +4805,22 @@ OMX_ERRORTYPE venc_dev::venc_set_bitrate_ratios()
         V4L2_CID_MPEG_VIDEO_HEVC_HIER_CODING_L5_BR,
     };
 
-    if (temporal_layers_config.bIsBitrateRatioValid == OMX_FALSE) {
-        DEBUG_PRINT_LOW("TemporalLayer: layerwise bitrate ratio not specified.");
-        return OMX_ErrorNone;
-    }
+    DEBUG_PRINT_LOW("TemporalLayer: layerwise bitrate ratio");
 
-    DEBUG_PRINT_LOW("TemporalLayer: layerwise bitrate ratio specified");
+    // Set all bitrate ratios to kernel. If client hasn't set bitrate ratio
+    // for a layer, 0 is passed on to kernel.
+    for (OMX_U32 i = 0; i < (OMX_U32)(sizeof(ids)/sizeof(ids[0])); ++i) {
+        ctrl.id = ids[i];
+        ctrl.value = temporal_layers_config.nTemporalLayerBitrateRatio[i];
 
-    for (OMX_U32 i = 0; i < std::min(temporal_layers_config.nPLayers, (OMX_U32)(sizeof(ids)/sizeof(ids[0]))); ++i) {
-        if (!temporal_layers_config.nTemporalLayerBitrateRatio[i]) {
-            DEBUG_PRINT_ERROR("Invalid bitrate settings for layer %u", i);
-	        return OMX_ErrorUnsupportedSetting;
-        } else {
-            ctrl.id = ids[i];
-            ctrl.value = temporal_layers_config.nTemporalLayerBitrateRatio[i];
-
-            rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &ctrl);
-            if (rc) {
-                DEBUG_PRINT_ERROR("Failed to set layerwise bitrate ratio. Id= %u, Value= %u, error %d",
-                                  ctrl.id, ctrl.value, rc);
-	            return OMX_ErrorUnsupportedSetting;
-            }
-            DEBUG_PRINT_LOW("Layerwise bitrate configured successfully for layer: %u, bitrate: %u",
-                            i, temporal_layers_config.nTemporalLayerBitrateRatio[i]);
+        rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &ctrl);
+        if (rc) {
+            DEBUG_PRINT_ERROR("Failed to set layerwise bitrate ratio. Id= %u, Value= %u, error %d",
+                              ctrl.id, ctrl.value, rc);
+            return OMX_ErrorUnsupportedSetting;
         }
+        DEBUG_PRINT_LOW("Layerwise bitrate configured successfully for layer: %u, bitrate: %u",
+                        i, temporal_layers_config.nTemporalLayerBitrateRatio[i]);
     }
 	return OMX_ErrorNone;
 }
