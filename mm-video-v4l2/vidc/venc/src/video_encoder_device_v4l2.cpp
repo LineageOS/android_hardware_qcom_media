@@ -152,7 +152,6 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     operating_rate = 30;
     memset(&color_space, 0x0, sizeof(color_space));
     memset(&temporal_layers_config, 0x0, sizeof(temporal_layers_config));
-    client_req_disable_bframe   = false;
     bframe_implicitly_enabled = false;
     intra_period.num_pframes = 29;
     intra_period.num_bframes = 0;
@@ -2212,7 +2211,7 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                 OMX_VIDEO_CONFIG_AVCINTRAPERIOD *avc_iperiod = (OMX_VIDEO_CONFIG_AVCINTRAPERIOD*) configData;
                 DEBUG_PRINT_LOW("venc_set_param: OMX_IndexConfigVideoAVCIntraPeriod");
 
-                if (venc_set_intra_period(avc_iperiod->nPFrames, intra_period.num_bframes) == false) {
+                if (set_nP_frames(avc_iperiod->nPFrames) == false) {
                     DEBUG_PRINT_ERROR("ERROR: Setting intra period failed");
                     return false;
                 }
@@ -2675,30 +2674,6 @@ unsigned venc_dev::venc_start(void)
     struct v4l2_control control;
 
     memset(&control, 0, sizeof(control));
-
-    if (!venc_set_priority(sess_priority.priority)) {
-        DEBUG_PRINT_ERROR("Failed to set priority");
-        return 1;
-    }
-    // Client can set intra refresh period in terms of frames.
-    // This requires reconfiguration on port redefinition as
-    // mbcount for IR depends on encode resolution.
-    if (!venc_reconfigure_intra_refresh_period()) {
-        DEBUG_PRINT_ERROR("Reconfiguring intra refresh period failed");
-        return 1;
-    }
-
-    if (!venc_reconfigure_intra_period()) {
-        DEBUG_PRINT_ERROR("Reconfiguring intra period failed");
-        return 1;
-    }
-    // Note HP settings could change GOP structure
-    if (!venc_set_intra_period(intra_period.num_pframes, intra_period.num_bframes)) {
-        DEBUG_PRINT_ERROR("Failed to set nPframes/nBframes");
-        return OMX_ErrorUndefined;
-    }
-
-    venc_set_extradata_hdr10metadata();
 
     venc_config_print();
 
@@ -3441,19 +3416,6 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
         }
     }
 
-    if (!streaming[OUTPUT_PORT] &&
-        (m_sVenc_cfg.inputformat != V4L2_PIX_FMT_NV12_TP10_UBWC &&
-         m_sVenc_cfg.inputformat != V4L2_PIX_FMT_NV12_UBWC)) {
-        if (bframe_implicitly_enabled) {
-            DEBUG_PRINT_HIGH("Disabling implicitly enabled B-frames");
-            intra_period.num_pframes = nPframes_cache;
-            if (!_venc_set_intra_period(intra_period.num_pframes, 0)) {
-                DEBUG_PRINT_ERROR("Failed to set nPframes/nBframes");
-                return OMX_ErrorUndefined;
-            }
-        }
-    }
-
     extra_idx = EXTRADATA_IDX(num_input_planes);
 
     if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
@@ -3970,194 +3932,13 @@ bool venc_dev::venc_set_voptiming_cfg( OMX_U32 TimeIncRes)
     return true;
 }
 
-bool venc_dev::venc_reconfigure_intra_refresh_period() {
-
-    DEBUG_PRINT_LOW("venc_reconfigure_intra_refresh_period");
-    if (intra_refresh.framecount) {
-        OMX_U32 mb_size = 16;
-        // Firmware will re-calculate mbcount if codec is HEVC.
-        OMX_U32 num_mbs_per_frame = (ALIGN(m_sVenc_cfg.dvs_height, mb_size)/mb_size) * (ALIGN(m_sVenc_cfg.dvs_width, mb_size)/mb_size);
-        OMX_U32 num_intra_refresh_mbs = 0;
-        num_intra_refresh_mbs = ceil(num_mbs_per_frame / intra_refresh.framecount);
-
-        intra_refresh.irmode     = OMX_VIDEO_IntraRefreshRandom;
-        intra_refresh.mbcount    = num_intra_refresh_mbs;
-    }
-
-    if (venc_set_intra_refresh() == false) {
-        DEBUG_PRINT_ERROR("ERROR: Setting Intra refresh failed");
-        return false;
-    }
-
-    return true;
-}
-
-bool venc_dev::venc_reconfigure_intra_period()
+bool venc_dev::set_nP_frames(unsigned long nPframes)
 {
-    int  rc;
-    bool isValidCodec        = false;
-    bool isValidResolution   = false;
-    bool isValidFps          = false;
-    bool isValidOpRate       = false;
-    bool isValidLayerCount   = false;
-    bool enableBframes       = false;
-    bool isValidLtrSetting   = false;
-    bool isValidRcMode       = false;
     struct v4l2_control control;
-
-    DEBUG_PRINT_LOW("venc_reconfigure_intra_period");
-
-    if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264 &&
-        ((codec_profile.profile == V4L2_MPEG_VIDEO_H264_PROFILE_MAIN) ||
-         (codec_profile.profile == V4L2_MPEG_VIDEO_H264_PROFILE_HIGH))) {
-        isValidCodec = true;
-    }
-
-    if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC &&
-        ((codec_profile.profile == V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN) ||
-         (codec_profile.profile == V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_10) ||
-         (codec_profile.profile == V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_STILL_PICTURE)) &&
-         (m_codec != OMX_VIDEO_CodingImageHEIC)) {
-        isValidCodec = true;
-    }
-
-    if ((m_sVenc_cfg.input_width <= VENC_BFRAME_MAX_WIDTH && m_sVenc_cfg.input_height <= VENC_BFRAME_MAX_HEIGHT) ||
-        (m_sVenc_cfg.input_width <= VENC_BFRAME_MAX_HEIGHT && m_sVenc_cfg.input_height <= VENC_BFRAME_MAX_WIDTH)) {
-        isValidResolution = true;
-    }
-
-    if ((m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) <= VENC_BFRAME_MAX_FPS) {
-        isValidFps = true;
-    }
-
-    if (operating_rate <= VENC_BFRAME_MAX_FPS) {
-        isValidOpRate = true;
-    }
-
-    if (temporal_layers_config.nPLayers <= 1) {
-        isValidLayerCount = true;
-    }
-
-    if (rate_ctrl.rcmode == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR) {
-        isValidRcMode = true;
-    }
-
-    isValidLtrSetting = ltrinfo.enabled ? false : true;
-
-    enableBframes = isValidResolution   &&
-                    isValidFps          &&
-                    isValidOpRate       &&
-                    isValidLayerCount   &&
-                    isValidLtrSetting   &&
-                    isValidRcMode       &&
-                    isValidCodec        &&
-                    !low_latency_mode   &&
-                    !client_req_disable_bframe;
-
-    DEBUG_PRINT_LOW("B-frame enablement = %u; Conditions for Resolution = %u, FPS = %u,"
-                     " Operating rate = %u, Layer condition = %u,"
-                     " LTR = %u, RC = %u Codec/Profile = %u Client request to disable = %u LowLatency : %u\n",
-                     enableBframes, isValidResolution, isValidFps, isValidOpRate,
-                     isValidLayerCount, isValidLtrSetting, isValidRcMode, isValidCodec, client_req_disable_bframe,
-                     low_latency_mode);
-
-    if (enableBframes && intra_period.num_bframes == 0 && intra_period.num_pframes > VENC_BFRAME_MAX_COUNT) {
-        intra_period.num_bframes = VENC_BFRAME_MAX_COUNT;
-        nPframes_cache = intra_period.num_pframes;
-        intra_period.num_pframes = intra_period.num_pframes / (1 + intra_period.num_bframes);
-        bframe_implicitly_enabled = true;
-    } else if (!enableBframes && intra_period.num_bframes > 0) {
-        intra_period.num_pframes = intra_period.num_pframes + (intra_period.num_pframes * intra_period.num_bframes);
-        intra_period.num_bframes = 0;
-    }
-
-    if (!venc_calibrate_gop())
-    {
-        DEBUG_PRINT_ERROR("reconfigure_intra_refresh: Invalid settings");
-        return false;
-    }
-
-    control.id    = V4L2_CID_MPEG_VIDEO_GOP_SIZE;
-    control.value = intra_period.num_pframes;
-
-    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-
-    if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set control V4L2_CID_MPEG_VIDEO_GOP_SIZE");
-        return false;
-    }
-
-    DEBUG_PRINT_LOW("Success IOCTL set control for V4L2_CID_MPEG_VIDEO_GOP_SIZE value=%d", control.value);
-
-    control.id    = V4L2_CID_MPEG_VIDEO_B_FRAMES;
-    control.value = intra_period.num_bframes;
-
-    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-
-    if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set control V4L2_CID_MPEG_VIDEO_B_FRAMES");
-        return false;
-    }
-
-    DEBUG_PRINT_LOW("Success IOCTL set control for V4L2_CID_MPEG_VIDEO_B_FRAMES value=%lu", intra_period.num_bframes);
-
-    return true;
-}
-
-bool venc_dev::venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames)
-{
-    DEBUG_PRINT_LOW("venc_set_intra_period: nPFrames = %u, nBFrames: %u", (unsigned int)nPFrames, (unsigned int)nBFrames);
-
-    if ((streaming[OUTPUT_PORT] || streaming[CAPTURE_PORT]) && (intra_period.num_bframes != nBFrames)) {
-        DEBUG_PRINT_ERROR("Invalid settings, Cannot change B frame count dynamically");
-        return false;
-    }
-    return _venc_set_intra_period(nPFrames, nBFrames);
-}
-
-bool venc_dev::_venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames)
-{
-    int rc;
-    struct v4l2_control control;
-    char property_value[PROPERTY_VALUE_MAX] = {0};
-
-    if ((m_sVenc_cfg.codectype != V4L2_PIX_FMT_H264 &&
-        m_sVenc_cfg.codectype != V4L2_PIX_FMT_HEVC) ||
-        m_codec == OMX_VIDEO_CodingImageHEIC) {
-        nBFrames = 0;
-    }
-
-    if ((codec_profile.profile != V4L2_MPEG_VIDEO_MPEG4_PROFILE_ADVANCED_SIMPLE) &&
-        (codec_profile.profile != V4L2_MPEG_VIDEO_H264_PROFILE_MAIN)             &&
-        (codec_profile.profile != V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN)        &&
-        (codec_profile.profile != V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_10)      &&
-        (codec_profile.profile != V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_STILL_PICTURE) &&
-        (codec_profile.profile != V4L2_MPEG_VIDEO_H264_PROFILE_HIGH)) {
-        nBFrames = 0;
-    }
-
-    if (temporal_layers_config.nPLayers > 1 && nBFrames) {
-        DEBUG_PRINT_ERROR("Invalid settings, bframes cannot be enabled with HP. Resetting it to 0");
-        nBFrames = 0;
-    }
-
-    if (!venc_validate_range(V4L2_CID_MPEG_VIDEO_B_FRAMES, nBFrames) || (nBFrames > VENC_BFRAME_MAX_COUNT)) {
-        DEBUG_PRINT_ERROR("Invalid settings, hardware doesn't support %u bframes", nBFrames);
-        return false;
-    }
-
-    intra_period.num_pframes = nPFrames;
-    intra_period.num_bframes = nBFrames;
-
-    if (!venc_calibrate_gop())
-    {
-        DEBUG_PRINT_ERROR("set_intra_period: Invalid settings");
-        return false;
-    }
 
     control.id = V4L2_CID_MPEG_VIDEO_GOP_SIZE;
-    control.value = intra_period.num_pframes;
-    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
+    control.value = nPframes;
+    int rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
     if (rc) {
         DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
@@ -4165,9 +3946,16 @@ bool venc_dev::_venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames)
     }
     DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
 
+    return true;
+}
+
+bool venc_dev::set_nB_frames(unsigned long nBframes)
+{
+    struct v4l2_control control;
+
     control.id = V4L2_CID_MPEG_VIDEO_B_FRAMES;
-    control.value = intra_period.num_bframes;
-    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
+    control.value = nBframes;
+    int rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
     if (rc) {
         DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
@@ -5185,13 +4973,17 @@ bool venc_dev::venc_config_framerate(OMX_CONFIG_FRAMERATETYPE *frame_rate)
 
 bool venc_dev::venc_config_intraperiod(QOMX_VIDEO_INTRAPERIODTYPE *intra_period)
 {
+    if (intra_period->nIDRPeriod != 1) {
+        DEBUG_PRINT_ERROR("ERROR: IDR period is %u. It is expected to be 1 always."
+                          " Please check with the client", intra_period->nIDRPeriod);
+    }
+
     if (intra_period->nPortIndex == (OMX_U32) PORT_INDEX_OUT) {
-        if (venc_set_intra_period(intra_period->nPFrames, intra_period->nBFrames) == false) {
+        if (set_nP_frames(intra_period->nPFrames) == false ||
+            set_nB_frames(intra_period->nBFrames) == false) {
             DEBUG_PRINT_ERROR("ERROR: Request for setting intra period failed");
             return false;
         }
-
-        client_req_disable_bframe = (intra_period->nBFrames == 0) ? true : false;
         return true;
     }
 
