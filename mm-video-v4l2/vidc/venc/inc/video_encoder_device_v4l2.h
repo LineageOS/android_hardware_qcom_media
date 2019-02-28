@@ -408,7 +408,6 @@ class venc_dev
         struct msm_venc_color_space         color_space;
         msm_venc_temporal_layers            temporal_layers_config;
         OMX_BOOL                            downscalar_enabled;
-        bool client_req_disable_bframe;
         bool bframe_implicitly_enabled;
         bool client_req_disable_temporal_layers;
 
@@ -416,8 +415,8 @@ class venc_dev
         bool venc_validate_range(OMX_S32 id, OMX_S32 val);
         bool venc_set_profile(OMX_U32 eProfile);
         bool venc_set_level(OMX_U32 eLevel);
-        bool venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames);
-        bool _venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames);
+        bool set_nB_frames(unsigned long nBframes);
+        bool set_nP_frames(unsigned long nPframes);
         bool venc_set_target_bitrate(OMX_U32 nTargetBitrate);
         bool venc_set_ratectrl_cfg(OMX_VIDEO_CONTROLRATETYPE eControlRate);
         bool venc_set_session_qp_range(OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE *qp_range);
@@ -433,8 +432,6 @@ class venc_dev
         bool venc_set_voptiming_cfg(OMX_U32 nTimeIncRes);
         void venc_config_print();
         bool venc_set_extradata(OMX_U32 extra_data, OMX_BOOL enable);
-        bool venc_reconfigure_intra_period();
-        bool venc_reconfigure_intra_refresh_period();
         bool venc_reconfig_reqbufs();
         bool venc_set_vpe_rotation(OMX_S32 rotation_angle);
         bool venc_set_mirror(OMX_MIRRORTYPE mirror);

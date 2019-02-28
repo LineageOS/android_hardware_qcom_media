@@ -246,26 +246,10 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                         DEBUG_PRINT_ERROR("ERROR: Unsuccessful in updating Profile %d",
                                 pParam->eProfile);
                         return false;
-                    } else {
-                        if ((pParam->eProfile != OMX_VIDEO_AVCProfileBaseline) &&
-                            (pParam->eProfile != (OMX_VIDEO_AVCPROFILETYPE) QOMX_VIDEO_AVCProfileConstrainedBaseline)) {
-                            if (pParam->nBFrames) {
-                                bFrames = pParam->nBFrames;
-                            }
-                        } else {
-                            if (pParam->nBFrames) {
-                                DEBUG_PRINT_ERROR("Warning: B frames not supported");
-                                bFrames = 0;
-                            }
-                        }
                     }
 
-                    if(!venc_set_level(OMX_VIDEO_LEVEL_UNKNOWN)) {
-                        DEBUG_PRINT_ERROR("ERROR: Unsuccessful in updating level to unknown");
-                        return false;
-                    }
-
-                    if (!venc_set_intra_period (pParam->nPFrames, bFrames)) {
+                    if (set_nP_frames(pParam->nPFrames) == false ||
+                        (pParam->nBFrames && set_nB_frames(pParam->nBFrames) == false)) {
                         DEBUG_PRINT_ERROR("ERROR: Request for setting intra period failed");
                         return false;
                     }
@@ -300,10 +284,6 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                             pParam->eProfile);
                     return false;
                 }
-                if (!venc_set_level (OMX_VIDEO_LEVEL_UNKNOWN)) {
-                    DEBUG_PRINT_ERROR("ERROR: Unsuccessful in updating level to unknown");
-                    return false;
-                }
                 if(venc_set_vpx_error_resilience(pParam->bErrorResilientMode) == false) {
                     DEBUG_PRINT_ERROR("ERROR: Failed to set vpx error resilience");
                     return false;
@@ -320,16 +300,12 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                                         pParam->eProfile);
                     return false;
                 }
-                if (!venc_set_level (OMX_VIDEO_LEVEL_UNKNOWN)) {
-                    DEBUG_PRINT_ERROR("ERROR: Unsuccessful in updating level to unknown");
-                    return false;
-                }
                 if (!venc_set_inloop_filter(OMX_VIDEO_AVCLoopFilterEnable))
                     DEBUG_PRINT_HIGH("WARN: Request for setting Inloop filter failed for HEVC encoder");
 
                 OMX_U32 fps = m_sVenc_cfg.fps_den ? m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den : 30;
                 OMX_U32 nPFrames = pParam->nKeyFrameInterval > 0 ? pParam->nKeyFrameInterval - 1 : fps - 1;
-                if (!venc_set_intra_period (nPFrames, 0 /* nBFrames */)) {
+                if (set_nP_frames(nPFrames) == false) {
                     DEBUG_PRINT_ERROR("ERROR: Request for setting intra period failed");
                     return false;
                 }
