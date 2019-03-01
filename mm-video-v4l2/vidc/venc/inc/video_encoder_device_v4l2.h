@@ -416,6 +416,7 @@ class venc_dev
         bool venc_set_profile(OMX_U32 eProfile);
         bool venc_set_level(OMX_U32 eLevel);
         bool set_nB_frames(unsigned long nBframes);
+        bool set_native_recoder(bool enable);
         bool set_nP_frames(unsigned long nPframes);
         bool venc_set_target_bitrate(OMX_U32 nTargetBitrate);
         bool venc_set_ratectrl_cfg(OMX_VIDEO_CONTROLRATETYPE eControlRate);

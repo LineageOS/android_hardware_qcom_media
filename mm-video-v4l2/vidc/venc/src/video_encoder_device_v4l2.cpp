@@ -3985,6 +3985,23 @@ bool venc_dev::set_nB_frames(unsigned long nBframes)
     return true;
 }
 
+bool venc_dev::set_native_recoder(bool enable)
+{
+    struct v4l2_control control;
+
+    control.id = V4L2_CID_MPEG_VIDC_VENC_NATIVE_RECORDER;
+    control.value = enable;
+    int rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
+
+    if (rc) {
+        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control.id, control.value);
+        return false;
+    }
+    DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
+
+    return true;
+}
+
 bool venc_dev::venc_set_intra_refresh()
 {
     bool status = true;
