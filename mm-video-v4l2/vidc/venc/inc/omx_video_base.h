@@ -701,7 +701,6 @@ class omx_video: public qc_omx_component
         QOMX_VIDEO_CONFIG_LTRUSE_TYPE m_sConfigLTRUse;
         QOMX_VIDEO_CONFIG_LTRMARK_TYPE m_sConfigLTRMark;
         OMX_VIDEO_CONFIG_AVCINTRAPERIOD m_sConfigAVCIDRPeriod;
-        OMX_VIDEO_CONFIG_DEINTERLACE m_sConfigDeinterlace;
         OMX_VIDEO_VP8REFERENCEFRAMETYPE m_sConfigVp8ReferenceFrame;
         QOMX_VIDEO_HIERARCHICALLAYERS m_sHierLayers;
         QOMX_EXTNINDEX_VIDEO_HIER_P_LAYERS m_sHPlayers;

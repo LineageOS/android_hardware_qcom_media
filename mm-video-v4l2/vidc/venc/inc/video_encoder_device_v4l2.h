@@ -530,7 +530,6 @@ class venc_dev
             OMX_VIDEO_VP8REFERENCEFRAMETYPE vp8refframe;
             OMX_QCOM_VIDEO_CONFIG_LTRMARK_TYPE markltr;
             OMX_QCOM_VIDEO_CONFIG_LTRUSE_TYPE useltr;
-            OMX_VIDEO_CONFIG_DEINTERLACE deinterlace;
             OMX_SKYPE_VIDEO_CONFIG_QP configqp;
             OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE temporallayer;
             OMX_SKYPE_VIDEO_CONFIG_BASELAYERPID configbaselayerid;

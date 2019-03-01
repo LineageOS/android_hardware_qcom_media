@@ -551,10 +551,6 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     m_sConfigLTRMark.nPortIndex = (OMX_U32) PORT_INDEX_IN;
     m_sConfigLTRMark.nID = 0;
 
-    OMX_INIT_STRUCT(&m_sConfigDeinterlace, OMX_VIDEO_CONFIG_DEINTERLACE);
-    m_sConfigDeinterlace.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
-    m_sConfigDeinterlace.nEnable = OMX_FALSE;
-
     OMX_INIT_STRUCT(&m_sHierLayers, QOMX_VIDEO_HIERARCHICALLAYERS);
     m_sHierLayers.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
     m_sHierLayers.nNumLayers = 0;
@@ -1932,18 +1928,6 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                     return OMX_ErrorUnsupportedSetting;
                 }
                 memcpy(&m_sConfigAVCIDRPeriod, pParam, sizeof(m_sConfigAVCIDRPeriod));
-                break;
-            }
-        case OMX_IndexConfigCommonDeinterlace:
-            {
-                VALIDATE_OMX_PARAM_DATA(configData, OMX_VIDEO_CONFIG_DEINTERLACE);
-                OMX_VIDEO_CONFIG_DEINTERLACE *pParam = (OMX_VIDEO_CONFIG_DEINTERLACE*) configData;
-                DEBUG_PRINT_LOW("set_config: OMX_IndexConfigCommonDeinterlace");
-                if (!handle->venc_set_config(pParam, (OMX_INDEXTYPE)OMX_IndexConfigCommonDeinterlace)) {
-                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_IndexConfigCommonDeinterlace failed");
-                    return OMX_ErrorUnsupportedSetting;
-                }
-                memcpy(&m_sConfigDeinterlace, pParam, sizeof(m_sConfigDeinterlace));
                 break;
             }
         case OMX_QcomIndexConfigNumHierPLayers:

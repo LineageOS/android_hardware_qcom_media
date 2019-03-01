@@ -2178,15 +2178,6 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
                 memcpy(pParam, &m_sConfigAVCIDRPeriod, sizeof(m_sConfigAVCIDRPeriod));
                 break;
             }
-        case OMX_IndexConfigCommonDeinterlace:
-            {
-                VALIDATE_OMX_PARAM_DATA(configData, OMX_VIDEO_CONFIG_DEINTERLACE);
-                OMX_VIDEO_CONFIG_DEINTERLACE *pParam =
-                    reinterpret_cast<OMX_VIDEO_CONFIG_DEINTERLACE*>(configData);
-                DEBUG_PRINT_LOW("get_config: OMX_IndexConfigCommonDeinterlace");
-                memcpy(pParam, &m_sConfigDeinterlace, sizeof(m_sConfigDeinterlace));
-                break;
-            }
        case OMX_IndexConfigVideoVp8ReferenceFrame:
            {
                 VALIDATE_OMX_PARAM_DATA(configData, OMX_VIDEO_VP8REFERENCEFRAMETYPE);
