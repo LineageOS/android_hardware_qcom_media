@@ -11058,12 +11058,12 @@ void omx_vdec::convert_color_space_info(OMX_U32 primaries, OMX_U32 range,
         case MSM_VIDC_TRANSFER_SRGB:
             aspects->mTransfer = ColorAspects::TransferSRGB;
             break;
-        case MSM_VIDC_TRANSFER_SMPTE_ST2084:
-            aspects->mTransfer = ColorAspects::TransferST2084;
-            break;
-        case MSM_VIDC_TRANSFER_HLG:
-            aspects->mTransfer = ColorAspects::TransferHLG;
-            break;
+
+
+
+
+ 
+
         default:
             //aspects->mTransfer = ColorAspects::TransferOther;
             aspects->mTransfer = m_client_color_space.sAspects.mTransfer;
