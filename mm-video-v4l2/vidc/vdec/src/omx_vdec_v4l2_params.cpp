@@ -98,6 +98,8 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                    status = client_buffers.get_color_format(drv_color_format);
                                }
 
+                               fix_drv_output_format();
+
                                if (status) {
                                  if (!client_buffers.is_color_conversion_enabled()) {
                                          client_buffers.set_client_buffers_disabled(true);
@@ -549,6 +551,8 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                    bool port_format_changed = false;
                                    m_display_id = portDefn->format.video.pNativeWindow;
                                    unsigned int buffer_size;
+
+                                   fix_drv_output_format();
 
                                    if (portDefn->nBufferCountActual > MAX_NUM_INPUT_OUTPUT_BUFFERS) {
                                        DEBUG_PRINT_ERROR("Requested o/p buf count (%u) exceeds limit (%u)",

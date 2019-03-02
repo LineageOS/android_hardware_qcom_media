@@ -930,6 +930,7 @@ class omx_vdec: public qc_omx_component
                 OMX_QCOM_EXTRADATA_FRAMEINFO *frame_info);
         void append_terminator_extradata(OMX_OTHER_EXTRADATATYPE *extra);
         OMX_ERRORTYPE update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn);
+        void fix_drv_output_format();
         void append_portdef_extradata(OMX_OTHER_EXTRADATATYPE *extra);
         void append_frame_dimension_extradata(OMX_OTHER_EXTRADATATYPE *extra);
         void append_extn_extradata(OMX_OTHER_EXTRADATATYPE *extra, OMX_OTHER_EXTRADATATYPE *p_extn);

@@ -8220,6 +8220,40 @@ OMX_ERRORTYPE omx_vdec::update_picture_resolution()
     return eRet;
 }
 
+void omx_vdec::fix_drv_output_format()
+{
+    bool is_dest_format_non_ubwc = (capture_capability != V4L2_PIX_FMT_NV12_UBWC &&
+                                    capture_capability != V4L2_PIX_FMT_NV12_TP10_UBWC);
+
+    if (is_dest_format_non_ubwc){
+        if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10) {
+            if(is_flexible_format){ // if flexible formats are expected, P010 is set for 10bit cases here
+                drv_ctx.output_format = VDEC_YUV_FORMAT_P010_VENUS;
+                capture_capability = V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010_VENUS;
+            }
+        } else {
+            // Hardware does not support NV12+interlace clips.
+            // Request NV12_UBWC and convert it to NV12+interlace using C2D
+            // in combined mode
+            drv_ctx.output_format = VDEC_YUV_FORMAT_NV12_UBWC;
+            capture_capability = V4L2_PIX_FMT_NV12_UBWC;
+        }
+    } else {
+        if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10) {
+            drv_ctx.output_format = VDEC_YUV_FORMAT_NV12_TP10_UBWC;
+            capture_capability = V4L2_PIX_FMT_NV12_TP10_UBWC;
+        }
+        // 8 bit depth uses the default.
+        // Combined mode
+        // V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_NONE
+    }
+    DEBUG_PRINT_LOW("%s: Drv output format %#X Capture capability %#X",
+                    __func__,
+                    drv_ctx.output_format,
+                    capture_capability);
+
+}
+
 OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
 {
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
@@ -9856,7 +9890,7 @@ void omx_vdec::allocate_color_convert_buf::enable_color_conversion(bool enable) 
     }
 
     if (!omx->in_reconfig)
-        enabled = enable;
+        this->enabled = enable;
 
     omx->c2d_enable_pending = enable;
 }
@@ -9979,37 +10013,41 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
                 src_format = (ColorConvertFormat) found->second;;
             }
 
-            DEBUG_PRINT_INFO("C2D: Set Resolution, Interlace(%s) Conversion(%#X -> %#X)"
-                             " src(%dX%d) dest(%dX%d)",
-                             (omx->m_progressive != MSM_VIDC_PIC_STRUCT_PROGRESSIVE) ? "true": "false",
-                             src_format, dest_format, width,
-                             omx->m_progressive !=
-                                  MSM_VIDC_PIC_STRUCT_PROGRESSIVE?(height+1)/2 : height,
-                             width, height);
-            status = c2dcc.setResolution(width,
-                                         omx->m_progressive !=
-                                         MSM_VIDC_PIC_STRUCT_PROGRESSIVE?
-                                         (height+1)/2 : height,
-                                         width, height,
-                                         src_format, dest_format,
-                                         0,0);
-            if (status) {
-                src_size = c2dcc.getBuffSize(C2D_INPUT);
-                destination_size = c2dcc.getBuffSize(C2D_OUTPUT);
+            if (c2dcc.isPropChanged(width, omx->m_progressive != MSM_VIDC_PIC_STRUCT_PROGRESSIVE?
+                                                    (height+1)/2 : height,
+                                    width, height, src_format, dest_format, 0, 0)) {
+                DEBUG_PRINT_INFO("C2D: Set Resolution, Interlace(%s) Conversion(%#X -> %#X)"
+                                 " src(%dX%d) dest(%dX%d)",
+                                 (omx->m_progressive != MSM_VIDC_PIC_STRUCT_PROGRESSIVE) ? "true": "false",
+                                 src_format, dest_format, width,
+                                 omx->m_progressive !=
+                                 MSM_VIDC_PIC_STRUCT_PROGRESSIVE?(height+1)/2 : height,
+                                 width, height);
+                status = c2dcc.setResolution(width,
+                                             omx->m_progressive !=
+                                             MSM_VIDC_PIC_STRUCT_PROGRESSIVE?
+                                             (height+1)/2 : height,
+                                             width, height,
+                                             src_format, dest_format,
+                                             0, 0);
+                if (status) {
+                    src_size = c2dcc.getBuffSize(C2D_INPUT);
+                    destination_size = c2dcc.getBuffSize(C2D_OUTPUT);
 
-                if (!src_size || src_size > omx->drv_ctx.op_buf.buffer_size ||
-                    !destination_size) {
-                    DEBUG_PRINT_ERROR("ERROR: Size mismatch in C2D src_size %d"
-                                      "driver size %u destination size %d",
-                                      src_size, (unsigned int)omx->drv_ctx.op_buf.buffer_size,
-                                      destination_size);
-                    buffer_size_req = 0;
-                    // TODO: make this fatal. Driver is not supposed to quote size
-                    //  smaller than what C2D needs !!
-                } else {
-                    buffer_size_req = destination_size;
-                    m_c2d_height = height;
-                    m_c2d_width = width;
+                    if (!src_size || src_size > omx->drv_ctx.op_buf.buffer_size ||
+                        !destination_size) {
+                        DEBUG_PRINT_ERROR("ERROR: Size mismatch in C2D src_size %d"
+                                          "driver size %u destination size %d",
+                                          src_size, (unsigned int)omx->drv_ctx.op_buf.buffer_size,
+                                          destination_size);
+                        buffer_size_req = 0;
+                        // TODO: make this fatal. Driver is not supposed to quote size
+                        //  smaller than what C2D needs !!
+                    } else {
+                        buffer_size_req = destination_size;
+                        m_c2d_height = height;
+                        m_c2d_width = width;
+                    }
                 }
             }
         }
