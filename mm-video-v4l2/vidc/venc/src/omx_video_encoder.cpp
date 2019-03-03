@@ -628,6 +628,7 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
             msg_thread_created = false;
             goto init_error;
         } else {
+#ifndef HYPERVISOR
             async_thread_created = true;
             r = pthread_create(&async_thread_id,0, venc_dev::async_venc_message_thread, this);
             if (r < 0) {
@@ -640,6 +641,7 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
                 goto init_error;
             } else
                 dev_set_message_thread_id(async_thread_id);
+#endif
         }
     }
 
@@ -2315,7 +2317,16 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                 }
                 break;
             }
+        case OMX_QTIIndexConfigVideoRoiRectRegionInfo:
+            {
+                VALIDATE_OMX_PARAM_DATA(configData, OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_INFO);
+                if (!handle->venc_set_config(configData, (OMX_INDEXTYPE)OMX_QTIIndexConfigVideoRoiRectRegionInfo)) {
+                    DEBUG_PRINT_ERROR("Failed to set OMX_QTIIndexConfigVideoRoiRegionInfo");
+                    return OMX_ErrorUnsupportedSetting;
+                }
+                break;
 
+            }
         default:
             DEBUG_PRINT_ERROR("ERROR: unsupported index %d", (int) configIndex);
             break;

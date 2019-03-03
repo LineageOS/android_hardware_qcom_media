@@ -699,6 +699,9 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     OMX_QTIIndexParamNativeRecorder = 0x7F100005,
 
     OMX_QTIIndexParamVideoDecoderOutputFrameRate = 0x7F100006,
+
+    /* Configure Rectangle Region based ROI info */
+    OMX_QTIIndexConfigVideoRoiRectRegionInfo = 0x7F100007,
 };
 
 /**
@@ -1404,6 +1407,36 @@ typedef struct OMX_QTI_VIDEO_CONFIG_ROIINFO {
     OMX_S32         nRoiMBInfoCount;
     OMX_S8          pRoiMBInfo[MAX_ROI_MBINFO_SIZE];
 } OMX_QTI_VIDEO_CONFIG_ROIINFO;
+
+typedef struct QOMX_VIDEO_RECT_REGION_DELTAQP {
+    OMX_U32 nLeft;
+    OMX_U32 nTop;
+    OMX_U32 nRight;
+    OMX_U32 nBottom;
+    OMX_S8  nDeltaQP;
+} QOMX_VIDEO_RECT_REGION_DELTAQP;
+
+#define MAX_RECT_ROI_NUM 10
+/* *
+ *  Specifies the region based ROI deltaQP information for each frame to support
+ *  MediaCodec VendorExtension usage. The client should send it before ETB.
+ *  STRUCT MEMBERS:
+ *  nSize                 : Size of Structure in bytes.
+ *  nVersion              : OpenMAX IL spcification version information.
+ *  nPortIndex            : Index of the port to which this structure applies.
+ *  nTimeStamp            : TimeStamp of the ETB, to which the ROI data will be applied.
+ *  nRegionNum            : The numbers of the roi regions, the maximum number is 10 which
+ *                          is aligned with vender extension's maximum numbers.
+ *  nRegions              : The array of rectangle region's area and delta qp value.
+ */
+typedef struct OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_INFO {
+    OMX_U32         nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32         nPortIndex;
+    OMX_TICKS       nTimeStamp;
+    OMX_U32         nRegionNum;
+    QOMX_VIDEO_RECT_REGION_DELTAQP  nRegions[MAX_RECT_ROI_NUM];
+} OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_INFO;
 
 /**
  * Specifies the Blur resolution or Enable/Disable config.

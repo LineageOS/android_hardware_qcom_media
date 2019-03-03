@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -138,6 +138,12 @@ void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
 
     ADD_EXTENSION("qti-ext-enc-linear-color-format", OMX_QTIIndexParamEnableLinearColorFormat, OMX_DirInput)
     ADD_PARAM_END("value", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-enc-roiinfo", OMX_QTIIndexConfigVideoRoiRectRegionInfo, OMX_DirInput)
+    ADD_PARAM    ("timestamp", OMX_AndroidVendorValueInt64)
+    ADD_PARAM    ("type", OMX_AndroidVendorValueString)
+    ADD_PARAM    ("rect-payload", OMX_AndroidVendorValueString)
+    ADD_PARAM_END("rect-payload-ext", OMX_AndroidVendorValueString)
 }
 
 OMX_ERRORTYPE omx_video::get_vendor_extension_config(
@@ -365,6 +371,14 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
         case OMX_QTIIndexParamEnableLinearColorFormat:
         {
             setStatus &= vExt.setParamInt32(ext, "value", m_sParamLinearColorFormat.bEnable);
+            break;
+        }
+        case OMX_QTIIndexConfigVideoRoiRectRegionInfo:
+        {
+            setStatus &= vExt.setParamInt64(ext, "timestamp", 0);
+            setStatus &= vExt.setParamString(ext, "type", "rect");
+            setStatus &= vExt.setParamString(ext, "rect-payload", "");
+            setStatus &= vExt.setParamString(ext, "rect-payload-ext", "");
             break;
         }
         default:
@@ -926,6 +940,105 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
                    NULL, (OMX_INDEXTYPE)OMX_QTIIndexParamEnableLinearColorFormat, &linearColor);
             if (err != OMX_ErrorNone) {
                 DEBUG_PRINT_ERROR("set_param: OMX_QTIIndexParamEnableLinearColorFormat failed !");
+            }
+            break;
+        }
+        case OMX_QTIIndexConfigVideoRoiRectRegionInfo:
+        {
+            uint32_t format = m_sOutPortDef.format.video.eCompressionFormat;
+            if (format != OMX_VIDEO_CodingHEVC && format != OMX_VIDEO_CodingAVC) {
+                DEBUG_PRINT_ERROR("ROI-Ext: only support avc or hevc");
+                break;
+            }
+            char type[OMX_MAX_STRINGVALUE_SIZE];
+            valueSet = vExt.readParamString(ext, "type", type);
+            if (!valueSet || strncmp(type, "rect", 4)) {
+                DEBUG_PRINT_ERROR("ROI-Ext: type is invalid");
+                break;
+            }
+            int64_t timestamp;
+            valueSet = vExt.readParamInt64(ext, "timestamp", (OMX_S64 *)&timestamp);
+            if (!valueSet) {
+                DEBUG_PRINT_ERROR("ROI-Ext: timestamp is invalid");
+                break;
+            }
+            char rawData[OMX_MAX_STRINGVALUE_SIZE * 2] = {0};
+            valueSet = vExt.readParamString(ext, "rect-payload", rawData);
+            if (!valueSet) {
+                DEBUG_PRINT_ERROR("ROI-Ext: payload is invalid");
+                break;
+            }
+            uint32_t size = strlen(rawData);
+            if (size == 0 || size > (OMX_MAX_STRINGVALUE_SIZE -1)) {
+                DEBUG_PRINT_ERROR("ROI-Ext: payload size is invalid : %u", size);
+                break;
+            }
+            // "payload-ext" is optional, if it's set by the client, joint this string
+            // with the "payload" string and seperate them with ';'
+            if (vExt.readParamString(ext, "rect-payload-ext", rawData + size + 1)) {
+                rawData[size] = ';';
+                size = strlen(rawData);
+            }
+            uint32_t width = m_sOutPortDef.format.video.nFrameWidth;
+            uint32_t height = m_sOutPortDef.format.video.nFrameHeight;
+            DEBUG_PRINT_LOW("ROI-Ext: clip(%ux%u), ts(%lld), payload(%u):%s",
+                    width, height, (long long)timestamp, size, rawData);
+
+            OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_INFO roiInfo;
+            OMX_INIT_STRUCT(&roiInfo, OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_INFO);
+            roiInfo.nTimeStamp = timestamp;
+            roiInfo.nPortIndex = PORT_INDEX_IN;
+
+            // The pattern to parse the String: "top,left-bottom,right=deltaQp;"
+            // each rectangle region string is seperated by ";"
+            // For example, the rectangle region is: top: 128, left:96, bottom:336, right:272
+            // and delta QP is -9, the string is "128,96-336,272=-9;".
+            uint32_t index = 0;
+            int top, left, bottom, right, deltaQp;
+            char *save = rawData;
+            char *rect = strtok_r(rawData, ";", &save);
+            const char* patternString = "%d,%d-%d,%d=%d";
+            while (rect != NULL) {
+                int tags = sscanf(rect, patternString, &top, &left, &bottom, &right, &deltaQp);
+                if (tags == 5) {
+                    // sanity check
+                    if (top > bottom || left > right || top < 0 || left < 0
+                            || bottom >= (int32_t)height || right >= (int32_t)width
+                            || index == MAX_RECT_ROI_NUM) {
+                        DEBUG_PRINT_ERROR("ROI-Ext: invalid roi info with deltaQp");
+                    } else {
+                        // delta QP range is (-32, 31)
+                        if (deltaQp < -31) {
+                            deltaQp = -31;
+                        }
+                        if (deltaQp > 30) {
+                            deltaQp = 30;
+                        }
+                        roiInfo.nRegions[index].nLeft = (uint32_t)left;
+                        roiInfo.nRegions[index].nTop = (uint32_t)top;
+                        roiInfo.nRegions[index].nRight = (uint32_t)right;
+                        roiInfo.nRegions[index].nBottom = (uint32_t)bottom;
+                        roiInfo.nRegions[index].nDeltaQP = (int8_t)deltaQp;
+                        DEBUG_PRINT_LOW("ROI-Ext: region(%u): t%d-l%d-b%d-r%d: qp:%d",
+                                index, top, left, bottom, right, deltaQp);
+                        index++;
+                    }
+                } else {
+                    DEBUG_PRINT_LOW("error rect : %s", rect);
+                }
+                rect = strtok_r(NULL, ";", &save);
+            }
+            if (index > 0) {
+                roiInfo.nRegionNum = index;
+                err = set_config(NULL, (OMX_INDEXTYPE)OMX_QTIIndexConfigVideoRoiRectRegionInfo,
+                        &roiInfo);
+                if (err != OMX_ErrorNone) {
+                    DEBUG_PRINT_ERROR("ROI-Ext: failed to set roi region info");
+                } else {
+                    DEBUG_PRINT_LOW("ROI-Ext: set %u number of roi region info", index);
+                }
+            } else {
+                DEBUG_PRINT_LOW("ROI-Ext: none valid roi region info");
             }
             break;
         }
