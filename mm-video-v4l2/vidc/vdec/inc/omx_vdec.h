@@ -1198,7 +1198,6 @@ class omx_vdec: public qc_omx_component
         bool dynamic_buf_mode;
         OMX_U32 m_reconfig_width;
         OMX_U32 m_reconfig_height;
-        bool m_smoothstreaming_mode;
         bool m_decode_order_mode;
 
         bool m_input_pass_buffer_fd;
@@ -1209,10 +1208,6 @@ class omx_vdec: public qc_omx_component
         DescribeHDRStaticInfoParams m_client_hdr_info;
         DescribeHDRStaticInfoParams m_internal_hdr_info;
 
-        OMX_U32 m_smoothstreaming_width;
-        OMX_U32 m_smoothstreaming_height;
-        OMX_ERRORTYPE enable_smoothstreaming();
-        OMX_ERRORTYPE enable_adaptive_playback(unsigned long width, unsigned long height);
         bool m_disable_ubwc_mode;
 
         unsigned int m_fill_output_msg;

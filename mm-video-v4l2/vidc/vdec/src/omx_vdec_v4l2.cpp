@@ -131,9 +131,6 @@ extern "C" {
 
 using namespace android;
 
-OMX_U32 maxSmoothStreamingWidth = 1920;
-OMX_U32 maxSmoothStreamingHeight = 1088;
-
 void* async_message_thread (void *input)
 {
     OMX_BUFFERHEADERTYPE *buffer;
@@ -829,9 +826,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     dynamic_buf_mode = false;
     m_reconfig_height = 0;
     m_reconfig_width = 0;
-    m_smoothstreaming_mode = false;
-    m_smoothstreaming_width = 0;
-    m_smoothstreaming_height = 0;
     m_decode_order_mode = false;
     m_perf_control.perf_lock_acquire();
     m_input_pass_buffer_fd = false;
@@ -1394,32 +1388,6 @@ void omx_vdec::process_event_cb(void *ctxt)
                                             pThis->prev_n_filled_len = 0;
                                         }  else if (p2 == OMX_IndexConfigCommonOutputCrop) {
                                             DEBUG_PRINT_HIGH("Rxd PORT_RECONFIG: OMX_IndexConfigCommonOutputCrop");
-
-                                            /* Check if resolution is changed in smooth streaming mode */
-                                            if (pThis->m_smoothstreaming_mode &&
-                                                (pThis->framesize.nWidth !=
-                                                    pThis->drv_ctx.video_resolution.frame_width) ||
-                                                (pThis->framesize.nHeight !=
-                                                    pThis->drv_ctx.video_resolution.frame_height)) {
-
-                                                DEBUG_PRINT_HIGH("Resolution changed from: wxh = %dx%d to: wxh = %dx%d",
-                                                        pThis->framesize.nWidth,
-                                                        pThis->framesize.nHeight,
-                                                        pThis->drv_ctx.video_resolution.frame_width,
-                                                        pThis->drv_ctx.video_resolution.frame_height);
-
-                                                /* Update new resolution */
-                                                pThis->framesize.nWidth =
-                                                       pThis->drv_ctx.video_resolution.frame_width;
-                                                pThis->framesize.nHeight =
-                                                       pThis->drv_ctx.video_resolution.frame_height;
-
-                                                /* Update C2D with new resolution */
-                                                if (!pThis->client_buffers.update_buffer_req()) {
-                                                    DEBUG_PRINT_ERROR("Setting C2D buffer requirements failed");
-                                                }
-                                            }
-
                                             /* Update new crop information */
                                             pThis->rectangle.nLeft = pThis->drv_ctx.frame_size.left;
                                             pThis->rectangle.nTop = pThis->drv_ctx.frame_size.top;
@@ -1773,12 +1741,6 @@ int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer)
     } else if (m_debug.outfile && drv_ctx.output_format == VDEC_YUV_FORMAT_NV12) {
         int stride = drv_ctx.video_resolution.stride;
         int scanlines = drv_ctx.video_resolution.scan_lines;
-        if (m_smoothstreaming_mode) {
-            stride = drv_ctx.video_resolution.frame_width;
-            scanlines = drv_ctx.video_resolution.frame_height;
-            stride = (stride + DEFAULT_WIDTH_ALIGNMENT - 1) & (~(DEFAULT_WIDTH_ALIGNMENT - 1));
-            scanlines = (scanlines + DEFAULT_HEIGHT_ALIGNMENT - 1) & (~(DEFAULT_HEIGHT_ALIGNMENT - 1));
-        }
         unsigned i;
         DEBUG_PRINT_HIGH("Logging width/height(%u/%u) stride/scanlines(%u/%u)",
             drv_ctx.video_resolution.frame_width,
@@ -1797,12 +1759,6 @@ int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer)
     } else if (m_debug.outfile && drv_ctx.output_format == VDEC_YUV_FORMAT_P010_VENUS) {
         int stride = drv_ctx.video_resolution.stride;
         int scanlines = drv_ctx.video_resolution.scan_lines;
-        if (m_smoothstreaming_mode) {
-            stride = drv_ctx.video_resolution.frame_width * 2;
-            scanlines = drv_ctx.video_resolution.frame_height;
-            stride = (stride + DEFAULT_WIDTH_ALIGNMENT - 1) & (~(DEFAULT_WIDTH_ALIGNMENT - 1));
-            scanlines = (scanlines + DEFAULT_HEIGHT_ALIGNMENT - 1) & (~(DEFAULT_HEIGHT_ALIGNMENT - 1));
-        }
         unsigned i;
         DEBUG_PRINT_HIGH("Logging width/height(%u/%u) stride/scanlines(%u/%u)",
             drv_ctx.video_resolution.frame_width,
@@ -1911,8 +1867,6 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
     property_get("ro.board.platform", platform_name, "0");
     if (!strncmp(platform_name, "msm8610", 7)) {
         device_name = (OMX_STRING)"/dev/video/q6_dec";
-        maxSmoothStreamingWidth = 1280;
-        maxSmoothStreamingHeight = 720;
     }
 #endif
 
@@ -3264,21 +3218,6 @@ OMX_ERRORTYPE omx_vdec::use_android_native_buffer(OMX_IN OMX_HANDLETYPE hComp, O
     return eRet;
 }
 #endif
-
-OMX_ERRORTYPE omx_vdec::enable_smoothstreaming()
-{
-    struct v4l2_control control;
-    struct v4l2_format fmt;
-    /*control.id = V4L2_CID_MPEG_VIDC_VIDEO_CONTINUE_DATA_TRANSFER;
-    control.value = 1;
-    int rc = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL,&control);
-    if (rc < 0) {
-        DEBUG_PRINT_ERROR("Failed to enable Smooth Streaming on driver.");
-        return OMX_ErrorHardware;
-    }*/
-    m_smoothstreaming_mode = true;
-    return OMX_ErrorNone;
-}
 
 /* ======================================================================
    FUNCTION
@@ -6660,25 +6599,6 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
         DEBUG_PRINT_ERROR("NULL m_cb.FillBufferDone");
         return OMX_ErrorBadParameter;
     }
-
-#ifdef ADAPTIVE_PLAYBACK_SUPPORTED
-    if (m_smoothstreaming_mode && omx_base_address) {
-        OMX_U32 buf_index = buffer - omx_base_address;
-        BufferDim_t dim;
-        private_handle_t *private_handle = NULL;
-        dim.sliceWidth = framesize.nWidth;
-        dim.sliceHeight = framesize.nHeight;
-        if (buf_index < drv_ctx.op_buf.actualcount &&
-            buf_index < MAX_NUM_INPUT_OUTPUT_BUFFERS &&
-            native_buffer[buf_index].privatehandle)
-            private_handle = native_buffer[buf_index].privatehandle;
-        if (private_handle) {
-            DEBUG_PRINT_LOW("set metadata: update buf-geometry with stride %d slice %d",
-                dim.sliceWidth, dim.sliceHeight);
-            setMetaData(private_handle, UPDATE_BUFFER_GEOMETRY, (void*)&dim);
-        }
-    }
-#endif
 
     return OMX_ErrorNone;
 }
@@ -10423,98 +10343,6 @@ handle_err:
     m_perf_lock_acquire = NULL;
     m_perf_lock_release = NULL;
     return false;
-}
-
-OMX_ERRORTYPE omx_vdec::enable_adaptive_playback(unsigned long nMaxFrameWidth,
-                            unsigned long nMaxFrameHeight)
-{
-
-    OMX_ERRORTYPE eRet = OMX_ErrorNone;
-    int ret = 0;
-    unsigned long min_res_buf_count = 0;
-
-    eRet = enable_smoothstreaming();
-    if (eRet != OMX_ErrorNone) {
-         DEBUG_PRINT_ERROR("Failed to enable Adaptive Playback on driver");
-         return eRet;
-     }
-
-     DEBUG_PRINT_HIGH("Enabling Adaptive playback for %lu x %lu",
-             nMaxFrameWidth,
-             nMaxFrameHeight);
-     m_smoothstreaming_mode = true;
-     m_smoothstreaming_width = nMaxFrameWidth;
-     m_smoothstreaming_height = nMaxFrameHeight;
-
-     //Get upper limit buffer count for min supported resolution
-     struct v4l2_format fmt;
-     fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
-     fmt.fmt.pix_mp.height = m_decoder_capability.min_height;
-     fmt.fmt.pix_mp.width = m_decoder_capability.min_width;
-     fmt.fmt.pix_mp.pixelformat = output_capability;
-
-     ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_FMT, &fmt);
-     if (ret) {
-         DEBUG_PRINT_ERROR("Set Resolution failed for HxW = %ux%u",
-                           m_decoder_capability.min_height,
-                           m_decoder_capability.min_width);
-         return OMX_ErrorUnsupportedSetting;
-     }
-
-     eRet = get_buffer_req(&drv_ctx.op_buf);
-     if (eRet != OMX_ErrorNone) {
-         DEBUG_PRINT_ERROR("failed to get_buffer_req");
-         return eRet;
-     }
-
-     min_res_buf_count = drv_ctx.op_buf.mincount;
-     DEBUG_PRINT_LOW("enable adaptive - upper limit buffer count = %lu for HxW %ux%u",
-                     min_res_buf_count, m_decoder_capability.min_height, m_decoder_capability.min_width);
-
-     m_extradata_info.output_crop_rect.nLeft = 0;
-     m_extradata_info.output_crop_rect.nTop = 0;
-     m_extradata_info.output_crop_rect.nWidth = m_smoothstreaming_width;
-     m_extradata_info.output_crop_rect.nHeight = m_smoothstreaming_height;
-
-     update_resolution(m_smoothstreaming_width, m_smoothstreaming_height,
-                       m_smoothstreaming_width, m_smoothstreaming_height);
-
-     //Get upper limit buffer size for max smooth streaming resolution set
-     fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
-     fmt.fmt.pix_mp.height = drv_ctx.video_resolution.frame_height;
-     fmt.fmt.pix_mp.width = drv_ctx.video_resolution.frame_width;
-     fmt.fmt.pix_mp.pixelformat = output_capability;
-     ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_FMT, &fmt);
-     if (ret) {
-         DEBUG_PRINT_ERROR("Set Resolution failed for adaptive playback");
-         return OMX_ErrorUnsupportedSetting;
-     }
-
-     eRet = get_buffer_req(&drv_ctx.op_buf);
-     if (eRet != OMX_ErrorNone) {
-         DEBUG_PRINT_ERROR("failed to get_buffer_req!!");
-         return eRet;
-     }
-     DEBUG_PRINT_LOW("enable adaptive - upper limit buffer size = %u",
-                     (unsigned int)drv_ctx.op_buf.buffer_size);
-
-     drv_ctx.op_buf.mincount = min_res_buf_count;
-     drv_ctx.op_buf.actualcount = min_res_buf_count;
-     drv_ctx.op_buf.buffer_size = drv_ctx.op_buf.buffer_size;
-     eRet = set_buffer_req(&drv_ctx.op_buf);
-     if (eRet != OMX_ErrorNone) {
-         DEBUG_PRINT_ERROR("failed to set_buffer_req");
-         return eRet;
-     }
-
-     eRet = get_buffer_req(&drv_ctx.op_buf);
-     if (eRet != OMX_ErrorNone) {
-         DEBUG_PRINT_ERROR("failed to get_buffer_req!!!");
-         return eRet;
-     }
-     DEBUG_PRINT_HIGH("adaptive playback enabled, buf count = %u bufsize = %u",
-                      drv_ctx.op_buf.mincount, (unsigned int)drv_ctx.op_buf.buffer_size);
-     return eRet;
 }
 
 //static

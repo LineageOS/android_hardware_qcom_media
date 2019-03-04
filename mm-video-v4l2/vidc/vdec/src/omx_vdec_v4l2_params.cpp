@@ -51,9 +51,6 @@ extern "C" {
 
 using namespace android;
 
-extern OMX_U32 maxSmoothStreamingWidth;
-extern OMX_U32 maxSmoothStreamingHeight;
-
 /* ======================================================================
    FUNCTION
    omx_vdec::GetParameter
@@ -639,16 +636,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                        OMX_U32 frameWidth = portDefn->format.video.nFrameWidth;
                                        OMX_U32 frameHeight = portDefn->format.video.nFrameHeight;
                                        if (frameHeight != 0x0 && frameWidth != 0x0) {
-                                           if (m_smoothstreaming_mode &&
-                                                   ((frameWidth * frameHeight) <
-                                                   (m_smoothstreaming_width * m_smoothstreaming_height))) {
-                                               frameWidth = m_smoothstreaming_width;
-                                               frameHeight = m_smoothstreaming_height;
-                                               DEBUG_PRINT_LOW("NOTE: Setting resolution %u x %u "
-                                                       "for adaptive-playback/smooth-streaming",
-                                                       (unsigned int)frameWidth, (unsigned int)frameHeight);
-                                           }
-
                                            m_extradata_info.output_crop_rect.nLeft = 0;
                                            m_extradata_info.output_crop_rect.nTop = 0;
                                            m_extradata_info.output_crop_rect.nWidth = frameWidth;
@@ -1072,14 +1059,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                     QOMX_INDEXEXTRADATATYPE *extradataIndexType = (QOMX_INDEXEXTRADATATYPE *) paramData;
                                 }
                                 break;
-        case OMX_QcomIndexParamEnableSmoothStreaming: {
-#ifndef SMOOTH_STREAMING_DISABLED
-                                      eRet = enable_smoothstreaming();
-#else
-                                      eRet = OMX_ErrorUnsupportedSetting;
-#endif
-                                  }
-                                  break;
 #if defined (_ANDROID_HONEYCOMB_) || defined (_ANDROID_ICS_)
                                   /* Need to allow following two set_parameters even in Idle
                                    * state. This is ANDROID architecture which is not in sync
@@ -1209,46 +1188,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             }
             break;
         }
-#ifdef ADAPTIVE_PLAYBACK_SUPPORTED
-        case OMX_QcomIndexParamVideoAdaptivePlaybackMode:
-        {
-            VALIDATE_OMX_PARAM_DATA(paramData, PrepareForAdaptivePlaybackParams);
-            DEBUG_PRINT_LOW("set_parameter: OMX_GoogleAndroidIndexPrepareForAdaptivePlayback");
-            PrepareForAdaptivePlaybackParams* pParams =
-                    (PrepareForAdaptivePlaybackParams *) paramData;
-            if (pParams->nPortIndex == OMX_CORE_OUTPUT_PORT_INDEX) {
-                if (!pParams->bEnable) {
-                    return OMX_ErrorNone;
-                }
-                if (pParams->nMaxFrameWidth > maxSmoothStreamingWidth
-                        || pParams->nMaxFrameHeight > maxSmoothStreamingHeight) {
-                    DEBUG_PRINT_ERROR(
-                            "Adaptive playback request exceeds max supported resolution : [%u x %u] vs [%u x %u]",
-                             (unsigned int)pParams->nMaxFrameWidth, (unsigned int)pParams->nMaxFrameHeight,
-                             (unsigned int)maxSmoothStreamingWidth, (unsigned int)maxSmoothStreamingHeight);
-                    eRet = OMX_ErrorBadParameter;
-                } else {
-                    eRet = enable_adaptive_playback(pParams->nMaxFrameWidth, pParams->nMaxFrameHeight);
-                }
-            } else {
-                DEBUG_PRINT_ERROR(
-                        "Prepare for adaptive playback supported only on output port");
-                eRet = OMX_ErrorBadParameter;
-            }
-            break;
-        }
-
-        case OMX_QTIIndexParamVideoPreferAdaptivePlayback:
-        {
-            VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
-            DEBUG_PRINT_LOW("set_parameter: OMX_QTIIndexParamVideoPreferAdaptivePlayback");
-            m_disable_dynamic_buf_mode = ((QOMX_ENABLETYPE *)paramData)->bEnable;
-            if (m_disable_dynamic_buf_mode) {
-                DEBUG_PRINT_HIGH("Prefer Adaptive Playback is set");
-            }
-            break;
-        }
-#endif
         case OMX_QcomIndexParamVideoCustomBufferSize:
         {
             VALIDATE_OMX_PARAM_DATA(paramData, QOMX_VIDEO_CUSTOM_BUFFERSIZE);
