@@ -93,6 +93,10 @@ libOmxVenc_la_CFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) -fPIC
 libOmxVenc_la_LDFLAGS = -module -shared -avoid-version
 libOmxVenc_la_LDFLAGS += -lstdc++ -lpthread -llog -lutils -lcutils -lglib-2.0 -lbase -ldl -lpthread
 
+if !TARGET_USES_LIBGBM
+libOmxVenc_la_LDFLAGS += -lion
+endif
+
 libOmxVenc_la_LDFLAGS += -L$(top_builddir)/libplatformconfig
 libOmxVenc_la_LDFLAGS += -lplatformconfig
 
