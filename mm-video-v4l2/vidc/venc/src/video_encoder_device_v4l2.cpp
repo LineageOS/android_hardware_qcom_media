@@ -588,7 +588,7 @@ bool venc_dev::handle_dynamic_config(OMX_BUFFERHEADERTYPE *bufferHdr)
                 break;
             case QOMX_IndexConfigVideoIntraperiod:
                 DEBUG_PRINT_LOW("handle_dynamic_config:QOMX_IndexConfigVideoIntraperiod");
-                if (!venc_config_intraperiod(&iter->config_data.intraperiod))
+                if (!set_nP_frames(iter->config_data.intraperiod.nPFrames))
                     return false;
                 break;
             case OMX_IndexConfigVideoVp8ReferenceFrame:
@@ -2165,7 +2165,8 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                 QOMX_VIDEO_INTRAPERIODTYPE *intraperiod =
                     (QOMX_VIDEO_INTRAPERIODTYPE *)configData;
 
-                if (!venc_config_intraperiod(intraperiod))
+                if (set_nP_frames(intraperiod->nPFrames) == false ||
+                    set_nB_frames(intraperiod->nBFrames) == false)
                     return false;
 
                 break;
@@ -4987,25 +4988,6 @@ bool venc_dev::venc_config_framerate(OMX_CONFIG_FRAMERATETYPE *frame_rate)
         return false;
     }
     return true;
-}
-
-bool venc_dev::venc_config_intraperiod(QOMX_VIDEO_INTRAPERIODTYPE *intra_period)
-{
-    if (intra_period->nIDRPeriod != 1) {
-        DEBUG_PRINT_ERROR("ERROR: IDR period is %u. It is expected to be 1 always."
-                          " Please check with the client", intra_period->nIDRPeriod);
-    }
-
-    if (intra_period->nPortIndex == (OMX_U32) PORT_INDEX_OUT) {
-        if (set_nP_frames(intra_period->nPFrames) == false ||
-            set_nB_frames(intra_period->nBFrames) == false) {
-            DEBUG_PRINT_ERROR("ERROR: Request for setting intra period failed");
-            return false;
-        }
-        return true;
-    }
-
-    return false;
 }
 
 bool venc_dev::venc_config_intravoprefresh(OMX_CONFIG_INTRAREFRESHVOPTYPE *intra_vop_refresh)

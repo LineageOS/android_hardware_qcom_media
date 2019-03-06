@@ -544,7 +544,6 @@ class venc_dev
         bool handle_dynamic_config(OMX_BUFFERHEADERTYPE *bufferHdr);
         bool venc_config_bitrate(OMX_VIDEO_CONFIG_BITRATETYPE *bit_rate);
         bool venc_config_framerate(OMX_CONFIG_FRAMERATETYPE *frame_rate);
-        bool venc_config_intraperiod(QOMX_VIDEO_INTRAPERIODTYPE *intra_period);
         bool venc_config_intravoprefresh(OMX_CONFIG_INTRAREFRESHVOPTYPE *intra_vop_refresh);
         bool venc_config_vp8refframe(OMX_VIDEO_VP8REFERENCEFRAMETYPE *vp8refframe);
         bool venc_config_markLTR(OMX_QCOM_VIDEO_CONFIG_LTRMARK_TYPE *markltr);
