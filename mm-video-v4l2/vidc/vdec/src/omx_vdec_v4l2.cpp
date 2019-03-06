@@ -233,7 +233,6 @@ void* async_message_thread (void *input)
                 int tmp_level = 0;
                 int codec = omx->get_session_codec_type();
                 event_fields_changed |= (omx->dpb_bit_depth != (int)ptr[2]);
-                event_fields_changed |= (omx->m_progressive != (int)ptr[3]);
                 tmp_color_space = (ptr[4] == MSM_VIDC_BT2020 ? (omx_vdec::BT2020):
                                    (omx_vdec:: EXCEPT_BT2020));
                 event_fields_changed |= (omx->m_color_space != tmp_color_space);
@@ -8152,11 +8151,8 @@ void omx_vdec::fix_drv_output_format()
                 capture_capability = V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010_VENUS;
             }
         } else {
-            // Hardware does not support NV12+interlace clips.
-            // Request NV12_UBWC and convert it to NV12+interlace using C2D
-            // in combined mode
-            drv_ctx.output_format = VDEC_YUV_FORMAT_NV12_UBWC;
-            capture_capability = V4L2_PIX_FMT_NV12_UBWC;
+            drv_ctx.output_format = VDEC_YUV_FORMAT_NV12;
+            capture_capability = VDEC_YUV_FORMAT_NV12;
         }
     } else {
         if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10) {
@@ -10005,9 +10001,7 @@ bool omx_vdec::allocate_color_convert_buf::set_color_format(
     if (status && drv_colorformat_c2d_enable && dest_color_format_c2d_enable) {
         DEBUG_PRINT_LOW("Enabling C2D");
         if (dest_color_format == OMX_COLOR_FormatYUV420Planar ||
-            dest_color_format == OMX_COLOR_FormatYUV420SemiPlanar ||
-            (omx->m_progressive != MSM_VIDC_PIC_STRUCT_PROGRESSIVE &&
-            dest_color_format == (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m)) {
+            dest_color_format == OMX_COLOR_FormatYUV420SemiPlanar) {
             ColorFormat = dest_color_format;
             if (dest_color_format == OMX_COLOR_FormatYUV420Planar) {
                    dest_format = YCbCr420P;
