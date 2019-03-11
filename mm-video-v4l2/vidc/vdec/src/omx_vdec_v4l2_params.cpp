@@ -1157,6 +1157,19 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             clientSet_profile_level.eLevel = pParam->eLevel;
             break;
         }
+        case OMX_QTIIndexParamVideoDecoderOutputFrameRate:
+        {
+            VALIDATE_OMX_PARAM_DATA(paramData, QOMX_VIDEO_OUTPUT_FRAME_RATE);
+            DEBUG_PRINT_LOW("set_parameter: OMX_QTIIndexParamVideoDecoderOutputFrameRate");
+            QOMX_VIDEO_OUTPUT_FRAME_RATE *pParam = (QOMX_VIDEO_OUTPUT_FRAME_RATE*)paramData;
+            DEBUG_PRINT_LOW("set_parameter: decoder output-frame-rate %d", pParam->fps);
+            m_dec_hfr_fps=pParam->fps;
+            DEBUG_PRINT_HIGH("output-frame-rate value = %d", m_dec_hfr_fps);
+            if (m_dec_hfr_fps) {
+                m_last_rendered_TS = 0;
+            }
+            break;
+        }
         case OMX_QcomIndexParamVideoMetaBufferMode:
         {
             VALIDATE_OMX_PARAM_DATA(paramData, StoreMetaDataInBuffersParams);
