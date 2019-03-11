@@ -517,16 +517,9 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 DEBUG_PRINT_LOW("venc_set_param: OMX_QcomIndexParamVideoLTRCount");
                 OMX_QCOM_VIDEO_PARAM_LTRCOUNT_TYPE* pParam =
                         (OMX_QCOM_VIDEO_PARAM_LTRCOUNT_TYPE*)paramData;
-                if (pParam->nCount > 0) {
-                    if (venc_set_ltrmode(1, pParam->nCount) == false) {
-                        DEBUG_PRINT_ERROR("ERROR: Enable LTR mode failed");
-                        return false;
-                    }
-                } else {
-                    if (venc_set_ltrmode(0, 0) == false) {
-                        DEBUG_PRINT_ERROR("ERROR: Disable LTR mode failed");
-                        return false;
-                    }
+                if (venc_set_ltrcount(pParam->nCount) == false) {
+                    DEBUG_PRINT_ERROR("ERROR: Enable LTR mode failed");
+                    return false;
                 }
                 break;
             }
