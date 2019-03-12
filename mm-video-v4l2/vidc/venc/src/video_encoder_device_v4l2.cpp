@@ -146,7 +146,6 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     memset(&voptimecfg, 0, sizeof(voptimecfg));
     memset(&capability, 0, sizeof(capability));
     memset(&m_debug,0,sizeof(m_debug));
-    memset(&ltrinfo, 0, sizeof(ltrinfo));
     memset(&fd_list, 0, sizeof(fd_list));
     sess_priority.priority = 1;
     operating_rate = 30;
@@ -2813,9 +2812,6 @@ void venc_dev::venc_config_print()
     DEBUG_PRINT_HIGH("ENC_CONFIG: HEC: %ld, IDR Period: %ld",
             hec.header_extension, idrperiod.idrperiod);
 
-    DEBUG_PRINT_HIGH("ENC_CONFIG: LTR Enabled: %d, Count: %d",
-            ltrinfo.enabled, ltrinfo.count);
-
     if (temporal_layers_config.nPLayers) {
         DEBUG_PRINT_HIGH("ENC_CONFIG: Temporal layers: P-layers: %u, B-layers: %u, Adjusted I-frame-interval: %lu",
                 temporal_layers_config.nPLayers, temporal_layers_config.nBLayers,
@@ -4292,14 +4288,14 @@ OMX_ERRORTYPE venc_dev::venc_set_max_hierp_layer()
     DEBUG_PRINT_LOW("venc_set_max_hierp_layer");
     struct v4l2_control control;
 
-    DEBUG_PRINT_LOW("TemporalLayer: Setting hierp max layer: %u",
+    DEBUG_PRINT_LOW("Setting hierp max layer: %u",
                     temporal_layers_config.nMaxLayers);
 
     control.id = V4L2_CID_MPEG_VIDC_VIDEO_HEVC_MAX_HIER_CODING_LAYER;
     control.value = temporal_layers_config.nMaxLayers;
 
     if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
-        DEBUG_PRINT_ERROR("TemporalLayer: Failed to set max HP layers: %u", control.value);
+        DEBUG_PRINT_ERROR("Failed to set max HP layers: %u", control.value);
         return OMX_ErrorUnsupportedSetting;
     }
     return OMX_ErrorNone;
@@ -4310,52 +4306,33 @@ OMX_ERRORTYPE venc_dev::venc_set_hierp_layer()
     DEBUG_PRINT_LOW("venc_set_hierp_layer");
     struct v4l2_control control;
 
-    DEBUG_PRINT_LOW("TemporalLayer: Setting hierp layer: %u", temporal_layers_config.nPLayers);
+    DEBUG_PRINT_LOW("Setting hierp layer: %u", temporal_layers_config.nPLayers);
 
     control.id = V4L2_CID_MPEG_VIDEO_HEVC_HIER_CODING_LAYER;
     control.value = temporal_layers_config.nPLayers;
 
     if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
-        DEBUG_PRINT_ERROR("TemporalLayer: Failed to set HP layers: %u", control.value);
+        DEBUG_PRINT_ERROR("Failed to set HP layers: %u", control.value);
         return OMX_ErrorUnsupportedSetting;
     }
     return OMX_ErrorNone;
 }
 
-bool venc_dev::venc_set_ltrmode(OMX_U32 enable, OMX_U32 count)
+bool venc_dev::venc_set_ltrcount(OMX_U32 count)
 {
-    DEBUG_PRINT_LOW("venc_set_ltrmode: enable = %u", (unsigned int)enable);
-    struct v4l2_ext_control ctrl[2];
-    struct v4l2_ext_controls controls;
-    int rc;
+    DEBUG_PRINT_LOW("venc_set_ltrcount: count = %u", (unsigned int)count);
+    struct v4l2_control control;
 
-    ctrl[0].id = V4L2_CID_MPEG_VIDC_VIDEO_LTRCOUNT;
-    if (enable && count > 0)
-        ctrl[0].value = count;
-    else if (enable)
-        ctrl[0].value = 1;
-    else
-        ctrl[0].value = 0;
+    control.id = V4L2_CID_MPEG_VIDC_VIDEO_LTRCOUNT;
+    control.value = count;
 
-    controls.count = 1;
-    controls.ctrl_class = V4L2_CTRL_CLASS_MPEG;
-    controls.controls = ctrl;
-
-    DEBUG_PRINT_LOW("Calling IOCTL set control for id=%x, val=%d id=%x, val=%d",
-                    controls.controls[0].id, controls.controls[0].value,
-                    controls.controls[1].id, controls.controls[1].value);
-
-    rc = ioctl(m_nDriver_fd, VIDIOC_S_EXT_CTRLS, &controls);
-    if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set ltrmode %d", rc);
-        return false;
+    if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
+        DEBUG_PRINT_ERROR("Failed to set LTR count: %u", control.value);
+        return OMX_ErrorUnsupportedSetting;
     }
-    ltrinfo.enabled = enable;
-    ltrinfo.count = count;
 
-    DEBUG_PRINT_LOW("Success IOCTL set control for id=%x, val=%d id=%x, val=%d",
-                    controls.controls[0].id, controls.controls[0].value,
-                    controls.controls[1].id, controls.controls[1].value);
+    DEBUG_PRINT_LOW("Success IOCTL set control for id=%x, val=%d",
+                    control.id, control.value);
     return true;
 }
 
@@ -4390,7 +4367,7 @@ bool venc_dev::venc_set_markltr(OMX_U32 frameIdx)
 
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
     if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set ltrmode %d", rc);
+        DEBUG_PRINT_ERROR("Failed to set markltr %d", rc);
         return false;
     }
 

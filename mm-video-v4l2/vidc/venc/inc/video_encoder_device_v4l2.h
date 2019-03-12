@@ -210,11 +210,6 @@ struct msm_venc_idrperiod {
     unsigned long idrperiod;
 };
 
-struct msm_venc_ltrinfo {
-    unsigned int enabled;
-    unsigned int count;
-};
-
 struct msm_venc_vui_timing_info {
     unsigned int enabled;
 };
@@ -401,7 +396,6 @@ class venc_dev
         struct msm_venc_idrperiod           idrperiod;
         struct msm_venc_vui_timing_info     vui_timing_info;
         struct msm_venc_peak_bitrate        peak_bitrate;
-        struct msm_venc_ltrinfo             ltrinfo;
         struct msm_venc_vpx_error_resilience vpx_err_resilience;
         struct msm_venc_priority            sess_priority;
         OMX_U32                             operating_rate;
@@ -436,7 +430,7 @@ class venc_dev
         bool venc_reconfig_reqbufs();
         bool venc_set_vpe_rotation(OMX_S32 rotation_angle);
         bool venc_set_mirror(OMX_MIRRORTYPE mirror);
-        bool venc_set_ltrmode(OMX_U32 enable, OMX_U32 count);
+        bool venc_set_ltrcount(OMX_U32 count);
         bool venc_set_useltr(OMX_U32 frameIdx);
         bool venc_set_markltr(OMX_U32 frameIdx);
         bool venc_set_inband_video_header(OMX_BOOL enable);
@@ -459,8 +453,6 @@ class venc_dev
         bool venc_set_roi_qp_info(OMX_QTI_VIDEO_CONFIG_ROIINFO *roiInfo);
         bool venc_set_blur_resolution(OMX_QTI_VIDEO_CONFIG_BLURINFO *blurInfo);
         bool venc_set_colorspace(OMX_U32 primaries, OMX_U32 range, OMX_U32 transfer_chars, OMX_U32 matrix_coeffs);
-        bool venc_reconfigure_temporal_settings();
-        bool venc_reconfigure_ltrmode();
         bool venc_set_iframesize_type(QOMX_VIDEO_IFRAMESIZE_TYPE type);
         unsigned long venc_get_color_format(OMX_COLOR_FORMATTYPE eColorFormat);
         unsigned long venc_get_codectype(OMX_VIDEO_CODINGTYPE eCompressionFormat);
