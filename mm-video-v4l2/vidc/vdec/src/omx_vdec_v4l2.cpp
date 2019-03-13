@@ -8145,7 +8145,7 @@ void omx_vdec::fix_drv_output_format()
             }
         } else {
             drv_ctx.output_format = VDEC_YUV_FORMAT_NV12;
-            capture_capability = VDEC_YUV_FORMAT_NV12;
+            capture_capability = V4L2_PIX_FMT_NV12;
         }
     } else {
         if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10) {
