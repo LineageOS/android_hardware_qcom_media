@@ -333,9 +333,10 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                     (OMX_VIDEO_PARAM_INTRAREFRESHTYPE *)paramData;
 
                 if (intra_refresh_param->nPortIndex == (OMX_U32) PORT_INDEX_OUT) {
-                    intra_refresh.irmode     = intra_refresh_param->eRefreshMode;
+                    intra_refresh.irmode     = OMX_VIDEO_IntraRefreshCyclic;
                     intra_refresh.mbcount    = intra_refresh_param->nCirMBs;
                     intra_refresh.framecount = 0;
+                    venc_set_intra_refresh();
                 } else {
                     DEBUG_PRINT_ERROR("ERROR: Invalid Port Index for OMX_IndexParamVideoIntraRefresh");
                 }

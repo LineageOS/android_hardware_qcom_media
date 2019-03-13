@@ -2341,8 +2341,9 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
 
                 if (intra_refresh_period->nPortIndex == (OMX_U32) PORT_INDEX_OUT) {
                     intra_refresh.framecount = intra_refresh_period->nRefreshPeriod;
-                    intra_refresh.irmode     = OMX_VIDEO_IntraRefreshMax;
+                    intra_refresh.irmode     = OMX_VIDEO_IntraRefreshRandom;
                     intra_refresh.mbcount    = 0;
+                    venc_set_intra_refresh();
                 } else {
                     DEBUG_PRINT_ERROR("ERROR: Invalid Port Index for OMX_IndexConfigVideoIntraRefreshType");
                 }
@@ -4000,33 +4001,31 @@ bool venc_dev::set_native_recoder(bool enable)
 
 bool venc_dev::venc_set_intra_refresh()
 {
-    bool status = true;
     int rc;
-    struct v4l2_control control_mode, control_mbs;
-    control_mode.id   = V4L2_CID_MPEG_VIDEO_CYCLIC_INTRA_REFRESH_MB;
-    control_mode.value = 0;
-    // There is no disabled mode.  Disabled mode is indicated by a 0 count.
-    if (intra_refresh.irmode == OMX_VIDEO_IntraRefreshMax || intra_refresh.mbcount == 0) {
-        return status;
-    } else if (intra_refresh.irmode == OMX_VIDEO_IntraRefreshCyclic ||
-               intra_refresh.irmode == OMX_VIDEO_IntraRefreshRandom) {
+    struct v4l2_control control_mode;
+
+    // Default is RANDOM mode
+    control_mode.id = V4L2_CID_MPEG_VIDC_VIDEO_INTRA_REFRESH_RANDOM;
+    // Set intra refresh period (frame count) for Random mode
+    control_mode.value  = intra_refresh.framecount;
+
+    if (intra_refresh.irmode == OMX_VIDEO_IntraRefreshCyclic) {
+        control_mode.id = V4L2_CID_MPEG_VIDEO_CYCLIC_INTRA_REFRESH_MB;
         control_mode.value  = intra_refresh.mbcount;
-    } else {
-        DEBUG_PRINT_ERROR("ERROR: Invalid IntraRefresh Parameters:"
-                " mb mode:%lu", intra_refresh.irmode);
-        return false;
     }
 
-    DEBUG_PRINT_LOW("Calling IOCTL set control for id=%u, val=%d", control_mode.id, control_mode.value);
+    DEBUG_PRINT_LOW("Calling IOCTL set control for id=%u, val=%d",
+                    control_mode.id, control_mode.value);
     rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control_mode);
 
     if (rc) {
-        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d", control_mode.id, control_mode.value);
-        return false;
+        DEBUG_PRINT_HIGH("Failed to set control, id %#x, value %d",
+                         control_mode.id, control_mode.value);
+        // This key is ignored if the video encoder does not support the intra refresh feature.
+        // From android developer reference documentation.
     }
 
-    intra_refresh.mbcount = control_mbs.value;
-    return status;
+    return true;
 }
 
 bool venc_dev::venc_set_target_bitrate(OMX_U32 nTargetBitrate)
