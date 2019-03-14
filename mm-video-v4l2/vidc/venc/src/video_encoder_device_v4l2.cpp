@@ -4600,6 +4600,13 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
 #endif
                         if (cam_ubwc_stats[0].bDataValid) {
                             switch (cam_ubwc_stats[0].version) {
+                            case UBWC_1_0:
+                                {
+                                    // Camera hw doesn't support UBWC stats in trinket and sends
+                                    // a hardcoded compression factor in nCRStatsTile32
+                                    compression_ratio = cam_ubwc_stats[0].ubwc_stats.nCRStatsTile32;
+                                }
+                                break;
                             case UBWC_2_0:
                             case UBWC_3_0:
                                 {
