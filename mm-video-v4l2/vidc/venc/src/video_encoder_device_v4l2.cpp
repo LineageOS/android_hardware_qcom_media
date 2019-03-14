@@ -3434,6 +3434,44 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
         }
     }
 
+    if (!streaming[OUTPUT_PORT]) {
+        enum v4l2_buf_type buf_type;
+        buf_type=V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
+        int ret;
+
+        if (!downscalar_enabled) {
+            OMX_U32 inp_width = 0, inp_height = 0, out_width = 0, out_height = 0;
+
+            if (!venc_get_dimensions(PORT_INDEX_IN, &inp_width, &inp_height)) {
+                return false;
+            }
+
+            if (!venc_get_dimensions(PORT_INDEX_OUT, &out_width, &out_height)) {
+                return false;
+            }
+
+            // Tiling in HEIC requires output WxH to be Tile size; difference is permitted
+            if (!(m_codec == OMX_VIDEO_CodingImageHEIC) &&
+                inp_width * inp_height != out_width * out_height) {
+                DEBUG_PRINT_ERROR("Downscalar is disabled and input/output dimenstions don't match");
+                DEBUG_PRINT_ERROR("Input WxH : %dx%d Output WxH : %dx%d",inp_width, inp_height, out_width, out_height);
+                return false;
+            }
+        }
+
+        ret = ioctl(m_nDriver_fd, VIDIOC_STREAMON, &buf_type);
+
+        if (ret) {
+            DEBUG_PRINT_ERROR("Failed to call streamon");
+            if (errno == EBUSY) {
+                hw_overload = true;
+            }
+            return false;
+        } else {
+            streaming[OUTPUT_PORT] = true;
+        }
+    }
+
     extra_idx = EXTRADATA_IDX(num_input_planes);
 
     if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
@@ -3506,44 +3544,6 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
     }
 
     etb++;
-
-    if (!streaming[OUTPUT_PORT]) {
-        enum v4l2_buf_type buf_type;
-        buf_type=V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
-        int ret;
-
-        if (!downscalar_enabled) {
-            OMX_U32 inp_width = 0, inp_height = 0, out_width = 0, out_height = 0;
-
-            if (!venc_get_dimensions(PORT_INDEX_IN, &inp_width, &inp_height)) {
-                return false;
-            }
-
-            if (!venc_get_dimensions(PORT_INDEX_OUT, &out_width, &out_height)) {
-                return false;
-            }
-
-            // Tiling in HEIC requires output WxH to be Tile size; difference is permitted
-            if (!(m_codec == OMX_VIDEO_CodingImageHEIC) &&
-                inp_width * inp_height != out_width * out_height) {
-                DEBUG_PRINT_ERROR("Downscalar is disabled and input/output dimenstions don't match");
-                DEBUG_PRINT_ERROR("Input WxH : %dx%d Output WxH : %dx%d",inp_width, inp_height, out_width, out_height);
-                return false;
-            }
-        }
-
-        ret = ioctl(m_nDriver_fd, VIDIOC_STREAMON, &buf_type);
-
-        if (ret) {
-            DEBUG_PRINT_ERROR("Failed to call streamon");
-            if (errno == EBUSY) {
-                hw_overload = true;
-            }
-            return false;
-        } else {
-            streaming[OUTPUT_PORT] = true;
-        }
-    }
 
     return true;
 }
