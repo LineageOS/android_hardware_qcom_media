@@ -1,4 +1,4 @@
-MSM_VIDC_TARGET_LIST := msmnile
+#MSM_VIDC_TARGET_LIST := msmnile
 
 ifeq ($(call is-board-platform-in-list, $(QCOM_BOARD_PLATFORMS)),true)
 
@@ -22,6 +22,8 @@ MM_VIDEO += libstagefrighthw
 
 PRODUCT_PACKAGES += $(MM_VIDEO)
 
+ifeq ($(call is-board-platform-in-list, msmnile),true)
 include hardware/qcom/media/conf_files/$(TARGET_BOARD_PLATFORM)/$(TARGET_BOARD_PLATFORM).mk
+endif
 
 endif
