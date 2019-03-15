@@ -649,6 +649,18 @@ void venc_dev::append_extradata_ltrinfo(OMX_OTHER_EXTRADATATYPE *p_extra,
     memcpy(p_extra->data, p_extradata->data, p_extradata->data_size);
 }
 
+
+void venc_dev::append_extradata_frameQPinfo(OMX_OTHER_EXTRADATATYPE *p_extra,
+            struct msm_vidc_extradata_header *p_extradata)
+{
+    p_extra->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) + p_extradata->data_size, 4);
+    p_extra->nVersion.nVersion = OMX_SPEC_VERSION;
+    p_extra->nPortIndex = OMX_DirOutput;
+    p_extra->eType = (OMX_EXTRADATATYPE) OMX_ExtraDataEncoderFrameQp;
+    p_extra->nDataSize = p_extradata->data_size;
+    memcpy(p_extra->data, p_extradata->data, p_extradata->data_size);
+}
+
 void venc_dev::append_extradata_none(OMX_OTHER_EXTRADATATYPE *p_extra)
 {
     p_extra->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE), 4);
@@ -1083,6 +1095,13 @@ bool venc_dev::handle_output_extradata(void *buffer, int index)
                 DEBUG_PRINT_LOW("LTRInfo Extradata = 0x%x", *((OMX_U32 *)p_extra->data));
                 break;
             }
+            case MSM_VIDC_EXTRADATA_FRAME_QP:
+                append_extradata_frameQPinfo(p_extra, p_extradata);
+                if(p_clientextra) {
+                    append_extradata_frameQPinfo(p_clientextra, p_extradata);
+                }
+                DEBUG_PRINT_LOW("FrameQP Extradata = %d", *((OMX_U32 *)p_extra->data));
+                break;
             case MSM_VIDC_EXTRADATA_NONE:
                 append_extradata_none(p_extra);
                 if(p_clientextra) {
@@ -2816,6 +2835,18 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 extradata = true;
                 break;
             }
+        case OMX_ExtraDataEncoderFrameQp:
+             {
+                DEBUG_PRINT_LOW("venc_set_param: OMX_ExtraDataEncoderFrameQp");
+                OMX_BOOL extra_data = *(OMX_BOOL *)(paramData);
+                if (venc_set_extradata(OMX_ExtraDataEncoderFrameQp, extra_data) == false) {
+                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_ExtraDataEncoderFrameQp failed");
+                    return false;
+                }
+
+                extradata = true;
+                break;
+            }
         case OMX_ExtraDataVideoEncoderMBInfo:
             {
                 DEBUG_PRINT_LOW("venc_set_param: OMX_ExtraDataVideoEncoderMBInfo");
@@ -4205,7 +4236,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
     struct v4l2_buffer buf;
     struct v4l2_requestbuffers bufreq;
     struct v4l2_plane plane[VIDEO_MAX_PLANES];
-    int rc = 0, extra_idx;
+    int rc = 0, extra_idx, c2d_enabled = 0;
     bool interlace_flag = false;
     struct OMX_BUFFERHEADERTYPE *bufhdr;
     LEGACY_CAM_METADATA_TYPE * meta_buf = NULL;
@@ -4653,6 +4684,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                 // color_format == 1 ==> RGBA to YUV Color-converted buffer
                 // Buffers color-converted via C2D have 601 color
                 if (!streaming[OUTPUT_PORT]) {
+                    c2d_enabled = 1;
                     DEBUG_PRINT_HIGH("Setting colorspace 601 for Color-converted buffer");
                     venc_set_colorspace(MSM_VIDC_BT601_6_625, color_space.range,
                             MSM_VIDC_TRANSFER_601_6_525, MSM_VIDC_MATRIX_601_6_525);
@@ -4674,9 +4706,9 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
         }
     }
 
-    if (!streaming[OUTPUT_PORT] &&
+    if (!streaming[OUTPUT_PORT] && (c2d_enabled ||
         (m_sVenc_cfg.inputformat != V4L2_PIX_FMT_NV12_TP10_UBWC &&
-         m_sVenc_cfg.inputformat != V4L2_PIX_FMT_NV12_UBWC)) {
+         m_sVenc_cfg.inputformat != V4L2_PIX_FMT_NV12_UBWC))) {
         if (bframe_implicitly_enabled) {
             DEBUG_PRINT_HIGH("Disabling implicitly enabled B-frames");
             intra_period.num_pframes = nPframes_cache;
@@ -5140,6 +5172,9 @@ bool venc_dev::venc_set_extradata(OMX_U32 extra_data, OMX_BOOL enable)
             control.value = V4L2_MPEG_VIDC_EXTRADATA_INPUT_CROP;
             break;
 #endif
+        case OMX_ExtraDataEncoderFrameQp:
+            control.value = V4L2_MPEG_VIDC_EXTRADATA_ENC_FRAME_QP;
+            break;
         default:
             DEBUG_PRINT_ERROR("Unrecognized extradata index 0x%x", (unsigned int)extra_data);
             return false;
