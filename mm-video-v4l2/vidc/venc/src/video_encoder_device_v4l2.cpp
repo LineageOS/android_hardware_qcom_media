@@ -115,6 +115,7 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     hw_overload = false;
     mBatchSize = 0;
     m_roi_enabled = false;
+    m_cvp_meta_enabled = false;
     low_latency_mode = false;
     pthread_mutex_init(&m_roilock, NULL);
     pthread_mutex_init(&m_configlock, NULL);
@@ -755,6 +756,27 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
         consumed_len += p_extra->nSize;
         p_extra = (OMX_OTHER_EXTRADATATYPE *)((char *)p_extra + p_extra->nSize);
     }
+
+    if (m_cvp_meta_enabled && cvpMetadata.size == CVP_METADATA_SIZE) {
+        packet_size = sizeof(struct msm_vidc_extradata_header) - sizeof(unsigned int)
+                           + sizeof(struct msm_vidc_enc_cvp_metadata_payload);
+
+        if (filled_len + packet_size <= input_extradata_info.buffer_size) {
+            data->nSize = ALIGN(packet_size, 4);
+            data->nVersion.nVersion = OMX_SPEC_VERSION;
+            data->nPortIndex = PORT_INDEX_IN;
+            data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_CVP_METADATA;
+            data->nDataSize = sizeof(struct msm_vidc_enc_cvp_metadata_payload);
+            filled_len += data->nSize;
+            data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
+        } else {
+            DEBUG_PRINT_ERROR("Insufficient size for CVPMetadata: required %u buffer_size %lu filled_len %u",
+               packet_size, input_extradata_info.buffer_size, filled_len);
+            status = false;
+            goto bailout;
+        }
+    }
+    cvpMetadata.size = 0;
 
       /*
        * Below code is based on these points.
@@ -3210,6 +3232,11 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                                              colorData.dynamicMetaDataValid, colorData.dynamicMetaDataLen);
                         }
 
+                        if (!venc_cvp_enable(handle)) {
+                            DEBUG_PRINT_ERROR("ERROR: Setting CVP enable");
+                            return false;
+                        }
+
                         struct v4l2_format fmt;
                         memset(&fmt, 0, sizeof(fmt));
                         fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
@@ -3338,6 +3365,8 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                             }
                         }
                     } // Check OUTPUT Streaming
+
+                    venc_get_cvp_metadata(handle);
 
                     struct UBWCStats cam_ubwc_stats[2];
                     unsigned long long int compression_ratio = 1 << 16;
@@ -4953,6 +4982,50 @@ bool venc_dev::venc_store_dynamic_config(OMX_INDEXTYPE config_type, OMX_PTR conf
     pthread_mutex_unlock(&m_configlock);
     return true;
 
+}
+
+bool venc_dev::venc_cvp_enable(private_handle_t *handle)
+{
+    cvpMetadata.size = 0;
+    if (getMetaData(handle, GET_CVP_METADATA, &cvpMetadata) == 0) {
+        if (cvpMetadata.size == CVP_METADATA_SIZE) {
+            struct v4l2_control control;
+            control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
+            control.value = EXTRADATA_ENC_INPUT_CVP;
+            if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
+                DEBUG_PRINT_ERROR("ERROR: Setting CVP metadata extradata control failed");
+                return false;
+            }
+            m_cvp_meta_enabled = true;
+            DEBUG_PRINT_HIGH("CVP metadata enabled");
+        } else {
+            DEBUG_PRINT_ERROR("ERROR: invalid CVP metadata, size %d",
+                    cvpMetadata.size);
+            clearMetaData(handle, SET_CVP_METADATA);
+        }
+    }
+    return true;
+}
+
+bool venc_dev::venc_get_cvp_metadata(private_handle_t *handle)
+{
+    if (!m_cvp_meta_enabled)
+        return true;
+
+    cvpMetadata.size = 0;
+    if (getMetaData(handle, GET_CVP_METADATA, &cvpMetadata) == 0) {
+        clearMetaData(handle, SET_CVP_METADATA);
+        if (cvpMetadata.size != CVP_METADATA_SIZE) {
+            DEBUG_PRINT_ERROR("ERROR: Invalid CVP metadata size %d",
+                cvpMetadata.size);
+            cvpMetadata.size = 0;
+            return false;
+        }
+        DEBUG_PRINT_LOW("CVP metadata size %d", cvpMetadata.size);
+    } else {
+        DEBUG_PRINT_LOW("CVP metadata not available");
+    }
+    return true;
 }
 
 bool venc_dev::venc_config_bitrate(OMX_VIDEO_CONFIG_BITRATETYPE *bit_rate)

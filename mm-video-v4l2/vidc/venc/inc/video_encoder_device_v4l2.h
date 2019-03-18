@@ -44,6 +44,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "media/msm_vidc_utils.h"
 #include <poll.h>
 #include <list>
+#include <qdMetaData.h>
 #include "color_metadata.h"
 
 #define TIMEOUT 5*60*1000
@@ -460,6 +461,8 @@ class venc_dev
         bool venc_set_grid_enable();
         bool venc_set_extradata_hdr10metadata();
         bool venc_store_dynamic_config(OMX_INDEXTYPE type, OMX_PTR config);
+        bool venc_cvp_enable(private_handle_t *handle);
+        bool venc_get_cvp_metadata(private_handle_t *handle);
 
         OMX_U32 pmem_free();
         OMX_U32 pmem_allocate(OMX_U32 size, OMX_U32 alignment, OMX_U32 count);
@@ -473,6 +476,8 @@ class venc_dev
         bool m_hdr10meta_enabled;
         ColorMetaData colorData= {};
 
+        bool m_cvp_meta_enabled;
+        CVPMetadata cvpMetadata;
         pthread_mutex_t pause_resume_mlock;
         pthread_cond_t pause_resume_cond;
         bool paused;
