@@ -22,7 +22,7 @@ MM_VIDEO += libstagefrighthw
 
 PRODUCT_PACKAGES += $(MM_VIDEO)
 
-ifeq ($(call is-board-platform-in-list, msmnile),true)
+ifeq ($(call is-board-platform-in-list, msmnile $(MSMSTEPPE)),true)
 include hardware/qcom/media/conf_files/$(TARGET_BOARD_PLATFORM)/$(TARGET_BOARD_PLATFORM).mk
 endif
 
