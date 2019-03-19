@@ -152,6 +152,7 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     mBatchSize = 0;
     deinterlace_enabled = false;
     m_roi_enabled = false;
+    m_roi_type = 0;
     low_latency_mode = false;
     pthread_mutex_init(&m_roilock, NULL);
     pthread_mutex_init(&pause_resume_mlock, NULL);
@@ -3005,6 +3006,13 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                     return false;
                 }
                 m_roi_enabled = true;
+                control.id = V4L2_CID_MPEG_VIDC_VIDEO_ROI_TYPE;
+                if (ioctl(m_nDriver_fd, VIDIOC_G_CTRL, &control)) {
+                    DEBUG_PRINT_ERROR("ERROR: Getting V4L2_CID_MPEG_VIDC_VIDEO_ROI_TYPE failed");
+                } else {
+                    DEBUG_PRINT_LOW("ROI type: %d", control.value);
+                    m_roi_type = control.value;
+                }
                 break;
             }
         case OMX_QTIIndexParamLowLatencyMode:
@@ -7974,8 +7982,9 @@ venc_dev::venc_dev_vqzip::~venc_dev_vqzip()
 *==================================================================================*/
 bool venc_dev::venc_set_roi_region_qp_info(OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_INFO *roiRegionInfo)
 {
-    if (!m_roi_enabled) {
-        DEBUG_PRINT_ERROR("ROI-Region: roi info not enabled");
+    if (!m_roi_enabled || (m_roi_type == 0)) {
+        DEBUG_PRINT_ERROR("ROI-Region: roi is invalid (enable:%u, type:%d)",
+                m_roi_enabled, m_roi_type);
         return false;
     }
     if (!roiRegionInfo) {
@@ -7994,18 +8003,6 @@ bool venc_dev::venc_set_roi_region_qp_info(OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_
     mRoiRegionList.push_back(*roiRegionInfo);
     pthread_mutex_unlock(&m_roilock);
     return true;
-}
-
-#define SOC_ID(id) {                                    \
-   int fd = open("/sys/devices/soc0/soc_id", O_RDONLY); \
-   if (fd >= 0) {                                       \
-       char buf[5];                                     \
-       read(fd, buf, 4);                                \
-       buf[4] = 0;                                      \
-       id = atoi(buf);                                  \
-       close(fd);                                       \
-       DEBUG_PRINT_LOW("soc id: %d", id);               \
-   }                                                    \
 }
 
 /*=================================================================================
@@ -8045,19 +8042,6 @@ OMX_U32 venc_dev::append_extradata_roi_region_qp_info(OMX_OTHER_EXTRADATATYPE *d
         return 0;
     }
     OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_INFO regionInfo = *it;
-    static bool isSocCheck = false;
-    static int socID = 0;
-    if (!isSocCheck) {
-        SOC_ID(socID);
-        isSocCheck = true;
-    }
-    // Talos for AR50 and Hana for Iris
-    bool isAR50 = socID == 355 ? true : false;
-    bool isIris = socID == 339 ? true : false;
-    if (!isAR50 && !isIris) {
-        DEBUG_PRINT_LOW("ROI-Region: not supported by hw");
-        return 0;
-    }
     bool isHevc = m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC ? true:false;
     OMX_U32 height = m_sVenc_cfg.dvs_height;
     OMX_U32 width = m_sVenc_cfg.dvs_width;
@@ -8067,11 +8051,11 @@ OMX_U32 venc_dev::append_extradata_roi_region_qp_info(OMX_OTHER_EXTRADATATYPE *d
     OMX_U32 mbCol = ALIGN(height, mbAlign) / mbAlign;
     OMX_U32 numBytes, mbLeft, mbTop, mbRight, mbBottom = 0;
     OMX_S8 deltaQP = 0;
-    DEBUG_PRINT_LOW("ROI-Region: version: %s clip(%ux%u: %s), mb(%ux%u), region(num:%u, ts:%lld)",
-            isAR50 ? "AR50" : "Iris", width, height, isHevc ? "hevc" : "avc",
+    DEBUG_PRINT_LOW("ROI-Region: clip(%ux%u: %s), mb(%ux%u), region(num:%u, ts:%lld)",
+            width, height, isHevc ? "hevc" : "avc",
             mbRow, mbCol, regionInfo.nRegionNum, regionInfo.nTimeStamp);
 
-    if (isIris) {
+    if (m_roi_type == V4L2_CID_MPEG_VIDC_VIDEO_ROI_TYPE_2BYTE) {
         OMX_U32 mbRowAligned = ALIGN(mbRow, 8);
         numBytes = mbRowAligned * mbCol * 2;
         OMX_U32 numBytesAligned = ALIGN(numBytes, 4);
@@ -8118,8 +8102,8 @@ OMX_U32 venc_dev::append_extradata_roi_region_qp_info(OMX_OTHER_EXTRADATATYPE *d
                 }
             }
         }
-        DEBUG_PRINT_LOW("ROI-Region: set roi: raw size: %u", numBytesAligned);
-    } else if (isAR50) {
+        DEBUG_PRINT_LOW("ROI-Region(2Byte): set roi: raw size: %u", numBytesAligned);
+    } else if (m_roi_type == V4L2_CID_MPEG_VIDC_VIDEO_ROI_TYPE_2BIT) {
         numBytes = (mbRow * mbCol * 2 + 7) >> 3;
         data->nDataSize = sizeof(struct msm_vidc_roi_qp_payload) + numBytes;
         data->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) + data->nDataSize, 4);
@@ -8183,7 +8167,7 @@ OMX_U32 venc_dev::append_extradata_roi_region_qp_info(OMX_OTHER_EXTRADATATYPE *d
                 }
             }
         }
-        DEBUG_PRINT_LOW("ROI-Region:set roi low:%d,up:%d", roiData->lower_qp_offset, roiData->upper_qp_offset);
+        DEBUG_PRINT_LOW("ROI-Region(2Bit):set roi low:%d,up:%d", roiData->lower_qp_offset, roiData->upper_qp_offset);
     }
     return data->nSize;
 }
