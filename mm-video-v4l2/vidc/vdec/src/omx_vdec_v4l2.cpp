@@ -11592,11 +11592,13 @@ OMX_ERRORTYPE omx_vdec::enable_extradata(OMX_U64 requested_extradata,
                 DEBUG_PRINT_HIGH("Failed to set QP extradata");
             }
         }
-        if (!secure_mode && (requested_extradata & OMX_EXTNUSER_EXTRADATA)) {
-            control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
-            control.value = V4L2_MPEG_VIDC_EXTRADATA_STREAM_USERDATA;
-            if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
-                DEBUG_PRINT_HIGH("Failed to set stream userdata extradata");
+        if (requested_extradata & OMX_EXTNUSER_EXTRADATA) {
+            if (!secure_mode || (secure_mode && output_capability == V4L2_PIX_FMT_HEVC)) {
+                control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
+                control.value = V4L2_MPEG_VIDC_EXTRADATA_STREAM_USERDATA;
+                if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
+                    DEBUG_PRINT_HIGH("Failed to set stream userdata extradata");
+                }
             }
         }
 #if NEED_TO_REVISIT
