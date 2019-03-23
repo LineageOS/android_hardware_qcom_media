@@ -45,7 +45,10 @@ void venc_dev::venc_get_consumer_usage(OMX_U32* usage)
     /* Configure UBWC as default */
     *usage |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
 
-    if (hevc && eProfile == (OMX_U32)OMX_VIDEO_HEVCProfileMain10HDR10) {
+    if (hevc &&
+        (eProfile == (OMX_U32)OMX_VIDEO_HEVCProfileMain10HDR10 ||
+         eProfile == (OMX_U32)OMX_VIDEO_HEVCProfileMain10 ||
+         eProfile == (OMX_U32)OMX_VIDEO_HEVCProfileMain10HDR10Plus)) {
         DEBUG_PRINT_INFO("Setting 10-bit consumer usage bits");
         *usage |= GRALLOC_USAGE_PRIVATE_10BIT_VIDEO;
         if (mUseLinearColorFormat & REQUEST_LINEAR_COLOR_10_BIT) {
