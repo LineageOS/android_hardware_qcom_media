@@ -33,6 +33,475 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #undef LOG_TAG
 #define LOG_TAG "OMX-VENC: venc_dev"
 
+void venc_dev::venc_get_consumer_usage(OMX_U32* usage)
+{
+
+    OMX_U32 eProfile = 0;
+    bool hevc = venc_get_hevc_profile(&eProfile);
+
+    /* Initialize to zero & update as per required color format */
+    *usage = 0;
+
+    /* Configure UBWC as default */
+    *usage |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
+
+    if (hevc && eProfile == (OMX_U32)OMX_VIDEO_HEVCProfileMain10HDR10) {
+        DEBUG_PRINT_INFO("Setting 10-bit consumer usage bits");
+        *usage |= GRALLOC_USAGE_PRIVATE_10BIT_VIDEO;
+        if (mUseLinearColorFormat & REQUEST_LINEAR_COLOR_10_BIT) {
+            *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
+            DEBUG_PRINT_INFO("Clear UBWC consumer usage bits as 10-bit linear color requested");
+        }
+    } else if (mUseLinearColorFormat & REQUEST_LINEAR_COLOR_8_BIT) {
+        *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
+        DEBUG_PRINT_INFO("Clear UBWC consumer usage bits as 8-bit linear color requested");
+    }
+
+    if (m_codec == OMX_VIDEO_CodingImageHEIC) {
+        DEBUG_PRINT_INFO("Clear UBWC and set HEIF consumer usage bit");
+        *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
+        *usage |= GRALLOC_USAGE_PRIVATE_HEIF_VIDEO;
+    }
+
+    DEBUG_PRINT_INFO("venc_get_consumer_usage 0x%x", *usage);
+}
+
+bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
+{
+
+    if (is_streamon_done(PORT_INDEX_IN)) {
+        if (venc_store_dynamic_config(index, configData)) {
+            DEBUG_PRINT_ERROR("dynamic config %#X successfully stored.", index);
+            return true;
+        }
+
+        /* If failed, try to handle the dynamic config immediately */
+        DEBUG_PRINT_ERROR("Store dynamic config %#X failed", index);
+    }
+
+    DEBUG_PRINT_LOW("Inside venc_set_config");
+
+    switch ((int)index) {
+        case OMX_IndexConfigVideoBitrate:
+            {
+                OMX_VIDEO_CONFIG_BITRATETYPE *bit_rate = (OMX_VIDEO_CONFIG_BITRATETYPE *)
+                    configData;
+                DEBUG_PRINT_LOW("venc_set_config: OMX_IndexConfigVideoBitrate");
+                if (!venc_config_bitrate(bit_rate))
+                    return false;
+
+                break;
+            }
+        case OMX_IndexConfigVideoFramerate:
+            {
+                OMX_CONFIG_FRAMERATETYPE *frame_rate = (OMX_CONFIG_FRAMERATETYPE *)
+                    configData;
+                DEBUG_PRINT_LOW("venc_set_config: OMX_IndexConfigVideoFramerate");
+                if (!venc_config_framerate(frame_rate))
+                    return false;
+
+                break;
+            }
+        case QOMX_IndexConfigVideoIntraperiod:
+            {
+                DEBUG_PRINT_LOW("venc_set_param:QOMX_IndexConfigVideoIntraperiod");
+                QOMX_VIDEO_INTRAPERIODTYPE *intraperiod =
+                    (QOMX_VIDEO_INTRAPERIODTYPE *)configData;
+
+                if (set_nP_frames(intraperiod->nPFrames) == false ||
+                    set_nB_frames(intraperiod->nBFrames) == false)
+                    return false;
+
+                break;
+            }
+        case OMX_IndexConfigVideoIntraVOPRefresh:
+            {
+                OMX_CONFIG_INTRAREFRESHVOPTYPE *intra_vop_refresh = (OMX_CONFIG_INTRAREFRESHVOPTYPE *)
+                    configData;
+                DEBUG_PRINT_LOW("venc_set_config: OMX_IndexConfigVideoIntraVOPRefresh");
+                if (!venc_config_intravoprefresh(intra_vop_refresh))
+                    return false;
+
+                break;
+            }
+        case OMX_IndexConfigCommonMirror:
+            {
+                OMX_CONFIG_MIRRORTYPE *mirror = (OMX_CONFIG_MIRRORTYPE*) configData;
+                DEBUG_PRINT_LOW("venc_set_param: OMX_IndexConfigCommonMirror");
+
+                if (venc_set_mirror(mirror->eMirror) == false) {
+                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_IndexConfigCommonMirror failed");
+                    return false;
+                }
+                break;
+            }
+        case OMX_IndexConfigCommonRotate:
+            {
+                OMX_CONFIG_ROTATIONTYPE *config_rotation =
+                    reinterpret_cast<OMX_CONFIG_ROTATIONTYPE*>(configData);
+                OMX_U32 nFrameWidth;
+                if (!config_rotation) {
+                   return false;
+                }
+                if (venc_set_vpe_rotation(config_rotation->nRotation) == false) {
+                    DEBUG_PRINT_ERROR("ERROR: Dimension Change for Rotation failed");
+                    return false;
+                }
+
+                break;
+            }
+        case OMX_IndexConfigVideoAVCIntraPeriod:
+            {
+                OMX_VIDEO_CONFIG_AVCINTRAPERIOD *avc_iperiod = (OMX_VIDEO_CONFIG_AVCINTRAPERIOD*) configData;
+                DEBUG_PRINT_LOW("venc_set_param: OMX_IndexConfigVideoAVCIntraPeriod");
+
+                if (set_nP_frames(avc_iperiod->nPFrames) == false) {
+                    DEBUG_PRINT_ERROR("ERROR: Setting intra period failed");
+                    return false;
+                }
+                break;
+            }
+        case OMX_IndexConfigVideoVp8ReferenceFrame:
+            {
+                OMX_VIDEO_VP8REFERENCEFRAMETYPE* vp8refframe = (OMX_VIDEO_VP8REFERENCEFRAMETYPE*) configData;
+                DEBUG_PRINT_LOW("venc_set_config: OMX_IndexConfigVideoVp8ReferenceFrame");
+                if (!venc_config_vp8refframe(vp8refframe))
+                    return false;
+
+                break;
+            }
+        case OMX_QcomIndexConfigVideoLTRUse:
+            {
+                OMX_QCOM_VIDEO_CONFIG_LTRUSE_TYPE* pParam = (OMX_QCOM_VIDEO_CONFIG_LTRUSE_TYPE*)configData;
+                DEBUG_PRINT_LOW("venc_set_config: OMX_QcomIndexConfigVideoLTRUse");
+                if (!venc_config_useLTR(pParam))
+                    return false;
+
+                break;
+            }
+        case OMX_IndexParamVideoAndroidVp8Encoder:
+           {
+               DEBUG_PRINT_LOW("venc_set_param: OMX_IndexParamVideoAndroidVp8Encoder");
+               OMX_VIDEO_PARAM_ANDROID_VP8ENCODERTYPE *vp8EncodeParams =
+                   (OMX_VIDEO_PARAM_ANDROID_VP8ENCODERTYPE *)configData;
+
+               if (vp8EncodeParams->nPortIndex == (OMX_U32) PORT_INDEX_OUT) {
+                   int pFrames = vp8EncodeParams->nKeyFrameInterval - 1;
+                   if (set_nP_frames(pFrames) == false) {
+                       DEBUG_PRINT_ERROR("ERROR: Request for setting intra period failed");
+                       return false;
+                   }
+
+               } else {
+                   DEBUG_PRINT_ERROR("ERROR: Invalid Port Index for OMX_IndexParamVideoAndroidVp8Encoder");
+               }
+               break;
+           }
+        case OMX_QcomIndexConfigVideoLTRMark:
+            {
+                OMX_QCOM_VIDEO_CONFIG_LTRMARK_TYPE* pParam = (OMX_QCOM_VIDEO_CONFIG_LTRMARK_TYPE*)configData;
+                DEBUG_PRINT_LOW("venc_set_config: OMX_QcomIndexConfigVideoLTRMark");
+                if (!venc_config_markLTR(pParam))
+                    return false;
+
+                break;
+            }
+        case OMX_IndexConfigAndroidVideoTemporalLayering:
+            {
+                OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE *pParam =
+                    (OMX_VIDEO_CONFIG_ANDROID_TEMPORALLAYERINGTYPE *) configData;
+
+                // Update temporal_layers_config with input config
+                if (pParam->nPLayerCountActual < OMX_VIDEO_ANDROID_MAXTEMPORALLAYERS) {
+                    temporal_layers_config.nPLayers = pParam->nPLayerCountActual;
+                } else {
+                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_IndexConfigAndroidVideoTemporalLayering failed");
+                    return false;
+                }
+                temporal_layers_config.ePattern = pParam->ePattern;
+                temporal_layers_config.hier_mode = HIER_P;
+                temporal_layers_config.nBLayers = 0;
+                // Resetting to zero as we are sending all bitrate ratios to kernel
+                memset(&temporal_layers_config.nTemporalLayerBitrateRatio, 0x0, sizeof(OMX_U32)*OMX_VIDEO_ANDROID_MAXTEMPORALLAYERS);
+                for (OMX_U32 i = 0; i < temporal_layers_config.nPLayers; ++i) {
+                    temporal_layers_config.nTemporalLayerBitrateRatio[i] = pParam->nBitrateRatios[i];
+                }
+
+                if (OMX_ErrorNone != venc_set_hierp_layer()) {
+                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_IndexConfigAndroidVideoTemporalLayering failed in setting hierp layers");
+                    return false;
+                }
+                if (OMX_ErrorNone != venc_set_bitrate_ratios()) {
+                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_IndexConfigAndroidVideoTemporalLayering failed in setting bitrate ratios");
+                    return false;
+                }
+                break;
+            }
+        case OMX_QcomIndexConfigBaseLayerId:
+            {
+                OMX_SKYPE_VIDEO_CONFIG_BASELAYERPID* pParam =
+                    (OMX_SKYPE_VIDEO_CONFIG_BASELAYERPID*) configData;
+                if (venc_set_baselayerid(pParam->nPID) == false) {
+                    DEBUG_PRINT_ERROR("Failed to set OMX_QcomIndexConfigBaseLayerId failed");
+                    return false;
+                }
+                break;
+            }
+        case OMX_QcomIndexConfigQp:
+            {
+                OMX_QCOM_VIDEO_CONFIG_QP* pParam =
+                    (OMX_QCOM_VIDEO_CONFIG_QP*) configData;
+                DEBUG_PRINT_LOW("Set_config: nQP %d", pParam->nQP);
+                if (!venc_config_qp(pParam))
+                    return false;
+
+                break;
+            }
+        case OMX_IndexConfigPriority:
+            {
+                OMX_PARAM_U32TYPE *priority = (OMX_PARAM_U32TYPE *)configData;
+                DEBUG_PRINT_LOW("Set_config: priority %d",priority->nU32);
+                if (!venc_set_priority(priority->nU32)) {
+                    DEBUG_PRINT_ERROR("Failed to set priority");
+                    return false;
+                }
+                sess_priority.priority = priority->nU32;
+                break;
+            }
+        case OMX_IndexConfigOperatingRate:
+            {
+                OMX_PARAM_U32TYPE *rate = (OMX_PARAM_U32TYPE *)configData;
+                DEBUG_PRINT_LOW("Set_config: operating rate %u", rate->nU32);
+                if (!venc_set_operatingrate(rate->nU32)) {
+                    DEBUG_PRINT_ERROR("Failed to set operating rate");
+                    return false;
+                }
+                break;
+            }
+        case OMX_IndexConfigAndroidIntraRefresh:
+            {
+                OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE *intra_refresh_period = (OMX_VIDEO_CONFIG_ANDROID_INTRAREFRESHTYPE *)configData;
+                DEBUG_PRINT_LOW("OMX_IndexConfigAndroidIntraRefresh : num frames = %d", intra_refresh_period->nRefreshPeriod);
+
+                if (intra_refresh_period->nPortIndex == (OMX_U32) PORT_INDEX_OUT) {
+                    intra_refresh.framecount = intra_refresh_period->nRefreshPeriod;
+                    intra_refresh.irmode     = OMX_VIDEO_IntraRefreshRandom;
+                    intra_refresh.mbcount    = 0;
+                    venc_set_intra_refresh();
+                } else {
+                    DEBUG_PRINT_ERROR("ERROR: Invalid Port Index for OMX_IndexConfigVideoIntraRefreshType");
+                }
+                break;
+            }
+        case OMX_QTIIndexConfigVideoBlurResolution:
+        {
+             OMX_QTI_VIDEO_CONFIG_BLURINFO *blur = (OMX_QTI_VIDEO_CONFIG_BLURINFO *)configData;
+             if (blur->nPortIndex == (OMX_U32)PORT_INDEX_IN) {
+                 DEBUG_PRINT_LOW("Set_config: blur resolution: %u", blur->nBlurInfo);
+                 if(!venc_set_blur_resolution(blur)) {
+                    DEBUG_PRINT_ERROR("Failed to set Blur Resolution");
+                    return false;
+                 }
+             } else {
+                  DEBUG_PRINT_ERROR("ERROR: Invalid Port Index for OMX_QTIIndexConfigVideoBlurResolution");
+                  return false;
+             }
+             break;
+        }
+        case OMX_QcomIndexConfigH264Transform8x8:
+        {
+            OMX_CONFIG_BOOLEANTYPE *pEnable = (OMX_CONFIG_BOOLEANTYPE *) configData;
+            DEBUG_PRINT_LOW("venc_set_config: OMX_QcomIndexConfigH264Transform8x8");
+            if (venc_h264_transform_8x8(pEnable->bEnabled) == false) {
+                DEBUG_PRINT_ERROR("Failed to set OMX_QcomIndexConfigH264Transform8x8");
+                return false;
+            }
+            break;
+        }
+        case OMX_QTIIndexConfigDescribeColorAspects:
+            {
+                DescribeColorAspectsParams *params = (DescribeColorAspectsParams *)configData;
+
+                OMX_U32 color_space = MSM_VIDC_BT601_6_625;
+                OMX_U32 full_range = 0;
+                OMX_U32 matrix_coeffs = MSM_VIDC_MATRIX_601_6_625;
+                OMX_U32 transfer_chars = MSM_VIDC_TRANSFER_601_6_625;
+
+                switch((ColorAspects::Primaries)(params->sAspects.mPrimaries)) {
+                    case ColorAspects::PrimariesBT709_5:
+                        color_space = MSM_VIDC_BT709_5;
+                        break;
+                    case ColorAspects::PrimariesBT470_6M:
+                        color_space = MSM_VIDC_BT470_6_M;
+                        break;
+                    case ColorAspects::PrimariesBT601_6_625:
+                        color_space = MSM_VIDC_BT601_6_625;
+                        break;
+                    case ColorAspects::PrimariesBT601_6_525:
+                        color_space = MSM_VIDC_BT601_6_525;
+                        break;
+                    case ColorAspects::PrimariesGenericFilm:
+                        color_space = MSM_VIDC_GENERIC_FILM;
+                        break;
+                    case ColorAspects::PrimariesBT2020:
+                        color_space = MSM_VIDC_BT2020;
+                        break;
+                    default:
+                        color_space = MSM_VIDC_BT601_6_625;
+                        //params->sAspects.mPrimaries = ColorAspects::PrimariesBT601_6_625;
+                        break;
+                }
+                switch((ColorAspects::Range)params->sAspects.mRange) {
+                    case ColorAspects::RangeFull:
+                        full_range = 1;
+                        break;
+                    case ColorAspects::RangeLimited:
+                        full_range = 0;
+                        break;
+                    default:
+                        break;
+                }
+                switch((ColorAspects::Transfer)params->sAspects.mTransfer) {
+                    case ColorAspects::TransferSMPTE170M:
+                        transfer_chars = MSM_VIDC_TRANSFER_601_6_525;
+                        break;
+                    case ColorAspects::TransferUnspecified:
+                        transfer_chars = MSM_VIDC_TRANSFER_UNSPECIFIED;
+                        break;
+                    case ColorAspects::TransferGamma22:
+                        transfer_chars = MSM_VIDC_TRANSFER_BT_470_6_M;
+                        break;
+                    case ColorAspects::TransferGamma28:
+                        transfer_chars = MSM_VIDC_TRANSFER_BT_470_6_BG;
+                        break;
+                    case ColorAspects::TransferSMPTE240M:
+                        transfer_chars = MSM_VIDC_TRANSFER_SMPTE_240M;
+                        break;
+                    case ColorAspects::TransferLinear:
+                        transfer_chars = MSM_VIDC_TRANSFER_LINEAR;
+                        break;
+                    case ColorAspects::TransferXvYCC:
+                        transfer_chars = MSM_VIDC_TRANSFER_IEC_61966;
+                        break;
+                    case ColorAspects::TransferBT1361:
+                        transfer_chars = MSM_VIDC_TRANSFER_BT_1361;
+                        break;
+                    case ColorAspects::TransferSRGB:
+                        transfer_chars = MSM_VIDC_TRANSFER_SRGB;
+                        break;
+                    default:
+                        //params->sAspects.mTransfer = ColorAspects::TransferSMPTE170M;
+                        transfer_chars = MSM_VIDC_TRANSFER_601_6_625;
+                        break;
+                }
+                switch((ColorAspects::MatrixCoeffs)params->sAspects.mMatrixCoeffs) {
+                    case ColorAspects::MatrixUnspecified:
+                        matrix_coeffs = MSM_VIDC_MATRIX_UNSPECIFIED;
+                        break;
+                    case ColorAspects::MatrixBT709_5:
+                        matrix_coeffs = MSM_VIDC_MATRIX_BT_709_5;
+                        break;
+                    case ColorAspects::MatrixBT470_6M:
+                        matrix_coeffs = MSM_VIDC_MATRIX_FCC_47;
+                        break;
+                    case ColorAspects::MatrixBT601_6:
+                        matrix_coeffs = MSM_VIDC_MATRIX_601_6_525;
+                        break;
+                    case ColorAspects::MatrixSMPTE240M:
+                        matrix_coeffs = MSM_VIDC_MATRIX_SMPTE_240M;
+                        break;
+                    case ColorAspects::MatrixBT2020:
+                        matrix_coeffs = MSM_VIDC_MATRIX_BT_2020;
+                        break;
+                    case ColorAspects::MatrixBT2020Constant:
+                        matrix_coeffs = MSM_VIDC_MATRIX_BT_2020_CONST;
+                        break;
+                    default:
+                        //params->sAspects.mMatrixCoeffs = ColorAspects::MatrixBT601_6;
+                        matrix_coeffs = MSM_VIDC_MATRIX_601_6_625;
+                        break;
+                }
+                if (!venc_set_colorspace(color_space, full_range,
+                            transfer_chars, matrix_coeffs)) {
+
+                    DEBUG_PRINT_ERROR("Failed to set operating rate");
+                    return false;
+                }
+                break;
+            }
+        case OMX_QTIIndexConfigVideoRoiInfo:
+        {
+            if(!venc_set_roi_qp_info((OMX_QTI_VIDEO_CONFIG_ROIINFO *)configData)) {
+                DEBUG_PRINT_ERROR("Failed to set ROI QP info");
+                return false;
+            }
+            break;
+        }
+        case OMX_IndexConfigVideoNalSize:
+        {
+            if(!venc_set_nal_size((OMX_VIDEO_CONFIG_NALSIZE *)configData)) {
+                DEBUG_PRINT_LOW("Failed to set Nal size info");
+                return false;
+            }
+            break;
+        }
+        default:
+            DEBUG_PRINT_ERROR("Unsupported config index = %u", index);
+            break;
+    }
+
+    return true;
+}
+
+bool venc_dev::venc_store_dynamic_config(OMX_INDEXTYPE config_type, OMX_PTR config)
+{
+    struct dynamicConfig newConfig;
+    memset(&newConfig, 0, sizeof(dynamicConfig));
+    newConfig.type = config_type;
+
+   switch ((int)config_type) {
+        case OMX_IndexConfigVideoFramerate:
+            memcpy(&newConfig.config_data.framerate, config, sizeof(OMX_CONFIG_FRAMERATETYPE));
+            break;
+        case OMX_IndexConfigVideoIntraVOPRefresh:
+            memcpy(&newConfig.config_data.intravoprefresh, config, sizeof(OMX_CONFIG_INTRAREFRESHVOPTYPE));
+            break;
+        case OMX_IndexConfigVideoBitrate:
+            memcpy(&newConfig.config_data.bitrate, config, sizeof(OMX_VIDEO_CONFIG_BITRATETYPE));
+            break;
+        case OMX_QcomIndexConfigVideoLTRUse:
+            memcpy(&newConfig.config_data.useltr, config, sizeof(OMX_QCOM_VIDEO_CONFIG_LTRUSE_TYPE));
+            break;
+        case OMX_QcomIndexConfigVideoLTRMark:
+            memcpy(&newConfig.config_data.markltr, config, sizeof(OMX_QCOM_VIDEO_CONFIG_LTRMARK_TYPE));
+            break;
+        case OMX_QcomIndexConfigQp:
+            memcpy(&newConfig.config_data.configqp, config, sizeof(OMX_QCOM_VIDEO_CONFIG_QP));
+            break;
+        case QOMX_IndexConfigVideoIntraperiod:
+            memcpy(&newConfig.config_data.intraperiod, config, sizeof(QOMX_VIDEO_INTRAPERIODTYPE));
+            break;
+        case OMX_IndexConfigVideoVp8ReferenceFrame:
+            memcpy(&newConfig.config_data.vp8refframe, config, sizeof(OMX_VIDEO_VP8REFERENCEFRAMETYPE));
+            break;
+        default:
+            DEBUG_PRINT_INFO("Unsupported dynamic config.");
+            return false;
+    }
+
+    if(venc_handle->m_etb_count)
+        newConfig.timestamp = venc_handle->m_etb_timestamp + 1;
+    else
+        newConfig.timestamp = 0;
+
+    pthread_mutex_lock(&m_configlock);
+    DEBUG_PRINT_LOW("list add dynamic config with type %d timestamp %lld us", config_type, newConfig.timestamp);
+    m_configlist.push_back(newConfig);
+    pthread_mutex_unlock(&m_configlock);
+    return true;
+
+}
+
 bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
 {
     DEBUG_PRINT_LOW("venc_set_param index 0x%x", index);
