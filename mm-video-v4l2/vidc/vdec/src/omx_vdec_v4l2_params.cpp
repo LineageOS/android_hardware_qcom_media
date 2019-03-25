@@ -445,17 +445,6 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             }
             break;
         }
-        case OMX_QTIIndexParamClientConfiguredProfileLevelForSufficiency:
-        {
-            VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_PROFILELEVELTYPE);
-            DEBUG_PRINT_LOW("get_parameter: OMX_QTIIndexParamClientConfiguredProfileLevelForSufficiency");
-            OMX_VIDEO_PARAM_PROFILELEVELTYPE *pParam =
-                (OMX_VIDEO_PARAM_PROFILELEVELTYPE *) paramData;
-            pParam->eProfile = clientSet_profile_level.eProfile;
-            pParam->eLevel = clientSet_profile_level.eLevel;
-            eRet = OMX_ErrorNone;
-            break;
-        }
         default: {
                  DEBUG_PRINT_ERROR("get_parameter: unknown param %08x", paramIndex);
                  eRet =OMX_ErrorUnsupportedIndex;
@@ -1138,21 +1127,12 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                        }
                                    }
                                    break;
-        case OMX_QTIIndexParamClientConfiguredProfileLevelForSufficiency:
         case OMX_IndexParamVideoProfileLevelCurrent: {
             VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_PROFILELEVELTYPE);
-            DEBUG_PRINT_LOW("set_parameter: OMX_QTIIndexParamClientConfiguredProfileLevelForSufficiency");
             OMX_VIDEO_PARAM_PROFILELEVELTYPE *pParam = (OMX_VIDEO_PARAM_PROFILELEVELTYPE*)paramData;
-
-            if ((output_capability != V4L2_PIX_FMT_H264) ||
-                (output_capability != V4L2_PIX_FMT_HEVC)) {
-                DEBUG_PRINT_ERROR("set_parameter: Unsupported codec for client configured profile and level");
-                eRet = OMX_ErrorBadParameter;
-            }
 
             DEBUG_PRINT_LOW("set_parameter: Client set profile is: %d", pParam->eProfile);
             DEBUG_PRINT_LOW("set_parameter: Client set level is: %d", pParam->eLevel);
-            mClientSessionForSufficiency = true;
             clientSet_profile_level.eProfile = pParam->eProfile;
             clientSet_profile_level.eLevel = pParam->eLevel;
             break;
