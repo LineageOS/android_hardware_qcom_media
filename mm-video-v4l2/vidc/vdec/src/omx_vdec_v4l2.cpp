@@ -10393,10 +10393,6 @@ OMX_ERRORTYPE omx_vdec::describeColorFormat(OMX_PTR pParam)
 bool omx_vdec::prefetch_buffers(unsigned long prefetch_count,
         unsigned long prefetch_size, unsigned ioctl_code, unsigned ion_flag)
 {
-    int rc = false;
-    DEBUG_PRINT_ERROR("Prefetch is disabled! count %ld size %ld ioctl %#x flag %d",
-        prefetch_count, prefetch_size, ioctl_code, ion_flag);
-#if 0
     struct ion_prefetch_data prefetch_data;
     struct ion_prefetch_regions regions;
     __u64 sizes[prefetch_count];
@@ -10413,11 +10409,11 @@ bool omx_vdec::prefetch_buffers(unsigned long prefetch_count,
     }
 
     regions.nr_sizes = prefetch_count;
-    regions.sizes = sizes;
+    regions.sizes = (__u64) sizes;
     regions.vmid = ion_flag;
 
     prefetch_data.nr_regions = 1;
-    prefetch_data.regions = &regions;
+    prefetch_data.regions = (__u64) &regions;
     prefetch_data.heap_id = ION_HEAP(ION_SECURE_HEAP_ID);
 
     rc = ioctl(ion_fd, ioctl_code, &prefetch_data);
@@ -10430,7 +10426,6 @@ bool omx_vdec::prefetch_buffers(unsigned long prefetch_count,
     }
 
     close(ion_fd);
-#endif
     return rc;
 }
 
