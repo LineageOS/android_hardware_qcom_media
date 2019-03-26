@@ -685,7 +685,6 @@ class omx_vdec: public qc_omx_component
          * Class variables to track client set profile and level
          * via OMX_QTIIndexParamClientConfiguredMaxProfileLevelForSufficiency
          */
-        bool mClientSessionForSufficiency;
         bool isPortReconfigInsufficient;
         inline int get_session_codec_type();
 

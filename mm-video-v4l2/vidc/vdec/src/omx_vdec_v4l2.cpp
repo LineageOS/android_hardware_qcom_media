@@ -247,18 +247,6 @@ void* async_message_thread (void *input)
                  event_fields_changed |= (omx->drv_ctx.video_resolution.frame_height != ptr[0]);
                  event_fields_changed |= (omx->drv_ctx.video_resolution.frame_width != ptr[1]);
 
-                 if ((codec == V4L2_PIX_FMT_H264) ||
-                     (codec  == V4L2_PIX_FMT_HEVC)) {
-                     if (profile_level_converter::convert_v4l2_profile_to_omx(
-                                                         codec, ptr[9], &tmp_profile) &&
-                         profile_level_converter::convert_v4l2_level_to_omx(
-                                                         codec, ptr[10], &tmp_level)) {
-                         event_fields_changed |= (omx->mClientSessionForSufficiency &&
-                                                  ((tmp_profile != (int)omx->get_clientSet_profile_level().eProfile) ||
-                                                   (tmp_level > (int)omx->get_clientSet_profile_level().eLevel)));
-                     }
-                 }
-
                  if (omx->drv_ctx.video_resolution.frame_height != ptr[0] ||
                      omx->drv_ctx.video_resolution.frame_width != ptr[1]) {
                      event_fields_changed = true;
@@ -276,7 +264,6 @@ void* async_message_thread (void *input)
                     DEBUG_PRINT_HIGH("VIDC Port Reconfig Old colorSpace = %s New colorspace = %s",
                                      (omx->m_color_space == omx_vdec::BT2020 ? "BT2020": "EXCEPT_BT2020"),
                                      (tmp_color_space == omx_vdec::BT2020 ? "BT2020": "EXCEPT_BT2020"));
-                    DEBUG_PRINT_HIGH("Client Session for sufficiency feature is %s", omx->mClientSessionForSufficiency ? "enabled": "disabled");
                     DEBUG_PRINT_HIGH("VIDC Port Reconfig Client (Profile,Level) = (%d,%d) bitstream(Profile,Level) = (%d,%d))",
                                      omx->get_clientSet_profile_level().eProfile,
                                      omx->get_clientSet_profile_level().eLevel,
@@ -841,7 +828,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     init_color_aspects_map();
 
     profile_level_converter::init();
-    mClientSessionForSufficiency = false;
     clientSet_profile_level.eProfile = 0;
     clientSet_profile_level.eLevel = 0;
 #ifdef USE_GBM
@@ -3572,8 +3558,6 @@ OMX_ERRORTYPE  omx_vdec::get_extension_index(OMX_IN OMX_HANDLETYPE      hComp,
         *indexType = (OMX_INDEXTYPE)OMX_QTIIndexConfigDescribeColorAspects;
     } else if (extn_equals(paramName, "OMX.google.android.index.describeHDRStaticInfo")) {
         *indexType = (OMX_INDEXTYPE)OMX_QTIIndexConfigDescribeHDRColorInfo;
-    } else if (extn_equals(paramName, "OMX.QTI.index.param.ClientConfiguredProfileLevel")) {
-        *indexType = (OMX_INDEXTYPE)OMX_QTIIndexParamClientConfiguredProfileLevelForSufficiency;
     }else {
         DEBUG_PRINT_ERROR("Extension: %s not implemented", paramName);
         return OMX_ErrorNotImplemented;
