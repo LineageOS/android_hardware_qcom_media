@@ -2294,32 +2294,34 @@ unsigned venc_dev::venc_set_message_thread_id(pthread_t tid)
     return 0;
 }
 
-bool venc_dev::venc_set_extradata_hdr10metadata()
+bool venc_dev::venc_set_extradata_hdr10metadata(OMX_U32 omx_profile)
 {
     struct v4l2_control control;
 
-    /* HDR10 Metadata is enabled by default for HEVC Main10 profile. */
+    control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
+    control.value = EXTRADATA_NONE;
+
+    /* HDR10 Metadata is enabled by default for HEVC Main10PLUS profile. */
     if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC &&
-        codec_profile.profile == V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_10) {
-
-        control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
-        control.value = EXTRADATA_ENC_INPUT_HDR10PLUS;
-
+        omx_profile == OMX_VIDEO_HEVCProfileMain10HDR10Plus) {
         DEBUG_PRINT_HIGH("venc_set_extradata:: HDR10PLUS_METADATA");
-
-        if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
-            DEBUG_PRINT_ERROR("ERROR: Set extradata HDR10PLUS_METADATA failed %d", errno);
-            return false;
-        }
+        control.value = EXTRADATA_ENC_INPUT_HDR10PLUS;
         m_hdr10meta_enabled = true;
         extradata = true;
-
-        //Get upated buffer requirement as enable extradata leads to two buffer planes
-        venc_get_buf_req (&venc_handle->m_sInPortDef.nBufferCountMin,
-                                 &venc_handle->m_sInPortDef.nBufferCountActual,
-                                 &venc_handle->m_sInPortDef.nBufferSize,
-                                 venc_handle->m_sInPortDef.nPortIndex);
+    } else {
+        m_hdr10meta_enabled = false;
     }
+
+    if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
+        DEBUG_PRINT_ERROR("ERROR: Set extradata HDR10PLUS_METADATA failed %d", errno);
+        return false;
+    }
+
+    //Get upated buffer requirement as enable extradata leads to two buffer planes
+    venc_get_buf_req (&venc_handle->m_sInPortDef.nBufferCountMin,
+                      &venc_handle->m_sInPortDef.nBufferCountActual,
+                      &venc_handle->m_sInPortDef.nBufferSize,
+                      venc_handle->m_sInPortDef.nPortIndex);
     return true;
 }
 
