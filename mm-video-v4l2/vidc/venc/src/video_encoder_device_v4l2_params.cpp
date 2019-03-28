@@ -1306,15 +1306,24 @@ bool venc_dev::venc_set_level(OMX_U32 eLevel)
     DEBUG_PRINT_LOW("venc_set_level:: eLevel = %u",
                     (unsigned int)eLevel);
 
+    if (!eLevel) {
+        DEBUG_PRINT_ERROR(" Unknown OMX level : %u" ,
+                    (unsigned int)eLevel );
+        return true;
+	}
+
+	if (!profile_level_converter::convert_omx_level_to_v4l2(m_sVenc_cfg.codectype, eLevel, &control.value, &tier)) {
+        DEBUG_PRINT_ERROR("Failed to find v4l2 level for OMX level : %d" \
+                        " Codec : %lu", eLevel, m_sVenc_cfg.codectype);
+        return true;
+	}
+
     if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264) {
         control.id = V4L2_CID_MPEG_VIDEO_H264_LEVEL;
-        control.value = V4L2_MPEG_VIDEO_H264_LEVEL_UNKNOWN;
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8) {
         control.id = V4L2_CID_MPEG_VIDC_VIDEO_VP8_PROFILE_LEVEL;
-        control.value = V4L2_MPEG_VIDC_VIDEO_VP8_UNUSED;
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
         control.id = V4L2_CID_MPEG_VIDEO_HEVC_LEVEL;
-        control.value = V4L2_MPEG_VIDEO_HEVC_LEVEL_UNKNOWN;
         profile_level.tier = tier;
     }
     else {
@@ -1322,45 +1331,34 @@ bool venc_dev::venc_set_level(OMX_U32 eLevel)
         return false;
     }
 
-    /* Set default level */
-    profile_level.level = control.value;
-    if (eLevel != OMX_VIDEO_LEVEL_UNKNOWN) {
-        if (!profile_level_converter::convert_omx_level_to_v4l2(m_sVenc_cfg.codectype, eLevel, &control.value, &tier)) {
-            DEBUG_PRINT_LOW("Warning: Cannot find v4l2 level for OMX level : %d" \
-                            " Codec : %lu Setting unknown level",
-                              eLevel, m_sVenc_cfg.codectype);
+    DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d",
+                            control.id, control.value);
+    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
+    if (rc) {
+        DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d",
+                        control.id, control.value);
+        return false;
+    }
+    DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d",
+                        control.id, control.value);
+
+    if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
+        struct v4l2_control control_tier = {
+            .id = V4L2_CID_MPEG_VIDEO_HEVC_TIER,
+            .value = (signed int)tier
+        };
+        DEBUG_PRINT_LOW("Calling IOCTL set tier control for HEVC, id %#x, value %d",
+                            control_tier.id, control_tier.value);
+
+        rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control_tier);
+        if (rc) {
+            DEBUG_PRINT_ERROR("Failed to set tier control for HEVC, id %#x, value %d",
+                                control_tier.id, control_tier.value);
         } else {
-            DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d",
-                                                    control.id, control.value);
-            rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-            if (rc) {
-                DEBUG_PRINT_ERROR("Failed to set control, id %#x, value %d",
-                                                    control.id, control.value);
-                return false;
-            }
-            DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d",
-                                                    control.id, control.value);
-
-            if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
-                struct v4l2_control control_tier = {
-                    .id = V4L2_CID_MPEG_VIDEO_HEVC_TIER,
-                    .value = (signed int)tier
-                };
-                DEBUG_PRINT_ERROR("Calling IOCTL set tier control for HEVC, id %#x, value %d",
-                                  control_tier.id, control_tier.value);
-
-                rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control_tier);
-                if (rc) {
-                    DEBUG_PRINT_ERROR("Failed to set tier control for HEVC, id %#x, value %d",
-                                      control_tier.id, control_tier.value);
-                } else {
-                    profile_level.tier = control_tier.value;
-                }
-            }
-            profile_level.level = control.value;
+            profile_level.tier = control_tier.value;
         }
     }
-
+    profile_level.level = control.value;
     return true;
 }
 
@@ -1806,5 +1804,3 @@ bool venc_dev::venc_set_vpx_error_resilience(OMX_BOOL enable)
     DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
     return true;
 }
-
-
