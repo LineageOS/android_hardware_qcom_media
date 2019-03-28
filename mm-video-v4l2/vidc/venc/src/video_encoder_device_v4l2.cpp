@@ -2296,32 +2296,31 @@ unsigned venc_dev::venc_set_message_thread_id(pthread_t tid)
 
 bool venc_dev::venc_set_extradata_hdr10metadata(OMX_U32 omx_profile)
 {
-    struct v4l2_control control;
-
-    control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
-    control.value = EXTRADATA_NONE;
-
     /* HDR10 Metadata is enabled by default for HEVC Main10PLUS profile. */
     if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC &&
         omx_profile == OMX_VIDEO_HEVCProfileMain10HDR10Plus) {
         DEBUG_PRINT_HIGH("venc_set_extradata:: HDR10PLUS_METADATA");
+        struct v4l2_control control;
+        control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
         control.value = EXTRADATA_ENC_INPUT_HDR10PLUS;
+
+        if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
+            DEBUG_PRINT_ERROR("ERROR: Set extradata HDR10PLUS_METADATA failed %d", errno);
+            return false;
+        }
+
         m_hdr10meta_enabled = true;
         extradata = true;
+
+        //Get upated buffer requirement as enable extradata leads to two buffer planes
+        venc_get_buf_req (&venc_handle->m_sInPortDef.nBufferCountMin,
+                          &venc_handle->m_sInPortDef.nBufferCountActual,
+                          &venc_handle->m_sInPortDef.nBufferSize,
+                          venc_handle->m_sInPortDef.nPortIndex);
     } else {
         m_hdr10meta_enabled = false;
     }
 
-    if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
-        DEBUG_PRINT_ERROR("ERROR: Set extradata HDR10PLUS_METADATA failed %d", errno);
-        return false;
-    }
-
-    //Get upated buffer requirement as enable extradata leads to two buffer planes
-    venc_get_buf_req (&venc_handle->m_sInPortDef.nBufferCountMin,
-                      &venc_handle->m_sInPortDef.nBufferCountActual,
-                      &venc_handle->m_sInPortDef.nBufferSize,
-                      venc_handle->m_sInPortDef.nPortIndex);
     return true;
 }
 
