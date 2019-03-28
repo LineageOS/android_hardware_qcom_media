@@ -459,7 +459,7 @@ class venc_dev
         unsigned long venc_get_codectype(OMX_VIDEO_CODINGTYPE eCompressionFormat);
         bool venc_set_nal_size (OMX_VIDEO_CONFIG_NALSIZE *nalSizeInfo);
         bool venc_set_grid_enable();
-        bool venc_set_extradata_hdr10metadata();
+        bool venc_set_extradata_hdr10metadata(OMX_U32 omx_profile);
         bool venc_store_dynamic_config(OMX_INDEXTYPE type, OMX_PTR config);
         bool venc_cvp_enable(private_handle_t *handle);
         bool venc_get_cvp_metadata(private_handle_t *handle);

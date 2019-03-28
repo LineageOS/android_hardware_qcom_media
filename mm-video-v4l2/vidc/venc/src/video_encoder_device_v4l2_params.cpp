@@ -1288,6 +1288,12 @@ bool venc_dev::venc_set_profile(OMX_U32 eProfile)
     DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
 
     codec_profile.profile = control.value;
+
+    if (venc_set_extradata_hdr10metadata(eProfile)) {
+        DEBUG_PRINT_ERROR("Failed to set extradata HDR10PLUS_METADATA");
+        return false;
+    }
+
     return true;
 }
 
