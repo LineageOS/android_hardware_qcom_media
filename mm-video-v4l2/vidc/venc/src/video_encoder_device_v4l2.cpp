@@ -645,33 +645,10 @@ inline int get_yuv_size(unsigned long fmt, int width, int height) {
     return size;
 }
 
-void venc_dev::append_extradata_ltrinfo(OMX_OTHER_EXTRADATATYPE *p_extra,
-            struct msm_vidc_extradata_header *p_extradata)
-{
-    p_extra->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) + p_extradata->data_size  - sizeof(unsigned int), 4);
-    p_extra->nVersion.nVersion = OMX_SPEC_VERSION;
-    p_extra->nPortIndex = OMX_DirOutput;
-    p_extra->eType = (OMX_EXTRADATATYPE) OMX_ExtraDataVideoLTRInfo;
-    p_extra->nDataSize = p_extradata->data_size;
-    memcpy(p_extra->data, p_extradata->data, p_extradata->data_size);
-}
-
-void venc_dev::append_extradata_none(OMX_OTHER_EXTRADATATYPE *p_extra)
-{
-    p_extra->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE), 4);
-    p_extra->nVersion.nVersion = OMX_SPEC_VERSION;
-    p_extra->nPortIndex = OMX_DirOutput;
-    p_extra->eType = OMX_ExtraDataNone;
-    p_extra->nDataSize = 0;
-}
-
 bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
 {
-    OMX_OTHER_EXTRADATATYPE *p_extra = NULL;
-    unsigned int consumed_len = 0, filled_len = 0;
-    unsigned int yuv_size = 0, index = 0;
-    int enable = 0, i = 0, size = 0;
-    unsigned char *pVirt = NULL;
+    unsigned int filled_len = 0;
+    unsigned int index = 0;
     int height = m_sVenc_cfg.input_height;
     int width = m_sVenc_cfg.input_width;
     OMX_TICKS nTimeStamp = buf.timestamp.tv_sec * 1000000 + buf.timestamp.tv_usec;
@@ -702,65 +679,10 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
 #ifdef USE_ION
     venc_handle->do_cache_operations(input_extradata_info.ion[index].data_fd);
 #endif
-    if (m_sVenc_cfg.inputformat == V4L2_PIX_FMT_NV12 || m_sVenc_cfg.inputformat == V4L2_PIX_FMT_NV21) {
-        size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12, width, height);
-        yuv_size = get_yuv_size(COLOR_FMT_NV12, width, height);
-        pVirt = (unsigned char *)mmap(NULL, size, PROT_READ|PROT_WRITE,MAP_SHARED, fd, 0);
-        if (pVirt == MAP_FAILED) {
-            DEBUG_PRINT_ERROR("%s Failed to mmap",__func__);
-            status = false;
-            goto bailout;
-        }
-        p_extra = (OMX_OTHER_EXTRADATATYPE *) ((unsigned long)(pVirt + yuv_size + 3)&(~3));
-    }
 
     p_extradata = input_extradata_info.ion[index].uaddr;
     data = (struct OMX_OTHER_EXTRADATATYPE *)p_extradata;
     memset((void *)(data), 0, (input_extradata_info.buffer_size)); // clear stale data in current buffer
-
-    while (p_extra && (consumed_len + sizeof(OMX_OTHER_EXTRADATATYPE)) <= (size - yuv_size)
-        && (consumed_len + p_extra->nSize) <= (size - yuv_size)
-        && (filled_len + sizeof(OMX_OTHER_EXTRADATATYPE) <= input_extradata_info.buffer_size)
-        && (filled_len + p_extra->nSize <= input_extradata_info.buffer_size)
-        && (p_extra->eType != (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_NONE)) {
-
-        DEBUG_PRINT_LOW("Extradata Type = 0x%x", (OMX_QCOM_EXTRADATATYPE)p_extra->eType);
-        switch ((OMX_QCOM_EXTRADATATYPE)p_extra->eType) {
-        case OMX_ExtraDataQP:
-        {
-            OMX_QCOM_EXTRADATA_QP * qp_payload = NULL;
-            struct msm_vidc_frame_qp_payload *payload;
-            data->nSize = (sizeof(OMX_OTHER_EXTRADATATYPE) + sizeof(struct msm_vidc_frame_qp_payload) + 3)&(~3);
-            data->nVersion.nVersion = OMX_SPEC_VERSION;
-            data->nPortIndex = 0;
-            data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_FRAME_QP;
-            data->nDataSize = sizeof(struct  msm_vidc_frame_qp_payload);
-            qp_payload = (OMX_QCOM_EXTRADATA_QP *)p_extra->data;
-            payload = (struct  msm_vidc_frame_qp_payload *)(data->data);
-            payload->frame_qp = qp_payload->nQP;
-            DEBUG_PRINT_LOW("Frame QP = %d", payload->frame_qp);
-            filled_len += data->nSize;
-            data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
-            break;
-        }
-        case OMX_ExtraDataFrameInfo:
-        {
-            OMX_QCOM_EXTRADATA_FRAMEINFO *frame_info = NULL;
-            frame_info = (OMX_QCOM_EXTRADATA_FRAMEINFO *)(p_extra->data);
-            if (frame_info->ePicType == OMX_VIDEO_PictureTypeI) {
-                if (venc_set_intra_vop_refresh((OMX_BOOL)true) == false)
-                    DEBUG_PRINT_ERROR("%s Error in requesting I Frame ", __func__);
-            }
-            break;
-        }
-        default:
-            DEBUG_PRINT_HIGH("Unknown Extradata 0x%x", (OMX_QCOM_EXTRADATATYPE)p_extra->eType);
-            break;
-        }
-
-        consumed_len += p_extra->nSize;
-        p_extra = (OMX_OTHER_EXTRADATATYPE *)((char *)p_extra + p_extra->nSize);
-    }
 
     if (m_cvp_meta_enabled && cvpMetadata.size == CVP_METADATA_SIZE) {
         packet_size = sizeof(struct msm_vidc_extradata_header) - sizeof(unsigned int)
@@ -902,14 +824,11 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
         }
     }
 
-        data->nSize = sizeof(OMX_OTHER_EXTRADATATYPE);
-        data->nVersion.nVersion = OMX_SPEC_VERSION;
-        data->eType = OMX_ExtraDataNone;
-        data->nDataSize = 0;
-        data->data[0] = 0;
-
-    if (pVirt)
-        munmap(pVirt, size);
+    data->nSize = sizeof(OMX_OTHER_EXTRADATATYPE);
+    data->nVersion.nVersion = OMX_SPEC_VERSION;
+    data->eType = OMX_ExtraDataNone;
+    data->nDataSize = 0;
+    data->data[0] = 0;
 
 bailout:
 #ifdef USE_ION
@@ -966,10 +885,8 @@ bool venc_dev::venc_handle_client_input_extradata(void *buffer)
 bool venc_dev::handle_output_extradata(void *buffer, int index)
 {
     OMX_BUFFERHEADERTYPE *p_bufhdr = (OMX_BUFFERHEADERTYPE *) buffer;
-    OMX_OTHER_EXTRADATATYPE *p_extra = NULL;
     OMX_OTHER_EXTRADATATYPE *p_clientextra = NULL;
-    OMX_U32 remaining_extradata_size = 0;
-    OMX_U32 remaining_client_extradata_size = 0;
+    struct msm_vidc_extradata_header *p_extradata = NULL;
     OMX_U32 remaining_fw_extradata_size = 0;
 
     if(venc_handle->m_client_output_extradata_mem_ptr && venc_handle->m_sExtraData
@@ -980,125 +897,39 @@ bool venc_dev::handle_output_extradata(void *buffer, int index)
     }
     if (p_clientextra == NULL) {
         DEBUG_PRINT_ERROR("Client Extradata buffers not allocated\n");
+        return false;
     }
 
     if (!output_extradata_info.ion[index].uaddr) {
         DEBUG_PRINT_ERROR("Extradata buffers not allocated\n");
         return false;
     }
+    p_extradata = (struct msm_vidc_extradata_header *)output_extradata_info.ion[index].uaddr;
 
-    p_extra = (OMX_OTHER_EXTRADATATYPE *)ALIGN(p_bufhdr->pBuffer +
-                p_bufhdr->nOffset + p_bufhdr->nFilledLen, 4);
+    memcpy(p_clientextra, p_extradata, output_extradata_info.buffer_size);
 
-    if (output_extradata_info.buffer_size >
-            p_bufhdr->nAllocLen - ALIGN(p_bufhdr->nOffset + p_bufhdr->nFilledLen, 4)) {
-        DEBUG_PRINT_ERROR("Insufficient buffer size for extradata");
-        p_extra = NULL;
-        return false;
-    } else if (sizeof(msm_vidc_extradata_header) != sizeof(OMX_OTHER_EXTRADATATYPE)) {
-        /* A lot of the code below assumes this condition, so error out if it's not met */
-        DEBUG_PRINT_ERROR("Extradata ABI mismatch");
-        return false;
-    }
-    remaining_extradata_size = p_bufhdr->nAllocLen - ALIGN(p_bufhdr->nOffset +
-                                                           p_bufhdr->nFilledLen, 4);
-    if(p_clientextra){
-       remaining_client_extradata_size = (venc_handle->m_client_output_extradata_mem_ptr +
-                                          index)->nAllocLen;
-    }
+    /* just for debugging */
     remaining_fw_extradata_size = output_extradata_info.buffer_size;
-
-    struct msm_vidc_extradata_header *p_extradata = NULL;
-    do {
-        DEBUG_PRINT_LOW("Remaining size for: extradata= %d client= %d fw= %d ",\
-                        remaining_extradata_size,remaining_client_extradata_size,\
-                        remaining_fw_extradata_size);
-
-        if (remaining_fw_extradata_size < sizeof(OMX_OTHER_EXTRADATATYPE)) {
-           DEBUG_PRINT_ERROR("Insufficient space for extradata");
-           break;
-        }
-        p_extradata = (struct msm_vidc_extradata_header *) (p_extradata ?
-            ((char *)p_extradata) + p_extradata->size :
-            output_extradata_info.ion[index].uaddr);
-
-        if ((remaining_fw_extradata_size < p_extradata->size)) {
-           DEBUG_PRINT_ERROR("Corrupt extradata");
-           break;
-        }
-        remaining_fw_extradata_size -= p_extradata->size;
-
-        if (remaining_extradata_size < p_extradata->size){
-           DEBUG_PRINT_ERROR("insufficient size available in extradata port buffer");
-           break;
-        }
-
-        if(p_clientextra){
-           if (remaining_client_extradata_size < p_extradata->size) {
-              DEBUG_PRINT_ERROR("insufficient size available in client buffer");
-              break;
-           }
-        }
+    while (remaining_fw_extradata_size >= sizeof(OMX_OTHER_EXTRADATATYPE) &&
+            remaining_fw_extradata_size >= p_extradata->size &&
+            p_extradata->type != MSM_VIDC_EXTRADATA_NONE) {
 
         switch (p_extradata->type) {
             case MSM_VIDC_EXTRADATA_METADATA_LTRINFO:
             {
-                append_extradata_ltrinfo(p_extra, p_extradata);
-                if(p_clientextra) {
-                    append_extradata_ltrinfo(p_clientextra, p_extradata);
-                }
-                DEBUG_PRINT_LOW("LTRInfo Extradata = 0x%x", *((OMX_U32 *)p_extra->data));
+                DEBUG_PRINT_LOW("LTRInfo Extradata = 0x%x", *((OMX_U32 *)p_extradata->data));
                 break;
             }
-            case MSM_VIDC_EXTRADATA_NONE:
-                append_extradata_none(p_extra);
-                if(p_clientextra) {
-                    append_extradata_none(p_clientextra);
-                }
-                break;
             default:
                 /* No idea what this stuff is, just skip over it */
                 DEBUG_PRINT_HIGH("Found an unrecognised extradata (%x) ignoring it",
                         p_extradata->type);
-                continue;
+                break;
         }
 
-        remaining_extradata_size-= p_extra->nSize;
-        if(p_clientextra) {
-            remaining_client_extradata_size -= p_clientextra->nSize;
-            DEBUG_PRINT_LOW("Client Extradata Size= %u",p_clientextra->nSize);
-        }
-
-        DEBUG_PRINT_LOW("Extradata Size= %u FW= %d",\
-                        p_extra->nSize,p_extradata->size);
-
-        p_extra = (OMX_OTHER_EXTRADATATYPE *)(((char *)p_extra) + p_extra->nSize);
-        if(p_clientextra) {
-            p_clientextra = (OMX_OTHER_EXTRADATATYPE *)(((char *)p_clientextra) + p_clientextra->nSize);
-        }
-    } while (p_extradata->type != MSM_VIDC_EXTRADATA_NONE);
-
-    /* Just for debugging: Traverse the list of extra datas  and spit it out onto log */
-    p_extra = (OMX_OTHER_EXTRADATATYPE *)ALIGN(p_bufhdr->pBuffer +
-                p_bufhdr->nOffset + p_bufhdr->nFilledLen, 4);
-    remaining_extradata_size = p_bufhdr->nAllocLen - ALIGN(p_bufhdr->nOffset +
-                                                           p_bufhdr->nFilledLen, 4);
-    while(p_extra->eType != OMX_ExtraDataNone)
-    {
-        DEBUG_PRINT_LOW("Remaining size for: extradata= %d",remaining_extradata_size);
-        if (remaining_extradata_size < p_extra->nSize){
-           DEBUG_PRINT_ERROR("insufficient size available in extradata port buffer");
-           break;
-        }
-
-        DEBUG_PRINT_LOW("[%p/%u] found extradata type %x of size %u (%u) at %p",
-                p_bufhdr->pBuffer, (unsigned int)p_bufhdr->nFilledLen, p_extra->eType,
-                (unsigned int)p_extra->nSize, (unsigned int)p_extra->nDataSize, p_extra);
-
-        remaining_extradata_size-= p_extra->nSize;
-
-        p_extra = (OMX_OTHER_EXTRADATATYPE *) (((OMX_U8 *) p_extra) +
-                p_extra->nSize);
+        remaining_fw_extradata_size -= p_extradata->size;
+        p_extradata = (struct msm_vidc_extradata_header *) (
+            ((char *)p_extradata) + p_extradata->size);
     }
 
     return true;
@@ -1426,15 +1257,11 @@ int venc_dev::venc_extradata_log_buffers(char *buffer_addr, int index, bool inpu
     if (!m_debug.extradatafile && m_debug.extradata_log) {
         int size = 0;
 
-        if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264) {
-           size = snprintf(m_debug.extradatafile_name, PROPERTY_VALUE_MAX, "%s/extradata_enc_%lu_%lu_%p.bin",
-                           m_debug.log_loc, m_sVenc_cfg.input_width, m_sVenc_cfg.input_height, this);
-        } else if(m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
-           size = snprintf(m_debug.extradatafile_name, PROPERTY_VALUE_MAX, "%s/extradata_enc_%lu_%lu_%p.bin",
-                           m_debug.log_loc, m_sVenc_cfg.input_width, m_sVenc_cfg.input_height, this);
-        } else if(m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8) {
-           size = snprintf(m_debug.extradatafile_name, PROPERTY_VALUE_MAX, "%s/extradata_enc_%lu_%lu_%p.bin",
-                           m_debug.log_loc, m_sVenc_cfg.input_width, m_sVenc_cfg.input_height, this);
+        if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264 ||
+            m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC ||
+            m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8) {
+            size = snprintf(m_debug.extradatafile_name, PROPERTY_VALUE_MAX, "%s/extradata_enc_%lu_%lu_%p.bin",
+                            m_debug.log_loc, m_sVenc_cfg.input_width, m_sVenc_cfg.input_height, this);
         }
         if ((size > PROPERTY_VALUE_MAX) && (size < 0)) {
              DEBUG_PRINT_ERROR("Failed to open extradata file: %s for logging size:%d",
@@ -2313,7 +2140,6 @@ bool venc_dev::venc_set_extradata_hdr10metadata(OMX_U32 omx_profile)
         }
 
         m_hdr10meta_enabled = true;
-        extradata = true;
 
         //Get upated buffer requirement as enable extradata leads to two buffer planes
         venc_get_buf_req (&venc_handle->m_sInPortDef.nBufferCountMin,

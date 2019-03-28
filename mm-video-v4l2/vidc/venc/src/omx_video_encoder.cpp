@@ -1315,61 +1315,25 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 VALIDATE_OMX_PARAM_DATA(paramData, QOMX_INDEXEXTRADATATYPE);
                 DEBUG_PRINT_HIGH("set_parameter: OMX_QcomIndexParamIndexExtraDataType");
                 QOMX_INDEXEXTRADATATYPE *pParam = (QOMX_INDEXEXTRADATATYPE *)paramData;
-                bool enable = false;
                 OMX_U32 mask = 0;
 
-                if (pParam->nIndex == (OMX_INDEXTYPE)OMX_ExtraDataVideoEncoderSliceInfo) {
-                    if (pParam->nPortIndex == PORT_INDEX_OUT) {
-                        mask = VENC_EXTRADATA_SLICEINFO;
-
-                        DEBUG_PRINT_HIGH("SliceInfo extradata %s",
-                                ((pParam->bEnabled == OMX_TRUE) ? "enabled" : "disabled"));
-                    } else {
-                        DEBUG_PRINT_ERROR("set_parameter: Slice information is "
-                                "valid for output port only");
-                        eRet = OMX_ErrorUnsupportedIndex;
-                        break;
-                    }
-                } else if (pParam->nIndex == (OMX_INDEXTYPE)OMX_ExtraDataVideoEncoderMBInfo) {
-                    if (pParam->nPortIndex == PORT_INDEX_OUT) {
-                        mask = VENC_EXTRADATA_MBINFO;
-
-                        DEBUG_PRINT_HIGH("MBInfo extradata %s",
-                                ((pParam->bEnabled == OMX_TRUE) ? "enabled" : "disabled"));
-                    } else {
-                        DEBUG_PRINT_ERROR("set_parameter: MB information is "
-                                "valid for output port only");
-                        eRet = OMX_ErrorUnsupportedIndex;
-                        break;
-                    }
-                } else if (pParam->nIndex == (OMX_INDEXTYPE)OMX_ExtraDataFrameDimension) {
-                    if (pParam->nPortIndex == PORT_INDEX_IN) {
-                            mask = VENC_EXTRADATA_FRAMEDIMENSION;
-                        DEBUG_PRINT_HIGH("Frame dimension extradata %s",
-                                ((pParam->bEnabled == OMX_TRUE) ? "enabled" : "disabled"));
-                    } else {
-                        DEBUG_PRINT_ERROR("set_parameter: Frame Dimension is "
-                                "valid for input port only");
-                        eRet = OMX_ErrorUnsupportedIndex;
-                        break;
-                    }
-                } else if (pParam->nIndex == (OMX_INDEXTYPE)OMX_ExtraDataVideoLTRInfo) {
+                if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QCOM_ExtraDataCategory_Advanced) {
                     if (pParam->nPortIndex == PORT_INDEX_OUT) {
                         if (pParam->bEnabled == OMX_TRUE)
-                            mask = VENC_EXTRADATA_LTRINFO;
+                            mask = EXTRADATA_ADVANCED;
 
-                        DEBUG_PRINT_HIGH("LTRInfo extradata %s",
+                        DEBUG_PRINT_HIGH("Advanced extradata %s",
                                 ((pParam->bEnabled == OMX_TRUE) ? "enabled" : "disabled"));
                     } else {
-                        DEBUG_PRINT_ERROR("set_parameter: LTR information is "
+                        DEBUG_PRINT_ERROR("set_parameter: Advanced extradata is "
                                 "valid for output port only");
                         eRet = OMX_ErrorUnsupportedIndex;
                         break;
                     }
-                } else if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QTIIndexParamVideoEnableRoiInfo) {
+                } else if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QCOM_ExtraDataCategory_Enc_ROI) {
                     if (pParam->nPortIndex == PORT_INDEX_IN) {
                         if (pParam->bEnabled == OMX_TRUE)
-                            mask = VENC_EXTRADATA_ROI;
+                            mask = EXTRADATA_ENC_INPUT_ROI;
 
                         DEBUG_PRINT_HIGH("ROIInfo extradata %s",
                                 ((pParam->bEnabled == OMX_TRUE) ? "enabled" : "disabled"));
@@ -1386,18 +1350,16 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     break;
                 }
 
+                if (handle->venc_set_param(paramData,
+                            (OMX_INDEXTYPE)OMX_QcomIndexParamIndexExtraDataType) != true) {
+                    DEBUG_PRINT_ERROR("ERROR: Setting Extradata (%x) failed", pParam->nIndex);
+                    return OMX_ErrorUnsupportedSetting;
+                }
 
                 if (pParam->bEnabled == OMX_TRUE)
                     m_sExtraData |= mask;
                 else
                     m_sExtraData &= ~mask;
-
-                enable = !!(m_sExtraData & mask);
-                if (handle->venc_set_param(&enable,
-                            (OMX_INDEXTYPE)pParam->nIndex) != true) {
-                    DEBUG_PRINT_ERROR("ERROR: Setting Extradata (%x) failed", pParam->nIndex);
-                    return OMX_ErrorUnsupportedSetting;
-                }
 
                 if (pParam->nPortIndex == PORT_INDEX_IN) {
                     m_sInPortDef.nPortIndex = PORT_INDEX_IN;
@@ -1546,16 +1508,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     return OMX_ErrorUnsupportedSetting;
                 }
                 memcpy(&m_sSar, paramData, sizeof(m_sSar));
-                break;
-            }
-        case OMX_QTIIndexParamVideoEnableRoiInfo:
-            {
-                if (!handle->venc_set_param(paramData,
-                            (OMX_INDEXTYPE)OMX_QTIIndexParamVideoEnableRoiInfo)) {
-                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamVideoEnableRoiInfo failed");
-                    return OMX_ErrorUnsupportedSetting;
-                }
-                m_sExtraData |= VENC_EXTRADATA_ROI;
                 break;
             }
         case OMX_IndexParamAndroidVideoTemporalLayering:
@@ -1900,18 +1852,6 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                         return OMX_ErrorUnsupportedSetting;
                 }
                 m_sConfigFrameRotation.nRotation = pParam->nRotation;
-                break;
-            }
-        case OMX_QcomIndexConfigVideoFramePackingArrangement:
-            {
-                DEBUG_PRINT_HIGH("set_config(): OMX_QcomIndexConfigVideoFramePackingArrangement");
-                if (m_sOutPortFormat.eCompressionFormat == OMX_VIDEO_CodingAVC) {
-                    VALIDATE_OMX_PARAM_DATA(configData, OMX_QCOM_FRAME_PACK_ARRANGEMENT);
-                    OMX_QCOM_FRAME_PACK_ARRANGEMENT *configFmt =
-                        (OMX_QCOM_FRAME_PACK_ARRANGEMENT *) configData;
-                } else {
-                    DEBUG_PRINT_ERROR("ERROR: FramePackingData not supported for non AVC compression");
-                }
                 break;
             }
        case OMX_IndexConfigVideoVp8ReferenceFrame:
