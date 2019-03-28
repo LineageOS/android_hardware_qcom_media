@@ -38,6 +38,10 @@ endif
 
 libmm-venc-def += -D_UBWC_
 
+ifeq ($(TARGET_DISABLED_UBWC),true)
+    LOCAL_CFLAGS += -DTARGET_DISABLED_UBWC
+endif
+
 ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_VQZIP)),true)
 libmm-venc-def += -D_VQZIP_
 endif
