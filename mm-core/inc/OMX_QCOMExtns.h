@@ -674,6 +674,9 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     /* Enable Blur */
     OMX_QTIIndexParamVideoEnableBlur = 0x7F00007A,
 
+    /* Vbv Delay*/
+    OMX_QTIIndexParamVbvDelay = 0x7F00007B,
+
     /* Capabilities */
     OMX_QTIIndexParamCapabilitiesVTDriverVersion = 0x7F100000,
 
@@ -1960,6 +1963,13 @@ typedef struct QOMX_VIDEO_IFRAMESIZE {
    OMX_VERSIONTYPE nVersion;
    QOMX_VIDEO_IFRAMESIZE_TYPE eType;
 } QOMX_VIDEO_IFRAMESIZE;
+
+typedef struct OMX_EXTNINDEX_VIDEO_VBV_DELAY {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    OMX_U32 nVbvDelay;
+ } OMX_EXTNINDEX_VIDEO_VBV_DELAY;
 
 /* VIDEO POSTPROCESSING CTRLS AND ENUMS */
 /* MUST KEEP SAME AS IN vpp.h */

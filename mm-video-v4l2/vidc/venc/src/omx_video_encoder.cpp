@@ -589,6 +589,9 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     OMX_INIT_STRUCT(&m_sParamLinearColorFormat, QOMX_ENABLETYPE);
     m_sParamLinearColorFormat.bEnable = OMX_FALSE;
 
+    OMX_INIT_STRUCT(&m_sParamVbvDelay, OMX_EXTNINDEX_VIDEO_VBV_DELAY);
+    m_sParamVbvDelay.nVbvDelay = 0;
+
     m_state                   = OMX_StateLoaded;
     m_sExtraData = 0;
 
@@ -1658,6 +1661,17 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamNativeRecorder failed");
                     return OMX_ErrorUnsupportedSetting;
                 }
+                break;
+            }
+        case OMX_QTIIndexParamVbvDelay:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, OMX_EXTNINDEX_VIDEO_VBV_DELAY);
+                if (!handle->venc_set_param(paramData,
+                            (OMX_INDEXTYPE)OMX_QTIIndexParamVbvDelay)) {
+                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamVbvDelay failed");
+                    return OMX_ErrorUnsupportedSetting;
+                }
+                memcpy(&m_sParamVbvDelay, paramData, sizeof(OMX_EXTNINDEX_VIDEO_VBV_DELAY));
                 break;
             }
         case OMX_IndexParamVideoSliceFMO:

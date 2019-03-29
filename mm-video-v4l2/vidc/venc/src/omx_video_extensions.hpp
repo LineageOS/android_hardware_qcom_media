@@ -138,6 +138,9 @@ void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
 
     ADD_EXTENSION("qti-ext-enc-linear-color-format", OMX_QTIIndexParamEnableLinearColorFormat, OMX_DirInput)
     ADD_PARAM_END("value", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-enc-vbvdelay", OMX_QTIIndexParamVbvDelay, OMX_DirInput)
+    ADD_PARAM_END("value", OMX_AndroidVendorValueInt32)
 }
 
 OMX_ERRORTYPE omx_video::get_vendor_extension_config(
@@ -365,6 +368,11 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
         case OMX_QTIIndexParamEnableLinearColorFormat:
         {
             setStatus &= vExt.setParamInt32(ext, "value", m_sParamLinearColorFormat.bEnable);
+            break;
+        }
+        case OMX_QTIIndexParamVbvDelay:
+        {
+            setStatus &= vExt.setParamInt32(ext, "value", m_sParamVbvDelay.nVbvDelay);
             break;
         }
         default:
@@ -926,6 +934,25 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
                    NULL, (OMX_INDEXTYPE)OMX_QTIIndexParamEnableLinearColorFormat, &linearColor);
             if (err != OMX_ErrorNone) {
                 DEBUG_PRINT_ERROR("set_param: OMX_QTIIndexParamEnableLinearColorFormat failed !");
+            }
+            break;
+        }
+        case OMX_QTIIndexParamVbvDelay:
+        {
+            OMX_EXTNINDEX_VIDEO_VBV_DELAY vbvDelay;
+            memcpy(&vbvDelay, &m_sParamVbvDelay, sizeof(OMX_EXTNINDEX_VIDEO_VBV_DELAY));
+            valueSet |= vExt.readParamInt32(ext, "value", (OMX_S32 *)&(vbvDelay.nVbvDelay));
+            if (!valueSet) {
+                break;
+            }
+
+            DEBUG_PRINT_HIGH("VENDOR-EXT: set_param: OMX_QTIIndexParamVbvDelay : %d",
+                                vbvDelay.nVbvDelay);
+
+            err = set_parameter(
+                   NULL, (OMX_INDEXTYPE)OMX_QTIIndexParamVbvDelay, &vbvDelay);
+            if (err != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("set_param: OMX_QTIIndexParamVbvDelay failed !");
             }
             break;
         }

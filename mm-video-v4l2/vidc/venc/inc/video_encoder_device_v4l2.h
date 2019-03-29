@@ -342,6 +342,7 @@ class venc_dev
         int venc_extradata_log_buffers(char *buffer_addr, int index, bool input);
         bool venc_get_hevc_profile(OMX_U32* profile);
         void venc_get_consumer_usage(OMX_U32* usage);
+        bool venc_set_vbv_delay(OMX_U32 nVbvDelay);
 
         struct venc_debug_cap m_debug;
         OMX_U32 m_nDriver_fd;
