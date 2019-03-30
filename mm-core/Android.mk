@@ -71,6 +71,12 @@ LOCAL_C_INCLUDES        += $(LOCAL_PATH)/inc
 LOCAL_HEADER_LIBRARIES := \
         libutils_headers
 
+
+LOCAL_SANITIZE := integer_overflow
+ifeq ($(TARGET_MSM_VIDC_INTSAN_DIAG),true)
+LOCAL_SANITIZE_DIAG := integer_overflow
+endif
+
 LOCAL_PRELINK_MODULE    := false
 LOCAL_MODULE            := libOmxCore
 LOCAL_MODULE_TAGS       := optional
