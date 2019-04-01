@@ -61,6 +61,7 @@
 #define ALIGN512 512
 #define ALIGN256 256
 #define ALIGN128 128
+#define ALIGN64 64
 #define ALIGN32 32
 #define ALIGN16 16
 
@@ -119,6 +120,7 @@ enum ColorConvertFormat {
     NV12_UBWC,
     TP10_UBWC,
     YCbCr420_VENUS_P010,
+    CbYCrY,
     NO_COLOR_FORMAT
 };
 
