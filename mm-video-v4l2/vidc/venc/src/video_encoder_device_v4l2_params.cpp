@@ -1289,7 +1289,7 @@ bool venc_dev::venc_set_profile(OMX_U32 eProfile)
 
     codec_profile.profile = control.value;
 
-    if (venc_set_extradata_hdr10metadata(eProfile)) {
+    if (venc_set_extradata_hdr10metadata(eProfile) == false) {
         DEBUG_PRINT_ERROR("Failed to set extradata HDR10PLUS_METADATA");
         return false;
     }
