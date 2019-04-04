@@ -25,7 +25,7 @@ libmm-vdec-def += -DPROCESS_EXTRADATA_IN_OUTPUT_PORT
 
 TARGETS_THAT_HAVE_VENUS_HEVC := apq8084 msm8994 msm8996
 # KONA_TODO_UPDATE: Disable SW codec for Kona for now
-TARGETS_THAT_DONT_NEED_SW_VDEC := msm8226 msm8916 msm8992 msm8996 sdm660 msm8998 msm8909 kona
+TARGETS_THAT_DONT_NEED_SW_VDEC := msm8226 msm8916 msm8992 msm8996 sdm660 msm8998 msm8909
 
 ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_HAVE_VENUS_HEVC)),true)
 libmm-vdec-def += -DVENUS_HEVC

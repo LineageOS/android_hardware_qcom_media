@@ -2933,7 +2933,7 @@ int omx_venc::swvenc_input_log_rotated_buffers(const char *buffer, int bufferlen
    RETURN(0);
 }
 
-int omx_venc::dev_extradata_log_buffers(char *buffer, bool input)
+int omx_venc::dev_extradata_log_buffers(char *buffer, int index, bool input)
 {
    ENTER_FUNC();
 
