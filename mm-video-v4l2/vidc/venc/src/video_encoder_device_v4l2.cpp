@@ -4600,6 +4600,13 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
 #endif
                         if (cam_ubwc_stats[0].bDataValid) {
                             switch (cam_ubwc_stats[0].version) {
+                            case UBWC_1_0:
+                                {
+                                    // Camera hw doesn't support UBWC stats in trinket and sends
+                                    // a hardcoded compression factor in nCRStatsTile32
+                                    compression_ratio = cam_ubwc_stats[0].ubwc_stats.nCRStatsTile32;
+                                }
+                                break;
                             case UBWC_2_0:
                             case UBWC_3_0:
                                 {
@@ -7397,11 +7404,13 @@ void venc_dev::venc_get_consumer_usage(OMX_U32* usage) {
     *usage = 0;
 
     /* Configure UBWC as default */
+    if (is_gralloc_source_ubwc) {
 #ifdef __LIBGBM__
-    *usage |= GBM_FORMAT_YCbCr_420_SP_VENUS_UBWC;
+        *usage |= GBM_FORMAT_YCbCr_420_SP_VENUS_UBWC;
 #else
-    *usage |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
+        *usage |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
 #endif
+    }
 
     if (hevc && eProfile == (OMX_U32)OMX_VIDEO_HEVCProfileMain10HDR10) {
         DEBUG_PRINT_INFO("Setting 10-bit consumer usage bits");
