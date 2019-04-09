@@ -558,6 +558,7 @@ bool venc_dev::handle_dynamic_config(OMX_BUFFERHEADERTYPE *bufferHdr)
 {
     std::list<dynamicConfig>::iterator iter;
     OMX_TICKS timestamp = bufferHdr->nTimeStamp;
+    bool ret = false;
 
     pthread_mutex_lock(&m_configlock);
     iter = m_configlist.begin();
@@ -571,52 +572,54 @@ bool venc_dev::handle_dynamic_config(OMX_BUFFERHEADERTYPE *bufferHdr)
             case OMX_QcomIndexConfigVideoLTRUse:
                 DEBUG_PRINT_LOW("handle_dynamic_config: OMX_QcomIndexConfigVideoLTRUse");
                 if (!venc_config_useLTR(&iter->config_data.useltr))
-                    return false;
+                    goto bailout;
                 break;
             case OMX_QcomIndexConfigVideoLTRMark:
                 DEBUG_PRINT_LOW("handle_dynamic_config: OMX_QcomIndexConfigVideoLTRMark");
                 if (!venc_config_markLTR(&iter->config_data.markltr))
-                    return false;
+                    goto bailout;
                 break;
             case OMX_IndexConfigVideoFramerate:
                 DEBUG_PRINT_LOW("handle_dynamic_config: OMX_IndexConfigVideoFramerate");
                 if (!venc_config_framerate(&iter->config_data.framerate))
-                    return false;
+                    goto bailout;
                 break;
             case OMX_QcomIndexConfigQp:
                 DEBUG_PRINT_LOW("handle_dynamic_config: OMX_QcomIndexConfigQp");
                 if (!venc_config_qp(&iter->config_data.configqp))
-                    return false;
+                    goto bailout;
                 break;
             case QOMX_IndexConfigVideoIntraperiod:
                 DEBUG_PRINT_LOW("handle_dynamic_config:QOMX_IndexConfigVideoIntraperiod");
                 if (!set_nP_frames(iter->config_data.intraperiod.nPFrames))
-                    return false;
+                    goto bailout;
                 break;
             case OMX_IndexConfigVideoVp8ReferenceFrame:
                 DEBUG_PRINT_LOW("handle_dynamic_config: OMX_IndexConfigVideoVp8ReferenceFrame");
                 if (!venc_config_vp8refframe(&iter->config_data.vp8refframe))
-                    return false;
+                    goto bailout;
                 break;
             case OMX_IndexConfigVideoIntraVOPRefresh:
                 DEBUG_PRINT_LOW("handle_dynamic_config: OMX_IndexConfigVideoIntraVOPRefresh");
                 if (!venc_config_intravoprefresh(&iter->config_data.intravoprefresh))
-                    return false;
+                    goto bailout;
                 break;
             case OMX_IndexConfigVideoBitrate:
                 DEBUG_PRINT_LOW("handle_dynamic_config: OMX_IndexConfigVideoBitrate");
                 if (!venc_config_bitrate(&iter->config_data.bitrate))
-                    return false;
+                    goto bailout;
                 break;
             default:
                 DEBUG_PRINT_ERROR("Unsupported dynamic config type %d with timestamp %lld us", iter->type, iter->timestamp);
-                return false;
+                goto bailout;
         }
         iter = m_configlist.erase(iter);
     }
+    ret = true;
 
+bailout:
     pthread_mutex_unlock(&m_configlock);
-    return true;
+    return ret;
 }
 
 inline int get_yuv_size(unsigned long fmt, int width, int height) {
