@@ -492,7 +492,8 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     OMX_INIT_STRUCT(&m_sParamAVC, OMX_VIDEO_PARAM_AVCTYPE);
     m_sParamAVC.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
     m_sParamAVC.nSliceHeaderSpacing = 0;
-    m_sParamAVC.nPFrames = (m_sOutPortFormat.xFramerate * 2 - 1); // 2 second intra period for default outport fps
+    // 2 second intra period for default outport fps
+    m_sParamAVC.nPFrames = m_sOutPortFormat.xFramerate ? (m_sOutPortFormat.xFramerate * 2 - 1) : 0;
     m_sParamAVC.nBFrames = 0;
     m_sParamAVC.bUseHadamard = OMX_FALSE;
     m_sParamAVC.nRefIdx10ActiveMinus1 = 1;

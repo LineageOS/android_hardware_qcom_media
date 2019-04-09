@@ -4261,7 +4261,8 @@ OMX_ERRORTYPE omx_vdec::free_input_buffer(OMX_BUFFERHEADERTYPE *bufferHdr)
 #ifdef USE_ION
             free_ion_memory(&drv_ctx.ip_buf_ion_info[index]);
 #endif
-            m_in_alloc_cnt--;
+            if (m_in_alloc_cnt)
+                m_in_alloc_cnt--;
         } else {
             DEBUG_PRINT_ERROR("Invalid input buffer fd %d", drv_ctx.ptr_inputbuffer[index].pmem_fd);
         }

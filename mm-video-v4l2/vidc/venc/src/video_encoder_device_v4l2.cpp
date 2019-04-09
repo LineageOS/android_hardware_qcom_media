@@ -433,8 +433,8 @@ void* venc_dev::async_venc_message_thread (void *input)
         /* calc avg. fps, bitrate */
         struct timeval tv;
         gettimeofday(&tv,NULL);
-        OMX_U64 time_diff = (OMX_U32)((tv.tv_sec * 1000000 + tv.tv_usec) -
-                (stats.prev_tv.tv_sec * 1000000 + stats.prev_tv.tv_usec));
+        OMX_U64 time_diff = (tv.tv_sec * 1000000ULL + tv.tv_usec) -
+                (stats.prev_tv.tv_sec * 1000000ULL + stats.prev_tv.tv_usec);
         if (time_diff >= 5000000) {
             OMX_U32 num_fbd = omx->handle->fbd - stats.prev_fbd;
             if (stats.prev_tv.tv_sec && num_fbd && time_diff) {
