@@ -1,7 +1,7 @@
 /**
  * @copyright
  *
- *   Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+ *   Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
  *
  *   Redistribution and use in source and binary forms, with or without
  *   modification, are permitted provided that the following conditions are met:
@@ -49,7 +49,7 @@
 #include <ion/ion.h>
 #include <linux/dma-buf.h>
 #endif
-
+#include <media/msm_media_info.h>
 
 #include "qc_omx_component.h"
 
