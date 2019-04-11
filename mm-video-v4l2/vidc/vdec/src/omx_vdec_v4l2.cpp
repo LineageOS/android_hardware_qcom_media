@@ -221,85 +221,6 @@ void* async_message_thread (void *input)
                     DEBUG_PRINT_HIGH("async_message_thread Exited");
                     break;
                 }
-            } else if (dqevent.type == V4L2_EVENT_MSM_VIDC_PORT_SETTINGS_CHANGED_SUFFICIENT) {
-
-                bool event_fields_changed = false;
-                bool send_msg = false;
-                omx_vdec::color_space_type tmp_color_space;
-                struct vdec_msginfo vdec_msg;
-                DEBUG_PRINT_HIGH("VIDC Port Reconfig received sufficient");
-                unsigned int *ptr = (unsigned int *)(void *)dqevent.u.data;
-                int tmp_profile = 0;
-                int tmp_level = 0;
-                int codec = omx->get_session_codec_type();
-                event_fields_changed |= (omx->dpb_bit_depth != (int)ptr[2]);
-                tmp_color_space = (ptr[4] == MSM_VIDC_BT2020 ? (omx_vdec::BT2020):
-                                   (omx_vdec:: EXCEPT_BT2020));
-                event_fields_changed |= (omx->m_color_space != tmp_color_space);
-
-                /*
-                 * If the resolution is different due to 16\32 pixel alignment,
-                 * let's handle as Sufficient. Ex : 1080 & 1088 or 2160 & 2176.
-                 * When FBD comes, component updates the clients with actual
-                 * resolution through set_buffer_geometry.
-                 */
-
-                 event_fields_changed |= (omx->drv_ctx.video_resolution.frame_height != ptr[0]);
-                 event_fields_changed |= (omx->drv_ctx.video_resolution.frame_width != ptr[1]);
-
-                 if (omx->drv_ctx.video_resolution.frame_height != ptr[0] ||
-                     omx->drv_ctx.video_resolution.frame_width != ptr[1]) {
-                     event_fields_changed = true;
-                 }
-
-                 if (event_fields_changed) {
-                    DEBUG_PRINT_HIGH("VIDC Port Reconfig Old Resolution(H,W) = (%d,%d) New Resolution(H,W) = (%d,%d))",
-                                     omx->drv_ctx.video_resolution.frame_height,
-                                     omx->drv_ctx.video_resolution.frame_width,
-                                     ptr[0], ptr[1]);
-                    DEBUG_PRINT_HIGH("VIDC Port Reconfig Old bitdepth = %d New bitdepth = %d",
-                                     omx->dpb_bit_depth, ptr[2]);
-                    DEBUG_PRINT_HIGH("VIDC Port Reconfig Old picstruct = %d New picstruct = %d",
-                                     omx->m_progressive, ptr[3]);
-                    DEBUG_PRINT_HIGH("VIDC Port Reconfig Old colorSpace = %s New colorspace = %s",
-                                     (omx->m_color_space == omx_vdec::BT2020 ? "BT2020": "EXCEPT_BT2020"),
-                                     (tmp_color_space == omx_vdec::BT2020 ? "BT2020": "EXCEPT_BT2020"));
-                    DEBUG_PRINT_HIGH("VIDC Port Reconfig Client (Profile,Level) = (%d,%d) bitstream(Profile,Level) = (%d,%d))",
-                                     omx->get_clientSet_profile_level().eProfile,
-                                     omx->get_clientSet_profile_level().eLevel,
-                                     tmp_profile, tmp_level);
-                    omx->dpb_bit_depth = ptr[2];
-                    omx->m_progressive = ptr[3];
-                    omx->m_color_space = (ptr[4] == MSM_VIDC_BT2020 ? (omx_vdec::BT2020):
-                                       (omx_vdec:: EXCEPT_BT2020));
-                    send_msg = true;
-                    vdec_msg.msgcode=VDEC_MSG_EVT_CONFIG_CHANGED;
-                    vdec_msg.status_code=VDEC_S_SUCCESS;
-                    vdec_msg.msgdata.output_frame.picsize.frame_height = ptr[0];
-                    vdec_msg.msgdata.output_frame.picsize.frame_width = ptr[1];
-                    vdec_msg.msgdata.output_frame.flags = false; // SUFFICIENT event
-                } else {
-                    struct v4l2_decoder_cmd dec;
-                    memset(&dec, 0, sizeof(dec));
-                    dec.cmd = V4L2_CMD_SESSION_CONTINUE;
-                    rc = ioctl(pfds[0].fd, VIDIOC_DECODER_CMD, &dec);
-                    if (rc < 0) {
-                        DEBUG_PRINT_ERROR("Session continue failed");
-                        send_msg = true;
-                        vdec_msg.msgcode=VDEC_MSG_EVT_HW_ERROR;
-                        vdec_msg.status_code=VDEC_S_SUCCESS;
-                    } else {
-                        DEBUG_PRINT_HIGH("Sent Session continue");
-                    }
-                }
-
-                if (send_msg) {
-                    if (omx->async_message_process(input,&vdec_msg) < 0) {
-                        DEBUG_PRINT_HIGH("async_message_thread Exited");
-                        break;
-                    }
-                }
-
             } else if (dqevent.type == V4L2_EVENT_MSM_VIDC_FLUSH_DONE) {
                 struct vdec_msginfo vdec_msg;
                 uint32_t flush_type = *(uint32_t *)dqevent.u.data;
@@ -837,7 +758,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
 
 static const int event_type[] = {
     V4L2_EVENT_MSM_VIDC_FLUSH_DONE,
-    V4L2_EVENT_MSM_VIDC_PORT_SETTINGS_CHANGED_SUFFICIENT,
     V4L2_EVENT_MSM_VIDC_PORT_SETTINGS_CHANGED_INSUFFICIENT,
     V4L2_EVENT_MSM_VIDC_RELEASE_BUFFER_REFERENCE,
     V4L2_EVENT_MSM_VIDC_RELEASE_UNQUEUED_BUFFER,
