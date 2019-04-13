@@ -117,7 +117,6 @@ LOCAL_SRC_FILES   += src/video_encoder_device_v4l2_params.cpp
 include $(BUILD_SHARED_LIBRARY)
 
 ifneq ($(call is-board-platform-in-list, $(TARGETS_THAT_DONT_NEED_SW_VENC_MPEG4)),true)
-ifneq ($(TARGET_PRODUCT),qssi)
 # ---------------------------------------------------------------------------------
 # 			Make the Shared library (libOmxSwVencMpeg4)
 # ---------------------------------------------------------------------------------
@@ -168,7 +167,7 @@ LOCAL_SRC_FILES   += src/omx_swvenc_mpeg4.cpp
 
 include $(BUILD_SHARED_LIBRARY)
 endif
-endif
+
 
 # ---------------------------------------------------------------------------------
 # 					END
