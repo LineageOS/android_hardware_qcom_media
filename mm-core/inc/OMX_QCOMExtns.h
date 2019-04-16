@@ -1426,15 +1426,57 @@ typedef enum OMX_QCOM_EXTRADATATYPE
     OMX_ExtraDataInputROIInfo =            0x7F000058,
 } OMX_QCOM_EXTRADATATYPE;
 
+/**
+ * Basic extradata includes:
+ *     decoder: output_crop, num_concealed_mb, interlaced_format,
+                vui_display_info, vpx_color, mpeg2_seqdisp, MLL, CLL
+       encoder: none
+   Others are advanced extradata, except encoder ROI
+ */
+typedef enum OMX_QCOM_EXTRADATACATEGORY {
+    OMX_QCOM_ExtraDataCategory_Basic =      1,
+    OMX_QCOM_ExtraDataCategory_Advanced =   2,
+    OMX_QCOM_ExtraDataCategory_Enc_ROI =    4,
+} OMX_QCOM_EXTRADATA_ENABLE_TYPE;
+
+/**
+ * Below enums are used to indicate the type of each
+ * extradata packet in the extradata buffer.
+ */
+typedef enum OMX_QCOM_VIDC_EXTRADATATYPE
+{
+    OMX_QCOM_VIDC_ExtraData_None =                      0x00000000,
+    OMX_QCOM_VIDC_ExtraData_InterlaceFormat =           0x00000002,
+    OMX_QCOM_VIDC_ExtraData_Timestamp =                 0x00000005,
+    OMX_QCOM_VIDC_ExtraData_FramePacking =              0x00000006,
+    OMX_QCOM_VIDC_ExtraData_FrameRate =                 0x00000007,
+    OMX_QCOM_VIDC_ExtraData_PanscanWindow =             0x00000008,
+    OMX_QCOM_VIDC_ExtraData_RecoveryPointSEI =          0x00000009,
+    OMX_QCOM_VIDC_ExtraData_Mpeg2SeqDisp =              0x0000000D,
+    OMX_QCOM_VIDC_ExtraData_StreamUserData =            0x0000000E,
+    OMX_QCOM_VIDC_ExtraData_FrameQP =                   0x0000000F,
+    OMX_QCOM_VIDC_ExtraData_FrameBitsInfo =             0x00000010,
+    OMX_QCOM_VIDC_ExtraData_VPXColorSpaceInfo =         0x00000014,
+    OMX_QCOM_VIDC_ExtraData_MasteringDisplayColourSEI = 0x00000015,
+    OMX_QCOM_VIDC_ExtraData_ContentLightLevelSEI =      0x00000016,
+    OMX_QCOM_VIDC_ExtraData_UBWCStatInfo =              0x00000019,
+    OMX_QCOM_VIDC_ExtraData_OutputCropInfo =            0x0700000F,
+    OMX_QCOM_VIDC_ExtraData_ROIInfo =                   0x7F000058,
+    OMX_QCOM_VIDC_ExtraData_NumConcealedMB =            0x7F100001,
+    OMX_QCOM_VIDC_ExtraData_Index =                     0x7F100002,
+    OMX_QCOM_VIDC_ExtraData_AspectRatio =               0x7F100003,
+    OMX_QCOM_VIDC_ExtraData_LTRInfo =                   0x7F100004,
+    OMX_QCOM_VIDC_ExtraData_VUIDisplayInfo =            0x7F100006,
+} OMX_QCOM_VIDC_EXTRADATATYPE;
+
 struct ExtraDataMap {
         const char *type;
-        OMX_QCOM_EXTRADATATYPE index;
+        OMX_QCOM_VIDC_EXTRADATATYPE index;
 };
 static const struct ExtraDataMap kExtradataMap[] = {
-        { "ltrinfo", OMX_ExtraDataVideoLTRInfo },
-        { "mbinfo", OMX_ExtraDataVideoEncoderMBInfo },
-        { "outputcropinfo", OMX_ExtraDataOutputCropInfo },
-        { "roiinfo", OMX_ExtraDataInputROIInfo },
+        { "outputcropinfo", OMX_QCOM_VIDC_ExtraData_OutputCropInfo },
+        { "ltrinfo", OMX_QCOM_VIDC_ExtraData_LTRInfo },
+        { "concealmbinfo", OMX_QCOM_VIDC_ExtraData_NumConcealedMB },
 };
 
 static inline OMX_S32 getIndexForExtradataType(char * type) {
@@ -1770,13 +1812,6 @@ typedef struct QOMX_VIDEO_OUTPUT_FRAME_RATE {
 
 #define OMX_QCOM_INDEX_PARAM_VIDEO_SYNCFRAMEDECODINGMODE "OMX.QCOM.index.param.video.SyncFrameDecodingMode"
 #define OMX_QCOM_INDEX_PARAM_INDEXEXTRADATA "OMX.QCOM.index.param.IndexExtraData"
-#define OMX_QCOM_INDEX_PARAM_VIDEO_FRAMEPACKING_EXTRADATA "OMX.QCOM.index.param.video.FramePackingExtradata"
-#define OMX_QCOM_INDEX_PARAM_VIDEO_QP_EXTRADATA "OMX.QCOM.index.param.video.QPExtradata"
-#define OMX_QCOM_INDEX_PARAM_VIDEO_INPUTBITSINFO_EXTRADATA "OMX.QCOM.index.param.video.InputBitsInfoExtradata"
-#define OMX_QCOM_INDEX_PARAM_VIDEO_EXTNUSER_EXTRADATA "OMX.QCOM.index.param.video.ExtnUserExtraData"
-#define OMX_QCOM_INDEX_PARAM_VIDEO_EXTNOUTPUTCROP_EXTRADATA "OMX.QCOM.index.param.video.ExtnOutputCropExtraData"
-#define OMX_QCOM_INDEX_CONFIG_VIDEO_FRAMEPACKING_INFO "OMX.QCOM.index.config.video.FramePackingInfo"
-#define OMX_QCOM_INDEX_PARAM_VIDEO_MPEG2SEQDISP_EXTRADATA "OMX.QCOM.index.param.video.Mpeg2SeqDispExtraData"
 
 #define OMX_QCOM_INDEX_PARAM_VIDEO_HIERSTRUCTURE "OMX.QCOM.index.param.video.HierStructure"
 #define OMX_QCOM_INDEX_PARAM_VIDEO_LTRCOUNT "OMX.QCOM.index.param.video.LTRCount"

@@ -629,10 +629,10 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                        OMX_U32 frameWidth = portDefn->format.video.nFrameWidth;
                                        OMX_U32 frameHeight = portDefn->format.video.nFrameHeight;
                                        if (frameHeight != 0x0 && frameWidth != 0x0) {
-                                           m_extradata_info.output_crop_rect.nLeft = 0;
-                                           m_extradata_info.output_crop_rect.nTop = 0;
-                                           m_extradata_info.output_crop_rect.nWidth = frameWidth;
-                                           m_extradata_info.output_crop_rect.nHeight = frameHeight;
+                                           m_extradata_misr.output_crop_rect.nLeft = 0;
+                                           m_extradata_misr.output_crop_rect.nTop = 0;
+                                           m_extradata_misr.output_crop_rect.nWidth = frameWidth;
+                                           m_extradata_misr.output_crop_rect.nHeight = frameHeight;
 
                                            update_resolution(frameWidth, frameHeight,
                                                    frameWidth, frameHeight);
@@ -997,23 +997,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                             pictureOrder->eOutputPictureOrder == QOMX_VIDEO_DECODE_ORDER;
                                      break;
                                  }
-        case OMX_QcomIndexParamConcealMBMapExtraData:
-        case OMX_QcomIndexParamInterlaceExtraData:
-        case OMX_QcomIndexParamOutputCropExtraData:
-                               /* extradata default is set by default */
-                               VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
-                               break;
-
-
-        case OMX_QcomIndexParamFrameInfoExtraData:
-        case OMX_ExtraDataFrameDimension:
-        case OMX_QcomIndexParamH264TimeInfo:
-        case OMX_QcomIndexParamVideoFramePackingExtradata:
-        case OMX_QcomIndexParamVideoQPExtraData:
-        case OMX_QcomIndexEnableExtnUserData:
-                               VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
-                               eRet = enable_extradata(EXTRADATA_ADVANCED);
-                               break;
         case OMX_QcomIndexParamVideoSyncFrameDecodingMode: {
                                        DEBUG_PRINT_HIGH("set_parameter: OMX_QcomIndexParamVideoSyncFrameDecodingMode");
                                        DEBUG_PRINT_HIGH("set idr only decoding for thumbnail mode");
@@ -1048,10 +1031,15 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                    }
                                    break;
         case OMX_QcomIndexParamIndexExtraDataType: {
-                                    VALIDATE_OMX_PARAM_DATA(paramData, QOMX_INDEXEXTRADATATYPE);
-                                    QOMX_INDEXEXTRADATATYPE *extradataIndexType = (QOMX_INDEXEXTRADATATYPE *) paramData;
-                                }
-                                break;
+            VALIDATE_OMX_PARAM_DATA(paramData, QOMX_INDEXEXTRADATATYPE);
+            QOMX_INDEXEXTRADATATYPE *extradataIndexType = (QOMX_INDEXEXTRADATATYPE *) paramData;
+            /* Basic extradata is enabled by default, only check for advanced extradata */
+            if (extradataIndexType->nIndex == (OMX_INDEXTYPE)OMX_QCOM_ExtraDataCategory_Advanced) {
+                m_client_extradata |= EXTRADATA_ADVANCED;
+                eRet = enable_extradata(m_client_extradata);
+            }
+            break;
+        }
 #if defined (_ANDROID_HONEYCOMB_) || defined (_ANDROID_ICS_)
                                   /* Need to allow following two set_parameters even in Idle
                                    * state. This is ANDROID architecture which is not in sync

@@ -359,8 +359,6 @@ class venc_dev
         OMX_ERRORTYPE allocate_extradata(struct extradata_buffer_info *extradata_info, int flags);
         void free_extradata_all();
         void free_extradata(struct extradata_buffer_info *extradata_info);
-        void append_extradata_ltrinfo(OMX_OTHER_EXTRADATATYPE *, struct msm_vidc_extradata_header *);
-        void append_extradata_none(OMX_OTHER_EXTRADATATYPE *);
         bool handle_output_extradata(void *, int);
         bool handle_input_extradata(struct v4l2_buffer);
         bool venc_handle_client_input_extradata(void *);
@@ -470,7 +468,6 @@ class venc_dev
 
         int metadatamode;
         bool streaming[MAX_PORT];
-        bool extradata;
         struct extradata_buffer_info input_extradata_info;
         struct extradata_buffer_info output_extradata_info;
         bool m_hdr10meta_enabled;
