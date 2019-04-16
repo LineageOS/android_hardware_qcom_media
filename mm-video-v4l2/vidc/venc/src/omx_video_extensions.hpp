@@ -144,6 +144,9 @@ void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
     ADD_PARAM    ("type", OMX_AndroidVendorValueString)
     ADD_PARAM    ("rect-payload", OMX_AndroidVendorValueString)
     ADD_PARAM_END("rect-payload-ext", OMX_AndroidVendorValueString)
+
+    ADD_EXTENSION("qti-ext-enc-roiinfo-rect-mode", OMX_QTIIndexConfigVideoRoiRectRegionInfo, OMX_DirOutput)
+    ADD_PARAM_END("enable", OMX_AndroidVendorValueInt32)
 }
 
 OMX_ERRORTYPE omx_video::get_vendor_extension_config(
@@ -375,10 +378,14 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
         }
         case OMX_QTIIndexConfigVideoRoiRectRegionInfo:
         {
-            setStatus &= vExt.setParamInt64(ext, "timestamp", 0);
-            setStatus &= vExt.setParamString(ext, "type", "rect");
-            setStatus &= vExt.setParamString(ext, "rect-payload", "");
-            setStatus &= vExt.setParamString(ext, "rect-payload-ext", "");
+            if (vExt.paramCount() == 1) {
+                setStatus &= vExt.setParamInt32(ext, "enable", 1);
+            } else {
+                setStatus &= vExt.setParamInt64(ext, "timestamp", 0);
+                setStatus &= vExt.setParamString(ext, "type", "rect");
+                setStatus &= vExt.setParamString(ext, "rect-payload", "");
+                setStatus &= vExt.setParamString(ext, "rect-payload-ext", "");
+            }
             break;
         }
         default:
@@ -945,6 +952,9 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
         }
         case OMX_QTIIndexConfigVideoRoiRectRegionInfo:
         {
+            if (vExt.paramCount() == 1) {
+                break;
+            }
             uint32_t format = m_sOutPortDef.format.video.eCompressionFormat;
             if (format != OMX_VIDEO_CodingHEVC && format != OMX_VIDEO_CodingAVC) {
                 DEBUG_PRINT_ERROR("ROI-Ext: only support avc or hevc");

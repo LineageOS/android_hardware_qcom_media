@@ -606,6 +606,7 @@ class venc_dev
             OMX_QTI_VIDEO_CONFIG_ROIINFO info;
         };
         bool m_roi_enabled;
+        int m_roi_type;
         pthread_mutex_t m_roilock;
         std::list<roidata> m_roilist;
         void get_roi_for_timestamp(struct roidata &roi, OMX_TICKS timestamp);
