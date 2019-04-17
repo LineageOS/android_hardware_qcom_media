@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -36,6 +36,10 @@
 #include <string>
 #include <map>
 
+#ifdef ENABLE_CONFIGSTORE
+#include <vendor/qti/hardware/capabilityconfigstore/1.0/ICapabilityConfigStore.h>
+#endif
+
 #ifdef __cplusplus
     extern "C" {
 #endif
@@ -43,6 +47,11 @@
 namespace Platform {
 
 typedef std::map<std::string, std::string> ConfigMap;
+
+#ifdef ENABLE_CONFIGSTORE
+using namespace android;
+using vendor::qti::hardware::capabilityconfigstore::V1_0::ICapabilityConfigStore;
+#endif
 
 typedef enum {
     OK = 0,
@@ -89,9 +98,17 @@ class Config {
         ConfigMap mConfigMap;
         static Config* mInstance;
 
+#ifdef ENABLE_CONFIGSTORE
+        android::sp<ICapabilityConfigStore> mConfigStore;
+#endif
+
     public:
         static ConfigError_t getInt32(Config_t config, int32_t *value,
                 const int32_t defaultValue);
+
+        static bool isConfigStoreEnabled();
+        static ConfigError_t getConfigStoreBool(const char *area,
+                const char *config, bool &value, const bool defaultValue);
 };
 
 }
