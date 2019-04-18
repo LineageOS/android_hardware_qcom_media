@@ -20,12 +20,6 @@ LOCAL_VENDOR_MODULE    := true
 LOCAL_C_INCLUDES       := $(libarbitrarybytes-inc)
 LOCAL_CFLAGS           := $(libarbitrarybytes-def)
 
-LOCAL_SANITIZE := integer_overflow
-ifeq ($(TARGET_ENABLE_VIDC_INTSAN_DIAG), true)
-$(warning INTSAN_DIAG_ENABLED)
-LOCAL_SANITIZE_DIAG := integer_overflow
-endif
-
 LOCAL_HEADER_LIBRARIES := libutils_headers
 
 LOCAL_SHARED_LIBRARIES := liblog libcutils
