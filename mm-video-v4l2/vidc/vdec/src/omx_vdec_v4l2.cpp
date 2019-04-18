@@ -9098,6 +9098,7 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                 case MSM_VIDC_EXTRADATA_FRAME_BITS_INFO:
                 case MSM_VIDC_EXTRADATA_S3D_FRAME_PACKING:
                 case MSM_VIDC_EXTRADATA_PANSCAN_WINDOW:
+                case MSM_VIDC_EXTRADATA_HDR_HIST:
                     // skip unused extra data
                     break;
                 default:

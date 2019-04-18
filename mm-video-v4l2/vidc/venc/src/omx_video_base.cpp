@@ -1845,7 +1845,7 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 VALIDATE_OMX_PARAM_DATA(paramData, QOMX_INDEXEXTRADATATYPE);
                 DEBUG_PRINT_LOW("get_parameter: OMX_QcomIndexParamIndexExtraDataType");
                 QOMX_INDEXEXTRADATATYPE *pParam = (QOMX_INDEXEXTRADATATYPE *)paramData;
-                if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QCOM_ExtraDataCategory_Advanced) {
+                if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Advanced) {
                     if (pParam->nPortIndex == PORT_INDEX_OUT) {
                         pParam->bEnabled = (OMX_BOOL)(m_sExtraData & EXTRADATA_ADVANCED);
                         DEBUG_PRINT_HIGH("Advanced extradata %d", pParam->bEnabled);
@@ -1854,7 +1854,7 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                 "valid for output port only");
                         eRet = OMX_ErrorUnsupportedIndex;
                     }
-                } else if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QCOM_ExtraDataCategory_Enc_ROI) {
+                } else if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Enc_ROI) {
                     if (pParam->nPortIndex == PORT_INDEX_IN) {
                         pParam->bEnabled = (OMX_BOOL)(m_sExtraData & EXTRADATA_ENC_INPUT_ROI);
                         DEBUG_PRINT_HIGH("ROI %d", pParam->bEnabled);

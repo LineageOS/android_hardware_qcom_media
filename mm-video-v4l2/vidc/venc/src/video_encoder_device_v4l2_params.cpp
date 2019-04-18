@@ -927,10 +927,10 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 DEBUG_PRINT_LOW("venc_set_param: OMX_QcomIndexParamIndexExtraDataType");
                 QOMX_INDEXEXTRADATATYPE *pParam = (QOMX_INDEXEXTRADATATYPE *)paramData;
 
-                if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QCOM_ExtraDataCategory_Enc_ROI &&
+                if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Enc_ROI &&
                         m_sVenc_cfg.codectype != V4L2_PIX_FMT_H264 &&
                         m_sVenc_cfg.codectype != V4L2_PIX_FMT_HEVC) {
-                    DEBUG_PRINT_ERROR("OMX_QCOM_ExtraDataCategory_Enc_ROI is not supported for %lu codec", m_sVenc_cfg.codectype);
+                    DEBUG_PRINT_ERROR("OMX_QTI_ExtraDataCategory_Enc_ROI is not supported for %lu codec", m_sVenc_cfg.codectype);
                     return false;
                 }
 
@@ -939,7 +939,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                     return false;
                 }
 
-                if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QCOM_ExtraDataCategory_Enc_ROI && pParam->bEnabled)
+                if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Enc_ROI && pParam->bEnabled)
                     m_roi_enabled = true;
 
                 break;
@@ -1199,10 +1199,10 @@ bool venc_dev::venc_set_extradata(OMX_U32 extra_data, OMX_BOOL enable)
 
     control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
     switch (extra_data) {
-        case OMX_QCOM_ExtraDataCategory_Advanced:
+        case OMX_QTI_ExtraDataCategory_Advanced:
             control.value = EXTRADATA_ADVANCED;
             break;
-        case OMX_QCOM_ExtraDataCategory_Enc_ROI:
+        case OMX_QTI_ExtraDataCategory_Enc_ROI:
             control.value = EXTRADATA_ENC_INPUT_ROI;
             break;
         default:
