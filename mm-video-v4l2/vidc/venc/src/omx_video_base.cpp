@@ -2346,9 +2346,49 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
                         pParam->sAspects.mTransfer = ColorAspects::TransferSMPTE170M;
                         pParam->sAspects.mMatrixCoeffs = ColorAspects::MatrixBT601_6;
                     } else {
-                        // For IMPLEMENTATION_DEFINED (or anything else), stick to client's defaults.
-                        DEBUG_PRINT_INFO("get_config (dataspace changed): ColorSpace: use client-default for format=%x",
-                                pParam->nPixelFormat);
+                         DEBUG_PRINT_INFO("get_config (dataspace changed): dataspace=0x%x", pParam->nDataSpace);
+                         if (pParam->nDataSpace == HAL_DATASPACE_JFIF || pParam->nDataSpace == HAL_DATASPACE_V0_JFIF) {
+                             DEBUG_PRINT_INFO("get_config (dataspace changed): ColorSpace: for HAL_DATASPACE_JFIF");
+                             pParam->sAspects.mPrimaries = ColorAspects::PrimariesBT601_6_625;
+                             pParam->sAspects.mRange = ColorAspects::RangeFull;
+                             pParam->sAspects.mTransfer = ColorAspects::TransferSMPTE170M;
+                             pParam->sAspects.mMatrixCoeffs = ColorAspects::MatrixBT601_6;
+                         } else if (pParam->nDataSpace == HAL_DATASPACE_BT601_525 || pParam->nDataSpace == HAL_DATASPACE_V0_BT601_525) {
+                             DEBUG_PRINT_INFO("get_config (dataspace changed): ColorSpace: for HAL_DATASPACE_BT601_525");
+                             pParam->sAspects.mPrimaries = ColorAspects::PrimariesBT601_6_525;
+                             pParam->sAspects.mRange = ColorAspects::RangeLimited;
+                             pParam->sAspects.mTransfer = ColorAspects::TransferSMPTE170M;
+                             pParam->sAspects.mMatrixCoeffs = ColorAspects::MatrixBT601_6;
+                         } else if (pParam->nDataSpace == HAL_DATASPACE_BT601_625 || pParam->nDataSpace == HAL_DATASPACE_V0_BT601_625) {
+                             DEBUG_PRINT_INFO("get_config (dataspace changed): ColorSpace: for HAL_DATASPACE_BT601_625");
+                             pParam->sAspects.mPrimaries = ColorAspects::PrimariesBT601_6_625;
+                             pParam->sAspects.mRange = ColorAspects::RangeLimited;
+                             pParam->sAspects.mTransfer = ColorAspects::TransferSMPTE170M;
+                             pParam->sAspects.mMatrixCoeffs = ColorAspects::MatrixBT601_6;
+                         } else if (pParam->nDataSpace == HAL_DATASPACE_BT709 || pParam->nDataSpace == HAL_DATASPACE_V0_BT709) {
+                             DEBUG_PRINT_INFO("get_config (dataspace changed): ColorSpace: for HAL_DATASPACE_BT709");
+                             pParam->sAspects.mPrimaries = ColorAspects::PrimariesBT709_5;
+                             pParam->sAspects.mRange = ColorAspects::RangeLimited;
+                             pParam->sAspects.mTransfer = ColorAspects::TransferSMPTE170M;
+                             pParam->sAspects.mMatrixCoeffs = ColorAspects::MatrixBT709_5;
+                         } else if (pParam->nDataSpace == HAL_DATASPACE_BT2020) {
+                             DEBUG_PRINT_INFO("get_config (dataspace changed): ColorSpace: for HAL_DATASPACE_BT2020");
+                             pParam->sAspects.mPrimaries = ColorAspects::PrimariesBT2020;
+                             pParam->sAspects.mRange = ColorAspects::RangeFull;
+                             pParam->sAspects.mTransfer = ColorAspects::TransferSMPTE170M;
+                             pParam->sAspects.mMatrixCoeffs = ColorAspects::MatrixBT2020;
+                         } else if (pParam->nDataSpace == (HAL_DATASPACE_STANDARD_BT2020|HAL_DATASPACE_TRANSFER_HLG|HAL_DATASPACE_RANGE_LIMITED)) {
+                             //For SONY HDR
+                             DEBUG_PRINT_INFO("get_config (dataspace changed): ColorSpace: for HAL_DATASPACE_STANDARD_BT2020|HAL_DATASPACE_TRANSFER_HLG|HAL_DATASPACE_RANGE_LIMITED");
+                             pParam->sAspects.mPrimaries = ColorAspects::PrimariesBT2020;
+                             pParam->sAspects.mRange = ColorAspects::RangeLimited;
+                             pParam->sAspects.mTransfer = ColorAspects::TransferHLG;
+                             pParam->sAspects.mMatrixCoeffs = ColorAspects::MatrixBT2020;
+                         } else {
+                             // Stick to client's defaults.
+                             DEBUG_PRINT_INFO("get_config (dataspace changed): ColorSpace: use client-default for format=%x",
+                             pParam->nPixelFormat);
+                         }
                     }
                     print_debug_color_aspects(&(pParam->sAspects), "get_config (dataspace changed) recommended");
                 } else {
