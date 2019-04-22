@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2013 - 2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2013 - 2019, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -158,6 +158,12 @@ public:
             ts.tv_sec  += 1;
         }
         int ret = pthread_cond_timedwait(&condition, &mutex, &ts);
+        //as the mutex lock is released inside timedwait first
+        //the singalled variant maybe changed by the main thread in some rare cases
+        //meanwhile still returns wait time out
+        //need to double check it and return 0 to process the last cmd/event during time out
+        if (signalled)
+            ret = 0;
         signalled = false;
         pthread_mutex_unlock(&mutex);
         return ret;

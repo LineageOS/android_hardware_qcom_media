@@ -4,10 +4,12 @@ include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES := \
         hypv_intercept.cpp
-LOCAL_C_INCLUDES = $(TOP)/hardware/qcom/media/mm-video-v4l2/vidc/common/inc
+LOCAL_C_INCLUDES := $(TOP)/hardware/qcom/media/mm-video-v4l2/vidc/common/inc \
+                    $(TOP)/system/core/include
 
-LOCAL_SHARED_LIBRARIES := liblog libdl
+LOCAL_SHARED_LIBRARIES := liblog libcutils libdl
 
+LOCAL_CFLAGS      := -D_ANDROID_
 LOCAL_MODULE_TAGS := optional
 
 LOCAL_MODULE := libhypv_intercept
