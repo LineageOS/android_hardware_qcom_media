@@ -1139,6 +1139,16 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 DEBUG_PRINT_INFO("Native recorder encode session %d", pParam->bEnable);
                 break;
             }
+        case OMX_QTIIndexParamVbvDelay:
+            {
+                OMX_EXTNINDEX_VIDEO_VBV_DELAY *pParam =
+                    (OMX_EXTNINDEX_VIDEO_VBV_DELAY*)paramData;
+                if (!venc_set_vbv_delay(pParam->nVbvDelay)) {
+                     DEBUG_PRINT_ERROR("Setting OMX_QTIIndexParamVbvDelay failed");
+                     return false;
+                }
+                break;
+            }
         default:
             DEBUG_PRINT_ERROR("ERROR: Unsupported parameter in venc_set_param: %u",
                     index);
@@ -1792,6 +1802,28 @@ bool venc_dev::venc_set_vpx_error_resilience(OMX_BOOL enable)
         return false;
     }
     vpx_err_resilience.enable = 1;
+    DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
+    return true;
+}
+
+bool venc_dev::venc_set_vbv_delay(OMX_U32 nVbvDelay)
+{
+    int rc = 0;
+    struct v4l2_control control;
+
+    control.id = V4L2_CID_MPEG_VIDEO_VBV_DELAY;
+    control.value = nVbvDelay;
+
+    DEBUG_PRINT_LOW("venc_set_vbv_delay: vbvdelay = %u", (unsigned int)control.value);
+
+    DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
+    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
+
+    if (rc) {
+        DEBUG_PRINT_ERROR("Failed to set vbv delay");
+        return false;
+    }
+
     DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
     return true;
 }

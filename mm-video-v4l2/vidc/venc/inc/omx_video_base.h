@@ -733,6 +733,7 @@ class omx_video: public qc_omx_component
         QOMX_ENABLETYPE m_sParamColorSpaceConversion;
         OMX_VIDEO_PARAM_ANDROID_IMAGEGRIDTYPE m_sParamAndroidImageGrid;
         QOMX_ENABLETYPE m_sParamLinearColorFormat;
+        OMX_EXTNINDEX_VIDEO_VBV_DELAY m_sParamVbvDelay;
 
         // fill this buffer queue
         omx_cmd_queue m_ftb_q;
