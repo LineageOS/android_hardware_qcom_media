@@ -6924,7 +6924,10 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
             // of the YUVs. Output buffers are cache-invalidated in driver.
             // If color-conversion is involved, Only the C2D output buffers are cached, no
             // need to cache the decoder's output buffers
-            int cache_flag = client_buffers.is_color_conversion_enabled() ? 0 : ION_FLAG_CACHED;
+            int cache_flag = ION_FLAG_CACHED;
+            if (intermediate == true && client_buffers.is_color_conversion_enabled()) {
+                cache_flag = 0;
+            }
             bool status = alloc_map_ion_memory(drv_ctx.op_buf.buffer_size,
                                                &(*omx_op_buf_ion_info)[i],
                     (secure_mode && !secure_scaling_to_non_secure_opb) ?
