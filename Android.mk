@@ -10,8 +10,8 @@ endif #TARGET_USES_QMAA
 #Compile these for all targets under QCOM_BOARD_PLATFORMS list.
 ifeq ($(call is-board-platform-in-list, $(QCOM_BOARD_PLATFORMS)),true)
 include $(QCOM_MEDIA_ROOT)/libstagefrighthw/Android.mk
-endif
 include $(QCOM_MEDIA_ROOT)/mm-core/Android.mk
+endif
 
 ifeq ($(call is-board-platform-in-list, $(MSM_VIDC_TARGET_LIST)),true)
 ifeq ($(VIDC_STUB_HAL),false)
