@@ -732,10 +732,10 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
             do {
                 extraDataParam.bEnabled = OMX_TRUE;
                 if (!strcmp(token, "advanced")) {
-                    extraDataParam.nIndex = (OMX_INDEXTYPE)OMX_QCOM_ExtraDataCategory_Advanced;
+                    extraDataParam.nIndex = (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Advanced;
                     extraDataParam.nPortIndex = (OMX_U32)PORT_INDEX_OUT;
                 } else if (!strcmp(token, "roiinfo")) {
-                    extraDataParam.nIndex = (OMX_INDEXTYPE)OMX_QCOM_ExtraDataCategory_Enc_ROI;
+                    extraDataParam.nIndex = (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Enc_ROI;
                     extraDataParam.nPortIndex = (OMX_U32)PORT_INDEX_IN;
                 } else {
                     DEBUG_PRINT_HIGH("extradata %s not supported ", token);

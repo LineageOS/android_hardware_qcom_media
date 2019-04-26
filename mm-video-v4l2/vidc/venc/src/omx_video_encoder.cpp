@@ -1320,7 +1320,7 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 QOMX_INDEXEXTRADATATYPE *pParam = (QOMX_INDEXEXTRADATATYPE *)paramData;
                 OMX_U32 mask = 0;
 
-                if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QCOM_ExtraDataCategory_Advanced) {
+                if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Advanced) {
                     if (pParam->nPortIndex == PORT_INDEX_OUT) {
                         if (pParam->bEnabled == OMX_TRUE)
                             mask = EXTRADATA_ADVANCED;
@@ -1333,7 +1333,7 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                         eRet = OMX_ErrorUnsupportedIndex;
                         break;
                     }
-                } else if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QCOM_ExtraDataCategory_Enc_ROI) {
+                } else if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Enc_ROI) {
                     if (pParam->nPortIndex == PORT_INDEX_IN) {
                         if (pParam->bEnabled == OMX_TRUE)
                             mask = EXTRADATA_ENC_INPUT_ROI;

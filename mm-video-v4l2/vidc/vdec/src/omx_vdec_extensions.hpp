@@ -193,9 +193,9 @@ OMX_ERRORTYPE omx_vdec::set_vendor_extension_config(
                 extraDataParam.nPortIndex = OMX_CORE_OUTPUT_PORT_INDEX;
                 extraDataParam.bEnabled = OMX_TRUE;
                 if (!strcmp(token, "basic")) {
-                    extraDataParam.nIndex = (OMX_INDEXTYPE)OMX_QCOM_ExtraDataCategory_Basic;
+                    extraDataParam.nIndex = (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Basic;
                 } else if (!strcmp(token, "advanced")) {
-                    extraDataParam.nIndex = (OMX_INDEXTYPE)OMX_QCOM_ExtraDataCategory_Advanced;
+                    extraDataParam.nIndex = (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Advanced;
                 } else {
                     DEBUG_PRINT_HIGH("extradata %s not supported", token);
                     continue;

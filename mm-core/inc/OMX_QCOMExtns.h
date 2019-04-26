@@ -1436,50 +1436,51 @@ typedef enum OMX_QCOM_EXTRADATATYPE
        encoder: none
    Others are advanced extradata, except encoder ROI
  */
-typedef enum OMX_QCOM_EXTRADATACATEGORY {
-    OMX_QCOM_ExtraDataCategory_Basic =      1,
-    OMX_QCOM_ExtraDataCategory_Advanced =   2,
-    OMX_QCOM_ExtraDataCategory_Enc_ROI =    4,
-} OMX_QCOM_EXTRADATA_ENABLE_TYPE;
+typedef enum OMX_QTI_EXTRADATACATEGORY {
+    OMX_QTI_ExtraDataCategory_Basic =       1,
+    OMX_QTI_ExtraDataCategory_Advanced =    2,
+    OMX_QTI_ExtraDataCategory_Enc_ROI =     4,
+} OMX_QTI_EXTRADATA_ENABLE_TYPE;
 
 /**
  * Below enums are used to indicate the type of each
  * extradata packet in the extradata buffer.
  */
-typedef enum OMX_QCOM_VIDC_EXTRADATATYPE
+typedef enum OMX_QTI_VIDC_EXTRADATATYPE
 {
-    OMX_QCOM_VIDC_ExtraData_None =                      0x00000000,
-    OMX_QCOM_VIDC_ExtraData_InterlaceFormat =           0x00000002,
-    OMX_QCOM_VIDC_ExtraData_Timestamp =                 0x00000005,
-    OMX_QCOM_VIDC_ExtraData_FramePacking =              0x00000006,
-    OMX_QCOM_VIDC_ExtraData_FrameRate =                 0x00000007,
-    OMX_QCOM_VIDC_ExtraData_PanscanWindow =             0x00000008,
-    OMX_QCOM_VIDC_ExtraData_RecoveryPointSEI =          0x00000009,
-    OMX_QCOM_VIDC_ExtraData_Mpeg2SeqDisp =              0x0000000D,
-    OMX_QCOM_VIDC_ExtraData_StreamUserData =            0x0000000E,
-    OMX_QCOM_VIDC_ExtraData_FrameQP =                   0x0000000F,
-    OMX_QCOM_VIDC_ExtraData_FrameBitsInfo =             0x00000010,
-    OMX_QCOM_VIDC_ExtraData_VPXColorSpaceInfo =         0x00000014,
-    OMX_QCOM_VIDC_ExtraData_MasteringDisplayColourSEI = 0x00000015,
-    OMX_QCOM_VIDC_ExtraData_ContentLightLevelSEI =      0x00000016,
-    OMX_QCOM_VIDC_ExtraData_UBWCStatInfo =              0x00000019,
-    OMX_QCOM_VIDC_ExtraData_OutputCropInfo =            0x0700000F,
-    OMX_QCOM_VIDC_ExtraData_ROIInfo =                   0x7F000058,
-    OMX_QCOM_VIDC_ExtraData_NumConcealedMB =            0x7F100001,
-    OMX_QCOM_VIDC_ExtraData_Index =                     0x7F100002,
-    OMX_QCOM_VIDC_ExtraData_AspectRatio =               0x7F100003,
-    OMX_QCOM_VIDC_ExtraData_LTRInfo =                   0x7F100004,
-    OMX_QCOM_VIDC_ExtraData_VUIDisplayInfo =            0x7F100006,
-} OMX_QCOM_VIDC_EXTRADATATYPE;
+    OMX_QTI_VIDC_ExtraData_None =                       0x00000000,
+    OMX_QTI_VIDC_ExtraData_InterlaceFormat =            0x00000002,
+    OMX_QTI_VIDC_ExtraData_Timestamp =                  0x00000005,
+    OMX_QTI_VIDC_ExtraData_FramePacking =               0x00000006,
+    OMX_QTI_VIDC_ExtraData_FrameRate =                  0x00000007,
+    OMX_QTI_VIDC_ExtraData_PanscanWindow =              0x00000008,
+    OMX_QTI_VIDC_ExtraData_RecoveryPointSEI =           0x00000009,
+    OMX_QTI_VIDC_ExtraData_Mpeg2SeqDisp =               0x0000000D,
+    OMX_QTI_VIDC_ExtraData_StreamUserData =             0x0000000E,
+    OMX_QTI_VIDC_ExtraData_FrameQP =                    0x0000000F,
+    OMX_QTI_VIDC_ExtraData_FrameBitsInfo =              0x00000010,
+    OMX_QTI_VIDC_ExtraData_VPXColorSpaceInfo =          0x00000014,
+    OMX_QTI_VIDC_ExtraData_MasteringDisplayColourSEI =  0x00000015,
+    OMX_QTI_VIDC_ExtraData_ContentLightLevelSEI =       0x00000016,
+    OMX_QTI_VIDC_ExtraData_UBWCStatInfo =               0x00000019,
+    OMX_QTI_VIDC_ExtraData_OutputCropInfo =             0x0700000F,
+    OMX_QTI_VIDC_ExtraData_ROIInfo =                    0x7F000058,
+    OMX_QTI_VIDC_ExtraData_NumConcealedMB =             0x7F100001,
+    OMX_QTI_VIDC_ExtraData_Index =                      0x7F100002,
+    OMX_QTI_VIDC_ExtraData_AspectRatio =                0x7F100003,
+    OMX_QTI_VIDC_ExtraData_LTRInfo =                    0x7F100004,
+    OMX_QTI_VIDC_ExtraData_VUIDisplayInfo =             0x7F100006,
+    OMX_QTI_VIDC_ExtraData_HDR10HIST =                  0x7F100008,
+} OMX_QTI_VIDC_EXTRADATATYPE;
 
 struct ExtraDataMap {
         const char *type;
-        OMX_QCOM_VIDC_EXTRADATATYPE index;
+        OMX_QTI_VIDC_EXTRADATATYPE index;
 };
 static const struct ExtraDataMap kExtradataMap[] = {
-        { "outputcropinfo", OMX_QCOM_VIDC_ExtraData_OutputCropInfo },
-        { "ltrinfo", OMX_QCOM_VIDC_ExtraData_LTRInfo },
-        { "concealmbinfo", OMX_QCOM_VIDC_ExtraData_NumConcealedMB },
+        { "outputcropinfo", OMX_QTI_VIDC_ExtraData_OutputCropInfo },
+        { "ltrinfo", OMX_QTI_VIDC_ExtraData_LTRInfo },
+        { "concealmbinfo", OMX_QTI_VIDC_ExtraData_NumConcealedMB },
 };
 
 static inline OMX_S32 getIndexForExtradataType(char * type) {
@@ -1500,6 +1501,107 @@ static inline const char * getStringForExtradataType(int64_t index) {
     }
     return NULL;
 }
+
+/* Start of definitions are extradata payload structures for OMX_QTI_VIDC_EXTRADATATYPE */
+
+/* Below extradata types payload structure are currently not exposed
+ *  OMX_QTI_VIDC_ExtraData_Mpeg2SeqDisp
+ *  OMX_QTI_VIDC_ExtraData_VPXColorSpaceInfo
+ *  OMX_QTI_VIDC_ExtraData_VUIDisplayInfo
+ *  OMX_QTI_VIDC_ExtraData_MasteringDisplayColourSEI
+ *  OMX_QTI_VIDC_ExtraData_ContentLightLevelSEI
+ *  OMX_QTI_VIDC_ExtraData_UBWCStatInfo
+ *  OMX_QTI_VIDC_ExtraData_HDR10HIST
+ */
+
+typedef enum OMX_QTI_VIDC_INTERLACE_FORMATTYPE {
+    OMX_QTI_VIDC_InterlaceFrameProgressive =                   0x1,
+    OMX_QTI_VIDC_InterlaceInterleaveFrameTopFieldFirst =       0x2,
+    OMX_QTI_VIDC_InterlaceInterleaveFrameBottomFieldFirst =    0x4,
+    OMX_QTI_VIDC_InterlaceFrameTopFieldFirst =                 0x8,
+    OMX_QTI_VIDC_InterlaceFrameBottomFieldFirst =              0x10,
+    OMX_QTI_VIDC_InterlaceMBAFF =                              0x20,
+} OMX_QTI_VIDC_INTERLACE_FORMATTYPE;
+
+typedef struct OMX_QTI_VIDC_EXTRADATA_INTERFACE_TYPE {
+    OMX_QTI_VIDC_INTERLACE_FORMATTYPE eInterlaceFormat;
+    OMX_U32 eColorFormat;
+} OMX_QTI_VIDC_EXTRADATA_INTERFACE_TYPE;
+
+typedef struct OMX_QTI_VIDC_EXTRADATA_TIMESTAMP_TYPE {
+    OMX_U32 nTimeStampLow;    /**< Lower 32 bit value of the time stamp */
+    OMX_U32 nTimeStampHigh;   /**< Higher 32 bit value of the time stamp */
+} OMX_QTI_VIDC_EXTRADATA_TIMESTAMP_TYPE;
+
+typedef struct OMX_QTI_VIDC_EXTRADATA_FRAMEPACKING_TYPE {
+    OMX_U32 id;
+    OMX_U32 cancel_flag;
+    OMX_U32 type;
+    OMX_U32 quincunx_sampling_flag;
+    OMX_U32 content_interpretation_type;
+    OMX_U32 spatial_flipping_flag;
+    OMX_U32 frame0_flipped_flag;
+    OMX_U32 field_views_flag;
+    OMX_U32 current_frame_is_frame0_flag;
+    OMX_U32 frame0_self_contained_flag;
+    OMX_U32 frame1_self_contained_flag;
+    OMX_U32 frame0_grid_position_x;
+    OMX_U32 frame0_grid_position_y;
+    OMX_U32 frame1_grid_position_x;
+    OMX_U32 frame1_grid_position_y;
+    OMX_U32 reserved_byte;
+    OMX_U32 repetition_period;
+    OMX_U32 extension_flag;
+} OMX_QTI_VIDC_EXTRADATA_FRAMEPACKING_TYPE;
+
+typedef struct OMX_QTI_VIDC_EXTRADATA_FRAMERATE_TYPE {
+    OMX_U32 xFrameRate;     /* In Q16 format */
+} OMX_QTI_VIDC_EXTRADATA_FRAMERATE_TYPE;
+
+typedef struct OMX_QTI_VIDC_WINDOW
+{
+    OMX_S32 dx;
+    OMX_S32 dy;
+    OMX_S32 x;
+    OMX_S32 y;
+} OMX_QTI_VIDC_WINDOW;
+
+typedef struct OMX_QTI_VIDC_EXTRADATA_PANSCAN_TYPE
+{
+    OMX_U32 numWindows;
+    OMX_QTI_VIDC_WINDOW window[MAX_PAN_SCAN_WINDOWS];
+} OMX_QTI_VIDC_EXTRADATA_PANSCAN_TYPE;
+
+typedef struct OMX_QTI_VIDC_EXTRADATA_RECOVERYSEI_TYPE {
+    OMX_U32 nFlag;     /* QOMX_VIDEO_RECOVERYSEITYPE */
+} OMX_QTI_VIDC_EXTRADATA_RECOVERYSEI_TYPE;
+
+typedef struct OMX_QTI_VIDC_EXTRADATA_CONCEALMB_TYPE {
+    OMX_U32 nNumMBConcealed;
+} OMX_QTI_VIDC_EXTRADATA_CONCEALMB_TYPE;
+
+typedef struct OMX_QTI_VIDC_EXTRADATA_LTRINFO_TYPE {
+    OMX_U32 nLTRInfo;
+} OMX_QTI_VIDC_EXTRADATA_LTRINFO_TYPE;
+
+typedef struct OMX_QCOM_EXTRADATA_USERDATA OMX_QTI_VIDC_EXTRADATA_USERDATA_TYPE;
+
+typedef struct OMX_QCOM_EXTRADATA_QP OMX_QTI_VIDC_EXTRADATA_FRAMEQP_TYPE;
+
+typedef struct OMX_QCOM_EXTRADATA_BITS_INFO OMX_QTI_VIDC_EXTRADATA_FRAMEBITS_TYPE;
+
+typedef struct OMX_QCOM_OUTPUT_CROP OMX_QTI_VIDC_EXTRADATA_OUTPUTCROP_TYPE;
+
+typedef struct OMX_QTI_VIDC_EXTRADATA_ASPECTRATIO_TYPE
+{
+    OMX_U32 nSize;
+    OMX_U32 nVersion;
+    OMX_U32 nPortIndex;
+    OMX_U32 aspectRatioX;
+    OMX_U32 aspectRatioY;
+} OMX_QTI_VIDC_EXTRADATA_ASPECTRATIO_TYPE;
+
+/* End of definitions for extradata payload structures for OMX_QTI_VIDC_EXTRADATATYPE */
 
 typedef struct  OMX_STREAMINTERLACEFORMATTYPE {
     OMX_U32 nSize;

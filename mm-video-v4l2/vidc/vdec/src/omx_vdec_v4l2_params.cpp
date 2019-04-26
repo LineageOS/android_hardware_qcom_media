@@ -1034,7 +1034,7 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             VALIDATE_OMX_PARAM_DATA(paramData, QOMX_INDEXEXTRADATATYPE);
             QOMX_INDEXEXTRADATATYPE *extradataIndexType = (QOMX_INDEXEXTRADATATYPE *) paramData;
             /* Basic extradata is enabled by default, only check for advanced extradata */
-            if (extradataIndexType->nIndex == (OMX_INDEXTYPE)OMX_QCOM_ExtraDataCategory_Advanced) {
+            if (extradataIndexType->nIndex == (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Advanced) {
                 m_client_extradata |= EXTRADATA_ADVANCED;
                 eRet = enable_extradata(m_client_extradata);
             }
