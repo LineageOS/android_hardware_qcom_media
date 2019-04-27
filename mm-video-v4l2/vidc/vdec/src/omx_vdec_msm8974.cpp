@@ -1230,7 +1230,7 @@ void omx_vdec::process_event_cb(void *ctxt, unsigned char id)
                                                 (pThis->framesize.nHeight !=
                                                     pThis->drv_ctx.video_resolution.frame_height)) {
 
-                                                DEBUG_PRINT_HIGH("Resolution changed from: wxh = %dx%d to: wxh = %dx%d",
+                                                DEBUG_PRINT_HIGH("Resolution changed from: wxh = %lux%lu to: wxh = %dx%d",
                                                         pThis->framesize.nWidth,
                                                         pThis->framesize.nHeight,
                                                         pThis->drv_ctx.video_resolution.frame_width,
@@ -1258,7 +1258,7 @@ void omx_vdec::process_event_cb(void *ctxt, unsigned char id)
                                             if (pThis->rectangle.nLeft + pThis->rectangle.nWidth >
                                                 pThis->drv_ctx.video_resolution.frame_width) {
 
-                                                DEBUG_PRINT_HIGH("Crop L[%u] + R[%u] > W[%u]",
+                                                DEBUG_PRINT_HIGH("Crop L[%ld] + R[%lu] > W[%u]",
                                                         pThis->rectangle.nLeft, pThis->rectangle.nWidth,
                                                         pThis->drv_ctx.video_resolution.frame_width);
                                                 pThis->rectangle.nLeft = 0;
@@ -1266,7 +1266,7 @@ void omx_vdec::process_event_cb(void *ctxt, unsigned char id)
                                                 if (pThis->rectangle.nWidth >
                                                     pThis->drv_ctx.video_resolution.frame_width) {
 
-                                                    DEBUG_PRINT_HIGH("Crop R[%u] > W[%u]",
+                                                    DEBUG_PRINT_HIGH("Crop R[%lu] > W[%u]",
                                                             pThis->rectangle.nWidth,
                                                             pThis->drv_ctx.video_resolution.frame_width);
                                                     pThis->rectangle.nWidth =
@@ -1276,7 +1276,7 @@ void omx_vdec::process_event_cb(void *ctxt, unsigned char id)
                                             if (pThis->rectangle.nTop + pThis->rectangle.nHeight >
                                                 pThis->drv_ctx.video_resolution.frame_height) {
 
-                                                DEBUG_PRINT_HIGH("Crop T[%u] + B[%u] > H[%u]",
+                                                DEBUG_PRINT_HIGH("Crop T[%ld] + B[%lu] > H[%u]",
                                                     pThis->rectangle.nTop, pThis->rectangle.nHeight,
                                                     pThis->drv_ctx.video_resolution.frame_height);
                                                 pThis->rectangle.nTop = 0;
@@ -1284,18 +1284,18 @@ void omx_vdec::process_event_cb(void *ctxt, unsigned char id)
                                                 if (pThis->rectangle.nHeight >
                                                     pThis->drv_ctx.video_resolution.frame_height) {
 
-                                                    DEBUG_PRINT_HIGH("Crop B[%u] > H[%u]",
+                                                    DEBUG_PRINT_HIGH("Crop B[%lu] > H[%u]",
                                                         pThis->rectangle.nHeight,
                                                         pThis->drv_ctx.video_resolution.frame_height);
                                                     pThis->rectangle.nHeight =
                                                         pThis->drv_ctx.video_resolution.frame_height;
                                                 }
                                             }
-                                            DEBUG_PRINT_HIGH("Updated Crop Info: L: %u, T: %u, R: %u, B: %u",
+                                            DEBUG_PRINT_HIGH("Updated Crop Info: L: %ld, T: %ld, R: %lu, B: %lu",
                                                     pThis->rectangle.nLeft, pThis->rectangle.nTop,
                                                     pThis->rectangle.nWidth, pThis->rectangle.nHeight);
                                         } else {
-                                            DEBUG_PRINT_ERROR("Rxd Invalid PORT_RECONFIG event (%lu)", p2);
+                                            DEBUG_PRINT_ERROR("Rxd Invalid PORT_RECONFIG event (%d)", p2);
                                             break;
                                         }
                                         if (pThis->m_cb.EventHandler) {
@@ -1788,7 +1788,7 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
 
         property_get("persist.vidc.dec.conceal_color", property_value, DEFAULT_CONCEAL_COLOR);
         m_conceal_color= atoi(property_value);
-        DEBUG_PRINT_HIGH("trying to set 0x%x as conceal color\n",m_conceal_color);
+        DEBUG_PRINT_HIGH("trying to set 0x%lx as conceal color\n", m_conceal_color);
         control.id = V4L2_CID_MPEG_VIDC_VIDEO_CONCEAL_COLOR;
         control.value = m_conceal_color;
         ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control);
@@ -3168,7 +3168,7 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                        }
                                    }
                                    if (portDefn->nBufferCountActual > MAX_NUM_INPUT_OUTPUT_BUFFERS) {
-                                       DEBUG_PRINT_ERROR("Requested o/p buf count (%u) exceeds limit(%u)",
+                                       DEBUG_PRINT_ERROR("Requested o/p buf count (%lu) exceeds limit(%u)",
                                                                portDefn->nBufferCountActual, MAX_NUM_INPUT_OUTPUT_BUFFERS);
                                        eRet = OMX_ErrorBadParameter;
                                    } else if (!client_buffers.get_buffer_req(buffer_size)) {
@@ -3287,13 +3287,13 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                    }
                                    if (m_custom_buffersize.input_buffersize
                                         && (portDefn->nBufferSize > m_custom_buffersize.input_buffersize)) {
-                                       DEBUG_PRINT_ERROR("ERROR: Custom buffer size set by client: %d, trying to set: %d",
+                                       DEBUG_PRINT_ERROR("ERROR: Custom buffer size set by client: %lu, trying to set: %lu",
                                                m_custom_buffersize.input_buffersize, portDefn->nBufferSize);
                                        eRet = OMX_ErrorBadParameter;
                                        break;
                                    }
                                    if (portDefn->nBufferCountActual > MAX_NUM_INPUT_OUTPUT_BUFFERS) {
-                                       DEBUG_PRINT_ERROR("Requested i/p buf count (%u) exceeds limit (%u)",
+                                       DEBUG_PRINT_ERROR("Requested i/p buf count (%lu) exceeds limit (%u)",
                                                portDefn->nBufferCountActual, MAX_NUM_INPUT_OUTPUT_BUFFERS);
                                        eRet = OMX_ErrorBadParameter;
                                        break;
@@ -3884,7 +3884,7 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     eRet = get_buffer_req(&drv_ctx.ip_buf);
                     if (eRet == OMX_ErrorNone) {
                         m_custom_buffersize.input_buffersize = drv_ctx.ip_buf.buffer_size;
-                        DEBUG_PRINT_HIGH("Successfully set custom input buffer size = %d",
+                        DEBUG_PRINT_HIGH("Successfully set custom input buffer size = %lu",
                             m_custom_buffersize.input_buffersize);
                     } else {
                         DEBUG_PRINT_ERROR("Failed to get buffer requirement");
@@ -3982,7 +3982,7 @@ OMX_ERRORTYPE  omx_vdec::get_config(OMX_IN OMX_HANDLETYPE      hComp,
                                   VALIDATE_OMX_PARAM_DATA(configData, OMX_CONFIG_RECTTYPE);
                                   OMX_CONFIG_RECTTYPE *rect = (OMX_CONFIG_RECTTYPE *) configData;
                                   memcpy(rect, &rectangle, sizeof(OMX_CONFIG_RECTTYPE));
-                                  DEBUG_PRINT_HIGH("get_config: crop info: L: %u, T: %u, R: %u, B: %u",
+                                  DEBUG_PRINT_HIGH("get_config: crop info: L: %ld, T: %ld, R: %lu, B: %lu",
                                         rectangle.nLeft, rectangle.nTop,
                                         rectangle.nWidth, rectangle.nHeight);
                                   break;
@@ -4116,7 +4116,7 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
         return ret;
     } else if ((int)configIndex == (int)OMX_IndexConfigPriority) {
         OMX_PARAM_U32TYPE *priority = (OMX_PARAM_U32TYPE *)configData;
-        DEBUG_PRINT_LOW("Set_config: priority %d", priority->nU32);
+        DEBUG_PRINT_LOW("Set_config: priority %lu", priority->nU32);
 
         struct v4l2_control control;
 
@@ -4133,7 +4133,7 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
         return ret;
     } else if ((int)configIndex == (int)OMX_IndexConfigOperatingRate) {
         OMX_PARAM_U32TYPE *rate = (OMX_PARAM_U32TYPE *)configData;
-        DEBUG_PRINT_LOW("Set_config: operating-rate %u fps", rate->nU32 >> 16);
+        DEBUG_PRINT_LOW("Set_config: operating-rate %lu fps", rate->nU32 >> 16);
 
         struct v4l2_control control;
 
@@ -4143,7 +4143,7 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
         if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
             ret = errno == -EBUSY ? OMX_ErrorInsufficientResources :
                     OMX_ErrorUnsupportedSetting;
-            DEBUG_PRINT_ERROR("Failed to set operating rate %u fps (%s)",
+            DEBUG_PRINT_ERROR("Failed to set operating rate %lu fps (%s)",
                     rate->nU32 >> 16, errno == -EBUSY ? "HW Overload" : strerror(errno));
         }
         return ret;
@@ -6973,7 +6973,7 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
                buffer->nFilledLen = 0;
             }
 
-            DEBUG_PRINT_LOW(" -- %s Frame -- info:: fps(%d) lastRenderTime(%lld) bufferTs(%lld) ts_delta(%d)",
+            DEBUG_PRINT_LOW(" -- %s Frame -- info:: fps(%d) lastRenderTime(%lld) bufferTs(%lld) ts_delta(%lld)",
                               buffer->nFilledLen? "Rendering":"Dropping",current_framerate,m_last_rendered_TS,
                               il_buffer->nTimeStamp,ts_delta);
         }
@@ -7251,7 +7251,7 @@ int omx_vdec::async_message_process (void *context, void* message)
                         || (omx->drv_ctx.video_resolution.frame_width != vdec_msg->msgdata.output_frame.picsize.frame_width)
                         || (omx->drv_ctx.video_resolution.frame_height != vdec_msg->msgdata.output_frame.picsize.frame_height) )) {
 
-                        DEBUG_PRINT_HIGH("Paramters Changed From: Len: %u, WxH: %dx%d, L: %u, T: %u, R: %u, B: %u --> Len: %u, WxH: %dx%d, L: %u, T: %u, R: %u, B: %u",
+                        DEBUG_PRINT_HIGH("Paramters Changed From: Len: %lu, WxH: %dx%d, L: %u, T: %u, R: %lu, B: %u --> Len: %u, WxH: %dx%d, L: %u, T: %u, R: %u, B: %u",
                                 omx->prev_n_filled_len,
                                 omx->drv_ctx.video_resolution.frame_width,
                                 omx->drv_ctx.video_resolution.frame_height,
@@ -7307,7 +7307,7 @@ int omx_vdec::async_message_process (void *context, void* message)
                                  (unsigned long)vdec_msg->msgdata.output_frame.offset),
                                 vdec_msg->msgdata.output_frame.len);
                 } else {
-                    DEBUG_PRINT_ERROR("Invalid filled length = %u, buffer size = %u, prev_length = %u",
+                    DEBUG_PRINT_ERROR("Invalid filled length = %u, buffer size = %lu, prev_length = %lu",
                             (unsigned int)vdec_msg->msgdata.output_frame.len,
                             omxhdr->nAllocLen, omx->prev_n_filled_len);
                     omxhdr->nFilledLen = 0;
@@ -8332,7 +8332,7 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
         portDefn->format.video.nSliceHeight = drv_ctx.video_resolution.frame_height;
     }
     DEBUG_PRINT_HIGH("update_portdef(%lu): Width = %lu Height = %lu Stride = %ld "
-            "SliceHeight = %lu eColorFormat = %lu nBufSize %lu nBufCnt %lu",
+            "SliceHeight = %lu eColorFormat = %u nBufSize %lu nBufCnt %lu",
             portDefn->nPortIndex,
             portDefn->format.video.nFrameWidth,
             portDefn->format.video.nFrameHeight,
@@ -9013,7 +9013,6 @@ void omx_vdec::print_debug_extradata(OMX_OTHER_EXTRADATATYPE *extra)
                 "                         type: %lu \n"
                 " quincunx_sampling_flagFormat: %lu \n"
                 "  content_interpretation_type: %lu \n"
-                "  content_interpretation_type: %lu \n"
                 "        spatial_flipping_flag: %lu \n"
                 "          frame0_flipped_flag: %lu \n"
                 "             field_views_flag: %lu \n"
@@ -9068,8 +9067,8 @@ void omx_vdec::print_debug_extradata(OMX_OTHER_EXTRADATATYPE *extra)
         OMX_U32 i = 0;
         DEBUG_PRINT_HIGH(
                 "--------------  Userdata  -------------\n"
-                "    Stream userdata type: %d\n"
-                "          userdata size: %d\n"
+                "    Stream userdata type: %lu\n"
+                "          userdata size: %lu\n"
                 "    STREAM_USERDATA:",
                 userdata->type, userdata_size);
                 for (i = 0; i < userdata_size; i+=4) {
@@ -9830,7 +9829,7 @@ void omx_vdec::buf_ref_add(OMX_U32 fd, OMX_U32 offset)
         if ((out_dynamic_list[i].fd == fd) &&
             (out_dynamic_list[i].offset == offset)) {
                out_dynamic_list[i].ref_count++;
-               DEBUG_PRINT_LOW("buf_ref_add: [ALREADY PRESENT] fd = %d ref_count = %d",
+               DEBUG_PRINT_LOW("buf_ref_add: [ALREADY PRESENT] fd = %lu ref_count = %lu",
                      out_dynamic_list[i].fd, out_dynamic_list[i].ref_count);
                buf_present = true;
                break;
@@ -9844,7 +9843,7 @@ void omx_vdec::buf_ref_add(OMX_U32 fd, OMX_U32 offset)
                 out_dynamic_list[i].offset = offset;
                 out_dynamic_list[i].dup_fd = dup(fd);
                 out_dynamic_list[i].ref_count++;
-                DEBUG_PRINT_LOW("buf_ref_add: [ADDED] fd = %d ref_count = %d",
+                DEBUG_PRINT_LOW("buf_ref_add: [ADDED] fd = %lu ref_count = %lu",
                      out_dynamic_list[i].fd, out_dynamic_list[i].ref_count);
                 break;
             }
@@ -9865,7 +9864,7 @@ void omx_vdec::buf_ref_remove(OMX_U32 fd, OMX_U32 offset)
             out_dynamic_list[i].ref_count--;
             if (out_dynamic_list[i].ref_count == 0) {
                 close(out_dynamic_list[i].dup_fd);
-                DEBUG_PRINT_LOW("buf_ref_remove: [REMOVED] fd = %d ref_count = %d",
+                DEBUG_PRINT_LOW("buf_ref_remove: [REMOVED] fd = %lu ref_count = %lu",
                      out_dynamic_list[i].fd, out_dynamic_list[i].ref_count);
                 out_dynamic_list[i].dup_fd = 0;
                 out_dynamic_list[i].fd = 0;
@@ -10081,7 +10080,7 @@ OMX_ERRORTYPE omx_vdec::describeColorFormat(OMX_PTR pParam) {
     };
 
     DEBUG_PRINT_LOW("NOTE: Describe color format : %x", params->eColorFormat);
-    DEBUG_PRINT_LOW("  FrameWidth x FrameHeight : %d x %d", params->nFrameWidth, params->nFrameHeight);
+    DEBUG_PRINT_LOW("  FrameWidth x FrameHeight : %lu x %lu", params->nFrameWidth, params->nFrameHeight);
     DEBUG_PRINT_LOW("  YWidth x YHeight : %d x %d", img->mWidth, img->mHeight);
     for (size_t i = 0; i < img->mNumPlanes; ++i) {
         DEBUG_PRINT_LOW("    Plane[%d] : offset=%d / xStep=%d / yStep = %d",

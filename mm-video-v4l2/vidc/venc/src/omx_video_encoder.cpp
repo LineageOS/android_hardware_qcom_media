@@ -530,7 +530,7 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     DEBUG_PRINT_LOW("i/p buffersize requested = %lu", portDefn->nBufferSize);
 
                     if (portDefn->nBufferCountActual > MAX_NUM_INPUT_BUFFERS) {
-                        DEBUG_PRINT_ERROR("ERROR: (In_PORT) actual count (%lu) exceeds max(%lu)",
+                        DEBUG_PRINT_ERROR("ERROR: (In_PORT) actual count (%u) exceeds max(%u)",
                                              (unsigned int)portDefn->nBufferCountActual, (unsigned int)MAX_NUM_INPUT_BUFFERS);
                         return OMX_ErrorUnsupportedSetting;
                     }
@@ -2096,7 +2096,7 @@ int omx_venc::async_message_process (void *context, void* message)
             break;
 #endif
         default:
-            DEBUG_PRINT_HIGH("Unknown msg received : %d", m_sVenc_msg->msgcode);
+            DEBUG_PRINT_HIGH("Unknown msg received : %lu", m_sVenc_msg->msgcode);
             break;
     }
     return 0;
