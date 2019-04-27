@@ -235,11 +235,13 @@ qc_omx_component_get_state(OMX_IN OMX_HANDLETYPE  hComp,
 }
 
  OMX_ERRORTYPE
-qc_omx_component_tunnel_request(OMX_IN OMX_HANDLETYPE                hComp,
-                       OMX_IN OMX_U32                        port,
-                       OMX_IN OMX_HANDLETYPE        peerComponent,
-                       OMX_IN OMX_U32                    peerPort,
-                       OMX_INOUT OMX_TUNNELSETUPTYPE* tunnelSetup)
+qc_omx_component_tunnel_request(
+     OMX_IN OMX_HANDLETYPE           /* hComp */,
+     OMX_IN OMX_U32                  /* port */,
+     OMX_IN OMX_HANDLETYPE           /* peerComponent */,
+     OMX_IN OMX_U32                  /* peerPort */,
+     OMX_INOUT OMX_TUNNELSETUPTYPE * /* tunnelSetup */
+     )
 {
   DEBUG_PRINT("Error: qc_omx_component_tunnel_request Not Implemented\n");
   return OMX_ErrorNotImplemented;

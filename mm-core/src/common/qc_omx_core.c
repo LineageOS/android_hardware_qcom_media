@@ -552,10 +552,12 @@ RETURN VALUE
   None.
 ========================================================================== */
 OMX_API OMX_ERRORTYPE OMX_APIENTRY
-OMX_SetupTunnel(OMX_IN OMX_HANDLETYPE outputComponent,
-                OMX_IN OMX_U32             outputPort,
-                OMX_IN OMX_HANDLETYPE  inputComponent,
-                OMX_IN OMX_U32              inputPort)
+OMX_SetupTunnel(
+    OMX_IN OMX_HANDLETYPE /* outputComponent */,
+    OMX_IN OMX_U32        /* outputPort */,
+    OMX_IN OMX_HANDLETYPE /* inputComponent */,
+    OMX_IN OMX_U32        /* inputPort */
+    )
 {
   /* Not supported right now */
   DEBUG_PRINT("OMXCORE API: OMX_SetupTunnel Not implemented \n");
@@ -575,8 +577,10 @@ RETURN VALUE
   None.
 ========================================================================== */
 OMX_API OMX_ERRORTYPE
-OMX_GetContentPipe(OMX_OUT OMX_HANDLETYPE* pipe,
-                   OMX_IN OMX_STRING        uri)
+OMX_GetContentPipe(
+    OMX_OUT OMX_HANDLETYPE * /* pipe */,
+    OMX_IN  OMX_STRING       /* uri */
+    )
 {
   /* Not supported right now */
   DEBUG_PRINT("OMXCORE API: OMX_GetContentPipe Not implemented \n");
