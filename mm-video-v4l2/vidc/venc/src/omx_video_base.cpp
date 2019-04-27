@@ -1882,7 +1882,7 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     reinterpret_cast<OMX_QCOM_VIDEO_PARAM_PEAK_BITRATE*>(paramData);
                 DEBUG_PRINT_LOW("get_parameter: OMX_QcomIndexParamPeakBitrate");
                 if (!dev_get_peak_bitrate(&peakbitrate)) {
-                    DEBUG_PRINT_ERROR("Invalid entry returned from get_peak_bitrate %d",
+                    DEBUG_PRINT_ERROR("Invalid entry returned from get_peak_bitrate %lu",
                         pParam->nPeakBitrate);
                 } else {
                     pParam->nPeakBitrate = peakbitrate;
@@ -3407,7 +3407,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE         
         media_buffer = (LEGACY_CAM_METADATA_TYPE *)meta_buffer_hdr[nBufIndex].pBuffer;
         if ((media_buffer->buffer_type == LEGACY_CAM_SOURCE)
                 && buffer->nAllocLen != sizeof(LEGACY_CAM_METADATA_TYPE)) {
-            DEBUG_PRINT_ERROR("Invalid metadata size expected(%u) v/s recieved(%zu)",
+            DEBUG_PRINT_ERROR("Invalid metadata size expected(%lu) v/s recieved(%zu)",
                     buffer->nAllocLen, sizeof(LEGACY_CAM_METADATA_TYPE));
             met_error = true;
         } else if (media_buffer) {
@@ -4252,7 +4252,7 @@ OMX_ERRORTYPE omx_video::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVE
                 profileLevelType->eLevel   = OMX_VIDEO_AVCLevel4;
 #endif
             } else {
-                DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoProfileLevelQuerySupported nProfileIndex ret NoMore %d",
+                DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoProfileLevelQuerySupported nProfileIndex ret NoMore %lu",
                         profileLevelType->nProfileIndex);
                 eRet = OMX_ErrorNoMore;
             }
@@ -4583,7 +4583,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
     media_buffer = (VideoGrallocMetadata *)buffer->pBuffer;
     if ((media_buffer->eType == LEGACY_CAM_SOURCE)
             && buffer->nAllocLen != sizeof(LEGACY_CAM_METADATA_TYPE)) {
-        DEBUG_PRINT_ERROR("Invalid metadata size expected(%u) v/s recieved(%zu)",
+        DEBUG_PRINT_ERROR("Invalid metadata size expected(%lu) v/s recieved(%zu)",
                 buffer->nAllocLen, sizeof(LEGACY_CAM_METADATA_TYPE));
         return OMX_ErrorBadParameter;
     }

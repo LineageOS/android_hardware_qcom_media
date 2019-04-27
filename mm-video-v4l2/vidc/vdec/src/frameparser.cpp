@@ -505,7 +505,7 @@ int frame_parse::parse_h264_nallength (OMX_BUFFERHEADERTYPE *source,
         } else {
             DEBUG_PRINT_ERROR("FrameParser: NAL Parsing Error!"
                 "Buffer recieved with source_len = %lu and with"
-                "flags %u", source_len, source->nFlags);
+                "flags %lu", source_len, source->nFlags);
             return -1;
         }
     }
