@@ -1914,7 +1914,7 @@ OMX_ERRORTYPE omx_swvdec::free_buffer(OMX_HANDLETYPE        cmp_handle,
 
         retval = OMX_ErrorBadPortIndex;
     }
-    else if (m_state != OMX_StateIdle)
+    else if (m_state != OMX_StateIdle && !(m_status_flags & (1 << PENDING_STATE_LOADED_TO_IDLE)))
     {
         if (m_state != OMX_StateExecuting)
         {
