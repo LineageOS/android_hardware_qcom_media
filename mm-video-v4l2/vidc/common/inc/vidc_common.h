@@ -62,6 +62,7 @@ class profile_level_converter {
     static pl_map        profile_avc_omx_to_v4l2;
     static pl_map        profile_hevc_omx_to_v4l2;
     static pl_map        profile_mpeg2_omx_to_v4l2;
+    static pl_map        profile_vp8_omx_to_v4l2;
     static pl_map        profile_vp9_omx_to_v4l2;
     static pl_map        level_avc_omx_to_v4l2;
     static pl_map        level_hevc_omx_to_v4l2;
@@ -76,6 +77,7 @@ class profile_level_converter {
     static pl_map        level_hevc_v4l2_to_omx;
     static pl_map        level_vp8_v4l2_to_omx;
     static pl_map        level_mpeg2_v4l2_to_omx;
+    static pl_map        profile_vp8_v4l2_to_omx;
     static pl_map        level_vp9_v4l2_to_omx;
     static codec_map     profile_omx_to_v4l2_map;
     static codec_map     profile_v4l2_to_omx_map;
