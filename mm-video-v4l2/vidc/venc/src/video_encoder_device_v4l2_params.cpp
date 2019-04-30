@@ -1264,8 +1264,7 @@ bool venc_dev::venc_set_profile(OMX_U32 eProfile)
     if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264) {
         control.id = V4L2_CID_MPEG_VIDEO_H264_PROFILE;
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8) {
-        //In driver VP8 profile is hardcoded. No need to set anything from here
-        return true;
+        control.id = V4L2_CID_MPEG_VIDEO_VP8_PROFILE;
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
         control.id = V4L2_CID_MPEG_VIDEO_HEVC_PROFILE;
     } else {

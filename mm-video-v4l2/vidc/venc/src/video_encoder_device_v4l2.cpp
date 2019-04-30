@@ -987,6 +987,7 @@ OMX_ERRORTYPE venc_dev::venc_get_supported_profile_level(OMX_VIDEO_PARAM_PROFILE
         profile_cap.id = V4L2_CID_MPEG_VIDEO_H264_PROFILE;
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8) {
         level_cap.id = V4L2_CID_MPEG_VIDC_VIDEO_VP8_PROFILE_LEVEL;
+        profile_cap.id = V4L2_CID_MPEG_VIDEO_VP8_PROFILE;
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
         level_cap.id = V4L2_CID_MPEG_VIDEO_HEVC_TIER;
         profile_cap.id = V4L2_CID_MPEG_VIDEO_HEVC_PROFILE;
@@ -1038,8 +1039,6 @@ OMX_ERRORTYPE venc_dev::venc_get_supported_profile_level(OMX_VIDEO_PARAM_PROFILE
                     (unsigned int)profileLevelType->nProfileIndex);
             return OMX_ErrorNoMore;
         }
-        /* Driver has no notion of VP8 profile and there is only one profile supported. Hence return here */
-        return OMX_ErrorNone;
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
         if (profileLevelType->nProfileIndex < (sizeof(hevc_profiles)/sizeof(int))) {
             profileLevelType->eProfile =  hevc_profiles[profileLevelType->nProfileIndex];
