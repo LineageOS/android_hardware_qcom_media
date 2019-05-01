@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2018, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2019, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -278,6 +278,7 @@ class omx_video: public qc_omx_component
         virtual bool is_secure_session(void) = 0;
         virtual int dev_handle_output_extradata(void*, int) = 0;
         virtual int dev_set_format(int) = 0;
+        virtual bool dev_query_cap(struct v4l2_queryctrl &) = 0;
         virtual bool dev_is_video_session_supported(OMX_U32 width, OMX_U32 height) = 0;
         virtual bool dev_get_capability_ltrcount(OMX_U32 *, OMX_U32 *, OMX_U32 *) = 0;
         virtual bool dev_get_vui_timing_info(OMX_U32 *) = 0;
