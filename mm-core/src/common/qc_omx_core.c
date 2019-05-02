@@ -49,7 +49,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "omx_core_cmp.h"
 #include <cutils/properties.h>
 
+#ifndef VIDC_STUB_HAL
 #include "ConfigStore.h"
+#endif
 
 extern omx_core_cb_type core[];
 extern const unsigned int SIZE_OF_CORE;
@@ -435,9 +437,14 @@ OMX_GetHandle(OMX_OUT OMX_HANDLETYPE*     handle,
       if (!strncmp(core[cmp_index].so_lib_name, hwDecLib, strlen(hwDecLib)) ||
           !strncmp(core[cmp_index].so_lib_name, swDecLib, strlen(swDecLib))) {
         bool isVppEnabled = false;
-        if (isConfigStoreEnabled()) {
+        bool isCSEnabled = false;
+#ifndef VIDC_STUB_HAL
+        isCSEnabled = isConfigStoreEnabled();
+        if (isCSEnabled) {
           getConfigStoreBool("vpp", "enable", &isVppEnabled, false);
-        } else {
+        }
+#endif
+        if (!isCSEnabled) {
           char value[PROPERTY_VALUE_MAX];
           if ((property_get("vendor.media.vpp.enable", value, NULL))
                && (!strcmp("1", value) || !strcmp("true", value))) {
