@@ -413,7 +413,9 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     m_sParamMPEG4.bSVH = OMX_FALSE;
     m_sParamMPEG4.bGov = OMX_FALSE;
     // 2 second intra period for default outport fps
+    if(m_sOutPortFormat.xFramerate)
     m_sParamMPEG4.nPFrames = (m_sOutPortFormat.xFramerate * 2 - 1);
+
     m_sParamMPEG4.bACPred = OMX_TRUE;
     // delta = 2 @ 15 fps
     m_sParamMPEG4.nTimeIncRes = 30;
@@ -427,7 +429,9 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     OMX_INIT_STRUCT(&m_sParamH263, OMX_VIDEO_PARAM_H263TYPE);
     m_sParamH263.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
     // 2 second intra period for default outport fps
+    if(m_sOutPortFormat.xFramerate)
     m_sParamH263.nPFrames = (m_sOutPortFormat.xFramerate * 2 - 1);
+
     m_sParamH263.nBFrames = 0;
     m_sParamH263.eProfile = OMX_VIDEO_H263ProfileBaseline;
     m_sParamH263.eLevel = OMX_VIDEO_H263Level10;
