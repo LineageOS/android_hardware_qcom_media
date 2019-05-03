@@ -656,14 +656,13 @@ void omx_video::process_event_cb(void *ctxt, unsigned char id)
    OMX_ErrorNone.
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_video::get_component_version
-(
- OMX_IN OMX_HANDLETYPE hComp,
- OMX_OUT OMX_STRING componentName,
- OMX_OUT OMX_VERSIONTYPE* componentVersion,
- OMX_OUT OMX_VERSIONTYPE* specVersion,
- OMX_OUT OMX_UUIDTYPE* componentUUID
- )
+OMX_ERRORTYPE  omx_video::get_component_version(
+    OMX_IN OMX_HANDLETYPE    /* hComp */,
+    OMX_OUT OMX_STRING       /* componentName */,
+    OMX_OUT OMX_VERSIONTYPE* /* componentVersion */,
+    OMX_OUT OMX_VERSIONTYPE* specVersion,
+    OMX_OUT OMX_UUIDTYPE*    /* componentUUID */
+    )
 {
     if (m_state == OMX_StateInvalid) {
         DEBUG_PRINT_ERROR("ERROR: Get Comp Version in Invalid State");
@@ -689,11 +688,12 @@ OMX_ERRORTYPE  omx_video::get_component_version
    true/false
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_video::send_command(OMX_IN OMX_HANDLETYPE hComp,
-        OMX_IN OMX_COMMANDTYPE cmd,
-        OMX_IN OMX_U32 param1,
-        OMX_IN OMX_PTR cmdData
-        )
+OMX_ERRORTYPE  omx_video::send_command(
+    OMX_IN OMX_HANDLETYPE  /* hComp */,
+    OMX_IN OMX_COMMANDTYPE cmd,
+    OMX_IN OMX_U32         param1,
+    OMX_IN OMX_PTR         cmdData
+    )
 {
     if (m_state == OMX_StateInvalid) {
         DEBUG_PRINT_ERROR("ERROR: Send Command in Invalid State");
@@ -736,11 +736,12 @@ OMX_ERRORTYPE  omx_video::send_command(OMX_IN OMX_HANDLETYPE hComp,
    true/false
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_video::send_command_proxy(OMX_IN OMX_HANDLETYPE hComp,
-        OMX_IN OMX_COMMANDTYPE cmd,
-        OMX_IN OMX_U32 param1,
-        OMX_IN OMX_PTR cmdData
-        )
+OMX_ERRORTYPE  omx_video::send_command_proxy(
+    OMX_IN OMX_HANDLETYPE  /* hComp */,
+    OMX_IN OMX_COMMANDTYPE cmd,
+    OMX_IN OMX_U32         param1,
+    OMX_IN OMX_PTR         /* cmdData */
+    )
 {
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
     OMX_STATETYPE eState = (OMX_STATETYPE) param1;
@@ -1420,9 +1421,11 @@ bool omx_video::post_event(unsigned int p1,
    Error None if successful.
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
-        OMX_IN OMX_INDEXTYPE paramIndex,
-        OMX_INOUT OMX_PTR     paramData)
+OMX_ERRORTYPE  omx_video::get_parameter(
+    OMX_IN OMX_HANDLETYPE /* hComp */,
+    OMX_IN OMX_INDEXTYPE  paramIndex,
+    OMX_INOUT OMX_PTR     paramData
+    )
 {
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
     unsigned int height=0,width = 0;
@@ -1924,9 +1927,11 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
    OMX Error None if successful.
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
-        OMX_IN OMX_INDEXTYPE configIndex,
-        OMX_INOUT OMX_PTR     configData)
+OMX_ERRORTYPE  omx_video::get_config(
+    OMX_IN OMX_HANDLETYPE /* hComp */,
+    OMX_IN OMX_INDEXTYPE  configIndex,
+    OMX_INOUT OMX_PTR     configData
+    )
 {
     ////////////////////////////////////////////////////////////////
     // Supported Config Index           Type
@@ -2026,9 +2031,11 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
    OMX Error None if everything successful.
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_video::get_extension_index(OMX_IN OMX_HANDLETYPE      hComp,
-        OMX_IN OMX_STRING      paramName,
-        OMX_OUT OMX_INDEXTYPE* indexType)
+OMX_ERRORTYPE  omx_video::get_extension_index(
+    OMX_IN OMX_HANDLETYPE  /* hComp */,
+    OMX_IN OMX_STRING      paramName,
+    OMX_OUT OMX_INDEXTYPE* indexType
+    )
 {
     if (m_state == OMX_StateInvalid) {
         DEBUG_PRINT_ERROR("ERROR: Get Extension Index in Invalid State");
@@ -2069,8 +2076,10 @@ OMX_ERRORTYPE  omx_video::get_extension_index(OMX_IN OMX_HANDLETYPE      hComp,
    RETURN VALUE
    Error None if everything is successful.
    ========================================================================== */
-OMX_ERRORTYPE  omx_video::get_state(OMX_IN OMX_HANDLETYPE  hComp,
-        OMX_OUT OMX_STATETYPE* state)
+OMX_ERRORTYPE  omx_video::get_state(
+    OMX_IN OMX_HANDLETYPE  /* hComp */,
+    OMX_OUT OMX_STATETYPE* state
+    )
 {
     *state = m_state;
     DEBUG_PRINT_LOW("get_state: Returning the state %d",*state);
@@ -2091,11 +2100,13 @@ OMX_ERRORTYPE  omx_video::get_state(OMX_IN OMX_HANDLETYPE  hComp,
    OMX Error None if everything successful.
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_video::component_tunnel_request(OMX_IN OMX_HANDLETYPE                hComp,
-        OMX_IN OMX_U32                        port,
-        OMX_IN OMX_HANDLETYPE        peerComponent,
-        OMX_IN OMX_U32                    peerPort,
-        OMX_INOUT OMX_TUNNELSETUPTYPE* tunnelSetup)
+OMX_ERRORTYPE  omx_video::component_tunnel_request(
+    OMX_IN OMX_HANDLETYPE          /* hComp */,
+    OMX_IN OMX_U32                 /* port */,
+    OMX_IN OMX_HANDLETYPE          /* peerComponent */,
+    OMX_IN OMX_U32                 /* peerPort */,
+    OMX_INOUT OMX_TUNNELSETUPTYPE* /* tunnelSetup */
+    )
 {
     DEBUG_PRINT_ERROR("ERROR: component_tunnel_request Not Implemented");
     return OMX_ErrorNotImplemented;
@@ -2116,12 +2127,13 @@ OMX_ERRORTYPE  omx_video::component_tunnel_request(OMX_IN OMX_HANDLETYPE        
 
    ========================================================================== */
 OMX_ERRORTYPE  omx_video::use_input_buffer(
-        OMX_IN OMX_HANDLETYPE            hComp,
-        OMX_INOUT OMX_BUFFERHEADERTYPE** bufferHdr,
-        OMX_IN OMX_U32                   port,
-        OMX_IN OMX_PTR                   appData,
-        OMX_IN OMX_U32                   bytes,
-        OMX_IN OMX_U8*                   buffer)
+    OMX_IN OMX_HANDLETYPE            /* hComp */,
+    OMX_INOUT OMX_BUFFERHEADERTYPE** bufferHdr,
+    OMX_IN OMX_U32                   port,
+    OMX_IN OMX_PTR                   appData,
+    OMX_IN OMX_U32                   bytes,
+    OMX_IN OMX_U8*                   buffer
+    )
 {
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
 
@@ -2284,12 +2296,13 @@ OMX_ERRORTYPE  omx_video::use_input_buffer(
 
    ========================================================================== */
 OMX_ERRORTYPE  omx_video::use_output_buffer(
-        OMX_IN OMX_HANDLETYPE            hComp,
-        OMX_INOUT OMX_BUFFERHEADERTYPE** bufferHdr,
-        OMX_IN OMX_U32                   port,
-        OMX_IN OMX_PTR                   appData,
-        OMX_IN OMX_U32                   bytes,
-        OMX_IN OMX_U8*                   buffer)
+    OMX_IN OMX_HANDLETYPE            /* hComp */,
+    OMX_INOUT OMX_BUFFERHEADERTYPE** bufferHdr,
+    OMX_IN OMX_U32                   /* port */,
+    OMX_IN OMX_PTR                   appData,
+    OMX_IN OMX_U32                   bytes,
+    OMX_IN OMX_U8*                   buffer
+    )
 {
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
     OMX_BUFFERHEADERTYPE       *bufHdr= NULL; // buffer header
@@ -2727,11 +2740,12 @@ OMX_ERRORTYPE omx_video::allocate_input_meta_buffer(
 
    ========================================================================== */
 OMX_ERRORTYPE  omx_video::allocate_input_buffer(
-        OMX_IN OMX_HANDLETYPE            hComp,
-        OMX_INOUT OMX_BUFFERHEADERTYPE** bufferHdr,
-        OMX_IN OMX_U32                   port,
-        OMX_IN OMX_PTR                   appData,
-        OMX_IN OMX_U32                   bytes)
+    OMX_IN OMX_HANDLETYPE            /* hComp */,
+    OMX_INOUT OMX_BUFFERHEADERTYPE** bufferHdr,
+    OMX_IN OMX_U32                   /* port */,
+    OMX_IN OMX_PTR                   appData,
+    OMX_IN OMX_U32                   bytes
+    )
 {
 
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
@@ -2883,11 +2897,12 @@ OMX_ERRORTYPE  omx_video::allocate_input_buffer(
 
    ========================================================================== */
 OMX_ERRORTYPE  omx_video::allocate_output_buffer(
-        OMX_IN OMX_HANDLETYPE            hComp,
-        OMX_INOUT OMX_BUFFERHEADERTYPE** bufferHdr,
-        OMX_IN OMX_U32                   port,
-        OMX_IN OMX_PTR                   appData,
-        OMX_IN OMX_U32                   bytes)
+    OMX_IN OMX_HANDLETYPE           /* hComp */,
+    OMX_INOUT OMX_BUFFERHEADERTYPE** bufferHdr,
+    OMX_IN OMX_U32                  /* port */,
+    OMX_IN OMX_PTR                   appData,
+    OMX_IN OMX_U32                   bytes
+    )
 {
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
     OMX_BUFFERHEADERTYPE       *bufHdr= NULL; // buffer header
@@ -3152,9 +3167,11 @@ OMX_ERRORTYPE  omx_video::allocate_buffer(OMX_IN OMX_HANDLETYPE                h
    true/false
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_video::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
-        OMX_IN OMX_U32                 port,
-        OMX_IN OMX_BUFFERHEADERTYPE* buffer)
+OMX_ERRORTYPE  omx_video::free_buffer(
+    OMX_IN OMX_HANDLETYPE        /* hComp */,
+    OMX_IN OMX_U32               port,
+    OMX_IN OMX_BUFFERHEADERTYPE* buffer
+    )
 {
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
     unsigned int nPortIndex;
@@ -3377,8 +3394,10 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
    OMX Error None if everything went successful.
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE         hComp,
-        OMX_IN OMX_BUFFERHEADERTYPE* buffer)
+OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(
+    OMX_IN OMX_HANDLETYPE        /* hComp */,
+    OMX_IN OMX_BUFFERHEADERTYPE* buffer
+    )
 {
     OMX_U8 *pmem_data_buf = NULL;
     int push_cnt = 0;
@@ -3606,8 +3625,9 @@ OMX_ERRORTYPE  omx_video::fill_this_buffer(OMX_IN OMX_HANDLETYPE  hComp,
 
    ========================================================================== */
 OMX_ERRORTYPE  omx_video::fill_this_buffer_proxy(
-        OMX_IN OMX_HANDLETYPE        hComp,
-        OMX_IN OMX_BUFFERHEADERTYPE* bufferAdd)
+    OMX_IN OMX_HANDLETYPE        /* hComp */,
+    OMX_IN OMX_BUFFERHEADERTYPE* bufferAdd
+    )
 {
     OMX_U8 *pmem_data_buf = NULL;
     OMX_ERRORTYPE nRet = OMX_ErrorNone;
@@ -3657,9 +3677,11 @@ OMX_ERRORTYPE  omx_video::fill_this_buffer_proxy(
    OMX Error None if everything successful.
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_video::set_callbacks(OMX_IN OMX_HANDLETYPE        hComp,
-        OMX_IN OMX_CALLBACKTYPE* callbacks,
-        OMX_IN OMX_PTR             appData)
+OMX_ERRORTYPE  omx_video::set_callbacks(
+    OMX_IN OMX_HANDLETYPE    /* hComp */,
+    OMX_IN OMX_CALLBACKTYPE* callbacks,
+    OMX_IN OMX_PTR           appData
+    )
 {
 
     m_pCallbacks       = *callbacks;
@@ -3684,11 +3706,13 @@ OMX_ERRORTYPE  omx_video::set_callbacks(OMX_IN OMX_HANDLETYPE        hComp,
    Not Implemented error.
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_video::use_EGL_image(OMX_IN OMX_HANDLETYPE                hComp,
-        OMX_INOUT OMX_BUFFERHEADERTYPE** bufferHdr,
-        OMX_IN OMX_U32                        port,
-        OMX_IN OMX_PTR                     appData,
-        OMX_IN void*                      eglImage)
+OMX_ERRORTYPE  omx_video::use_EGL_image(
+    OMX_IN OMX_HANDLETYPE            /* hComp */,
+    OMX_INOUT OMX_BUFFERHEADERTYPE** /* bufferHdr */,
+    OMX_IN OMX_U32                   /* port */,
+    OMX_IN OMX_PTR                   /* appData */,
+    OMX_IN void*                     /* eglImage */
+    )
 {
     DEBUG_PRINT_ERROR("ERROR: use_EGL_image:  Not Implemented");
     return OMX_ErrorNotImplemented;
@@ -3707,9 +3731,11 @@ OMX_ERRORTYPE  omx_video::use_EGL_image(OMX_IN OMX_HANDLETYPE                hCo
    RETURN VALUE
    OMX Error None if everything is successful.
    ========================================================================== */
-OMX_ERRORTYPE  omx_video::component_role_enum(OMX_IN OMX_HANDLETYPE hComp,
-        OMX_OUT OMX_U8*        role,
-        OMX_IN OMX_U32        index)
+OMX_ERRORTYPE  omx_video::component_role_enum(
+    OMX_IN OMX_HANDLETYPE /* hComp */,
+    OMX_OUT OMX_U8*       role,
+    OMX_IN OMX_U32        index
+    )
 {
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
     if (!strncmp((char*)m_nkind, "OMX.qcom.video.decoder.mpeg4",OMX_MAX_STRINGNAME_SIZE)) {

@@ -481,8 +481,9 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
    OMX Error None if successful.
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
-        OMX_IN OMX_INDEXTYPE paramIndex,
+OMX_ERRORTYPE  omx_venc::set_parameter(
+        OMX_IN OMX_HANDLETYPE /* hComp */,
+        OMX_IN OMX_INDEXTYPE  paramIndex,
         OMX_IN OMX_PTR        paramData)
 {
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
@@ -1418,8 +1419,9 @@ bool omx_venc::update_profile_level()
    RETURN VALUE
    OMX Error None if successful.
    ========================================================================== */
-OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
-        OMX_IN OMX_INDEXTYPE configIndex,
+OMX_ERRORTYPE  omx_venc::set_config(
+        OMX_IN OMX_HANDLETYPE /* hComp */,
+        OMX_IN OMX_INDEXTYPE  configIndex,
         OMX_IN OMX_PTR        configData)
 {
     if (configData == NULL) {
@@ -1727,7 +1729,7 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
    OMX Error None if everything successful.
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_venc::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
+OMX_ERRORTYPE  omx_venc::component_deinit(OMX_IN OMX_HANDLETYPE /* hComp */)
 {
     OMX_U32 i = 0;
     DEBUG_PRINT_HIGH("omx_venc(): Inside component_deinit()");
@@ -1865,6 +1867,7 @@ bool omx_venc::dev_get_seq_hdr(void *buffer, unsigned size, unsigned *hdrlen)
 bool omx_venc::dev_get_capability_ltrcount(OMX_U32 *min, OMX_U32 *max, OMX_U32 *step_size)
 {
 #ifdef _MSM8974_
+    (void)min; (void)max; (void)step_size; /* suppress -Wunused-parameter compiler warning */
     DEBUG_PRINT_ERROR("Get Capability LTR Count is not supported");
     return false;
 #else
