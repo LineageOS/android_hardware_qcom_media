@@ -211,10 +211,10 @@ VideoHeap::VideoHeap(int fd, size_t size, void* base)
    None.
    ========================================================================== */
 omx_video::omx_video():
-    secure_session(false),
     c2d_opened(false),
     psource_frame(NULL),
     pdest_frame(NULL),
+    secure_session(false),
     mEmptyEosBuffer(NULL),
     m_pipe_in(-1),
     m_pipe_out(-1),
