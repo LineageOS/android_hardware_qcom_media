@@ -3135,8 +3135,8 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                                eRet = OMX_ErrorHardware;
                                                break;
                                            }
-                                           if ((portDefn->format.video.nFrameHeight != (int)fmt.fmt.pix_mp.height) ||
-                                               (portDefn->format.video.nFrameWidth != (int)fmt.fmt.pix_mp.width)) {
+                                           if ((portDefn->format.video.nFrameHeight != fmt.fmt.pix_mp.height) ||
+                                               (portDefn->format.video.nFrameWidth != fmt.fmt.pix_mp.width)) {
                                                    port_format_changed = true;
                                            }
                                            update_resolution(portDefn->format.video.nFrameWidth,
@@ -9821,7 +9821,7 @@ bool omx_vdec::allocate_color_convert_buf::get_color_format(OMX_COLOR_FORMATTYPE
 
 void omx_vdec::buf_ref_add(OMX_U32 fd, OMX_U32 offset)
 {
-    int i = 0;
+    unsigned int i = 0;
     bool buf_present = false;
     pthread_mutex_lock(&m_lock);
     for (i = 0; i < drv_ctx.op_buf.actualcount; i++) {
@@ -9855,7 +9855,7 @@ void omx_vdec::buf_ref_add(OMX_U32 fd, OMX_U32 offset)
 
 void omx_vdec::buf_ref_remove(OMX_U32 fd, OMX_U32 offset)
 {
-    int i = 0;
+    unsigned int i = 0;
     pthread_mutex_lock(&m_lock);
     for (i = 0; i < drv_ctx.op_buf.actualcount; i++) {
         //check the buffer fd, offset, uv addr with list contents

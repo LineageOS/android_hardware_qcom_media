@@ -420,7 +420,7 @@ int frame_parse::parse_sc_frame ( OMX_BUFFERHEADERTYPE *source,
 
     /*Exit State Machine*/
     psource = source->pBuffer + source->nOffset;
-    int bytes_to_skip = 0;
+    unsigned int bytes_to_skip = 0;
     switch (parse_state) {
         case A5:
             *partialframe = 0;

@@ -733,7 +733,8 @@ int venc_dev::venc_input_log_buffers(OMX_BUFFERHEADERTYPE *pbuffer, int fd, int 
         }
     }
     if (m_debug.infile && pbuffer && pbuffer->nFilledLen) {
-        int i,msize;
+        unsigned long i;
+        int msize;
         int stride = VENUS_Y_STRIDE(COLOR_FMT_NV12, m_sVenc_cfg.input_width);
         int scanlines = VENUS_Y_SCANLINES(COLOR_FMT_NV12, m_sVenc_cfg.input_height);
         unsigned char *pvirt,*ptemp;
