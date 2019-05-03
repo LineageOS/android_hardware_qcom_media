@@ -235,7 +235,7 @@ struct vdec_ion
 
 #ifdef _MSM8974_
 struct extradata_buffer_info {
-    int buffer_size;
+    unsigned int buffer_size;
     char* uaddr;
     int count;
     int size;

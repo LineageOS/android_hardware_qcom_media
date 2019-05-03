@@ -3135,8 +3135,8 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                                eRet = OMX_ErrorHardware;
                                                break;
                                            }
-                                           if ((portDefn->format.video.nFrameHeight != (int)fmt.fmt.pix_mp.height) ||
-                                               (portDefn->format.video.nFrameWidth != (int)fmt.fmt.pix_mp.width)) {
+                                           if ((portDefn->format.video.nFrameHeight != fmt.fmt.pix_mp.height) ||
+                                               (portDefn->format.video.nFrameWidth != fmt.fmt.pix_mp.width)) {
                                                    port_format_changed = true;
                                            }
                                            update_resolution(portDefn->format.video.nFrameWidth,
@@ -8622,7 +8622,7 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
     OMX_U32 num_conceal_MB = 0;
     OMX_TICKS time_stamp = 0;
     OMX_U32 frame_rate = 0;
-    int consumed_len = 0;
+    unsigned int consumed_len = 0;
     OMX_U32 num_MB_in_frame;
     OMX_U32 recovery_sei_flags = 1;
     int enable = 0;
@@ -8663,7 +8663,7 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
     if (data && p_extra) {
         while ((consumed_len < drv_ctx.extradata_info.buffer_size)
                 && (data->eType != (OMX_EXTRADATATYPE)EXTRADATA_NONE)) {
-            if ((consumed_len + data->nSize) > (unsigned)drv_ctx.extradata_info.buffer_size) {
+            if ((consumed_len + data->nSize) > drv_ctx.extradata_info.buffer_size) {
                 DEBUG_PRINT_LOW("Invalid extra data size");
                 break;
             }
@@ -9821,7 +9821,7 @@ bool omx_vdec::allocate_color_convert_buf::get_color_format(OMX_COLOR_FORMATTYPE
 
 void omx_vdec::buf_ref_add(OMX_U32 fd, OMX_U32 offset)
 {
-    int i = 0;
+    unsigned int i = 0;
     bool buf_present = false;
     pthread_mutex_lock(&m_lock);
     for (i = 0; i < drv_ctx.op_buf.actualcount; i++) {
@@ -9855,7 +9855,7 @@ void omx_vdec::buf_ref_add(OMX_U32 fd, OMX_U32 offset)
 
 void omx_vdec::buf_ref_remove(OMX_U32 fd, OMX_U32 offset)
 {
-    int i = 0;
+    unsigned int i = 0;
     pthread_mutex_lock(&m_lock);
     for (i = 0; i < drv_ctx.op_buf.actualcount; i++) {
         //check the buffer fd, offset, uv addr with list contents
