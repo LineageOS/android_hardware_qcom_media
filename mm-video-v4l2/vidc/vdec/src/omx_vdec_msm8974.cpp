@@ -477,8 +477,11 @@ void *get_omx_component_factory_fn(void)
 
 #ifdef _ANDROID_
 #ifdef USE_ION
-VideoHeap::VideoHeap(int devicefd, size_t size, void* base,
-        ion_user_handle_t handle, int ionMapfd)
+VideoHeap::VideoHeap(__attribute__((unused)) int devicefd,
+                     __attribute__((unused)) size_t size,
+                     __attribute__((unused)) void* base,
+                     __attribute__((unused)) ion_user_handle_t handle,
+                     __attribute__((unused)) int ionMapfd)
 {
     //    ionInit(devicefd, base, size, 0 , MEM_DEVICE,handle,ionMapfd);
 }
@@ -1959,11 +1962,11 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
    ========================================================================== */
 OMX_ERRORTYPE  omx_vdec::get_component_version
 (
- OMX_IN OMX_HANDLETYPE hComp,
- OMX_OUT OMX_STRING componentName,
- OMX_OUT OMX_VERSIONTYPE* componentVersion,
+ __attribute__((unused)) OMX_IN OMX_HANDLETYPE hComp,
+ __attribute__((unused)) OMX_OUT OMX_STRING componentName,
+ __attribute__((unused)) OMX_OUT OMX_VERSIONTYPE* componentVersion,
  OMX_OUT OMX_VERSIONTYPE* specVersion,
- OMX_OUT OMX_UUIDTYPE* componentUUID
+ __attribute__((unused)) OMX_OUT OMX_UUIDTYPE* componentUUID
  )
 {
     if (m_state == OMX_StateInvalid) {
@@ -1990,10 +1993,11 @@ OMX_ERRORTYPE  omx_vdec::get_component_version
    true/false
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_vdec::send_command(OMX_IN OMX_HANDLETYPE hComp,
+OMX_ERRORTYPE  omx_vdec::send_command(
+        __attribute__((unused)) OMX_IN OMX_HANDLETYPE hComp,
         OMX_IN OMX_COMMANDTYPE cmd,
         OMX_IN OMX_U32 param1,
-        OMX_IN OMX_PTR cmdData
+        __attribute__((unused)) OMX_IN OMX_PTR cmdData
         )
 {
     DEBUG_PRINT_LOW("send_command: Recieved a Command from Client");
@@ -2028,10 +2032,11 @@ OMX_ERRORTYPE  omx_vdec::send_command(OMX_IN OMX_HANDLETYPE hComp,
    true/false
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_vdec::send_command_proxy(OMX_IN OMX_HANDLETYPE hComp,
+OMX_ERRORTYPE  omx_vdec::send_command_proxy(
+        __attribute__((unused)) OMX_IN OMX_HANDLETYPE hComp,
         OMX_IN OMX_COMMANDTYPE cmd,
         OMX_IN OMX_U32 param1,
-        OMX_IN OMX_PTR cmdData
+        __attribute__((unused)) OMX_IN OMX_PTR cmdData
         )
 {
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
@@ -2782,7 +2787,8 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level_for_1080p(OMX_VIDEO_PARAM_PR
    Error None if successful.
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
+OMX_ERRORTYPE  omx_vdec::get_parameter(
+        __attribute__((unused)) OMX_IN OMX_HANDLETYPE     hComp,
         OMX_IN OMX_INDEXTYPE paramIndex,
         OMX_INOUT OMX_PTR     paramData)
 {
@@ -3920,7 +3926,8 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
    OMX Error None if successful.
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_vdec::get_config(OMX_IN OMX_HANDLETYPE      hComp,
+OMX_ERRORTYPE  omx_vdec::get_config(
+        __attribute__((unused)) OMX_IN OMX_HANDLETYPE      hComp,
         OMX_IN OMX_INDEXTYPE configIndex,
         OMX_INOUT OMX_PTR     configData)
 {
@@ -4010,7 +4017,8 @@ OMX_ERRORTYPE  omx_vdec::get_config(OMX_IN OMX_HANDLETYPE      hComp,
    RETURN VALUE
    OMX Error None if successful.
    ========================================================================== */
-OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
+OMX_ERRORTYPE  omx_vdec::set_config(
+        __attribute__((unused)) OMX_IN OMX_HANDLETYPE      hComp,
         OMX_IN OMX_INDEXTYPE configIndex,
         OMX_IN OMX_PTR        configData)
 {
@@ -4168,7 +4176,8 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
    OMX Error None if everything successful.
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_vdec::get_extension_index(OMX_IN OMX_HANDLETYPE      hComp,
+OMX_ERRORTYPE  omx_vdec::get_extension_index(
+        __attribute__((unused)) OMX_IN OMX_HANDLETYPE      hComp,
         OMX_IN OMX_STRING      paramName,
         OMX_OUT OMX_INDEXTYPE* indexType)
 {
@@ -4240,7 +4249,7 @@ OMX_ERRORTYPE  omx_vdec::get_extension_index(OMX_IN OMX_HANDLETYPE      hComp,
    RETURN VALUE
    Error None if everything is successful.
    ========================================================================== */
-OMX_ERRORTYPE  omx_vdec::get_state(OMX_IN OMX_HANDLETYPE  hComp,
+OMX_ERRORTYPE  omx_vdec::get_state(__attribute__((unused)) OMX_IN OMX_HANDLETYPE  hComp,
         OMX_OUT OMX_STATETYPE* state)
 {
     *state = m_state;
@@ -4262,11 +4271,12 @@ OMX_ERRORTYPE  omx_vdec::get_state(OMX_IN OMX_HANDLETYPE  hComp,
    OMX Error None if everything successful.
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_vdec::component_tunnel_request(OMX_IN OMX_HANDLETYPE                hComp,
-        OMX_IN OMX_U32                        port,
-        OMX_IN OMX_HANDLETYPE        peerComponent,
-        OMX_IN OMX_U32                    peerPort,
-        OMX_INOUT OMX_TUNNELSETUPTYPE* tunnelSetup)
+OMX_ERRORTYPE  omx_vdec::component_tunnel_request(
+        __attribute__((unused)) OMX_IN OMX_HANDLETYPE                hComp,
+        __attribute__((unused)) OMX_IN OMX_U32                        port,
+        __attribute__((unused)) OMX_IN OMX_HANDLETYPE        peerComponent,
+        __attribute__((unused)) OMX_IN OMX_U32                    peerPort,
+        __attribute__((unused)) OMX_INOUT OMX_TUNNELSETUPTYPE* tunnelSetup)
 {
     DEBUG_PRINT_ERROR("Error: component_tunnel_request Not Implemented");
     return OMX_ErrorNotImplemented;
@@ -4344,9 +4354,9 @@ void omx_vdec::free_extradata()
 }
 
 OMX_ERRORTYPE  omx_vdec::use_output_buffer(
-        OMX_IN OMX_HANDLETYPE            hComp,
+        __attribute__((unused)) OMX_IN OMX_HANDLETYPE            hComp,
         OMX_INOUT OMX_BUFFERHEADERTYPE** bufferHdr,
-        OMX_IN OMX_U32                   port,
+        __attribute__((unused)) OMX_IN OMX_U32                   port,
         OMX_IN OMX_PTR                   appData,
         OMX_IN OMX_U32                   bytes,
         OMX_IN OMX_U8*                   buffer)
@@ -4964,9 +4974,9 @@ OMX_ERRORTYPE omx_vdec::allocate_input_heap_buffer(OMX_HANDLETYPE       hComp,
 
    ========================================================================== */
 OMX_ERRORTYPE  omx_vdec::allocate_input_buffer(
-        OMX_IN OMX_HANDLETYPE            hComp,
+        __attribute__((unused)) OMX_IN OMX_HANDLETYPE            hComp,
         OMX_INOUT OMX_BUFFERHEADERTYPE** bufferHdr,
-        OMX_IN OMX_U32                   port,
+        __attribute__((unused)) OMX_IN OMX_U32                   port,
         OMX_IN OMX_PTR                   appData,
         OMX_IN OMX_U32                   bytes)
 {
@@ -5162,9 +5172,9 @@ OMX_ERRORTYPE  omx_vdec::allocate_input_buffer(
 
    ========================================================================== */
 OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
-        OMX_IN OMX_HANDLETYPE            hComp,
+        __attribute__((unused)) OMX_IN OMX_HANDLETYPE            hComp,
         OMX_INOUT OMX_BUFFERHEADERTYPE** bufferHdr,
-        OMX_IN OMX_U32                   port,
+        __attribute__((unused)) OMX_IN OMX_U32                   port,
         OMX_IN OMX_PTR                   appData,
         OMX_IN OMX_U32                   bytes)
 {
@@ -5572,7 +5582,8 @@ OMX_ERRORTYPE  omx_vdec::allocate_buffer(OMX_IN OMX_HANDLETYPE                hC
    true/false
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_vdec::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
+OMX_ERRORTYPE  omx_vdec::free_buffer(
+        __attribute__((unused)) OMX_IN OMX_HANDLETYPE         hComp,
         OMX_IN OMX_U32                 port,
         OMX_IN OMX_BUFFERHEADERTYPE* buffer)
 {
@@ -5816,7 +5827,8 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
    OMX Error None if everything went successful.
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE         hComp,
+OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(
+        __attribute__((unused)) OMX_IN OMX_HANDLETYPE         hComp,
         OMX_IN OMX_BUFFERHEADERTYPE* buffer)
 {
     int push_cnt = 0,i=0;
@@ -6268,7 +6280,8 @@ return OMX_ErrorNone;
    OMX Error None if everything successful.
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_vdec::set_callbacks(OMX_IN OMX_HANDLETYPE        hComp,
+OMX_ERRORTYPE  omx_vdec::set_callbacks(
+        __attribute__((unused)) OMX_IN OMX_HANDLETYPE        hComp,
         OMX_IN OMX_CALLBACKTYPE* callbacks,
         OMX_IN OMX_PTR             appData)
 {
@@ -6294,7 +6307,7 @@ OMX_ERRORTYPE  omx_vdec::set_callbacks(OMX_IN OMX_HANDLETYPE        hComp,
    OMX Error None if everything successful.
 
    ========================================================================== */
-OMX_ERRORTYPE  omx_vdec::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
+OMX_ERRORTYPE  omx_vdec::component_deinit(__attribute__((unused)) OMX_IN OMX_HANDLETYPE hComp)
 {
 
     unsigned i = 0;
@@ -6420,7 +6433,7 @@ OMX_ERRORTYPE  omx_vdec::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
 OMX_ERRORTYPE  omx_vdec::use_EGL_image(OMX_IN OMX_HANDLETYPE                hComp,
         OMX_INOUT OMX_BUFFERHEADERTYPE** bufferHdr,
         OMX_IN OMX_U32                        port,
-        OMX_IN OMX_PTR                     appData,
+        __attribute__((unused)) OMX_IN OMX_PTR                     appData,
         OMX_IN void*                      eglImage)
 {
     OMX_QCOM_PLATFORM_PRIVATE_LIST pmem_list;
@@ -6493,7 +6506,8 @@ OMX_ERRORTYPE  omx_vdec::use_EGL_image(OMX_IN OMX_HANDLETYPE                hCom
    RETURN VALUE
    OMX Error None if everything is successful.
    ========================================================================== */
-OMX_ERRORTYPE  omx_vdec::component_role_enum(OMX_IN OMX_HANDLETYPE hComp,
+OMX_ERRORTYPE  omx_vdec::component_role_enum(
+        __attribute__((unused)) OMX_IN OMX_HANDLETYPE hComp,
         OMX_OUT OMX_U8*        role,
         OMX_IN OMX_U32        index)
 {
