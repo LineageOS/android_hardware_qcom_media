@@ -213,7 +213,7 @@ enum v4l2_ports {
 };
 
 struct extradata_buffer_info {
-    int buffer_size;
+    unsigned int buffer_size;
     char* uaddr;
     int count;
     int size;
