@@ -562,7 +562,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     h264_parser(NULL),
     client_extradata(0),
     m_reject_avc_1080p_mp (0),
-    m_other_extradata(NULL),
 #ifdef _ANDROID_
     m_enable_android_native_buffers(OMX_FALSE),
     m_use_android_native_buffers(OMX_FALSE),
@@ -570,6 +569,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_desc_buffer_ptr(NULL),
     secure_mode(false),
     allocate_native_handle(false),
+    m_other_extradata(NULL),
     m_profile(0),
     client_set_fps(false),
     m_last_rendered_TS(-1),
@@ -1224,11 +1224,12 @@ void omx_vdec::process_event_cb(void *ctxt, unsigned char id)
                                             DEBUG_PRINT_HIGH("Rxd PORT_RECONFIG: OMX_IndexConfigCommonOutputCrop");
 
                                             /* Check if resolution is changed in smooth streaming mode */
-                                            if (pThis->m_smoothstreaming_mode &&
+                                            if (pThis->m_smoothstreaming_mode && (
                                                 (pThis->framesize.nWidth !=
                                                     pThis->drv_ctx.video_resolution.frame_width) ||
                                                 (pThis->framesize.nHeight !=
-                                                    pThis->drv_ctx.video_resolution.frame_height)) {
+                                                    pThis->drv_ctx.video_resolution.frame_height))
+                                                ) {
 
                                                 DEBUG_PRINT_HIGH("Resolution changed from: wxh = %dx%d to: wxh = %dx%d",
                                                         pThis->framesize.nWidth,
@@ -4390,7 +4391,7 @@ OMX_ERRORTYPE  omx_vdec::use_output_buffer(
             enum v4l2_buf_type buf_type;
             int rr = 0;
             buf_type=V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-            if (rr = ioctl(drv_ctx.video_driver_fd, VIDIOC_STREAMON,&buf_type)) {
+            if ((rr = ioctl(drv_ctx.video_driver_fd, VIDIOC_STREAMON,&buf_type)) != 0) {
                 DEBUG_PRINT_ERROR("STREAMON FAILED : %d", rr);
                 return OMX_ErrorInsufficientResources;
             } else {
