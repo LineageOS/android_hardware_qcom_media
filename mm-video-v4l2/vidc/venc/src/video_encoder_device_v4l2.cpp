@@ -1048,10 +1048,10 @@ void venc_dev::venc_close()
     }
 }
 
-bool venc_dev::venc_set_buf_req(unsigned long *min_buff_count,
-        unsigned long *actual_buff_count,
-        unsigned long *buff_size,
-        unsigned long port)
+bool venc_dev::venc_set_buf_req(__attribute__((unused)) unsigned long *min_buff_count,
+                                unsigned long *actual_buff_count,
+                                __attribute__((unused)) unsigned long *buff_size,
+                                unsigned long port)
 {
 
     unsigned long temp_count = 0;
@@ -1094,8 +1094,9 @@ bool venc_dev::venc_loaded_stop_done()
     return true;
 }
 
-bool venc_dev::venc_get_seq_hdr(void *buffer,
-        unsigned buffer_size, unsigned *header_len)
+bool venc_dev::venc_get_seq_hdr(__attribute__((unused)) void *buffer,
+                                __attribute__((unused)) unsigned buffer_size,
+                                __attribute__((unused)) unsigned *header_len)
 {
     return true;
 }
@@ -4529,7 +4530,7 @@ bool venc_dev::venc_validate_profile_level(OMX_U32 *eProfile, OMX_U32 *eLevel)
     return true;
 }
 #ifdef _ANDROID_ICS_
-bool venc_dev::venc_set_meta_mode(bool mode)
+bool venc_dev::venc_set_meta_mode(__attribute__((unused)) bool mode)
 {
     metadatamode = 1;
     return true;
