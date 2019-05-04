@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "eff6796b_99f7f78f",
+        "filename": "mm-video-v4l2/vidc/vdec/inc/omx_vdec.h",
+        "patchSetId": 6
+      },
+      "lineNbr": 232,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2019-05-04T20:30:59Z",
+      "side": 1,
+      "message": "if you\u0027re going to do this, isn\u0027t this better expressed as size_t ?",
+      "range": {
+        "startLine": 232,
+        "startChar": 4,
+        "endLine": 232,
+        "endChar": 16
+      },
+      "revId": "92228ca05e85ce1301117e61bdc182bfe05bbfd5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "a010258e_ce90d502",
+        "filename": "mm-video-v4l2/vidc/venc/src/video_encoder_device_v4l2.cpp",
+        "patchSetId": 6
+      },
+      "lineNbr": 736,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2019-05-04T20:30:59Z",
+      "side": 1,
+      "message": "IIRC long is still 32-bit on 8974, no?",
+      "range": {
+        "startLine": 736,
+        "startChar": 8,
+        "endLine": 736,
+        "endChar": 21
+      },
+      "revId": "92228ca05e85ce1301117e61bdc182bfe05bbfd5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
