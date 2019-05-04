@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "2f5b0f59_9b5fc365",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 3
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2019-05-04T20:34:13Z",
+      "side": 1,
+      "message": "Same nit as other patch, also this is a really long line, please shorten it, or put the information in the summary rather than the title.",
+      "range": {
+        "startLine": 7,
+        "startChar": 0,
+        "endLine": 7,
+        "endChar": 19
+      },
+      "revId": "ca6c142599b143b5ab948a1e8993d07694c365c5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "d81cd80d_d8026e8e",
+        "filename": "mm-video-v4l2/vidc/vdec/src/omx_vdec_msm8974.cpp",
+        "patchSetId": 3
+      },
+      "lineNbr": 1232,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2019-05-04T20:34:13Z",
+      "side": 1,
+      "message": "nit: if you are going to put this on a newline, shouldn\u0027t it match the indent of line 1227?",
+      "range": {
+        "startLine": 1232,
+        "startChar": 48,
+        "endLine": 1232,
+        "endChar": 49
+      },
+      "revId": "ca6c142599b143b5ab948a1e8993d07694c365c5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
