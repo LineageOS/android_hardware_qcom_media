@@ -1,0 +1,136 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "2ab5465e_8f6ac928",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 2
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2019-05-04T20:40:00Z",
+      "side": 1,
+      "message": "Same nit a previous patches about titling. The repo/branch name already provides this information.",
+      "range": {
+        "startLine": 7,
+        "startChar": 0,
+        "endLine": 7,
+        "endChar": 19
+      },
+      "revId": "49032b773369a7d1d0d5af8ad58d7db83639d292",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "2896313c_e034e152",
+        "filename": "mm-video-v4l2/vidc/common/src/extra_data_handler.cpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 100,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2019-05-04T20:40:00Z",
+      "side": 1,
+      "message": "Since this is C++, you can just remove the parameter name instead.",
+      "range": {
+        "startLine": 100,
+        "startChar": 77,
+        "endLine": 100,
+        "endChar": 89
+      },
+      "revId": "49032b773369a7d1d0d5af8ad58d7db83639d292",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "fa49aaee_61437091",
+        "filename": "mm-video-v4l2/vidc/common/src/extra_data_handler.cpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 239,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2019-05-04T20:40:00Z",
+      "side": 1,
+      "message": "Same here.",
+      "range": {
+        "startLine": 239,
+        "startChar": 54,
+        "endLine": 239,
+        "endChar": 61
+      },
+      "revId": "49032b773369a7d1d0d5af8ad58d7db83639d292",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "8a59236b_bc398f09",
+        "filename": "mm-video-v4l2/vidc/vdec/src/omx_vdec_msm8974.cpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 480,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2019-05-04T20:40:00Z",
+      "side": 1,
+      "message": "Same as previous you can just remove the parameter name.",
+      "range": {
+        "startLine": 480,
+        "startChar": 49,
+        "endLine": 480,
+        "endChar": 57
+      },
+      "revId": "49032b773369a7d1d0d5af8ad58d7db83639d292",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "a6de012e_835f72f2",
+        "filename": "mm-video-v4l2/vidc/venc/src/omx_video_encoder.cpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 1867,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2019-05-04T20:40:00Z",
+      "side": 1,
+      "message": "I would be careful here, this is only unused if -D_MSM8974_. The more correct way to express this would be to do (void)min; (void)max; (void)step_size; in the #ifdef _MSM8974_ block.",
+      "range": {
+        "startLine": 1867,
+        "startChar": 76,
+        "endLine": 1867,
+        "endChar": 79
+      },
+      "revId": "49032b773369a7d1d0d5af8ad58d7db83639d292",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "0c20f02f_a1d36c35",
+        "filename": "mm-video-v4l2/vidc/venc/src/video_encoder_device_v4l2.cpp",
+        "patchSetId": 2
+      },
+      "lineNbr": 1052,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2019-05-04T20:40:00Z",
+      "side": 1,
+      "message": "I don\u0027t think you need to change all the whitespace here...",
+      "revId": "49032b773369a7d1d0d5af8ad58d7db83639d292",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
