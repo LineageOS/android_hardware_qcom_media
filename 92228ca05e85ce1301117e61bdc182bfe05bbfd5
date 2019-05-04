@@ -2,6 +2,29 @@
   "comments": [
     {
       "key": {
+        "uuid": "b38dae48_74ae9835",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 6
+      },
+      "lineNbr": 7,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2019-05-04T20:32:23Z",
+      "side": 1,
+      "message": "nit: The repo and branch gives you this info, if you want to prefix a topic, something like \"media:\" or \"mm-video-v4l2:\" is better.",
+      "range": {
+        "startLine": 7,
+        "startChar": 0,
+        "endLine": 7,
+        "endChar": 19
+      },
+      "revId": "92228ca05e85ce1301117e61bdc182bfe05bbfd5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "eff6796b_99f7f78f",
         "filename": "mm-video-v4l2/vidc/vdec/inc/omx_vdec.h",
         "patchSetId": 6
