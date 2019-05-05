@@ -45,6 +45,30 @@
       "revId": "ca6c142599b143b5ab948a1e8993d07694c365c5",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "da398526_dcf0796f",
+        "filename": "mm-video-v4l2/vidc/vdec/src/omx_vdec_msm8974.cpp",
+        "patchSetId": 3
+      },
+      "lineNbr": 1232,
+      "author": {
+        "id": 23045
+      },
+      "writtenOn": "2019-05-05T08:42:01Z",
+      "side": 1,
+      "message": "It actually matches the indent of line 1227.\n\nThe parenthesis on line 1232 is the closing partner to the first opening parenthesis in line 1227. The second closing parenthesis in line 1231 belongs to the second opening in line 1227 (enclosing both arguments to ||).\n\nI could move both the enclosing parenthesis on lines 1227 and 1231 to a separate line each, which would make that clearer.",
+      "parentUuid": "d81cd80d_d8026e8e",
+      "range": {
+        "startLine": 1232,
+        "startChar": 48,
+        "endLine": 1232,
+        "endChar": 49
+      },
+      "revId": "ca6c142599b143b5ab948a1e8993d07694c365c5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
     }
   ]
 }
