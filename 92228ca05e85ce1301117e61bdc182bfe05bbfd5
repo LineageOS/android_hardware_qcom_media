@@ -48,6 +48,30 @@
     },
     {
       "key": {
+        "uuid": "4a7e3fb3_68a4a898",
+        "filename": "mm-video-v4l2/vidc/vdec/inc/omx_vdec.h",
+        "patchSetId": 6
+      },
+      "lineNbr": 232,
+      "author": {
+        "id": 23045
+      },
+      "writtenOn": "2019-05-05T07:45:35Z",
+      "side": 1,
+      "message": "It might be if I wanted to go through the whole code. I haven\u0027t seen any size_t variables in this code. Besides I just used the types that the compiler was comparing these variables to.",
+      "parentUuid": "eff6796b_99f7f78f",
+      "range": {
+        "startLine": 232,
+        "startChar": 4,
+        "endLine": 232,
+        "endChar": 16
+      },
+      "revId": "92228ca05e85ce1301117e61bdc182bfe05bbfd5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
         "uuid": "a010258e_ce90d502",
         "filename": "mm-video-v4l2/vidc/venc/src/video_encoder_device_v4l2.cpp",
         "patchSetId": 6
@@ -59,6 +83,30 @@
       "writtenOn": "2019-05-04T20:30:59Z",
       "side": 1,
       "message": "IIRC long is still 32-bit on 8974, no?",
+      "range": {
+        "startLine": 736,
+        "startChar": 8,
+        "endLine": 736,
+        "endChar": 21
+      },
+      "revId": "92228ca05e85ce1301117e61bdc182bfe05bbfd5",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "3ebe429e_dd4c72b6",
+        "filename": "mm-video-v4l2/vidc/venc/src/video_encoder_device_v4l2.cpp",
+        "patchSetId": 6
+      },
+      "lineNbr": 736,
+      "author": {
+        "id": 23045
+      },
+      "writtenOn": "2019-05-05T07:45:35Z",
+      "side": 1,
+      "message": "Not quite sure what you mean. As above mentioned I used the types from the compiler warnings and \"i\" is used below as loop variable in this case where it is compared to \"m_sVenc_cfg.input_height\", which is unsigned long.",
+      "parentUuid": "a010258e_ce90d502",
       "range": {
         "startLine": 736,
         "startChar": 8,
