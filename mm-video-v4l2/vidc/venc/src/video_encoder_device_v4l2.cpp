@@ -134,6 +134,7 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     mBatchSize = 0;
     deinterlace_enabled = false;
     m_roi_enabled = false;
+    m_roi_type = 0;
     low_latency_mode = false;
     pthread_mutex_init(&m_roilock, NULL);
     pthread_mutex_init(&pause_resume_mlock, NULL);
@@ -235,6 +236,7 @@ venc_dev::~venc_dev()
                 iter->info.nTimeStamp);
         }
         m_roilist.clear();
+        mRoiRegionList.clear();
         pthread_mutex_unlock(&m_roilock);
     }
     pthread_mutex_destroy(&m_roilock);
@@ -842,6 +844,13 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
         }
         filled_len += data->nSize;
         data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
+    } else {
+        // m_roilist didn't contain any ROI info with OMX_IndexConfigVideoRoiInfo.
+        // then we can check mRoiRegionList which may contain the roi from vendor extension.
+        OMX_U32 freeSize = input_extradata_info.buffer_size - filled_len;
+        OMX_U32 appendSize = append_extradata_roi_region_qp_info(data, nTimeStamp, freeSize);
+        filled_len += appendSize;
+        data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + appendSize);
     }
 
     if (m_roi_enabled) {
@@ -2854,6 +2863,13 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                     return false;
                 }
                 m_roi_enabled = true;
+                control.id = V4L2_CID_MPEG_VIDC_VIDEO_ROI_TYPE;
+                if (ioctl(m_nDriver_fd, VIDIOC_G_CTRL, &control)) {
+                    DEBUG_PRINT_ERROR("ERROR: Getting V4L2_CID_MPEG_VIDC_VIDEO_ROI_TYPE failed");
+                } else {
+                    DEBUG_PRINT_LOW("ROI type: %d", control.value);
+                    m_roi_type = control.value;
+                }
                 break;
             }
         case OMX_QTIIndexParamLowLatencyMode:
@@ -3384,6 +3400,14 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
         {
             if(!venc_set_nal_size((OMX_VIDEO_CONFIG_NALSIZE *)configData)) {
                 DEBUG_PRINT_LOW("Failed to set Nal size info");
+                return false;
+            }
+            break;
+        }
+        case OMX_QTIIndexConfigVideoRoiRectRegionInfo:
+        {
+            if(!venc_set_roi_region_qp_info((OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_INFO *)configData)) {
+                DEBUG_PRINT_ERROR("Failed to set ROI Region QP info");
                 return false;
             }
             break;
@@ -7672,3 +7696,206 @@ venc_dev::venc_dev_vqzip::~venc_dev_vqzip()
     pthread_mutex_destroy(&lock);
 }
 #endif
+
+/*=================================================================================
+ * Function:   venc_set_roi_region_qp_info
+ * @brief      set the config of OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_INFO and store
+ *             the info in the list
+ * Parameters:
+ * @param      OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_INFO *roiRegionInfo:
+ *             the config to be set
+ * Return value:
+ *             bool: return true if the config is set successfully
+*==================================================================================*/
+bool venc_dev::venc_set_roi_region_qp_info(OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_INFO *roiRegionInfo)
+{
+    if (!m_roi_enabled || (m_roi_type == 0)) {
+        DEBUG_PRINT_ERROR("ROI-Region: roi is invalid (enable:%u, type:%d)",
+                m_roi_enabled, m_roi_type);
+        return false;
+    }
+    if (!roiRegionInfo) {
+        DEBUG_PRINT_ERROR("ROI-Region: no region info present");
+        return false;
+    }
+    if (m_sVenc_cfg.codectype != V4L2_PIX_FMT_H264 &&
+            m_sVenc_cfg.codectype != V4L2_PIX_FMT_HEVC) {
+        DEBUG_PRINT_ERROR("ROI-Region: is not supported for %d codec",
+                (OMX_U32) m_sVenc_cfg.codectype);
+        return false;
+    }
+
+    pthread_mutex_lock(&m_roilock);
+    DEBUG_PRINT_LOW("ROI-Region: add region with timestamp %lld us.", roiRegionInfo->nTimeStamp);
+    mRoiRegionList.push_back(*roiRegionInfo);
+    pthread_mutex_unlock(&m_roilock);
+    return true;
+}
+
+/*=================================================================================
+ * Function:   append_extradata_roi_region_qp_info
+ * @brief      fill the roi info in the extradata of input Buffer
+ * Parameters:
+ * @param      OMX_OTHER_EXTRADATATYPE *data: the address of the extradata buffer
+ *             OMX_TICKS timestamp:  the timestamp of the input Buffer
+ *             OMX_U32: the available size of the extradata buffer
+ * Return value:
+ *             OMX_U32: the filled size
+*==================================================================================*/
+OMX_U32 venc_dev::append_extradata_roi_region_qp_info(OMX_OTHER_EXTRADATATYPE *data,
+        OMX_TICKS timestamp, OMX_U32 freeSize)
+{
+    bool found = false;
+    pthread_mutex_lock(&m_roilock);
+    if (mRoiRegionList.size() == 0) {
+        pthread_mutex_unlock(&m_roilock);
+        return 0;
+    }
+    std::list<OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_INFO>::iterator it =
+            mRoiRegionList.begin();
+    while (it != mRoiRegionList.end()) {
+        if (it->nTimeStamp < timestamp) {
+            it = mRoiRegionList.erase(it);
+            continue;
+        } else if (it->nTimeStamp == timestamp) {
+            found = true;
+            break;
+        }
+        it++;
+    }
+    pthread_mutex_unlock(&m_roilock);
+    if (!found) {
+        DEBUG_PRINT_LOW("ROI-Region: no region roi data was found");
+        return 0;
+    }
+    OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_INFO regionInfo = *it;
+    bool isHevc = m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC ? true:false;
+    OMX_U32 height = m_sVenc_cfg.dvs_height;
+    OMX_U32 width = m_sVenc_cfg.dvs_width;
+    OMX_U32 mbAlign = isHevc ? 32 : 16;
+    OMX_U8 mbBit = isHevc ? 5 : 4;
+    OMX_U32 mbRow = ALIGN(width, mbAlign) / mbAlign;
+    OMX_U32 mbCol = ALIGN(height, mbAlign) / mbAlign;
+    OMX_U32 numBytes, mbLeft, mbTop, mbRight, mbBottom = 0;
+    OMX_S8 deltaQP = 0;
+    DEBUG_PRINT_LOW("ROI-Region: clip(%ux%u: %s), mb(%ux%u), region(num:%u, ts:%lld)",
+            width, height, isHevc ? "hevc" : "avc",
+            mbRow, mbCol, regionInfo.nRegionNum, regionInfo.nTimeStamp);
+
+    if (m_roi_type == V4L2_CID_MPEG_VIDC_VIDEO_ROI_TYPE_2BYTE) {
+        OMX_U32 mbRowAligned = ALIGN(mbRow, 8);
+        numBytes = mbRowAligned * mbCol * 2;
+        OMX_U32 numBytesAligned = ALIGN(numBytes, 4);
+
+        data->nDataSize = ALIGN(sizeof(struct msm_vidc_roi_deltaqp_payload), 256)
+                            + numBytesAligned;
+        data->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) + data->nDataSize, 4);
+        if (data->nSize > freeSize) {
+            DEBUG_PRINT_ERROR("ROI-Region: Buffer size(%u) is less than ROI extradata size(%u)",
+                    freeSize, data->nSize);
+            data->nDataSize = 0;
+            data->nSize = 0;
+            return 0;
+        }
+
+        data->nVersion.nVersion = OMX_SPEC_VERSION;
+        data->nPortIndex = 0;
+        data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_ROI_QP;
+        struct msm_vidc_roi_deltaqp_payload *roiData =
+                (struct msm_vidc_roi_deltaqp_payload *)(data->data);
+        roiData->b_roi_info = true;
+        roiData->mbi_info_size = numBytesAligned;
+        roiData->data[0] = (unsigned int)(ALIGN(&roiData->data[1], 256)
+                - (unsigned long)roiData->data);
+        OMX_U16* exDataBuf = (OMX_U16*)((OMX_U8*)roiData->data + roiData->data[0]);
+        OMX_U32 mb = 0;
+        OMX_U16 *pData = NULL;
+
+        for (OMX_U8 i = 0; i < regionInfo.nRegionNum; i++) {
+            mbLeft = regionInfo.nRegions[i].nLeft >> mbBit;
+            mbTop = regionInfo.nRegions[i].nTop >> mbBit;
+            mbRight = regionInfo.nRegions[i].nRight >> mbBit;
+            mbBottom = regionInfo.nRegions[i].nBottom >> mbBit;
+            deltaQP = regionInfo.nRegions[i].nDeltaQP;
+            if (mbLeft >= mbRow || mbRight >= mbRow
+                    || mbTop >= mbCol || mbBottom >= mbCol) {
+                continue;
+            }
+            for (OMX_U32 row = mbTop; row <= mbBottom; row++) {
+                for (OMX_U32 col = mbLeft; col <= mbRight; col++) {
+                    mb = row * mbRowAligned + col;
+                    pData = exDataBuf + mb;
+                    *pData = (1 << 11) | ((deltaQP & 0x3F) << 4);
+                }
+            }
+        }
+        DEBUG_PRINT_LOW("ROI-Region(2Byte): set roi: raw size: %u", numBytesAligned);
+    } else if (m_roi_type == V4L2_CID_MPEG_VIDC_VIDEO_ROI_TYPE_2BIT) {
+        numBytes = (mbRow * mbCol * 2 + 7) >> 3;
+        data->nDataSize = sizeof(struct msm_vidc_roi_qp_payload) + numBytes;
+        data->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) + data->nDataSize, 4);
+
+        if (data->nSize > freeSize) {
+            DEBUG_PRINT_ERROR("ROI-Region: Buffer size(%u) is less than ROI extradata size(%u)",
+                    freeSize, data->nSize);
+            data->nDataSize = 0;
+            data->nSize = 0;
+            return 0;
+        }
+
+        data->nVersion.nVersion = OMX_SPEC_VERSION;
+        data->nPortIndex = 0;
+        data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_ROI_QP;
+        struct msm_vidc_roi_qp_payload *roiData =
+                (struct msm_vidc_roi_qp_payload *)(data->data);
+        roiData->b_roi_info = true;
+        roiData->mbi_info_size = numBytes;
+        roiData->lower_qp_offset = 0;
+        roiData->upper_qp_offset = 0;
+        OMX_U8 flag = 0x1;
+        OMX_U32 mb, mb_byte = 0;
+        OMX_U8 mb_bit = 0;
+        OMX_U8 *pData = NULL;
+
+        for (OMX_U8 i = 0; i < regionInfo.nRegionNum; i++) {
+            mbLeft = regionInfo.nRegions[i].nLeft >> mbBit;
+            mbTop = regionInfo.nRegions[i].nTop >> mbBit;
+            mbRight = regionInfo.nRegions[i].nRight >> mbBit;
+            mbBottom = regionInfo.nRegions[i].nBottom >> mbBit;
+            deltaQP = regionInfo.nRegions[i].nDeltaQP;
+            if (mbLeft >= mbRow || mbRight >= mbRow
+                    || mbTop >= mbCol || mbBottom >= mbCol
+                    || deltaQP == 0) {
+                continue;
+            }
+            // choose the minimum absolute value for lower and upper offset
+            if (deltaQP < 0) {
+                if (roiData->lower_qp_offset == 0) {
+                    roiData->lower_qp_offset = deltaQP;
+                } else if (roiData->lower_qp_offset < deltaQP) {
+                    roiData->lower_qp_offset = deltaQP;
+                }
+                flag = 0x1;
+            } else {
+                if (roiData->upper_qp_offset == 0) {
+                    roiData->upper_qp_offset = deltaQP;
+                } else if (roiData->upper_qp_offset > deltaQP) {
+                    roiData->upper_qp_offset = deltaQP;
+                }
+                flag = 0x2;
+            }
+            for (OMX_U32 row = mbTop; row <= mbBottom; row++) {
+                for (OMX_U32 col = mbLeft; col <= mbRight; col++) {
+                    mb = row * mbRow + col;
+                    mb_byte = mb >> 2;
+                    mb_bit = (3 - (mb & 0x3)) << 1;
+                    pData = (OMX_U8 *)roiData->data + mb_byte;
+                    *pData |= (flag << mb_bit);
+                }
+            }
+        }
+        DEBUG_PRINT_LOW("ROI-Region(2Bit):set roi low:%d,up:%d", roiData->lower_qp_offset, roiData->upper_qp_offset);
+    }
+    return data->nSize;
+}
+
