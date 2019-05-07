@@ -759,69 +759,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                 }
                             }
                             break;
-        case OMX_QcomIndexPortDefn: {
-                            VALIDATE_OMX_PARAM_DATA(paramData, OMX_QCOM_PARAM_PORTDEFINITIONTYPE);
-                            OMX_QCOM_PARAM_PORTDEFINITIONTYPE *portFmt =
-                                (OMX_QCOM_PARAM_PORTDEFINITIONTYPE *) paramData;
-                            DEBUG_PRINT_LOW("set_parameter: OMX_IndexQcomParamPortDefinitionType %u",
-                                    (unsigned int)portFmt->nFramePackingFormat);
-
-                            /* Input port */
-                            if (portFmt->nPortIndex == 0) {
-                                // arbitrary_bytes mode cannot be changed arbitrarily since this controls how:
-                                //   - headers are allocated and
-                                //   - headers-indices are derived
-                                // Avoid changing arbitrary_bytes when the port is already allocated
-                                if (m_inp_mem_ptr) {
-                                    DEBUG_PRINT_ERROR("Cannot change arbitrary-bytes-mode since input port is not free!");
-                                    return OMX_ErrorUnsupportedSetting;
-                                }
-                                if (portFmt->nFramePackingFormat == OMX_QCOM_FramePacking_Arbitrary) {
-                                    if (secure_mode || m_input_pass_buffer_fd) {
-                                        arbitrary_bytes = false;
-                                        DEBUG_PRINT_ERROR("setparameter: cannot set to arbitary bytes mode");
-                                        eRet = OMX_ErrorUnsupportedSetting;
-                                    } else {
-                                        arbitrary_bytes = true;
-                                    }
-                                } else if (portFmt->nFramePackingFormat ==
-                                        OMX_QCOM_FramePacking_OnlyOneCompleteFrame) {
-                                    arbitrary_bytes = false;
-                                } else {
-                                    DEBUG_PRINT_ERROR("Setparameter: unknown FramePacking format %u",
-                                            (unsigned int)portFmt->nFramePackingFormat);
-                                    eRet = OMX_ErrorUnsupportedSetting;
-                                }
-                                //Explicitly disable arb mode for unsupported codecs
-                                bool is_arb_supported = false;
-                                if (arbitrary_bytes) {
-                                   switch (drv_ctx.decoder_format) {
-                                   case VDEC_CODECTYPE_H264:
-                                      is_arb_supported = m_arb_mode_override & VDEC_ARB_CODEC_H264;
-                                      break;
-                                   case VDEC_CODECTYPE_HEVC:
-                                      is_arb_supported = m_arb_mode_override & VDEC_ARB_CODEC_HEVC;
-                                      break;
-                                   case VDEC_CODECTYPE_MPEG2:
-                                      is_arb_supported = m_arb_mode_override & VDEC_ARB_CODEC_MPEG2;
-                                      break;
-                                   default:
-                                      DEBUG_PRINT_HIGH("Arbitrary bytes mode not enabled for this Codec");
-                                      break;
-                                   }
-
-                                   if (!is_arb_supported) {
-                                       DEBUG_PRINT_ERROR("Setparameter: Disabling arbitrary bytes mode explicitly");
-                                       arbitrary_bytes = false;
-                                       eRet = OMX_ErrorUnsupportedSetting;
-                                   }
-                                }
-                            } else if (portFmt->nPortIndex == OMX_CORE_OUTPUT_PORT_INDEX) {
-                                DEBUG_PRINT_ERROR("Unsupported at O/P port");
-                                eRet = OMX_ErrorUnsupportedSetting;
-                            }
-                            break;
-                        }
         case OMX_QTIIndexParamVideoClientExtradata: {
                                   VALIDATE_OMX_PARAM_DATA(paramData, QOMX_EXTRADATA_ENABLE);
                                   DEBUG_PRINT_LOW("set_parameter: OMX_QTIIndexParamVideoClientExtradata");
@@ -1204,12 +1141,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
         case OMX_QTIIndexParamPassInputBufferFd:
         {
             VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
-            if (arbitrary_bytes) {
-                DEBUG_PRINT_ERROR("OMX_QTIIndexParamPassInputBufferFd not supported in arbitrary buffer mode");
-                eRet = OMX_ErrorUnsupportedSetting;
-                break;
-            }
-
             m_input_pass_buffer_fd = ((QOMX_ENABLETYPE *)paramData)->bEnable;
             if (m_input_pass_buffer_fd)
                 DEBUG_PRINT_LOW("Enable passing input buffer FD");
