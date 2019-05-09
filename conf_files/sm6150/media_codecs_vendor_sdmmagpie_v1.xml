@@ -174,7 +174,7 @@ Only the three quirks included above are recognized at this point:
             <Limit name="frame-rate" range="1-480" />
             <Limit name="concurrent-instances" max="16" />
             <Limit name="quality" range="0-100" default="80" />
-            <Feature name="bitrate-modes" value="VBR,CBR" />
+            <Feature name="bitrate-modes" value="VBR,CBR,CQ" />
         </MediaCodec>
         <MediaCodec name="OMX.qcom.video.encoder.heic" type="image/vnd.android.heic" >
             <Quirk name="requires-allocate-on-input-ports" />
