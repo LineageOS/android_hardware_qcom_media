@@ -6424,11 +6424,6 @@ int omx_vdec::async_message_process (void *context, void* message)
                    if (omxhdr->nFilledLen) {
                        omxhdr->nFlags |= OMX_BUFFERFLAG_ENDOFFRAME;
                    }
-                   if (v4l2_buf_ptr->flags & V4L2_BUF_FLAG_KEYFRAME) {
-                       omxhdr->nFlags |= OMX_BUFFERFLAG_SYNCFRAME;
-                   } else {
-                       omxhdr->nFlags &= ~OMX_BUFFERFLAG_SYNCFRAME;
-                   }
                    if (v4l2_buf_ptr->flags & V4L2_BUF_FLAG_READONLY) {
                         omxhdr->nFlags |= OMX_BUFFERFLAG_READONLY;
                         DEBUG_PRINT_LOW("F_B_D: READONLY BUFFER - REFERENCE WITH F/W fd = %d",
@@ -6450,12 +6445,14 @@ int omx_vdec::async_message_process (void *context, void* message)
 
                    if (v4l2_buf_ptr->flags & V4L2_BUF_FLAG_KEYFRAME) {
                        output_respbuf->pic_type = PICTURE_TYPE_I;
+                       omxhdr->nFlags |= OMX_BUFFERFLAG_SYNCFRAME;
                    }
                    if (v4l2_buf_ptr->flags & V4L2_BUF_FLAG_PFRAME) {
                        output_respbuf->pic_type = PICTURE_TYPE_P;
                    }
                    if (v4l2_buf_ptr->flags & V4L2_BUF_FLAG_BFRAME) {
                        output_respbuf->pic_type = PICTURE_TYPE_B;
+                       omxhdr->nFlags |= QOMX_VIDEO_BUFFERFLAG_BFRAME;
                    }
 
                    if (vdec_msg->msgdata.output_frame.len) {
