@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -3377,6 +3377,9 @@ SWVENC_STATUS omx_venc::swvenc_set_profile_level
              break;
           case OMX_VIDEO_H263Level40:
              Level.h263 = SWVENC_LEVEL_H263_40;
+             break;
+          case OMX_VIDEO_H263Level45:
+             Level.h263 = SWVENC_LEVEL_H263_45;
              break;
           case OMX_VIDEO_H263Level50:
              Level.h263 = SWVENC_LEVEL_H263_50;
