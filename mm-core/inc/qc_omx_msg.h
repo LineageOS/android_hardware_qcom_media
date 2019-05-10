@@ -80,8 +80,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #else
     #ifdef _ANDROID_
         #include <utils/Log.h>
-        #define DEBUG_PRINT_ERROR ALOGE
-        #define DEBUG_PRINT ALOGD
+        #define DEBUG_PRINT_ERROR ALOGV
+        #define DEBUG_PRINT ALOGV
         #define DEBUG_DETAIL ALOGV
     #endif // _ANDROID_
 #endif // _ENABLE_QC_MSG_LOG_
