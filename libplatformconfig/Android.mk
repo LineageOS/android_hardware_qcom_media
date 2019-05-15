@@ -35,6 +35,16 @@ LOCAL_C_INCLUDES += \
 LOCAL_SRC_FILES := PlatformConfig.cpp
 LOCAL_SRC_FILES += ConfigParser.cpp
 
+####################
+ENABLE_CONFIGSTORE = true
+ifeq ($(ENABLE_CONFIGSTORE),true)
+LOCAL_SRC_FILES += ConfigStore.cpp
+LOCAL_CFLAGS += -DENABLE_CONFIGSTORE
+LOCAL_SHARED_LIBRARIES += libhidlbase
+LOCAL_SHARED_LIBRARIES += vendor.qti.hardware.capabilityconfigstore@1.0
+endif
+####################
+
 LOCAL_MODULE := libplatformconfig
 LOCAL_VENDOR_MODULE := true
 

@@ -3284,7 +3284,7 @@ bool omx_vdec::execute_output_flush()
     while (m_ftb_q.m_size) {
         m_ftb_q.pop_entry(&p1,&p2,&ident);
         if (ident == m_fill_output_msg ) {
-            print_omx_buffer("Flush FBD", (OMX_BUFFERHEADERTYPE *)&p2);
+            print_omx_buffer("Flush FBD", (OMX_BUFFERHEADERTYPE *)p2);
             m_cb.FillBufferDone(&m_cmp, m_app_data, (OMX_BUFFERHEADERTYPE *)(intptr_t)p2);
         } else if (ident == OMX_COMPONENT_GENERATE_FBD) {
             fill_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)(intptr_t)p1);
@@ -3329,15 +3329,15 @@ bool omx_vdec::execute_input_flush()
         m_etb_q.pop_entry(&p1,&p2,&ident);
 
         if (ident == OMX_COMPONENT_GENERATE_ETB_ARBITRARY) {
-            print_omx_buffer("Flush ETB_ARBITRARY", (OMX_BUFFERHEADERTYPE *)&p2);
+            print_omx_buffer("Flush ETB_ARBITRARY", (OMX_BUFFERHEADERTYPE *)p2);
             m_cb.EmptyBufferDone(&m_cmp ,m_app_data, (OMX_BUFFERHEADERTYPE *)p2);
         } else if (ident == OMX_COMPONENT_GENERATE_ETB) {
             pending_input_buffers++;
             VIDC_TRACE_INT_LOW("ETB-pending", pending_input_buffers);
-            print_omx_buffer("Flush ETB", (OMX_BUFFERHEADERTYPE *)&p2);
+            print_omx_buffer("Flush ETB", (OMX_BUFFERHEADERTYPE *)p2);
             empty_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p2);
         } else if (ident == OMX_COMPONENT_GENERATE_EBD) {
-            print_omx_buffer("Flush EBD", (OMX_BUFFERHEADERTYPE *)&p1);
+            print_omx_buffer("Flush EBD", (OMX_BUFFERHEADERTYPE *)p1);
             empty_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p1);
         }
     }
