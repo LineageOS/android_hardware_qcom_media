@@ -3289,31 +3289,6 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
         }
 
         return ret;
-    } else if ((int)configIndex == (int)OMX_QcomIndexConfigPictureTypeDecode) {
-        OMX_QCOM_VIDEO_CONFIG_PICTURE_TYPE_DECODE *config =
-            (OMX_QCOM_VIDEO_CONFIG_PICTURE_TYPE_DECODE *)configData;
-        struct v4l2_control control;
-        DEBUG_PRINT_LOW("Set picture type decode: %d", config->eDecodeType);
-        control.id = V4L2_CID_MPEG_VIDC_VIDEO_PICTYPE_DEC_MODE;
-
-        switch (config->eDecodeType) {
-            case OMX_QCOM_PictypeDecode_I:
-                control.value = V4L2_MPEG_VIDC_VIDEO_PICTYPE_DECODE_I;
-                break;
-            case OMX_QCOM_PictypeDecode_IPB:
-            default:
-                control.value = (V4L2_MPEG_VIDC_VIDEO_PICTYPE_DECODE_I|
-                                  V4L2_MPEG_VIDC_VIDEO_PICTYPE_DECODE_P|
-                                  V4L2_MPEG_VIDC_VIDEO_PICTYPE_DECODE_B);
-                break;
-        }
-
-        ret = (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control) < 0) ?
-                OMX_ErrorUnsupportedSetting : OMX_ErrorNone;
-        if (ret)
-            DEBUG_PRINT_ERROR("Failed to set picture type decode");
-
-        return ret;
     } else if ((int)configIndex == (int)OMX_IndexConfigPriority) {
         OMX_PARAM_U32TYPE *priority = (OMX_PARAM_U32TYPE *)configData;
         DEBUG_PRINT_LOW("Set_config: priority %d",priority->nU32);
