@@ -2813,7 +2813,7 @@ bool inline omx_vdec::vdec_query_cap(struct v4l2_queryctrl &cap)
 OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVELTYPE *profileLevelType)
 {
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
-    struct v4l2_queryctrl profile_cap, level_cap;
+    struct v4l2_queryctrl profile_cap, level_cap, tier_cap;
     int v4l2_profile;
     int avc_profiles[5] = { QOMX_VIDEO_AVCProfileConstrainedBaseline,
                             QOMX_VIDEO_AVCProfileBaseline,
@@ -2833,6 +2833,7 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
     if (!profileLevelType)
         return OMX_ErrorBadParameter;
 
+    memset(&tier_cap, 0, sizeof(struct v4l2_queryctrl));
     memset(&level_cap, 0, sizeof(struct v4l2_queryctrl));
     memset(&profile_cap, 0, sizeof(struct v4l2_queryctrl));
 
@@ -2845,7 +2846,8 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
         level_cap.id = V4L2_CID_MPEG_VIDC_VIDEO_VP9_LEVEL;
         profile_cap.id = V4L2_CID_MPEG_VIDEO_VP9_PROFILE;
     } else if (output_capability == V4L2_PIX_FMT_HEVC) {
-        level_cap.id = V4L2_CID_MPEG_VIDEO_HEVC_TIER;
+        tier_cap.id = V4L2_CID_MPEG_VIDEO_HEVC_TIER;
+        level_cap.id = V4L2_CID_MPEG_VIDEO_HEVC_LEVEL;
         profile_cap.id = V4L2_CID_MPEG_VIDEO_HEVC_PROFILE;
     } else if (output_capability == V4L2_PIX_FMT_MPEG2) {
         level_cap.id = V4L2_CID_MPEG_VIDC_VIDEO_MPEG2_LEVEL;
@@ -2869,10 +2871,21 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
         }
     }
 
+    if (tier_cap.id) {
+        if(!vdec_query_cap(tier_cap)) {
+            DEBUG_PRINT_ERROR("Getting capabilities for tier failed");
+            return OMX_ErrorHardware;
+        }
+    }
+
     /* Get the corresponding omx level from v4l2 level */
     if (!profile_level_converter::convert_v4l2_level_to_omx(output_capability, level_cap.maximum, (int *)&profileLevelType->eLevel)) {
         DEBUG_PRINT_ERROR("Invalid level, cannot find corresponding v4l2 level : %d ", level_cap.maximum);
         return OMX_ErrorHardware;
+    }
+    if (output_capability == V4L2_PIX_FMT_HEVC && tier_cap.maximum == V4L2_MPEG_VIDEO_HEVC_TIER_HIGH) {
+        /* handle HEVC high tier */
+        profileLevelType->eLevel <<= 1;
     }
 
     /* For given profile index get corresponding profile that needs to be supported */
