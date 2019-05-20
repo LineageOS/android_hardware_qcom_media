@@ -3252,7 +3252,7 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
         control.value = rate->nU32;
 
         if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
-            ret = errno == -EBUSY ? OMX_ErrorInsufficientResources :
+            ret = errno == EBUSY ? OMX_ErrorInsufficientResources :
                     OMX_ErrorUnsupportedSetting;
             DEBUG_PRINT_ERROR("Failed to set operating rate %u fps (%s)",
                     rate->nU32 >> 16, errno == -EBUSY ? "HW Overload" : strerror(errno));
