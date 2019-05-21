@@ -195,7 +195,6 @@ AC_CONFIG_FILES([ \
         Makefile \
         mm-core/Makefile \
         libc2dcolorconvert/Makefile \
-        libarbitrarybytes/Makefile \
         libplatformconfig/Makefile \
         mm-video-v4l2/Makefile \
         mm-video-v4l2/vidc/Makefile \

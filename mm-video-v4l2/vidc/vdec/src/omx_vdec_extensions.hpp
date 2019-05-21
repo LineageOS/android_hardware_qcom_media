@@ -83,11 +83,10 @@ OMX_ERRORTYPE omx_vdec::get_vendor_extension_config(
         {
             char exType[OMX_MAX_STRINGVALUE_SIZE + 1];
             memset (exType, 0, (sizeof(char)*OMX_MAX_STRINGVALUE_SIZE));
-            const char * outputCropInfo = getStringForExtradataType(OMX_ExtraDataOutputCropInfo);
-            if (outputCropInfo != NULL &&
-                (strlcat(exType, outputCropInfo,
-                         OMX_MAX_STRINGVALUE_SIZE)) >= OMX_MAX_STRINGVALUE_SIZE) {
-                DEBUG_PRINT_LOW("extradata string size exceeds size %d",OMX_MAX_STRINGVALUE_SIZE);
+            strlcat(exType, "basic", OMX_MAX_STRINGVALUE_SIZE);
+
+            if (m_client_extradata & EXTRADATA_ADVANCED) {
+                strlcat(exType, "|advanced", OMX_MAX_STRINGVALUE_SIZE);
             }
 
             setStatus &= vExt.setParamString(ext, "types", exType);
@@ -191,14 +190,15 @@ OMX_ERRORTYPE omx_vdec::set_vendor_extension_config(
             char *rest = exType;
             char *token = strtok_r(exType, "|", &rest);
             do {
+                extraDataParam.nPortIndex = OMX_CORE_OUTPUT_PORT_INDEX;
                 extraDataParam.bEnabled = OMX_TRUE;
-                extraDataParam.nIndex = (OMX_INDEXTYPE)getIndexForExtradataType(token);
-                if (extraDataParam.nIndex < 0) {
-                    DEBUG_PRINT_HIGH(" extradata %s not supported ", token);
+                if (!strcmp(token, "basic")) {
+                    extraDataParam.nIndex = (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Basic;
+                } else if (!strcmp(token, "advanced")) {
+                    extraDataParam.nIndex = (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Advanced;
+                } else {
+                    DEBUG_PRINT_HIGH("extradata %s not supported", token);
                     continue;
-                }
-                if (extraDataParam.nIndex == (OMX_INDEXTYPE)OMX_ExtraDataOutputCropInfo) {
-                    extraDataParam.nPortIndex = OMX_CORE_OUTPUT_PORT_INDEX;
                 }
                 DEBUG_PRINT_HIGH("VENDOR-EXT: set_config: extradata: enable for index = %x",
                         extraDataParam.nIndex);

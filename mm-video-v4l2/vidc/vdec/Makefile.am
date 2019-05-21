@@ -56,7 +56,6 @@ AM_CPPFLAGS += -I$(top_srcdir)/mm-video-v4l2/vidc/common/inc/
 AM_CPPFLAGS += -I$(top_srcdir)/mm-video-v4l2/vidc/vdec/inc/
 AM_CPPFLAGS += -I$(top_srcdir)/libc2dcolorconvert/
 AM_CPPFLAGS += -I$(top_srcdir)/libplatformconfig/
-AM_CPPFLAGS += -I$(top_srcdir)/libarbitrarybytes/inc/
 AM_CPPFLAGS += -I$(top_srcdir)/mm-core/inc/
 AM_CPPFLAGS += -I$(top_srcdir)/mm-core/src/common/
 
@@ -75,5 +74,5 @@ libOmxVdec_la_SOURCES = $(c_sources)
 libOmxVdec_la_CFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) -fPIC
 libOmxVdec_la_LDFLAGS = -module -shared -avoid-version
 libOmxVdec_la_LDFLAGS += -llog  -lcutils -lglib-2.0 -lion -lqdMetaData
-libOmxVdec_la_LDFLAGS += -L$(top_builddir)/libc2dcolorconvert  -L$(top_builddir)/libplatformconfig -L$(top_builddir)/libarbitrarybytes
-libOmxVdec_la_LDFLAGS += -lc2dcolorconvert -lplatformconfig -larbitrarybytes
+libOmxVdec_la_LDFLAGS += -L$(top_builddir)/libc2dcolorconvert  -L$(top_builddir)/libplatformconfig
+libOmxVdec_la_LDFLAGS += -lc2dcolorconvert -lplatformconfig

@@ -629,10 +629,10 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                        OMX_U32 frameWidth = portDefn->format.video.nFrameWidth;
                                        OMX_U32 frameHeight = portDefn->format.video.nFrameHeight;
                                        if (frameHeight != 0x0 && frameWidth != 0x0) {
-                                           m_extradata_info.output_crop_rect.nLeft = 0;
-                                           m_extradata_info.output_crop_rect.nTop = 0;
-                                           m_extradata_info.output_crop_rect.nWidth = frameWidth;
-                                           m_extradata_info.output_crop_rect.nHeight = frameHeight;
+                                           m_extradata_misr.output_crop_rect.nLeft = 0;
+                                           m_extradata_misr.output_crop_rect.nTop = 0;
+                                           m_extradata_misr.output_crop_rect.nWidth = frameWidth;
+                                           m_extradata_misr.output_crop_rect.nHeight = frameHeight;
 
                                            update_resolution(frameWidth, frameHeight,
                                                    frameWidth, frameHeight);
@@ -722,15 +722,15 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                     }
                                     enum vdec_output_format op_format;
                                     if (portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
-                                                     QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m ||
-                                        portFmt->eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar) {
+                                                     QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m) {
                                         op_format = (enum vdec_output_format)VDEC_YUV_FORMAT_NV12;
                                         fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12;
                                         //check if the required color format is a supported flexible format
                                         is_flexible_format = check_supported_flexible_formats(portFmt->eColorFormat);
                                     } else if (portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
                                                    QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed ||
-                                               portFmt->eColorFormat == OMX_COLOR_FormatYUV420Planar) {
+                                               portFmt->eColorFormat == OMX_COLOR_FormatYUV420Planar ||
+                                               portFmt->eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar) {
                                         op_format = (enum vdec_output_format)VDEC_YUV_FORMAT_NV12_UBWC;
                                         fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12_UBWC;
                                         //check if the required color format is a supported flexible format
@@ -759,69 +759,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                 }
                             }
                             break;
-        case OMX_QcomIndexPortDefn: {
-                            VALIDATE_OMX_PARAM_DATA(paramData, OMX_QCOM_PARAM_PORTDEFINITIONTYPE);
-                            OMX_QCOM_PARAM_PORTDEFINITIONTYPE *portFmt =
-                                (OMX_QCOM_PARAM_PORTDEFINITIONTYPE *) paramData;
-                            DEBUG_PRINT_LOW("set_parameter: OMX_IndexQcomParamPortDefinitionType %u",
-                                    (unsigned int)portFmt->nFramePackingFormat);
-
-                            /* Input port */
-                            if (portFmt->nPortIndex == 0) {
-                                // arbitrary_bytes mode cannot be changed arbitrarily since this controls how:
-                                //   - headers are allocated and
-                                //   - headers-indices are derived
-                                // Avoid changing arbitrary_bytes when the port is already allocated
-                                if (m_inp_mem_ptr) {
-                                    DEBUG_PRINT_ERROR("Cannot change arbitrary-bytes-mode since input port is not free!");
-                                    return OMX_ErrorUnsupportedSetting;
-                                }
-                                if (portFmt->nFramePackingFormat == OMX_QCOM_FramePacking_Arbitrary) {
-                                    if (secure_mode || m_input_pass_buffer_fd) {
-                                        arbitrary_bytes = false;
-                                        DEBUG_PRINT_ERROR("setparameter: cannot set to arbitary bytes mode");
-                                        eRet = OMX_ErrorUnsupportedSetting;
-                                    } else {
-                                        arbitrary_bytes = true;
-                                    }
-                                } else if (portFmt->nFramePackingFormat ==
-                                        OMX_QCOM_FramePacking_OnlyOneCompleteFrame) {
-                                    arbitrary_bytes = false;
-                                } else {
-                                    DEBUG_PRINT_ERROR("Setparameter: unknown FramePacking format %u",
-                                            (unsigned int)portFmt->nFramePackingFormat);
-                                    eRet = OMX_ErrorUnsupportedSetting;
-                                }
-                                //Explicitly disable arb mode for unsupported codecs
-                                bool is_arb_supported = false;
-                                if (arbitrary_bytes) {
-                                   switch (drv_ctx.decoder_format) {
-                                   case VDEC_CODECTYPE_H264:
-                                      is_arb_supported = m_arb_mode_override & VDEC_ARB_CODEC_H264;
-                                      break;
-                                   case VDEC_CODECTYPE_HEVC:
-                                      is_arb_supported = m_arb_mode_override & VDEC_ARB_CODEC_HEVC;
-                                      break;
-                                   case VDEC_CODECTYPE_MPEG2:
-                                      is_arb_supported = m_arb_mode_override & VDEC_ARB_CODEC_MPEG2;
-                                      break;
-                                   default:
-                                      DEBUG_PRINT_HIGH("Arbitrary bytes mode not enabled for this Codec");
-                                      break;
-                                   }
-
-                                   if (!is_arb_supported) {
-                                       DEBUG_PRINT_ERROR("Setparameter: Disabling arbitrary bytes mode explicitly");
-                                       arbitrary_bytes = false;
-                                       eRet = OMX_ErrorUnsupportedSetting;
-                                   }
-                                }
-                            } else if (portFmt->nPortIndex == OMX_CORE_OUTPUT_PORT_INDEX) {
-                                DEBUG_PRINT_ERROR("Unsupported at O/P port");
-                                eRet = OMX_ErrorUnsupportedSetting;
-                            }
-                            break;
-                        }
         case OMX_QTIIndexParamVideoClientExtradata: {
                                   VALIDATE_OMX_PARAM_DATA(paramData, QOMX_EXTRADATA_ENABLE);
                                   DEBUG_PRINT_LOW("set_parameter: OMX_QTIIndexParamVideoClientExtradata");
@@ -997,23 +934,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                             pictureOrder->eOutputPictureOrder == QOMX_VIDEO_DECODE_ORDER;
                                      break;
                                  }
-        case OMX_QcomIndexParamConcealMBMapExtraData:
-        case OMX_QcomIndexParamInterlaceExtraData:
-        case OMX_QcomIndexParamOutputCropExtraData:
-                               /* extradata default is set by default */
-                               VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
-                               break;
-
-
-        case OMX_QcomIndexParamFrameInfoExtraData:
-        case OMX_ExtraDataFrameDimension:
-        case OMX_QcomIndexParamH264TimeInfo:
-        case OMX_QcomIndexParamVideoFramePackingExtradata:
-        case OMX_QcomIndexParamVideoQPExtraData:
-        case OMX_QcomIndexEnableExtnUserData:
-                               VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
-                               eRet = enable_extradata(EXTRADATA_ADVANCED);
-                               break;
         case OMX_QcomIndexParamVideoSyncFrameDecodingMode: {
                                        DEBUG_PRINT_HIGH("set_parameter: OMX_QcomIndexParamVideoSyncFrameDecodingMode");
                                        DEBUG_PRINT_HIGH("set idr only decoding for thumbnail mode");
@@ -1048,10 +968,15 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                    }
                                    break;
         case OMX_QcomIndexParamIndexExtraDataType: {
-                                    VALIDATE_OMX_PARAM_DATA(paramData, QOMX_INDEXEXTRADATATYPE);
-                                    QOMX_INDEXEXTRADATATYPE *extradataIndexType = (QOMX_INDEXEXTRADATATYPE *) paramData;
-                                }
-                                break;
+            VALIDATE_OMX_PARAM_DATA(paramData, QOMX_INDEXEXTRADATATYPE);
+            QOMX_INDEXEXTRADATATYPE *extradataIndexType = (QOMX_INDEXEXTRADATATYPE *) paramData;
+            /* Basic extradata is enabled by default, only check for advanced extradata */
+            if (extradataIndexType->nIndex == (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Advanced) {
+                m_client_extradata |= EXTRADATA_ADVANCED;
+                eRet = enable_extradata(m_client_extradata);
+            }
+            break;
+        }
 #if defined (_ANDROID_HONEYCOMB_) || defined (_ANDROID_ICS_)
                                   /* Need to allow following two set_parameters even in Idle
                                    * state. This is ANDROID architecture which is not in sync
@@ -1216,12 +1141,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
         case OMX_QTIIndexParamPassInputBufferFd:
         {
             VALIDATE_OMX_PARAM_DATA(paramData, QOMX_ENABLETYPE);
-            if (arbitrary_bytes) {
-                DEBUG_PRINT_ERROR("OMX_QTIIndexParamPassInputBufferFd not supported in arbitrary buffer mode");
-                eRet = OMX_ErrorUnsupportedSetting;
-                break;
-            }
-
             m_input_pass_buffer_fd = ((QOMX_ENABLETYPE *)paramData)->bEnable;
             if (m_input_pass_buffer_fd)
                 DEBUG_PRINT_LOW("Enable passing input buffer FD");

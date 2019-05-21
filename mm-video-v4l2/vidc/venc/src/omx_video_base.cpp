@@ -1845,44 +1845,21 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 VALIDATE_OMX_PARAM_DATA(paramData, QOMX_INDEXEXTRADATATYPE);
                 DEBUG_PRINT_LOW("get_parameter: OMX_QcomIndexParamIndexExtraDataType");
                 QOMX_INDEXEXTRADATATYPE *pParam = (QOMX_INDEXEXTRADATATYPE *)paramData;
-                if (pParam->nIndex == (OMX_INDEXTYPE)OMX_ExtraDataVideoEncoderSliceInfo) {
+                if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Advanced) {
                     if (pParam->nPortIndex == PORT_INDEX_OUT) {
-                        pParam->bEnabled =
-                            (OMX_BOOL)(m_sExtraData & VENC_EXTRADATA_SLICEINFO);
-                        DEBUG_PRINT_HIGH("Slice Info extradata %d", pParam->bEnabled);
+                        pParam->bEnabled = (OMX_BOOL)(m_sExtraData & EXTRADATA_ADVANCED);
+                        DEBUG_PRINT_HIGH("Advanced extradata %d", pParam->bEnabled);
                     } else {
-                        DEBUG_PRINT_ERROR("get_parameter: slice information is "
+                        DEBUG_PRINT_ERROR("get_parameter: Advanced extradata is "
                                 "valid for output port only");
                         eRet = OMX_ErrorUnsupportedIndex;
                     }
-                } else if (pParam->nIndex == (OMX_INDEXTYPE)OMX_ExtraDataVideoEncoderMBInfo) {
-                    if (pParam->nPortIndex == PORT_INDEX_OUT) {
-                        pParam->bEnabled =
-                            (OMX_BOOL)(m_sExtraData & VENC_EXTRADATA_MBINFO);
-                        DEBUG_PRINT_HIGH("MB Info extradata %d", pParam->bEnabled);
-                    } else {
-                        DEBUG_PRINT_ERROR("get_parameter: MB information is "
-                                "valid for output port only");
-                        eRet = OMX_ErrorUnsupportedIndex;
-                    }
-                } else if (pParam->nIndex == (OMX_INDEXTYPE)OMX_ExtraDataFrameDimension) {
+                } else if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Enc_ROI) {
                     if (pParam->nPortIndex == PORT_INDEX_IN) {
-                        pParam->bEnabled =
-                            (OMX_BOOL)((m_sExtraData & VENC_EXTRADATA_FRAMEDIMENSION) ? 1 : 0);
-                        DEBUG_PRINT_HIGH("Frame dimension extradata %d", pParam->bEnabled);
+                        pParam->bEnabled = (OMX_BOOL)(m_sExtraData & EXTRADATA_ENC_INPUT_ROI);
+                        DEBUG_PRINT_HIGH("ROI %d", pParam->bEnabled);
                     } else {
-                        DEBUG_PRINT_ERROR("get_parameter: frame dimension is "
-                                "valid for input port only");
-                        eRet = OMX_ErrorUnsupportedIndex;
-                    }
-                } else if (pParam->nIndex == (OMX_INDEXTYPE)OMX_ExtraDataVideoLTRInfo) {
-                    if (pParam->nPortIndex == PORT_INDEX_OUT) {
-                        pParam->bEnabled =
-                            (OMX_BOOL)(m_sExtraData & VENC_EXTRADATA_LTRINFO);
-                        DEBUG_PRINT_HIGH("LTR Info extradata %d", pParam->bEnabled);
-                    } else {
-                        DEBUG_PRINT_ERROR("get_parameter: LTR information is "
-                                "valid for output port only");
+                        DEBUG_PRINT_ERROR("get_parameter: ROI is valid for input port only");
                         eRet = OMX_ErrorUnsupportedIndex;
                     }
                 } else {
@@ -1899,12 +1876,11 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 QOMX_EXTRADATA_ENABLE *pParam =
                     (QOMX_EXTRADATA_ENABLE *)paramData;
                 if (pParam->nPortIndex == PORT_INDEX_EXTRADATA_OUT) {
-                    OMX_U32 output_extradata_mask = VENC_EXTRADATA_SLICEINFO | VENC_EXTRADATA_LTRINFO |
-                                                    VENC_EXTRADATA_MBINFO;
+                    OMX_U32 output_extradata_mask = EXTRADATA_ADVANCED;
                     pParam->bEnable = (m_sExtraData & output_extradata_mask) ? OMX_TRUE : OMX_FALSE;
                     eRet = OMX_ErrorNone;
                 } else if (pParam->nPortIndex == PORT_INDEX_EXTRADATA_IN) {
-                    OMX_U32 input_extradata_mask = VENC_EXTRADATA_ROI;
+                    OMX_U32 input_extradata_mask = EXTRADATA_ENC_INPUT_ROI;
                     pParam->bEnable = (m_sExtraData & input_extradata_mask) ? OMX_TRUE : OMX_FALSE;
                     eRet = OMX_ErrorNone;
                 } else {
@@ -4739,9 +4715,6 @@ OMX_ERRORTYPE omx_video::fill_buffer_done(OMX_HANDLETYPE hComp,
         if (buffer->nFlags & OMX_BUFFERFLAG_EXTRADATA) {
             if (!dev_handle_output_extradata((void *)buffer, index))
                 DEBUG_PRINT_ERROR("Failed to parse output extradata");
-
-            dev_extradata_log_buffers((char *)(((unsigned long)buffer->pBuffer + buffer->nOffset +
-                        buffer->nFilledLen + 3) & (~3)), index, false);
         }
         m_pCallbacks.FillBufferDone (hComp,m_app_data,buffer);
     } else {

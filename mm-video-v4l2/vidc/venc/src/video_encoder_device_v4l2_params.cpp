@@ -922,15 +922,26 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
 
                 break;
             }
-        case OMX_ExtraDataVideoLTRInfo:
+        case OMX_QcomIndexParamIndexExtraDataType:
             {
-                DEBUG_PRINT_LOW("venc_set_param: OMX_ExtraDataVideoLTRInfo");
-                OMX_BOOL extra_data =  *(OMX_BOOL *)(paramData);
-                if (venc_set_extradata(OMX_ExtraDataVideoLTRInfo, extra_data) == false) {
-                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_ExtraDataVideoLTRInfo failed");
+                DEBUG_PRINT_LOW("venc_set_param: OMX_QcomIndexParamIndexExtraDataType");
+                QOMX_INDEXEXTRADATATYPE *pParam = (QOMX_INDEXEXTRADATATYPE *)paramData;
+
+                if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Enc_ROI &&
+                        m_sVenc_cfg.codectype != V4L2_PIX_FMT_H264 &&
+                        m_sVenc_cfg.codectype != V4L2_PIX_FMT_HEVC) {
+                    DEBUG_PRINT_ERROR("OMX_QTI_ExtraDataCategory_Enc_ROI is not supported for %lu codec", m_sVenc_cfg.codectype);
                     return false;
                 }
-                extradata = true;
+
+                if (venc_set_extradata(pParam->nIndex, pParam->bEnabled) == false) {
+                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_QcomIndexParamIndexExtraDataType failed");
+                    return false;
+                }
+
+                if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Enc_ROI && pParam->bEnabled)
+                    m_roi_enabled = true;
+
                 break;
             }
         case OMX_QcomIndexParamSequenceHeaderWithIDR:
@@ -1014,29 +1025,6 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                     DEBUG_PRINT_ERROR("ERROR: Setting OMX_QcomIndexParamVencAspectRatio failed");
                     return false;
                 }
-                break;
-            }
-        case OMX_QTIIndexParamVideoEnableRoiInfo:
-            {
-                struct v4l2_control control;
-                OMX_BOOL extra_data =  *(OMX_BOOL *)(paramData);
-                if (extra_data == OMX_FALSE) {
-                    DEBUG_PRINT_INFO("OMX_QTIIndexParamVideoEnableRoiInfo: bEnableRoiInfo is false");
-                    break;
-                }
-                if (m_sVenc_cfg.codectype != V4L2_PIX_FMT_H264 &&
-                        m_sVenc_cfg.codectype != V4L2_PIX_FMT_HEVC) {
-                    DEBUG_PRINT_ERROR("OMX_QTIIndexParamVideoEnableRoiInfo is not supported for %lu codec", m_sVenc_cfg.codectype);
-                    return false;
-                }
-                control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
-                control.value = EXTRADATA_ENC_INPUT_ROI;
-                DEBUG_PRINT_LOW("Setting param OMX_QTIIndexParamVideoEnableRoiInfo");
-                if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
-                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamVideoEnableRoiInfo failed");
-                    return false;
-                }
-                m_roi_enabled = true;
                 break;
             }
         case OMX_QTIIndexParamLowLatencyMode:
@@ -1151,6 +1139,16 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 DEBUG_PRINT_INFO("Native recorder encode session %d", pParam->bEnable);
                 break;
             }
+        case OMX_QTIIndexParamVbvDelay:
+            {
+                OMX_EXTNINDEX_VIDEO_VBV_DELAY *pParam =
+                    (OMX_EXTNINDEX_VIDEO_VBV_DELAY*)paramData;
+                if (!venc_set_vbv_delay(pParam->nVbvDelay)) {
+                     DEBUG_PRINT_ERROR("Setting OMX_QTIIndexParamVbvDelay failed");
+                     return false;
+                }
+                break;
+            }
         default:
             DEBUG_PRINT_ERROR("ERROR: Unsupported parameter in venc_set_param: %u",
                     index);
@@ -1211,8 +1209,11 @@ bool venc_dev::venc_set_extradata(OMX_U32 extra_data, OMX_BOOL enable)
 
     control.id = V4L2_CID_MPEG_VIDC_VIDEO_EXTRADATA;
     switch (extra_data) {
-        case OMX_ExtraDataVideoLTRInfo:
+        case OMX_QTI_ExtraDataCategory_Advanced:
             control.value = EXTRADATA_ADVANCED;
+            break;
+        case OMX_QTI_ExtraDataCategory_Enc_ROI:
+            control.value = EXTRADATA_ENC_INPUT_ROI;
             break;
         default:
             DEBUG_PRINT_ERROR("Unrecognized extradata index 0x%x", (unsigned int)extra_data);
@@ -1263,8 +1264,7 @@ bool venc_dev::venc_set_profile(OMX_U32 eProfile)
     if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264) {
         control.id = V4L2_CID_MPEG_VIDEO_H264_PROFILE;
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_VP8) {
-        //In driver VP8 profile is hardcoded. No need to set anything from here
-        return true;
+        control.id = V4L2_CID_MPEG_VIDEO_VP8_PROFILE;
     } else if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
         control.id = V4L2_CID_MPEG_VIDEO_HEVC_PROFILE;
     } else {
@@ -1801,6 +1801,28 @@ bool venc_dev::venc_set_vpx_error_resilience(OMX_BOOL enable)
         return false;
     }
     vpx_err_resilience.enable = 1;
+    DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
+    return true;
+}
+
+bool venc_dev::venc_set_vbv_delay(OMX_U32 nVbvDelay)
+{
+    int rc = 0;
+    struct v4l2_control control;
+
+    control.id = V4L2_CID_MPEG_VIDEO_VBV_DELAY;
+    control.value = nVbvDelay;
+
+    DEBUG_PRINT_LOW("venc_set_vbv_delay: vbvdelay = %u", (unsigned int)control.value);
+
+    DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
+    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
+
+    if (rc) {
+        DEBUG_PRINT_ERROR("Failed to set vbv delay");
+        return false;
+    }
+
     DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
     return true;
 }

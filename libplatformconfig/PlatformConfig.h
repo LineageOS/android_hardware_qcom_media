@@ -36,6 +36,10 @@
 #include <string>
 #include <map>
 
+#ifdef ENABLE_CONFIGSTORE
+#include <vendor/qti/hardware/capabilityconfigstore/1.0/ICapabilityConfigStore.h>
+#endif
+
 #ifdef __cplusplus
     extern "C" {
 #endif
@@ -43,6 +47,11 @@
 namespace Platform {
 
 typedef std::map<std::string, std::string> ConfigMap;
+
+#ifdef ENABLE_CONFIGSTORE
+using namespace android;
+using vendor::qti::hardware::capabilityconfigstore::V1_0::ICapabilityConfigStore;
+#endif
 
 typedef enum {
     OK = 0,
@@ -60,7 +69,6 @@ typedef enum {
     vidc_dec_conceal_color_8bit,
     vidc_dec_conceal_color_10bit,
     vidc_enc_csc_custom_matrix,
-    vidc_dec_arb_mode_override,
     vidc_perf_control_enable,
     vidc_enc_linear_color_format,
     vidc_enc_bitrate_savings_enable,
@@ -82,7 +90,6 @@ static const struct configStr configStrMap[] = {
     {vidc_dec_conceal_color_8bit, "vidc_dec_conceal_color_8bit"},
     {vidc_dec_conceal_color_10bit, "vidc_dec_conceal_color_10bit"},
     {vidc_enc_csc_custom_matrix, "vidc_enc_csc_custom_matrix"},
-    {vidc_dec_arb_mode_override, "vidc_dec_arb_mode_override"},
     {vidc_perf_control_enable, "vidc_perf_control_enable"},
     {vidc_enc_linear_color_format, "vidc_enc_linear_color_format"},
     {vidc_enc_bitrate_savings_enable, "vidc_enc_bitrate_savings_enable"},
@@ -99,9 +106,17 @@ class Config {
         ConfigMap mConfigMap;
         static Config* mInstance;
 
+#ifdef ENABLE_CONFIGSTORE
+        android::sp<ICapabilityConfigStore> mConfigStore;
+#endif
+
     public:
         static ConfigError_t getInt32(Config_t config, int32_t *value,
                 const int32_t defaultValue);
+
+        static bool isConfigStoreEnabled();
+        static ConfigError_t getConfigStoreBool(const char *area,
+                const char *config, bool &value, const bool defaultValue);
 };
 
 }
