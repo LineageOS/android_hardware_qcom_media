@@ -732,6 +732,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_color_space = EXCEPT_BT2020;
 
     init_color_aspects_map();
+    m_hist_metadata.stat_len = 0;
 
     profile_level_converter::init();
     clientSet_profile_level.eProfile = 0;
@@ -7954,6 +7955,22 @@ void omx_vdec::get_preferred_hdr_info(HDRStaticInfo& finalHDRInfo)
         preferredHDRInfo.sType1.mMaxFrameAverageLightLevel : defaultHDRInfo.sType1.mMaxFrameAverageLightLevel;
 }
 
+void omx_vdec::set_histogram_metadata(private_handle_t *private_handle)
+{
+    if (m_hist_metadata.stat_len != VIDEO_HISTOGRAM_STATS_SIZE || !private_handle)
+        return;
+
+    m_hist_metadata.display_width = m_extradata_misr.output_crop_rect.nWidth;
+    m_hist_metadata.display_height = m_extradata_misr.output_crop_rect.nHeight;
+    m_hist_metadata.decode_width = m_extradata_misr.output_width;
+    m_hist_metadata.decode_height = m_extradata_misr.output_height;
+
+    if (setMetaData(private_handle, SET_VIDEO_HISTOGRAM_STATS, (void*)&m_hist_metadata))
+        DEBUG_PRINT_HIGH("failed to set histogram video stats");
+
+    m_hist_metadata.stat_len = 0;
+}
+
 bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
 {
     OMX_OTHER_EXTRADATATYPE *p_client_extra = NULL;
@@ -8122,13 +8139,22 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                 case MSM_VIDC_EXTRADATA_MASTERING_DISPLAY_COLOUR_SEI:
                     internal_hdr_info_changed_flag |= handle_mastering_display_color_info((void*)data->data);
                     break;
+                case MSM_VIDC_EXTRADATA_HDR_HIST:
+                    if (data->nDataSize != VIDEO_HISTOGRAM_STATS_SIZE) {
+                        DEBUG_PRINT_ERROR("Invalid HDR histogram extradata size %u", data->nDataSize);
+                        m_hist_metadata.stat_len = 0;
+                    } else {
+                        memcpy(m_hist_metadata.stats_info, data->data, VIDEO_HISTOGRAM_STATS_SIZE);
+                        m_hist_metadata.stat_len = VIDEO_HISTOGRAM_STATS_SIZE;
+                        m_hist_metadata.frame_type = (p_buf_hdr->nFlags & OMX_BUFFERFLAG_SYNCFRAME) ? QD_SYNC_FRAME : 0;
+                    }
+                    break;
                 case MSM_VIDC_EXTRADATA_NUM_CONCEALED_MB:
                 case MSM_VIDC_EXTRADATA_FRAME_RATE:
                 case MSM_VIDC_EXTRADATA_FRAME_QP:
                 case MSM_VIDC_EXTRADATA_FRAME_BITS_INFO:
                 case MSM_VIDC_EXTRADATA_S3D_FRAME_PACKING:
                 case MSM_VIDC_EXTRADATA_PANSCAN_WINDOW:
-                case MSM_VIDC_EXTRADATA_HDR_HIST:
                     // skip unused extra data
                     break;
                 default:
@@ -8173,6 +8199,7 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                 print_debug_hdr_color_info_mdata(&color_mdata);
                 print_debug_hdr10plus_metadata(color_mdata);
                 setMetaData(private_handle, COLOR_METADATA, (void*)&color_mdata);
+                set_histogram_metadata(private_handle);
         }
 
     }
