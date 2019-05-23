@@ -740,6 +740,7 @@ class omx_video: public qc_omx_component
         QOMX_ENABLETYPE m_sParamColorSpaceConversion;
         OMX_VIDEO_PARAM_ANDROID_IMAGEGRIDTYPE m_sParamAndroidImageGrid;
         QOMX_ENABLETYPE m_sParamLinearColorFormat;
+        QOMX_ENABLETYPE m_sParamNativeRecorder;
 
         // fill this buffer queue
         omx_cmd_queue m_ftb_q;

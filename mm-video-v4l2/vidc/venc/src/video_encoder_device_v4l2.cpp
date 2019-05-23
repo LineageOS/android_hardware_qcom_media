@@ -180,6 +180,7 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     client_req_turbo_mode  = false;
     intra_period.num_pframes = 29;
     intra_period.num_bframes = 0;
+    mIsNativeRecorder = false;
     m_hdr10meta_enabled = false;
 
     Platform::Config::getInt32(Platform::vidc_enc_log_in,
@@ -2974,6 +2975,13 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 }
                 break;
             }
+        case OMX_QTIIndexParamNativeRecorder:
+            {
+                QOMX_ENABLETYPE *pParam = (QOMX_ENABLETYPE *)paramData;
+                mIsNativeRecorder = pParam->bEnable == OMX_TRUE;
+                DEBUG_PRINT_INFO("Native recorder encode session %d", pParam->bEnable);
+                break;
+            }
         default:
             DEBUG_PRINT_ERROR("ERROR: Unsupported parameter in venc_set_param: %u",
                     index);
@@ -5359,13 +5367,14 @@ bool venc_dev::venc_reconfigure_intra_period()
                     !client_req_disable_bframe;
 
     DEBUG_PRINT_LOW("B-frame enablement = %u; Conditions for Resolution = %u, FPS = %u,"
-                     " Operating rate = %u, Layer condition = %u,"
-                     " LTR = %u, RC = %u Codec/Profile = %u Client request to disable = %u LowLatency : %u\n",
+                     "Operating rate = %u, Layer condition = %u, LTR = %u, RC = %u"
+                     "Codec/Profile = %u Client request to disable = %u LowLatency : %u \n isNativeRecorder : %u",
                      enableBframes, isValidResolution, isValidFps, isValidOpRate,
                      isValidLayerCount, isValidLtrSetting, isValidRcMode, isValidCodec, client_req_disable_bframe,
-                     low_latency_mode);
+                     low_latency_mode, mIsNativeRecorder);
 
-    if (enableBframes && intra_period.num_bframes == 0 && intra_period.num_pframes > VENC_BFRAME_MAX_COUNT) {
+    if (enableBframes && intra_period.num_bframes == 0 && intra_period.num_pframes > VENC_BFRAME_MAX_COUNT
+            && mIsNativeRecorder) {
         intra_period.num_bframes = VENC_BFRAME_MAX_COUNT;
         nPframes_cache = intra_period.num_pframes;
         intra_period.num_pframes = intra_period.num_pframes / (1 + intra_period.num_bframes);
