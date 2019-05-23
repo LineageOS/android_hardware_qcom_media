@@ -370,6 +370,7 @@ class venc_dev
         bool is_csc_custom_matrix_enabled;
         bool csc_enable;
         OMX_U32 fd_list[64];
+        unsigned long get_media_colorformat(unsigned long);
 
     private:
         OMX_U32                             m_codec;
@@ -461,6 +462,7 @@ class venc_dev
         bool venc_store_dynamic_config(OMX_INDEXTYPE type, OMX_PTR config);
         bool venc_cvp_enable(private_handle_t *handle);
         bool venc_get_cvp_metadata(private_handle_t *handle);
+        bool venc_superframe_enable(private_handle_t *handle);
 
         OMX_U32 pmem_free();
         OMX_U32 pmem_allocate(OMX_U32 size, OMX_U32 alignment, OMX_U32 count);
