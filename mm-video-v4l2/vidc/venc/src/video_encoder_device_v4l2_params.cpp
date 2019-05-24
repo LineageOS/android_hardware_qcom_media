@@ -951,19 +951,6 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
 
                 break;
             }
-        case OMX_QcomIndexConfigH264EntropyCodingCabac:
-            {
-                QOMX_VIDEO_H264ENTROPYCODINGTYPE * pParam =
-                    (QOMX_VIDEO_H264ENTROPYCODINGTYPE *)paramData;
-
-                DEBUG_PRINT_LOW("set Entropy info : %d", pParam->bCabac);
-                if(venc_set_entropy_config (pParam->bCabac, 0) == false) {
-                    DEBUG_PRINT_ERROR("ERROR: set Entropy failed");
-                    return false;
-                }
-
-                break;
-            }
         case OMX_QcomIndexParamH264VUITimingInfo:
             {
                 OMX_QCOM_VIDEO_PARAM_VUI_TIMING_INFO *pParam =

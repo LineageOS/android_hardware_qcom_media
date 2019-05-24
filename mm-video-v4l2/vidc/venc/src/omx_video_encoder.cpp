@@ -886,28 +886,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 memcpy(&avc_param, pParam, sizeof( struct OMX_VIDEO_PARAM_AVCTYPE));
                 DEBUG_PRINT_LOW("set_parameter: OMX_IndexParamVideoAvc");
 
-                avc_param.nBFrames = 0;
-                avc_param.bEntropyCodingCABAC = (OMX_BOOL)(0);
-                avc_param.nCabacInitIdc = 0;
-                if ((pParam->eProfile == OMX_VIDEO_AVCProfileHigh)||
-                    (pParam->eProfile == OMX_VIDEO_AVCProfileMain)||
-                    (pParam->eProfile == static_cast <OMX_VIDEO_AVCPROFILETYPE> (OMX_VIDEO_AVCProfileConstrainedHigh))) {
-
-                    if (pParam->nBFrames) {
-                        avc_param.nBFrames = pParam->nBFrames;
-                        DEBUG_PRINT_LOW("B frames set using Client setparam to %d",
-                            avc_param.nBFrames);
-                    }
-
-                    DEBUG_PRINT_HIGH("AVC: BFrames: %u", (unsigned int)avc_param.nBFrames);
-                    avc_param.bEntropyCodingCABAC = (OMX_BOOL)(1);
-                    avc_param.nCabacInitIdc = 0;
-                } else {
-                    if (pParam->nBFrames) {
-                        DEBUG_PRINT_HIGH("B frames not supported with profile %x", pParam->eProfile);
-                    }
-                }
-
                 if (handle->venc_set_param(&avc_param,OMX_IndexParamVideoAvc) != true) {
                     return OMX_ErrorUnsupportedSetting;
                 }
@@ -1479,16 +1457,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                    return OMX_ErrorUnsupportedSetting;
                 }
                 break;
-            }
-        case OMX_QcomIndexConfigH264EntropyCodingCabac:
-            {
-                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_VIDEO_H264ENTROPYCODINGTYPE);
-                if(!handle->venc_set_param(paramData,
-                         (OMX_INDEXTYPE)OMX_QcomIndexConfigH264EntropyCodingCabac)) {
-                   DEBUG_PRINT_ERROR("Attempting to set Entropy failed");
-                   return OMX_ErrorUnsupportedSetting;
-                }
-               break;
             }
         case OMX_QcomIndexParamVencAspectRatio:
             {
