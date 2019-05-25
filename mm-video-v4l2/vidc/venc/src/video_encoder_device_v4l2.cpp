@@ -2733,8 +2733,9 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                             DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = NV12 Linear");
                         } else if (handle->format == HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC ||
                                    handle->format == HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS) {
-                            if ((m_codec == OMX_VIDEO_CodingHEVC) &&
-                                 (codec_profile.profile == V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_10)) {
+                            if (((m_codec == OMX_VIDEO_CodingHEVC) &&
+                                 (codec_profile.profile == V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_10)) ||
+                                     (csc_enable == true)) {
                                 m_sVenc_cfg.inputformat =
                                     (handle->format == HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC)?
                                              V4L2_PIX_FMT_NV12_TP10_UBWC :
@@ -2769,12 +2770,6 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
 
                         if (csc_enable) {
                             struct v4l2_control control;
-
-                            /* Set Camera Color Space. When we set CSC, this will be passed to
-                               fimrware as the InputPrimaries */
-                            venc_set_colorspace(colorData.colorPrimaries, colorData.range,
-                                                colorData.transfer, colorData.matrixCoefficients);
-
                             control.id = V4L2_CID_MPEG_VIDC_VIDEO_VPE_CSC;
                             control.value = V4L2_MPEG_MSM_VIDC_ENABLE;
                             if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
@@ -2790,11 +2785,6 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                                         DEBUG_PRINT_INFO("venc_empty_buf: Enabled VPE CSC custom matrix");
                                     }
                                 }
-                                /* Change Colorspace to 709*/
-                                colorData.colorPrimaries =  ColorPrimaries_BT709_5;
-                                colorData.range = Range_Limited;
-                                colorData.transfer = Transfer_sRGB;
-                                colorData.matrixCoefficients = MatrixCoEff_BT709_5;
                             }
                         }
 
