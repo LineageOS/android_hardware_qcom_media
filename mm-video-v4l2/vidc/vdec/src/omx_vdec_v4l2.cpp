@@ -2020,7 +2020,7 @@ int omx_vdec::log_input_buffers(const char *buffer_addr, int buffer_len, uint64_
 }
 
 int omx_vdec::log_cc_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
-    if (!client_buffers.is_color_conversion_enabled() ||
+    if (client_buffers.client_buffers_invalid() ||
         !m_debug.out_cc_buffer_log || !buffer || !buffer->nFilledLen)
         return 0;
 
@@ -3693,10 +3693,26 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                OMX_PARAM_PORTDEFINITIONTYPE *portDefn =
                                    (OMX_PARAM_PORTDEFINITIONTYPE *) paramData;
                                DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamPortDefinition");
+
+                               OMX_COLOR_FORMATTYPE drv_color_format;
+                               bool status = false;
+
+                               if (in_reconfig && !client_buffers.is_color_conversion_enabled()) {
+                                   status = client_buffers.get_color_format(drv_color_format);
+                               }
+
                                if (decide_dpb_buffer_mode(is_down_scalar_enabled)) {
                                    DEBUG_PRINT_ERROR("%s:decide_dpb_buffer_mode failed", __func__);
                                    return OMX_ErrorBadParameter;
                                }
+
+                              if (in_reconfig && status) {
+                                 if (!client_buffers.is_color_conversion_enabled()) {
+                                         client_buffers.set_client_buffers_disabled(true);
+                                         client_buffers.set_color_format(drv_color_format);
+                                 }
+                              }
+
                                eRet = update_portdef(portDefn);
                                if (eRet == OMX_ErrorNone)
                                    m_port_def = *portDefn;
@@ -10707,12 +10723,12 @@ bool omx_vdec::handle_mastering_display_color_info(void* data)
     HDRStaticInfo* hdr_info = &m_internal_hdr_info.sInfo;
     bool internal_disp_changed_flag = false;
 
-    internal_disp_changed_flag |= (hdr_info->sType1.mR.x != mastering_display_payload->nDisplayPrimariesX[0]) ||
-        (hdr_info->sType1.mR.y != mastering_display_payload->nDisplayPrimariesY[0]);
-    internal_disp_changed_flag |= (hdr_info->sType1.mG.x != mastering_display_payload->nDisplayPrimariesX[1]) ||
-        (hdr_info->sType1.mG.y != mastering_display_payload->nDisplayPrimariesY[1]);
-    internal_disp_changed_flag |= (hdr_info->sType1.mB.x != mastering_display_payload->nDisplayPrimariesX[2]) ||
-        (hdr_info->sType1.mB.y != mastering_display_payload->nDisplayPrimariesY[2]);
+    internal_disp_changed_flag |= (hdr_info->sType1.mG.x != mastering_display_payload->nDisplayPrimariesX[0]) ||
+        (hdr_info->sType1.mG.y != mastering_display_payload->nDisplayPrimariesY[0]);
+    internal_disp_changed_flag |= (hdr_info->sType1.mB.x != mastering_display_payload->nDisplayPrimariesX[1]) ||
+        (hdr_info->sType1.mB.y != mastering_display_payload->nDisplayPrimariesY[1]);
+    internal_disp_changed_flag |= (hdr_info->sType1.mR.x != mastering_display_payload->nDisplayPrimariesX[2]) ||
+        (hdr_info->sType1.mR.y != mastering_display_payload->nDisplayPrimariesY[2]);
 
     internal_disp_changed_flag |= (hdr_info->sType1.mW.x != mastering_display_payload->nWhitePointX) ||
         (hdr_info->sType1.mW.y != mastering_display_payload->nWhitePointY);
@@ -10726,12 +10742,12 @@ bool omx_vdec::handle_mastering_display_color_info(void* data)
         (hdr_info->sType1.mMinDisplayLuminance != mastering_display_payload->nMinDisplayMasteringLuminance);
 
     if (internal_disp_changed_flag) {
-        hdr_info->sType1.mR.x = mastering_display_payload->nDisplayPrimariesX[0];
-        hdr_info->sType1.mR.y = mastering_display_payload->nDisplayPrimariesY[0];
-        hdr_info->sType1.mG.x = mastering_display_payload->nDisplayPrimariesX[1];
-        hdr_info->sType1.mG.y = mastering_display_payload->nDisplayPrimariesY[1];
-        hdr_info->sType1.mB.x = mastering_display_payload->nDisplayPrimariesX[2];
-        hdr_info->sType1.mB.y = mastering_display_payload->nDisplayPrimariesY[2];
+        hdr_info->sType1.mG.x = mastering_display_payload->nDisplayPrimariesX[0];
+        hdr_info->sType1.mG.y = mastering_display_payload->nDisplayPrimariesY[0];
+        hdr_info->sType1.mB.x = mastering_display_payload->nDisplayPrimariesX[1];
+        hdr_info->sType1.mB.y = mastering_display_payload->nDisplayPrimariesY[1];
+        hdr_info->sType1.mR.x = mastering_display_payload->nDisplayPrimariesX[2];
+        hdr_info->sType1.mR.y = mastering_display_payload->nDisplayPrimariesY[2];
         hdr_info->sType1.mW.x = mastering_display_payload->nWhitePointX;
         hdr_info->sType1.mW.y = mastering_display_payload->nWhitePointY;
 
@@ -12116,6 +12132,7 @@ OMX_ERRORTYPE omx_vdec::handle_demux_data(OMX_BUFFERHEADERTYPE *p_buf_hdr)
 omx_vdec::allocate_color_convert_buf::allocate_color_convert_buf()
 {
     enabled = false;
+    client_buffers_disabled = false;
     omx = NULL;
     init_members();
     ColorFormat = OMX_COLOR_FormatMax;
@@ -12216,7 +12233,8 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
     if (status != false) {
         if (omx->drv_ctx.output_format != VDEC_YUV_FORMAT_NV12 &&
             (ColorFormat != OMX_COLOR_FormatYUV420Planar &&
-             ColorFormat != OMX_COLOR_FormatYUV420SemiPlanar)) {
+             ColorFormat != OMX_COLOR_FormatYUV420SemiPlanar &&
+             ColorFormat != (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m)) {
             DEBUG_PRINT_ERROR("update_buffer_req: Unsupported color conversion");
             status = false;
         } else {
@@ -12297,9 +12315,17 @@ bool omx_vdec::allocate_color_convert_buf::set_color_format(
     if (status && drv_colorformat_c2d_enable && dest_color_format_c2d_enable) {
         DEBUG_PRINT_LOW("Enabling C2D");
         if (dest_color_format == OMX_COLOR_FormatYUV420Planar ||
-            dest_color_format == OMX_COLOR_FormatYUV420SemiPlanar ) {
+            dest_color_format == OMX_COLOR_FormatYUV420SemiPlanar ||
+            (omx->m_progressive != MSM_VIDC_PIC_STRUCT_PROGRESSIVE &&
+            dest_color_format == (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m)) {
             ColorFormat = dest_color_format;
-            dest_format = dest_color_format == OMX_COLOR_FormatYUV420Planar? YCbCr420P: YCbCr420SP;
+            if (dest_color_format == OMX_COLOR_FormatYUV420Planar) {
+                   dest_format = YCbCr420P;
+            } else if( dest_color_format == OMX_COLOR_FormatYUV420SemiPlanar) {
+                    dest_format = YCbCr420SP;
+            } else {
+                   dest_format = NV12_128m;
+            }
             enabled = true;
         } else {
             DEBUG_PRINT_ERROR("Unsupported output color format for c2d (%d)",
@@ -12320,7 +12346,7 @@ OMX_BUFFERHEADERTYPE* omx_vdec::allocate_color_convert_buf::get_il_buf_hdr()
         DEBUG_PRINT_ERROR("Invalid param get_buf_hdr");
         return NULL;
     }
-    if (!enabled)
+    if (client_buffers_invalid())
         return omx->m_out_mem_ptr;
     return m_out_mem_ptr_client;
 }
@@ -12332,7 +12358,7 @@ OMX_BUFFERHEADERTYPE* omx_vdec::allocate_color_convert_buf::get_il_buf_hdr()
         DEBUG_PRINT_ERROR("Invalid param get_buf_hdr");
         return NULL;
     }
-    if (!enabled)
+    if (client_buffers_invalid())
         return bufadd;
 
     unsigned index = 0;
@@ -12378,7 +12404,7 @@ OMX_BUFFERHEADERTYPE* omx_vdec::allocate_color_convert_buf::get_il_buf_hdr()
         DEBUG_PRINT_ERROR("Invalid param get_buf_hdr");
         return NULL;
     }
-    if (!enabled)
+    if (client_buffers_invalid())
         return bufadd;
     unsigned index = 0;
     index = bufadd - m_out_mem_ptr_client;
@@ -12444,7 +12470,7 @@ OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::free_output_buffer(
 {
     unsigned int index = 0;
 
-    if (!enabled)
+    if (client_buffers_invalid())
         return omx->free_output_buffer(bufhdr);
     if (enabled && omx->is_component_secure())
         return OMX_ErrorNone;
@@ -12502,6 +12528,8 @@ OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::allocate_buffers_color_conve
         DEBUG_PRINT_ERROR("Actual count err in allocate_buffers_color_convert");
         return OMX_ErrorInsufficientResources;
     }
+
+    client_buffers_disabled = false;
     OMX_BUFFERHEADERTYPE *temp_bufferHdr = NULL;
     eRet = omx->allocate_output_buffer(hComp,&temp_bufferHdr,
             port,appData,omx->drv_ctx.op_buf.buffer_size);
@@ -12587,10 +12615,12 @@ bool omx_vdec::allocate_color_convert_buf::get_color_format(OMX_COLOR_FORMATTYPE
         }
     } else {
         if (ColorFormat == OMX_COLOR_FormatYUV420Planar ||
-            ColorFormat == OMX_COLOR_FormatYUV420SemiPlanar) {
+            ColorFormat == OMX_COLOR_FormatYUV420SemiPlanar ||
+            ColorFormat == (OMX_COLOR_FORMATTYPE) QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m) {
             dest_color_format = ColorFormat;
-        } else
+        } else {
             status = false;
+        }
     }
     return status;
 }
