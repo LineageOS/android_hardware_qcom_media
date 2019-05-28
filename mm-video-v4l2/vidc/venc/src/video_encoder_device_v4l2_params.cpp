@@ -311,16 +311,6 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
              }
              break;
         }
-        case OMX_QcomIndexConfigH264Transform8x8:
-        {
-            OMX_CONFIG_BOOLEANTYPE *pEnable = (OMX_CONFIG_BOOLEANTYPE *) configData;
-            DEBUG_PRINT_LOW("venc_set_config: OMX_QcomIndexConfigH264Transform8x8");
-            if (venc_h264_transform_8x8(pEnable->bEnabled) == false) {
-                DEBUG_PRINT_ERROR("Failed to set OMX_QcomIndexConfigH264Transform8x8");
-                return false;
-            }
-            break;
-        }
         case OMX_QTIIndexConfigDescribeColorAspects:
             {
                 DescribeColorAspectsParams *params = (DescribeColorAspectsParams *)configData;
@@ -737,6 +727,10 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                     if (!venc_set_multislice_cfg(V4L2_MPEG_VIDEO_MULTI_SICE_MODE_MAX_MB, pParam->nSliceHeaderSpacing)) {
                         DEBUG_PRINT_ERROR("WARNING: Unsuccessful in updating slice_config");
                         return false;
+                    }
+                    if (!venc_h264_transform_8x8(pParam->bDirect8x8Inference)) {
+                       DEBUG_PRINT_ERROR("WARNING: Request for setting Transform8x8 failed");
+                       return false;
                     }
                 } else {
                     DEBUG_PRINT_ERROR("ERROR: Invalid Port Index for OMX_IndexParamVideoAvc");

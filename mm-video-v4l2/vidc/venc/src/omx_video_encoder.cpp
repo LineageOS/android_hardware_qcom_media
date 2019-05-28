@@ -2019,14 +2019,6 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                 memcpy(&m_blurInfo, pParam, sizeof(OMX_QTI_VIDEO_CONFIG_BLURINFO));
                 break;
            }
-        case OMX_QcomIndexConfigH264Transform8x8:
-           {
-                if (!handle->venc_set_config(configData, (OMX_INDEXTYPE)OMX_QcomIndexConfigH264Transform8x8)) {
-                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_QcomIndexConfigH264Transform8x8 failed");
-                    return OMX_ErrorUnsupportedSetting;
-                }
-                break;
-            }
         case OMX_QTIIndexConfigDescribeColorAspects:
            {
                VALIDATE_OMX_PARAM_DATA(configData, DescribeColorAspectsParams);
