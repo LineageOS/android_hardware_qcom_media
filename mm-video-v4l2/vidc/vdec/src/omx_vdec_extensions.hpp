@@ -189,7 +189,7 @@ OMX_ERRORTYPE omx_vdec::set_vendor_extension_config(
             }
             char *rest = exType;
             char *token = strtok_r(exType, "|", &rest);
-            do {
+            while (token != NULL) {
                 extraDataParam.nPortIndex = OMX_CORE_OUTPUT_PORT_INDEX;
                 extraDataParam.bEnabled = OMX_TRUE;
                 if (!strcmp(token, "basic")) {
@@ -207,7 +207,8 @@ OMX_ERRORTYPE omx_vdec::set_vendor_extension_config(
                 if (err != OMX_ErrorNone) {
                     DEBUG_PRINT_ERROR("set_config: OMX_QcomIndexParamIndexExtraDataType failed !");
                 }
-            } while ((token = strtok_r(NULL, "|", &rest)));
+                token = strtok_r(NULL, "|", &rest);
+            }
             break;
         }
         case OMX_QTIIndexParamVideoDecoderOutputFrameRate:
