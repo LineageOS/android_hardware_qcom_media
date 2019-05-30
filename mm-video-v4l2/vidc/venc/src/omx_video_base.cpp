@@ -2587,6 +2587,11 @@ OMX_ERRORTYPE  omx_video::get_extension_index(OMX_IN OMX_HANDLETYPE      hComp,
         return OMX_ErrorNone;
     }
 
+    if (extn_equals(paramName, OMX_QTI_INDEX_PARAM_NATIVE_RECORDER)) {
+        *indexType = (OMX_INDEXTYPE)OMX_QTIIndexParamNativeRecorder;
+        return OMX_ErrorNone;
+    }
+
     return OMX_ErrorNotImplemented;
 }
 

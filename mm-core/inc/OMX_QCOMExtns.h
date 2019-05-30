@@ -695,6 +695,8 @@ enum OMX_QCOM_EXTN_INDEXTYPE
 
     OMX_QTIIndexParamCapabilitiesRotationSupport = 0x7F100004,
 
+    OMX_QTIIndexParamNativeRecorder = 0x7F100005,
+
     /* Configure Rectangle Region based ROI info */
     OMX_QTIIndexConfigVideoRoiRectRegionInfo = 0x7F100007,
 };
@@ -1853,6 +1855,7 @@ typedef struct QOMX_VIDEO_CUSTOM_BUFFERSIZE {
 #define OMX_QTI_INDEX_CONFIG_COLOR_ASPECTS "OMX.google.android.index.describeColorAspects"
 #define OMX_QTI_INDEX_CONFIG_VIDEO_GETDSMODE "OMX.QTI.index.config.video.getdsmode"
 #define OMX_QTI_INDEX_PARAM_TME "OMX.QTI.index.param.tme"
+#define OMX_QTI_INDEX_PARAM_NATIVE_RECORDER "OMX.QTI.index.param.nativeRecorder"
 
 typedef enum {
     QOMX_VIDEO_FRAME_PACKING_CHECKERBOARD = 0,
