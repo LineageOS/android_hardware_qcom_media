@@ -730,7 +730,8 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                     } else if (portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
                                                    QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed ||
                                                portFmt->eColorFormat == OMX_COLOR_FormatYUV420Planar ||
-                                               portFmt->eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar) {
+                                               portFmt->eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar ||
+                                               portFmt->eColorFormat == OMX_COLOR_Format16bitRGB565) {
                                         op_format = (enum vdec_output_format)VDEC_YUV_FORMAT_NV12_UBWC;
                                         fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12_UBWC;
                                         //check if the required color format is a supported flexible format
