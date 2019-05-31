@@ -703,7 +703,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
 #ifdef _ANDROID_
     // TODO: Support in XML
 #endif
-    m_client_extradata = EXTRADATA_DEFAULT;
+    m_client_extradata = EXTRADATA_NONE;
     m_fill_output_msg = OMX_COMPONENT_GENERATE_FTB;
     client_buffers.set_vdec_client(this);
     dynamic_buf_mode = false;
@@ -7995,8 +7995,10 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
     }
 
     p_extradata = drv_ctx.extradata_info.ion[buf_index].uaddr;
-    if (p_extradata && p_client_extra)
+    if (p_extradata && p_client_extra) {
         memcpy(p_client_extra, p_extradata, drv_ctx.extradata_info.buffer_size);
+        p_buf_hdr->nFlags |= OMX_BUFFERFLAG_EXTRADATA;
+    }
 
     m_extradata_misr.output_crop_updated = OMX_FALSE;
     data = (struct OMX_OTHER_EXTRADATATYPE *)p_extradata;
@@ -8150,7 +8152,6 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
             consumed_len += data->nSize;
             data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
         }
-        p_buf_hdr->nFlags |= OMX_BUFFERFLAG_EXTRADATA;
 
         if(internal_hdr_info_changed_flag) {
             print_debug_hdr_color_info(&(m_internal_hdr_info.sInfo), "Internal");
