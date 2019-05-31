@@ -1096,15 +1096,6 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 DEBUG_PRINT_INFO("Linear Color Format Enabled : %d ", pParam->bEnable);
                 break;
             }
-        case OMX_QTIIndexParamVideoEnableBlur:
-            {
-                OMX_QTI_VIDEO_CONFIG_BLURINFO *pParam = (OMX_QTI_VIDEO_CONFIG_BLURINFO *)paramData;
-                if (!venc_set_blur_resolution(pParam)) {
-                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamVideoEnableBlur failed");
-                    return false;
-                }
-                break;
-            }
         case OMX_QTIIndexParamNativeRecorder:
             {
                 QOMX_ENABLETYPE *pParam = (QOMX_ENABLETYPE *)paramData;

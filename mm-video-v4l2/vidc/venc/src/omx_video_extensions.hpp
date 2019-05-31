@@ -120,10 +120,8 @@ void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
     ADD_PARAM    ("qp-b", OMX_AndroidVendorValueInt32)
     ADD_PARAM_END("qp-b-enable", OMX_AndroidVendorValueInt32)
 
-    ADD_EXTENSION("qti-ext-enc-blurinfo", OMX_QTIIndexParamVideoEnableBlur, OMX_DirInput)
+    ADD_EXTENSION("qti-ext-enc-blurinfo", OMX_QTIIndexConfigVideoBlurResolution, OMX_DirInput)
     ADD_PARAM_END("info", OMX_AndroidVendorValueInt32)
-    ADD_EXTENSION("qti-ext-enc-blurfilter", OMX_QTIIndexConfigVideoBlurResolution, OMX_DirInput)
-    ADD_PARAM_END("strength", OMX_AndroidVendorValueInt32)
 
     ADD_EXTENSION("qti-ext-enc-qp-range", OMX_QcomIndexParamVideoIPBQPRange, OMX_DirOutput)
     ADD_PARAM    ("qp-i-min", OMX_AndroidVendorValueInt32)
@@ -832,34 +830,13 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
             }
             break;
         }
-        case OMX_QTIIndexParamVideoEnableBlur:
-        {
-            OMX_QTI_VIDEO_CONFIG_BLURINFO blurInfo;
-
-            memcpy(&blurInfo, &m_blurInfo, sizeof(OMX_QTI_VIDEO_CONFIG_BLURINFO));
-
-            valueSet |= vExt.readParamInt32(ext, "info", (OMX_S32 *)&(blurInfo.nBlurInfo));
-            if (!valueSet) {
-                break;
-            }
-
-            DEBUG_PRINT_HIGH("VENDOR-EXT: set_param: OMX_QTIIndexParamVideoEnableBlur : %u",
-                             blurInfo.nBlurInfo);
-
-            err = set_parameter(
-                    NULL, (OMX_INDEXTYPE)OMX_QTIIndexParamVideoEnableBlur, &blurInfo);
-            if (err != OMX_ErrorNone) {
-                DEBUG_PRINT_ERROR("set_param: OMX_QTIIndexParamVideoEnableBlur failed !");
-            }
-            break;
-        }
         case OMX_QTIIndexConfigVideoBlurResolution:
         {
             OMX_QTI_VIDEO_CONFIG_BLURINFO blurInfo;
 
             memcpy(&blurInfo, &m_blurInfo, sizeof(OMX_QTI_VIDEO_CONFIG_BLURINFO));
 
-            valueSet |= vExt.readParamInt32(ext, "strength", (OMX_S32 *)&(blurInfo.nBlurInfo));
+            valueSet |= vExt.readParamInt32(ext, "info", (OMX_S32 *)&(blurInfo.nBlurInfo));
             if (!valueSet) {
                 break;
             }
