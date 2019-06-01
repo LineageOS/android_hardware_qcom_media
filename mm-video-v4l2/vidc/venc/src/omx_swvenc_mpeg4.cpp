@@ -593,15 +593,15 @@ OMX_ERRORTYPE  omx_venc::set_parameter
                 /*Align stide and scanline to worst case*/
                 /*------------------------------------------------------------------------------------------
                 *           [Color Format]                   [Stride Alignment]        [Scanline Alignment]
-                * QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m       128                         32
-                * OMX_COLOR_FormatYUV420SemiPlanar                 16                          16
+                * QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m       512                         512
+                * OMX_COLOR_FormatYUV420SemiPlanar                 512                         512
                 * QOMX_COLOR_FormatYVU420SemiPlanar                16                          16
                 * HAL_PIXEL_FORMAT_NV21_ZSL                        64                          64
                 *------------------------------------------------------------------------------------------*/
-                y_stride = ALIGN(portDefn->format.video.nFrameWidth,128);
+                y_stride = SWVENC_Y_STRIDE(COLOR_FMT_NV12,portDefn->format.video.nFrameWidth);
                 //Slice height doesn't get updated so chroma offset calculation becomes incorrect .
                 //Using FrameHeight Instead , just for omx-test-app .
-                y_scanlines = ALIGN(portDefn->format.video.nFrameHeight,64);
+                y_scanlines = SWVENC_Y_SCANLINES(COLOR_FMT_NV12_ZSL,portDefn->format.video.nFrameHeight);
                 Prop.id = SWVENC_PROPERTY_ID_FRAME_ATTRIBUTES;
                 Prop.info.frame_attributes.stride_luma = y_stride;
                 Prop.info.frame_attributes.stride_chroma = y_stride;
@@ -3549,8 +3549,8 @@ bool omx_venc::swvenc_color_align(OMX_BUFFERHEADERTYPE *buffer, OMX_U32 width,
                         OMX_U32 height)
 {
     OMX_U32 y_stride,y_scanlines,uv_scanlines,plane_size_y,plane_size_uv,src_chroma_offset;
-    y_stride = ALIGN(width,128);
-    y_scanlines = ALIGN(height,32);
+    y_stride = SWVENC_Y_STRIDE(COLOR_FMT_NV12,width);
+    y_scanlines = SWVENC_Y_SCANLINES(COLOR_FMT_NV12,height);
     src_chroma_offset = width * height;
     OMX_U32 buffersize = SWVENC_BUFFER_SIZE(COLOR_FMT_NV12,width,height);
     if (buffer->nAllocLen >= buffersize) {
@@ -3596,10 +3596,10 @@ SWVENC_STATUS omx_venc::swvenc_set_color_format
         DEBUG_PRINT_ERROR("QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m");
         swvenc_color_format = SWVENC_COLOR_FORMAT_NV12;
         Prop.id = SWVENC_PROPERTY_ID_FRAME_ATTRIBUTES;
-        Prop.info.frame_attributes.stride_luma = ALIGN(m_sOutPortDef.format.video.nFrameWidth,128);
-        Prop.info.frame_attributes.stride_chroma = ALIGN(m_sOutPortDef.format.video.nFrameWidth,128);
+        Prop.info.frame_attributes.stride_luma = SWVENC_Y_STRIDE(COLOR_FMT_NV12, m_sOutPortDef.format.video.nFrameWidth);
+        Prop.info.frame_attributes.stride_chroma = SWVENC_Y_STRIDE(COLOR_FMT_NV12, m_sOutPortDef.format.video.nFrameWidth);
         Prop.info.frame_attributes.offset_luma = 0;
-        Prop.info.frame_attributes.offset_chroma = ((ALIGN(m_sOutPortDef.format.video.nFrameWidth,128)) * (ALIGN(m_sOutPortDef.format.video.nFrameHeight,32)));
+        Prop.info.frame_attributes.offset_chroma = ((SWVENC_Y_STRIDE(COLOR_FMT_NV12, m_sOutPortDef.format.video.nFrameWidth)) * (SWVENC_Y_SCANLINES(COLOR_FMT_NV12, m_sOutPortDef.format.video.nFrameHeight)));
         Ret = swvenc_setproperty(m_hSwVenc, &Prop);
         if (Ret != SWVENC_S_SUCCESS)
         {
@@ -3612,10 +3612,10 @@ SWVENC_STATUS omx_venc::swvenc_set_color_format
     {
         swvenc_color_format = SWVENC_COLOR_FORMAT_NV12;
         Prop.id = SWVENC_PROPERTY_ID_FRAME_ATTRIBUTES;
-        Prop.info.frame_attributes.stride_luma = ALIGN(m_sInPortDef.format.video.nFrameWidth,128);
-        Prop.info.frame_attributes.stride_chroma = ALIGN(m_sInPortDef.format.video.nFrameWidth,128);
+        Prop.info.frame_attributes.stride_luma = SWVENC_Y_STRIDE(COLOR_FMT_NV12, m_sInPortDef.format.video.nFrameWidth);
+        Prop.info.frame_attributes.stride_chroma = SWVENC_Y_STRIDE(COLOR_FMT_NV12, m_sInPortDef.format.video.nFrameWidth);
         Prop.info.frame_attributes.offset_luma = 0;
-        Prop.info.frame_attributes.offset_chroma = ((ALIGN(m_sInPortDef.format.video.nFrameWidth,128)) * (ALIGN(m_sInPortDef.format.video.nFrameHeight,32)));
+        Prop.info.frame_attributes.offset_chroma = ((SWVENC_Y_STRIDE(COLOR_FMT_NV12, m_sInPortDef.format.video.nFrameWidth)) * (SWVENC_Y_SCANLINES(COLOR_FMT_NV12, m_sInPortDef.format.video.nFrameHeight)));
         Ret = swvenc_setproperty(m_hSwVenc, &Prop);
         if (Ret != SWVENC_S_SUCCESS)
         {
@@ -3645,10 +3645,10 @@ SWVENC_STATUS omx_venc::swvenc_set_color_format
         DEBUG_PRINT_ERROR("HAL_PIXEL_FORMAT_NV21_ZSL");
         swvenc_color_format = SWVENC_COLOR_FORMAT_NV21;
         Prop.id = SWVENC_PROPERTY_ID_FRAME_ATTRIBUTES;
-        Prop.info.frame_attributes.stride_luma = ALIGN(m_sInPortDef.format.video.nFrameWidth,64);
-        Prop.info.frame_attributes.stride_chroma = ALIGN(m_sInPortDef.format.video.nFrameWidth,64);
+        Prop.info.frame_attributes.stride_luma = SWVENC_Y_STRIDE(COLOR_FMT_NV12_ZSL, m_sInPortDef.format.video.nFrameWidth);
+        Prop.info.frame_attributes.stride_chroma = SWVENC_Y_STRIDE(COLOR_FMT_NV12_ZSL, m_sInPortDef.format.video.nFrameWidth);
         Prop.info.frame_attributes.offset_luma = 0;
-        Prop.info.frame_attributes.offset_chroma = ((ALIGN(m_sInPortDef.format.video.nFrameWidth,64)) * (ALIGN(m_sInPortDef.format.video.nFrameHeight,64)));
+        Prop.info.frame_attributes.offset_chroma = ((SWVENC_Y_STRIDE(COLOR_FMT_NV12_ZSL, m_sInPortDef.format.video.nFrameWidth)) * (SWVENC_Y_SCANLINES(COLOR_FMT_NV12_ZSL, m_sInPortDef.format.video.nFrameHeight)));
         Ret = swvenc_setproperty(m_hSwVenc, &Prop);
         if (Ret != SWVENC_S_SUCCESS)
         {
