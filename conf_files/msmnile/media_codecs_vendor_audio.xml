@@ -52,15 +52,16 @@
             <Limit name="sample-rate" ranges="8000-96000" />
             <Limit name="bitrate" range="32000-500000" />
         </MediaCodec>
-        <MediaCodec name="OMX.google.opus.decoder" type="audio/opus">
-            <Limit name="channel-count" max="8" />
-            <Limit name="sample-rate" ranges="48000" />
-            <Limit name="bitrate" range="6000-510000" />
-        </MediaCodec>
         <MediaCodec name="OMX.google.raw.decoder" type="audio/raw">
             <Limit name="channel-count" max="8" />
             <Limit name="sample-rate" ranges="8000-96000" />
             <Limit name="bitrate" range="1-10000000" />
+        </MediaCodec>
+        <MediaCodec name="c2.android.opus.decoder" type="audio/opus">
+            <Alias name="OMX.google.opus.decoder" />
+            <Limit name="channel-count" max="8" />
+            <Limit name="sample-rate" ranges="48000" />
+            <Limit name="bitrate" range="6000-510000" />
         </MediaCodec>
         <!-- SimpleOMXComponet based software decoder-->
         <MediaCodec name="OMX.qti.audio.decoder.flac" type="audio/flac" >
@@ -91,6 +92,13 @@
             <Limit name="sample-rate" ranges="1-655350" />
             <Limit name="bitrate" range="1-21000000" />
             <Limit name="complexity" range="0-8"  default="5" />
+            <Feature name="bitrate-modes" value="CQ" />
+        </MediaCodec>
+        <MediaCodec name="c2.android.opus.encoder" type="audio/opus">
+            <Limit name="channel-count" max="2" />
+            <Limit name="sample-rate" ranges="8000,12000,16000,24000,48000" />
+            <Limit name="bitrate" range="500-512000" />
+            <Limit name="complexity" range="0-10"  default="5" />
             <Feature name="bitrate-modes" value="CQ" />
         </MediaCodec>
     </Encoders>
