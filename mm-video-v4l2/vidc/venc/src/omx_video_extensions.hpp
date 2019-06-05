@@ -729,7 +729,7 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
             }
             char *rest = exType;
             char *token = strtok_r(exType, "|", &rest);
-            do {
+            while (token != NULL) {
                 extraDataParam.bEnabled = OMX_TRUE;
                 if (!strcmp(token, "advanced")) {
                     extraDataParam.nIndex = (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Advanced;
@@ -748,7 +748,8 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
                 if (err != OMX_ErrorNone) {
                     DEBUG_PRINT_ERROR("set_config: OMX_QcomIndexParamIndexExtraDataType failed !");
                 }
-            } while ((token = strtok_r(NULL, "|", &rest)));
+                token = strtok_r(NULL, "|", &rest);
+            }
             break;
         }
         case OMX_QTIIndexParamColorSpaceConversion:
