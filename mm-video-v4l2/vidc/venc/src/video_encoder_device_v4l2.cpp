@@ -3430,7 +3430,7 @@ bool venc_dev::set_nP_frames(unsigned long nPframes)
     struct v4l2_control control;
 
     control.id = V4L2_CID_MPEG_VIDEO_GOP_SIZE;
-    control.value = nPframes;
+    control.value = (nPframes > VENC_INFINITE_GOP) ? VENC_INFINITE_GOP : nPframes;
     int rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
     if (rc) {
@@ -3447,7 +3447,7 @@ bool venc_dev::set_nB_frames(unsigned long nBframes)
     struct v4l2_control control;
 
     control.id = V4L2_CID_MPEG_VIDEO_B_FRAMES;
-    control.value = nBframes;
+    control.value = (nBframes > VENC_INFINITE_GOP) ? VENC_INFINITE_GOP : nBframes;
     int rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
 
     if (rc) {
