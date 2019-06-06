@@ -545,6 +545,12 @@ class venc_dev
         bool venc_config_markLTR(OMX_QCOM_VIDEO_CONFIG_LTRMARK_TYPE *markltr);
         bool venc_config_useLTR(OMX_QCOM_VIDEO_CONFIG_LTRUSE_TYPE *useltr);
         bool venc_config_qp(OMX_SKYPE_VIDEO_CONFIG_QP *configqp);
+
+        // the list to contain the region roi info
+        std::list<OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_INFO> mRoiRegionList;
+        bool venc_set_roi_region_qp_info(OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_INFO *roiRegionInfo);
+        OMX_U32 append_extradata_roi_region_qp_info(OMX_OTHER_EXTRADATATYPE *data,
+                OMX_TICKS timestamp, OMX_U32 freeSize);
 };
 
 enum instance_state {
