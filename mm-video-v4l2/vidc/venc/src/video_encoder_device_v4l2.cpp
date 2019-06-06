@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2018, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2019, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -514,7 +514,7 @@ static OMX_ERRORTYPE subscribe_to_events(int fd)
     return eRet;
 }
 
-bool inline venc_dev::venc_query_cap(struct v4l2_queryctrl &cap) {
+bool venc_dev::venc_query_cap(struct v4l2_queryctrl &cap) {
 
     if (ioctl(m_nDriver_fd, VIDIOC_QUERYCTRL, &cap)) {
         DEBUG_PRINT_ERROR("Query caps for id = %u failed", cap.id);

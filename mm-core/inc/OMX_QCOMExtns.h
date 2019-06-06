@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2009-2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2009-2017,2019 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -695,10 +695,14 @@ enum OMX_QCOM_EXTN_INDEXTYPE
 
     OMX_QTIIndexParamCapabilitiesRotationSupport = 0x7F100004,
 
-    OMX_QTIIndexParamNativeRecorder = 0x7F100005,
+    OMX_QTIIndexParamCapabilitiesBlurSupport = 0x7F100005,
+
+    OMX_QTIIndexParamCapabilitiesColorSpaceConversionSupport = 0x7F100006,
 
     /* Configure Rectangle Region based ROI info */
     OMX_QTIIndexConfigVideoRoiRectRegionInfo = 0x7F100007,
+
+    OMX_QTIIndexParamNativeRecorder = 0x7F100008,
 };
 
 /**

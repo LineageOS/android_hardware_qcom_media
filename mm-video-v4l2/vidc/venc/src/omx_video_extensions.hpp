@@ -102,6 +102,12 @@ void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
     ADD_EXTENSION("qti-ext-enc-caps-preprocess", OMX_QTIIndexParamCapabilitiesRotationSupport, OMX_DirOutput)
     ADD_PARAM_END("rotation", OMX_AndroidVendorValueInt32)
 
+    ADD_EXTENSION("qti-ext-enc-blur-support", OMX_QTIIndexParamCapabilitiesBlurSupport, OMX_DirInput)
+    ADD_PARAM_END ("blur-support", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-enc-color-conversion-support", OMX_QTIIndexParamCapabilitiesColorSpaceConversionSupport, OMX_DirInput)
+    ADD_PARAM_END ("color-conversion-support", OMX_AndroidVendorValueInt32)
+
     ADD_EXTENSION("qti-ext-enc-caps-ltr", OMX_QTIIndexParamCapabilitiesMaxLTR, OMX_DirOutput)
     ADD_PARAM_END("max-count", OMX_AndroidVendorValueInt32)
 
@@ -320,7 +326,41 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
         }
         case OMX_QTIIndexParamCapabilitiesRotationSupport:
         {
-            setStatus &= vExt.setParamInt32(ext, "rotation",1);
+            struct v4l2_queryctrl query_ctrl;
+            memset(&query_ctrl, 0, sizeof(struct v4l2_queryctrl));
+            query_ctrl.id = V4L2_CID_MPEG_VIDC_VIDEO_ROTATION_CAPS;
+            if (dev_query_cap(query_ctrl) && (query_ctrl.maximum > 0)) {
+                setStatus &= vExt.setParamInt32(ext, "rotation",OMX_TRUE);
+            }
+            else {
+                setStatus &= vExt.setParamInt32(ext, "rotation",OMX_FALSE);
+            }
+            break;
+        }
+        case OMX_QTIIndexParamCapabilitiesBlurSupport:
+        {
+            struct v4l2_queryctrl query_ctrl;
+            memset(&query_ctrl, 0, sizeof(struct v4l2_queryctrl));
+            query_ctrl.id = V4L2_CID_MPEG_VIDC_VIDEO_BLUR_WIDTH;
+            if (dev_query_cap(query_ctrl) && (query_ctrl.maximum > 0)) {
+                setStatus &= vExt.setParamInt32(ext, "blur-support",OMX_TRUE);
+            }
+            else {
+                setStatus &= vExt.setParamInt32(ext, "blur-support",OMX_FALSE);
+            }
+            break;
+        }
+        case OMX_QTIIndexParamCapabilitiesColorSpaceConversionSupport:
+        {
+            struct v4l2_queryctrl query_ctrl;
+            memset(&query_ctrl, 0, sizeof(struct v4l2_queryctrl));
+            query_ctrl.id = V4L2_CID_MPEG_VIDC_VIDEO_COLOR_SPACE_CAPS;
+            if (dev_query_cap(query_ctrl) && (query_ctrl.maximum > 0)) {
+                setStatus &= vExt.setParamInt32(ext, "color-conversion-support",OMX_TRUE);
+            }
+            else {
+                setStatus &= vExt.setParamInt32(ext, "color-conversion-support",OMX_FALSE);
+            }
             break;
         }
         case OMX_QTIIndexParamCapabilitiesMaxTemporalLayers:
@@ -810,6 +850,8 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
         case OMX_QTIIndexParamCapabilitiesMaxDownScaleRatio:
         case OMX_QTIIndexParamCapabilitiesRotationSupport:
         case OMX_QTIIndexParamCapabilitiesMaxTemporalLayers:
+        case OMX_QTIIndexParamCapabilitiesBlurSupport:
+        case OMX_QTIIndexParamCapabilitiesColorSpaceConversionSupport:
         {
             break;
         }

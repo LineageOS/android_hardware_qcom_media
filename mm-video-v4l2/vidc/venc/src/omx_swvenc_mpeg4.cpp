@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -2810,6 +2810,12 @@ int omx_venc::dev_set_format(int color)
 
    RETURN(true);
     //return handle->venc_set_format(color);
+}
+
+bool omx_venc::dev_query_cap(struct v4l2_queryctrl &cap)
+{
+    (void)cap;
+    RETURN(true);
 }
 
 bool omx_venc::dev_get_dimensions(OMX_U32 index, OMX_U32 *width, OMX_U32 *height)
