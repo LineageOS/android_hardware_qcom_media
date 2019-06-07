@@ -10,8 +10,9 @@ PRODUCT_COPY_FILES += \
     $(CONFIG_PATH)/mediacodec-seccomp.policy:$(TARGET_COPY_OUT_VENDOR)/etc/seccomp_policy/mediacodec.policy \
     $(CONFIG_PATH)/system_properties.xml:$(TARGET_COPY_OUT_VENDOR)/etc/system_properties.xml
 
-# Enable debug mode for CLANG/LLVM integer-overflow sanitization
-TARGET_ENABLE_VIDC_INTSAN_DIAG := true
+# Enable DIAG mode for CLANG/LLVM integer-overflow sanitization
+# NOTE: DIAG mode should be used only for debug builds
+TARGET_ENABLE_VIDC_INTSAN_DIAG := false
 
 # Vendor property overrides
 ifeq ($(GENERIC_ODM_IMAGE),true)
