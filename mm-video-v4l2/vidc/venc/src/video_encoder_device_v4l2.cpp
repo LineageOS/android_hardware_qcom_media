@@ -3419,20 +3419,6 @@ bool venc_dev::venc_set_qp(OMX_U32 i_frame_qp, OMX_U32 p_frame_qp,OMX_U32 b_fram
     return true;
 }
 
-bool venc_dev::venc_set_voptiming_cfg( OMX_U32 TimeIncRes)
-{
-
-    struct venc_voptimingcfg vop_timing_cfg;
-
-    DEBUG_PRINT_LOW("venc_set_voptiming_cfg: TimeRes = %u",
-            (unsigned int)TimeIncRes);
-
-    vop_timing_cfg.voptime_resolution = TimeIncRes;
-
-    voptimecfg.voptime_resolution = vop_timing_cfg.voptime_resolution;
-    return true;
-}
-
 bool venc_dev::set_nP_frames(unsigned long nPframes)
 {
     struct v4l2_control control;
@@ -3685,85 +3671,6 @@ bool venc_dev::venc_set_intra_vop_refresh(OMX_BOOL intra_vop_refresh)
         DEBUG_PRINT_ERROR("ERROR: VOP Refresh is False, no effect");
     }
 
-    return true;
-}
-
-bool venc_dev::venc_calibrate_gop()
-{
-    int ratio, sub_gop_size, gop_size, nPframes, nBframes, nLayers;
-    int num_sub_gops_in_a_gop;
-    nPframes = intra_period.num_pframes;
-    nBframes = intra_period.num_bframes;
-    nLayers = temporal_layers_config.nPLayers + temporal_layers_config.nBLayers;
-
-    if (!nPframes && nLayers) {
-        DEBUG_PRINT_ERROR("nPframes should be non-zero when nLayers are present\n");
-        return false;
-    }
-
-    if (nBframes && !nPframes) {
-        DEBUG_PRINT_ERROR("nPframes should be non-zero when nBframes is non-zero\n");
-        return false;
-    }
-
-    if (nLayers > 1) { /*Multi-layer encoding*/
-        sub_gop_size = 1 << (nLayers - 1);
-        /* Actual GOP definition is nPframes + nBframes + 1 but for the sake of
-         * below calculations we are ignoring +1 . Ignoring +1 in below
-         * calculations is not a mistake but intentional.
-         */
-        gop_size = MAX(sub_gop_size, ROUND(nPframes + (nPframes * nBframes), sub_gop_size));
-        num_sub_gops_in_a_gop = gop_size/sub_gop_size;
-        if (nBframes) { /*Hier-B case*/
-        /*
-            * Frame Type--> I  B  B  B  P  B  B  B  P  I  B  B  P ...
-            * Layer -->     0  2  1  2  0  2  1  2  0  0  2  1  2 ...
-            * nPframes = 2, nBframes = 3, nLayers = 3
-            *
-            * Intention is to keep the intraperiod as close as possible to what is desired
-            * by the client while adjusting nPframes and nBframes to meet other constraints.
-            * eg1: Input by client: nPframes =  9, nBframes = 14, nLayers = 2
-            *    Output of this fn: nPframes = 12, nBframes = 12, nLayers = 2
-            *
-            * eg2: Input by client: nPframes = 9, nBframes = 4, nLayers = 2
-            *    Output of this fn: nPframes = 7, nBframes = 7, nLayers = 2
-            */
-            nPframes = num_sub_gops_in_a_gop;
-            nBframes = sub_gop_size - 1;
-        } else { /*Hier-P case*/
-            /*
-            * Frame Type--> I  P  P  P  P  P  P  P  I  P  P  P  P ...
-            * Layer-->      0  2  1  2  0  2  1  2  0  2  1  2  0 ...
-            * nPframes =  7, nBframes = 0, nLayers = 3
-            *
-            * Intention is to keep the intraperiod as close as possible to what is desired
-            * by the client while adjusting nPframes and nBframes to meet other constraints.
-            * eg1: Input by client: nPframes = 9, nBframes = 0, nLayers = 3
-            *    Output of this fn: nPframes = 7, nBframes = 0, nLayers = 3
-            *
-            * eg2: Input by client: nPframes = 10, nBframes = 0, nLayers = 3
-            *     Output of this fn:nPframes = 12, nBframes = 0, nLayers = 3
-            */
-            nPframes = gop_size - 1;
-        }
-    } else { /*Single-layer encoding*/
-            /*
-            * No special handling needed for single layer
-            */
-       DEBUG_PRINT_LOW("Clip num of P and B frames, nPframes: %d nBframes: %d",
-                       nPframes,nBframes);
-       if ((unsigned int)nPframes > VENC_INFINITE_GOP) {
-          nPframes =  VENC_INFINITE_GOP;
-       }
-       if ((unsigned int)nBframes > VENC_INFINITE_GOP) {
-          nBframes =  VENC_INFINITE_GOP;
-       }
-    }
-
-    DEBUG_PRINT_LOW("P/B Frames changed from: %ld/%ld to %d/%d",
-        intra_period.num_pframes, intra_period.num_bframes, nPframes, nBframes);
-    intra_period.num_pframes = nPframes;
-    intra_period.num_bframes = nBframes;
     return true;
 }
 
