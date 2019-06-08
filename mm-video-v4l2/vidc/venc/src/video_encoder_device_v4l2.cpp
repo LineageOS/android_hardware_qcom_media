@@ -436,7 +436,7 @@ void* venc_dev::async_venc_message_thread (void *input)
         gettimeofday(&tv,NULL);
         OMX_U64 time_diff = (tv.tv_sec * 1000000ULL + tv.tv_usec) -
                 (stats.prev_tv.tv_sec * 1000000ULL + stats.prev_tv.tv_usec);
-        if (time_diff >= 5000000) {
+        if (time_diff >= 1000000) {
             OMX_U32 num_fbd = omx->handle->fbd - stats.prev_fbd;
             if (stats.prev_tv.tv_sec && num_fbd && time_diff) {
                 float framerate = num_fbd * 1000000/(float)time_diff;
