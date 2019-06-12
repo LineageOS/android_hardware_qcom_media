@@ -4527,7 +4527,8 @@ OMX_ERRORTYPE  omx_video::component_role_enum(OMX_IN OMX_HANDLETYPE hComp,
             eRet = OMX_ErrorNoMore;
         }
     } else if (!strncmp((char*)m_nkind, "OMX.qcom.video.encoder.hevc", OMX_MAX_STRINGNAME_SIZE) ||
-                !strncmp((char*)m_nkind, "OMX.qcom.video.encoder.heic", OMX_MAX_STRINGNAME_SIZE)) {
+              !strncmp((char*)m_nkind, "OMX.qcom.video.encoder.hevc.cq", OMX_MAX_STRINGNAME_SIZE) ||
+              !strncmp((char*)m_nkind, "OMX.qcom.video.encoder.heic", OMX_MAX_STRINGNAME_SIZE)) {
         if ((0 == index) && role) {
             strlcpy((char *)role, "video_encoder.hevc", OMX_MAX_STRINGNAME_SIZE);
             DEBUG_PRINT_LOW("component_role_enum: role %s", role);
