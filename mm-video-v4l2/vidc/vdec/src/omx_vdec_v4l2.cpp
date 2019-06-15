@@ -4547,7 +4547,7 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
             if (intermediate == true && client_buffers.is_color_conversion_enabled()) {
                 cache_flag = 0;
             }
-            bool status = alloc_map_ion_memory(drv_ctx.op_buf.buffer_size,
+            bool status = alloc_map_ion_memory(bytes,
                                                &(*omx_op_buf_ion_info)[i],
                     (secure_mode) ? SECURE_FLAGS_OUTPUT_BUFFER : cache_flag);
             if (status == false) {
@@ -4556,7 +4556,7 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
             pmem_fd = (*omx_op_buf_ion_info)[i].data_fd;
 #endif
             if (!secure_mode) {
-                pmem_baseaddress = (unsigned char *)ion_map(pmem_fd, drv_ctx.op_buf.buffer_size);
+                pmem_baseaddress = (unsigned char *)ion_map(pmem_fd, bytes);
                 if (pmem_baseaddress == MAP_FAILED) {
                     DEBUG_PRINT_ERROR("MMAP failed for Size %u",
                             (unsigned int)drv_ctx.op_buf.buffer_size);
@@ -4574,8 +4574,8 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
 #endif
             (*omx_ptr_outputbuffer)[i].offset = 0;
             (*omx_ptr_outputbuffer)[i].bufferaddr = pmem_baseaddress;
-            (*omx_ptr_outputbuffer)[i].mmaped_size = drv_ctx.op_buf.buffer_size;
-            (*omx_ptr_outputbuffer)[i].buffer_len = drv_ctx.op_buf.buffer_size;
+            (*omx_ptr_outputbuffer)[i].mmaped_size = bytes;
+            (*omx_ptr_outputbuffer)[i].buffer_len = bytes;
             m_pmem_info[i].pmem_fd = pmem_fd;
             m_pmem_info[i].size = (*omx_ptr_outputbuffer)[i].buffer_len;
             m_pmem_info[i].mapped_size = (*omx_ptr_outputbuffer)[i].mmaped_size;
@@ -7268,6 +7268,9 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
        (portDefn->format.video.eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar)) {
            portDefn->format.video.nStride = ALIGN(drv_ctx.video_resolution.frame_width, 16);
            portDefn->format.video.nSliceHeight = drv_ctx.video_resolution.frame_height;
+    } else if (portDefn->format.video.eColorFormat == OMX_COLOR_Format16bitRGB565) {
+           portDefn->format.video.nStride = ALIGN(drv_ctx.video_resolution.frame_width, 32);
+           portDefn->format.video.nSliceHeight = drv_ctx.video_resolution.frame_height;
     }
     DEBUG_PRINT_HIGH("update_portdef(%u): Width = %u Height = %u Stride = %d "
             "SliceHeight = %u eColorFormat = %d nBufSize %u nBufCnt %u",
@@ -8468,6 +8471,7 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
         if (omx->drv_ctx.output_format != VDEC_YUV_FORMAT_NV12 &&
             (ColorFormat != OMX_COLOR_FormatYUV420Planar &&
              ColorFormat != OMX_COLOR_FormatYUV420SemiPlanar &&
+             ColorFormat != OMX_COLOR_Format16bitRGB565 &&
              ColorFormat != (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m)) {
             DEBUG_PRINT_ERROR("update_buffer_req: Unsupported color conversion");
             status = false;
@@ -8553,12 +8557,15 @@ bool omx_vdec::allocate_color_convert_buf::set_color_format(
     if (status && drv_colorformat_c2d_enable && dest_color_format_c2d_enable) {
         DEBUG_PRINT_LOW("Enabling C2D");
         if (dest_color_format == OMX_COLOR_FormatYUV420Planar ||
-            dest_color_format == OMX_COLOR_FormatYUV420SemiPlanar) {
+            dest_color_format == OMX_COLOR_FormatYUV420SemiPlanar ||
+            dest_color_format == OMX_COLOR_Format16bitRGB565) {
             ColorFormat = dest_color_format;
             if (dest_color_format == OMX_COLOR_FormatYUV420Planar) {
                    dest_format = YCbCr420P;
             } else if( dest_color_format == OMX_COLOR_FormatYUV420SemiPlanar) {
                     dest_format = YCbCr420SP;
+            } else if(dest_color_format == OMX_COLOR_Format16bitRGB565) {
+                    dest_format = RGB565;
             } else {
                    dest_format = NV12_128m;
             }
@@ -8713,6 +8720,7 @@ bool omx_vdec::allocate_color_convert_buf::get_color_format(OMX_COLOR_FORMATTYPE
     } else {
         if (ColorFormat == OMX_COLOR_FormatYUV420Planar ||
             ColorFormat == OMX_COLOR_FormatYUV420SemiPlanar ||
+            ColorFormat == OMX_COLOR_Format16bitRGB565 ||
             ColorFormat == (OMX_COLOR_FORMATTYPE) QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m) {
             dest_color_format = ColorFormat;
         } else {

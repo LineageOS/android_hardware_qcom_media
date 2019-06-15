@@ -1,4 +1,4 @@
-/* Copyright (c) 2012 - 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012 - 2019, The Linux Foundation. All rights reserved.
  *
  * redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -706,9 +706,8 @@ bool C2DColorConverter::getBuffFilledLen(int32_t port, unsigned int &filled_leng
   C2DBuffReq req;
   if (enabled) {
     ret = getBuffReq(port, &req);
-    if (ret && req.bpp.denominator > 0) {
-      filled_length = (req.stride * req.sliceHeight * req.bpp.numerator);
-      filled_length /= req.bpp.denominator;
+    if (ret) {
+      filled_length = req.size;
     }
   }
 
