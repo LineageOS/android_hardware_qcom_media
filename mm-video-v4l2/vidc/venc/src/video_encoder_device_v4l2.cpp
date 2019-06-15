@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2018, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2019, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -223,6 +223,8 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     mIsGridset = false;
     Platform::Config::getInt32(Platform::vidc_enc_linear_color_format,
             (int32_t *)&mUseLinearColorFormat, 0);
+    Platform::Config::getInt32(Platform::vidc_enc_bitrate_savings_enable,
+            (int32_t *)&mBitrateSavingsEnable, 0);
 
     profile_level_converter::init();
 }
@@ -514,7 +516,7 @@ static OMX_ERRORTYPE subscribe_to_events(int fd)
     return eRet;
 }
 
-bool inline venc_dev::venc_query_cap(struct v4l2_queryctrl &cap) {
+bool venc_dev::venc_query_cap(struct v4l2_queryctrl &cap) {
 
     if (ioctl(m_nDriver_fd, VIDIOC_QUERYCTRL, &cap)) {
         DEBUG_PRINT_ERROR("Query caps for id = %u failed", cap.id);
@@ -6397,6 +6399,16 @@ bool venc_dev::venc_set_ratectrl_cfg(OMX_VIDEO_CONTROLRATETYPE eControlRate)
         DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
 
         rate_ctrl.rcmode = control.value;
+    }
+
+    {
+        DEBUG_PRINT_LOW("Set bitrate savings %d", mBitrateSavingsEnable);
+        control.id = V4L2_CID_MPEG_VIDC_VENC_BITRATE_SAVINGS;
+        control.value = mBitrateSavingsEnable;
+        rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
+        if (rc) {
+            DEBUG_PRINT_HIGH("Non-Fatal: Request to set bitrate savings failed");
+        }
     }
 
 #ifdef _VQZIP_
