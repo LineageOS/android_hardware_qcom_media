@@ -438,7 +438,7 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             QOMX_EXTRADATA_ENABLE *pParam =
                 (QOMX_EXTRADATA_ENABLE *)paramData;
             if (pParam->nPortIndex == OMX_CORE_OUTPUT_EXTRADATA_INDEX) {
-                pParam->bEnable = OMX_TRUE;
+                pParam->bEnable = m_client_extradata ? OMX_TRUE : OMX_FALSE;
                 eRet = OMX_ErrorNone;
             } else {
                 eRet = OMX_ErrorUnsupportedIndex;
@@ -761,9 +761,8 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                             break;
         case OMX_QTIIndexParamVideoClientExtradata: {
                                   VALIDATE_OMX_PARAM_DATA(paramData, QOMX_EXTRADATA_ENABLE);
-                                  DEBUG_PRINT_LOW("set_parameter: OMX_QTIIndexParamVideoClientExtradata");
-                                  QOMX_EXTRADATA_ENABLE *pParam =
-                                      (QOMX_EXTRADATA_ENABLE *)paramData;
+                                  QOMX_EXTRADATA_ENABLE *pParam = (QOMX_EXTRADATA_ENABLE *)paramData;
+                                  DEBUG_PRINT_LOW("set_parameter: OMX_QTIIndexParamVideoClientExtradata %d", pParam->bEnable);
 
                                   if (m_state != OMX_StateLoaded) {
                                       DEBUG_PRINT_ERROR("Set Parameter called in Invalid state");
@@ -970,9 +969,13 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
         case OMX_QcomIndexParamIndexExtraDataType: {
             VALIDATE_OMX_PARAM_DATA(paramData, QOMX_INDEXEXTRADATATYPE);
             QOMX_INDEXEXTRADATATYPE *extradataIndexType = (QOMX_INDEXEXTRADATATYPE *) paramData;
-            /* Basic extradata is enabled by default, only check for advanced extradata */
-            if (extradataIndexType->nIndex == (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Advanced) {
+            DEBUG_PRINT_LOW("set_parameter: OMX_QcomIndexParamIndexExtraDataType %d", extradataIndexType->nIndex);
+            if (extradataIndexType->nIndex == (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Basic) {
+                m_client_extradata |= EXTRADATA_DEFAULT;
+            } else if (extradataIndexType->nIndex == (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Advanced) {
                 m_client_extradata |= EXTRADATA_ADVANCED;
+            }
+            if (m_client_extradata) {
                 eRet = enable_extradata(m_client_extradata);
             }
             break;
