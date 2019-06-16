@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2009, 2015 The Linux Foundation. All rights reserved.
+Copyright (c) 2009, 2015, 2018 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -75,6 +75,11 @@ typedef enum QOMX_AUDIO_EXTENSIONS_INDEXTYPE
     QOMX_IndexParamAudioApe             = 0x7F200009, /** "OMX.Qualcomm.index.audio.ape" */
     QOMX_IndexParamAudioFlacDec         = 0x7F20000A, /** "OMX.Qualcomm.index.audio.flacdec**/
     QOMX_IndexParamAudioDsdDec          = 0x7F20000B, /** "OMX.Qualcomm.index.audio.Dsddec**/
+    QOMX_IndexParamAudioMpegh           = 0x7F20000C, /** "OMX.Qualcomm.index.audio.mpegh**/
+    QOMX_IndexParamAudioMpeghHeader     = 0x7F20000D, /** "OMX.Qualcomm.index.audio.MpeghHeader"**/
+    QOMX_IndexParamAudioChannelMask     = 0x7F20000E, /** "OMX.Qualcomm.index.audio.ChannelMask"**/
+    QOMX_IndexParamAudioBinauralMode    = 0x7F20000F, /** "OMX.Qualcomm.index.audio.BinauralMode"**/
+    QOMX_IndexParamAudioRotation        = 0x7F200010, /** "OMX.Qualcomm.index.audio.Rotation"**/
     QOMX_IndexParamAudioUnused          = 0x7F2FFFFF
 } QOMX_AUDIO_EXTENSIONS_INDEXTYPE;
 

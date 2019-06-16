@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2009, 2011, 2015, 2017 The Linux Foundation. All rights reserved.
+Copyright (c) 2009, 2011, 2015, 2017-2018 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -98,6 +98,7 @@ typedef enum QOMX_AUDIO_CODINGTYPE {
    QOMX_AUDIO_CodingEVRCB  = 0x7F000001,
    QOMX_AUDIO_CodingEVRCWB = 0x7F000002,
    QOMX_AUDIO_CodingFLAC   = 0x7F000003,
+   QOMX_AUDIO_CodingMPEGH  = 0x7F000004,
    QOMX_AUDIO_CodingMax = 0x7FFFFFFF
 }QOMX_AUDIO_CODINGTYPE;
 
@@ -580,6 +581,61 @@ typedef struct QOMX_AUDIO_PARAM_DSD_TYPE {
     OMX_U32 nChannels;
     OMX_U32 nBitsPerSample;
 } QOMX_AUDIO_PARAM_DSD_TYPE;
+
+typedef struct QOMX_AUDIO_PARAM_MPEGH_TYPE {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    OMX_U32 nSampleRate;      /** Sent In-Band as well and can be redundant For Decoder, **/
+    OMX_U32 nBitRate;         /** Sent In-Band as well and can be redundant For Decoder, **/
+    OMX_U32 nSamplesPerFrame; /** Sent In-Band as well and can be redundant For Decoder, **/
+    OMX_U32 nDFrames;         /** No of Dependent Frames; if 10;every 11 frame is seekable
+                                   - Specific to Encoder; Redundant for Decoder **/
+    OMX_U32 nHOAOrder;        /** HOA Order - Specific to Encoder; May be redundant for
+                                  Decoder **/
+} QOMX_AUDIO_PARAM_MPEGH_TYPE;
+
+typedef struct QOMX_AUDIO_PARAM_MPEGH_HEADER_TYPE {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    OMX_U64 pConfig;
+    OMX_U64 pSceneInfo;
+    OMX_U64 pDRC;
+    OMX_U64 pGroup;
+    OMX_U64 pSwitchGroup;
+    OMX_U64 pPreset;
+    OMX_U64 pTextLabel;
+} QOMX_AUDIO_PARAM_MPEGH_HEADER_TYPE;
+
+typedef struct QOMX_AUDIO_PARAM_CHANNEL_CONFIG_TYPE {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    OMX_U32 nChannelMask; /* Masked defined in Android audio-base.h */
+} QOMX_AUDIO_PARAM_CHANNEL_CONFIG_TYPE;
+
+typedef enum QOMX_BINAURAL_MODE {
+   QOMX_BINAURAL_MODE_OFF,
+   QOMX_BINAURAL_MODE_ON
+} QOMX_BINAURAL_MODE;
+
+typedef struct QOMX_AUDIO_PARAM_BINAURAL_TYPE {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    QOMX_BINAURAL_MODE eBinauralMode;
+} QOMX_AUDIO_PARAM_BINAURAL_TYPE;
+
+typedef struct QOMX_AUDIO_PARAM_ROTATION_TYPE {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    OMX_S32 nQX; /* x vector component of quaternion */
+    OMX_S32 nQY; /* y vector component of quaternion */
+    OMX_S32 nQZ; /* z vector component of quaternion */
+    OMX_S32 nQW; /* Scalar component of quaternion */
+} QOMX_AUDIO_PARAM_ROTATION_TYPE;
 
 enum {
     kKeyIndexAlacFrameLength = 0,
