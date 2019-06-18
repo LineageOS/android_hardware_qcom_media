@@ -15,3 +15,7 @@ PRODUCT_COPY_FILES += \
 
 # Vendor property overrides
 
+# Produce packages addition
+PRODUCT_PACKAGES += \
+    libcodec2_vndk.vendor \
+    libcodec2_hidl@1.0.vendor
