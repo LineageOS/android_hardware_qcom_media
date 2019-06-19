@@ -1800,19 +1800,6 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
             return false;
         }
 
-        // Increase buffer-header count for metadata-mode on input port
-        // to improve buffering and reduce bottlenecks in clients
-        if (metadatamode) {
-            DEBUG_PRINT_LOW("FW returned buffer count = %d , overwriting with 9",
-                control.value);
-            minCount = 9;
-        }
-
-        if (m_sVenc_cfg.input_height * m_sVenc_cfg.input_width >= 3840*2160) {
-            DEBUG_PRINT_LOW("Increasing buffer count = %d to 11", minCount);
-            minCount = 11;
-        }
-
         /* Need more buffers for HFR usecase */
         if (operating_rate >= 120 || (m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) >= 120) {
             minCount = MAX(minCount, 16);
