@@ -24,3 +24,8 @@ else
   #Rank SW C2 codecs first
   PRODUCT_PROPERTY_OVERRIDES += debug.stagefright.ccodec=1
 endif
+
+# Produce packages addition
+PRODUCT_PACKAGES += \
+    libcodec2_vndk.vendor \
+    libcodec2_hidl@1.0.vendor
