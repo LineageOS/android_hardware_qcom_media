@@ -90,8 +90,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define Q16ToFraction(q,num,den) { OMX_U32 power; Log2(q,power);  num = q >> power; den = 0x1 << (16 - power); }
 
 //TODO: remove once gerrit : 2680400 is merged
-#define VIDC_HAL_PIXEL_FORMAT_NV12_LINEAR_FLEX  0x125
-#define VIDC_HAL_PIXEL_FORMAT_NV12_UBWC_FLEX 0x126
+#define VIDC_HAL_PIXEL_FORMAT_NV12_LINEAR_FLEX  HAL_PIXEL_FORMAT_NV12_LINEAR_FLEX
+#define VIDC_HAL_PIXEL_FORMAT_NV12_UBWC_FLEX HAL_PIXEL_FORMAT_NV12_UBWC_FLEX
 
 #define BUFFER_LOG_LOC "/data/vendor/media"
 
