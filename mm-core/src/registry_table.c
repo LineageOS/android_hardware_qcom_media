@@ -55,6 +55,7 @@ omx_core_cb_type core[] =
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.avc", "libOmxVenc.so", "video_encoder.avc"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.vp8", "libOmxVenc.so", "video_encoder.vp8"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.hevc", "libOmxVenc.so", "video_encoder.hevc"),
+    OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.hevc.cq", "libOmxVenc.so", "video_encoder.hevc"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.heic", "libOmxVenc.so", "image_encoder.heic"),
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.Qcelp13", "libOmxQcelp13Dec.so", "audio_decoder.Qcelp13"),
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.evrc", "libOmxEvrcDec.so", "audio_decoder.evrc"),
@@ -63,6 +64,7 @@ omx_core_cb_type core[] =
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.alac", "libOmxAlacDec.so", "audio_decoder.alac"),
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.ape", "libOmxApeDec.so", "audio_decoder.ape"),
     OMX_REGISTRY_ENTRY("OMX.qti.audio.decoder.dsd", "libOmxDsdDec.so", "audio_decoder.dsd"),
+    OMX_REGISTRY_ENTRY("OMX.qti.audio.decoder.mpegh", "libOmxMpeghDecSw.so", "audio_decoder.mpegh"),
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.encoder.aac", "libOmxAacEnc.so", "audio_encoder.aac"),
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.encoder.qcelp13", "libOmxQcelp13Enc.so", "audio_encoder.qcelp13"),
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.encoder.evrc", "libOmxEvrcEnc.so", "audio_encoder.evrc"),
@@ -70,7 +72,7 @@ omx_core_cb_type core[] =
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.aac", "libOmxAacDec.so", "audio_decoder.aac"),
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.multiaac", "libOmxAacDec.so", "audio_decoder.aac"),
     OMX_REGISTRY_ENTRY("OMX.qti.vdec.vpp", "libOmxVpp.so", "video_decoder.vpp"),
-
+    OMX_REGISTRY_ENTRY("OMX.qcom.audio.encoder.mpegh", "libOmxMpeghEncSw.so", "audio_encoder.mpegh"),
 #ifdef _NILE_
     //Entries specific to msmnile
 #endif //_NILE_

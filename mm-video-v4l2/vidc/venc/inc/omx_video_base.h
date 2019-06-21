@@ -177,10 +177,6 @@ struct venc_bufferpayload{
 	unsigned long	filled_len;
 };
 
-struct	venc_voptimingcfg{
-	unsigned long	voptime_resolution;
-};
-
 struct venc_framerate{
 	unsigned long	fps_denominator;
 	unsigned long	fps_numerator;

@@ -370,6 +370,7 @@ class venc_dev
         bool is_csc_custom_matrix_enabled;
         bool csc_enable;
         OMX_U32 fd_list[64];
+        unsigned long get_media_colorformat(unsigned long);
 
     private:
         OMX_U32                             m_codec;
@@ -424,7 +425,6 @@ class venc_dev
         bool venc_set_inloop_filter(OMX_VIDEO_AVCLOOPFILTERTYPE loop_filter);
         bool venc_set_intra_refresh ();
         bool venc_set_error_resilience(OMX_VIDEO_PARAM_ERRORCORRECTIONTYPE* error_resilience);
-        bool venc_set_voptiming_cfg(OMX_U32 nTimeIncRes);
         void venc_config_print();
         bool venc_set_extradata(OMX_U32 extra_data, OMX_BOOL enable);
         bool venc_reconfig_reqbufs();
@@ -434,13 +434,11 @@ class venc_dev
         bool venc_set_useltr(OMX_U32 frameIdx);
         bool venc_set_markltr(OMX_U32 frameIdx);
         bool venc_set_inband_video_header(OMX_BOOL enable);
-        bool venc_set_au_delimiter(OMX_BOOL enable);
         bool venc_set_hier_layers(QOMX_VIDEO_HIERARCHICALCODINGTYPE type, OMX_U32 num_layers);
         bool venc_set_vui_timing_info(OMX_BOOL enable);
         bool venc_set_peak_bitrate(OMX_U32 nPeakBitrate);
         bool venc_set_vpx_error_resilience(OMX_BOOL enable);
         bool venc_set_batch_size(OMX_U32 size);
-        bool venc_calibrate_gop();
         bool venc_get_index_from_fd(OMX_U32 buffer_fd, OMX_U32 *index);
         bool venc_set_hierp_layers(OMX_U32 hierp_layers);
         bool venc_set_baselayerid(OMX_U32 baseid);
@@ -462,6 +460,7 @@ class venc_dev
         bool venc_store_dynamic_config(OMX_INDEXTYPE type, OMX_PTR config);
         bool venc_cvp_enable(private_handle_t *handle);
         bool venc_get_cvp_metadata(private_handle_t *handle);
+        bool venc_superframe_enable(private_handle_t *handle);
 
         OMX_U32 pmem_free();
         OMX_U32 pmem_allocate(OMX_U32 size, OMX_U32 alignment, OMX_U32 count);
@@ -546,6 +545,12 @@ class venc_dev
         bool venc_config_markLTR(OMX_QCOM_VIDEO_CONFIG_LTRMARK_TYPE *markltr);
         bool venc_config_useLTR(OMX_QCOM_VIDEO_CONFIG_LTRUSE_TYPE *useltr);
         bool venc_config_qp(OMX_SKYPE_VIDEO_CONFIG_QP *configqp);
+
+        // the list to contain the region roi info
+        std::list<OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_INFO> mRoiRegionList;
+        bool venc_set_roi_region_qp_info(OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_INFO *roiRegionInfo);
+        OMX_U32 append_extradata_roi_region_qp_info(OMX_OTHER_EXTRADATATYPE *data,
+                OMX_TICKS timestamp, OMX_U32 freeSize);
 };
 
 enum instance_state {

@@ -311,16 +311,6 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
              }
              break;
         }
-        case OMX_QcomIndexConfigH264Transform8x8:
-        {
-            OMX_CONFIG_BOOLEANTYPE *pEnable = (OMX_CONFIG_BOOLEANTYPE *) configData;
-            DEBUG_PRINT_LOW("venc_set_config: OMX_QcomIndexConfigH264Transform8x8");
-            if (venc_h264_transform_8x8(pEnable->bEnabled) == false) {
-                DEBUG_PRINT_ERROR("Failed to set OMX_QcomIndexConfigH264Transform8x8");
-                return false;
-            }
-            break;
-        }
         case OMX_QTIIndexConfigDescribeColorAspects:
             {
                 DescribeColorAspectsParams *params = (DescribeColorAspectsParams *)configData;
@@ -444,6 +434,14 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
         {
             if(!venc_set_nal_size((OMX_VIDEO_CONFIG_NALSIZE *)configData)) {
                 DEBUG_PRINT_LOW("Failed to set Nal size info");
+                return false;
+            }
+            break;
+        }
+        case OMX_QTIIndexConfigVideoRoiRectRegionInfo:
+        {
+            if(!venc_set_roi_region_qp_info((OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_INFO *)configData)) {
+                DEBUG_PRINT_LOW("Failed to set ROI Region QP info");
                 return false;
             }
             break;
@@ -738,6 +736,10 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                         DEBUG_PRINT_ERROR("WARNING: Unsuccessful in updating slice_config");
                         return false;
                     }
+                    if (!venc_h264_transform_8x8(pParam->bDirect8x8Inference)) {
+                       DEBUG_PRINT_ERROR("WARNING: Request for setting Transform8x8 failed");
+                       return false;
+                    }
                 } else {
                     DEBUG_PRINT_ERROR("ERROR: Invalid Port Index for OMX_IndexParamVideoAvc");
                 }
@@ -957,32 +959,6 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
 
                 break;
             }
-        case OMX_QcomIndexParamAUDelimiter:
-            {
-                OMX_QCOM_VIDEO_CONFIG_AUD * pParam =
-                    (OMX_QCOM_VIDEO_CONFIG_AUD *)paramData;
-
-                DEBUG_PRINT_LOW("set AU Delimiters: %d", pParam->bEnable);
-                if(venc_set_au_delimiter(pParam->bEnable) == false) {
-                    DEBUG_PRINT_ERROR("ERROR: set AU delimiter failed");
-                    return false;
-                }
-
-                break;
-            }
-        case OMX_QcomIndexConfigH264EntropyCodingCabac:
-            {
-                QOMX_VIDEO_H264ENTROPYCODINGTYPE * pParam =
-                    (QOMX_VIDEO_H264ENTROPYCODINGTYPE *)paramData;
-
-                DEBUG_PRINT_LOW("set Entropy info : %d", pParam->bCabac);
-                if(venc_set_entropy_config (pParam->bCabac, 0) == false) {
-                    DEBUG_PRINT_ERROR("ERROR: set Entropy failed");
-                    return false;
-                }
-
-                break;
-            }
         case OMX_QcomIndexParamH264VUITimingInfo:
             {
                 OMX_QCOM_VIDEO_PARAM_VUI_TIMING_INFO *pParam =
@@ -1120,15 +1096,6 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 DEBUG_PRINT_INFO("Linear Color Format Enabled : %d ", pParam->bEnable);
                 break;
             }
-        case OMX_QTIIndexParamVideoEnableBlur:
-            {
-                OMX_QTI_VIDEO_CONFIG_BLURINFO *pParam = (OMX_QTI_VIDEO_CONFIG_BLURINFO *)paramData;
-                if (!venc_set_blur_resolution(pParam)) {
-                    DEBUG_PRINT_ERROR("ERROR: Setting OMX_QTIIndexParamVideoEnableBlur failed");
-                    return false;
-                }
-                break;
-            }
         case OMX_QTIIndexParamNativeRecorder:
             {
                 QOMX_ENABLETYPE *pParam = (QOMX_ENABLETYPE *)paramData;
@@ -1171,25 +1138,6 @@ bool venc_dev::venc_set_inband_video_header(OMX_BOOL enable)
     DEBUG_PRINT_HIGH("Set inband sps/pps: %d", enable);
     if(ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control) < 0) {
         DEBUG_PRINT_ERROR("Request for inband sps/pps failed");
-        return false;
-    }
-    return true;
-}
-
-bool venc_dev::venc_set_au_delimiter(OMX_BOOL enable)
-{
-    struct v4l2_control control;
-
-    control.id = V4L2_CID_MPEG_VIDC_VIDEO_AU_DELIMITER;
-    if(enable) {
-        control.value = V4L2_MPEG_MSM_VIDC_ENABLE;
-    } else {
-        control.value = V4L2_MPEG_MSM_VIDC_DISABLE;
-    }
-
-    DEBUG_PRINT_HIGH("Set AU delimiters: %d", enable);
-    if(ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control) < 0) {
-        DEBUG_PRINT_ERROR("Request for AU delimiters failed");
         return false;
     }
     return true;

@@ -40,6 +40,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "swvenc_types.h"
 
 #include <ui/GraphicBuffer.h>
+#include <media/msm_media_info.h>
 
 extern "C" {
     OMX_API void * get_omx_component_factory_fn(void);
@@ -204,16 +205,23 @@ class omx_venc: public omx_video
         void dev_get_consumer_usage(OMX_U32* usage) { *usage = 0; }
         static inline unsigned int SWVENC_Y_STRIDE(int color_fmt, int width)
         {
-            unsigned int alignment, stride = 0;
+            unsigned int stride = 0;
             if (!width)
                 goto invalid_input;
+            /*mapping the ZSL to NV12 color format for now
+            * remove the mapping once ZSL design is in place */
+            if(color_fmt == COLOR_FMT_NV12_ZSL)
+                color_fmt = COLOR_FMT_NV12;
             switch (color_fmt)
             {
             case COLOR_FMT_NV21:
+                stride = VENUS_Y_STRIDE(COLOR_FMT_NV21, width);
+                break;
             case COLOR_FMT_NV12:
+                stride = VENUS_Y_STRIDE(COLOR_FMT_NV12, width);
+                break;
             case COLOR_FMT_NV12_ZSL:
-                alignment = 128;
-                stride = ALIGN(width, alignment);
+                stride = VENUS_Y_STRIDE(COLOR_FMT_NV12_ZSL, width);
                 break;
             default:
                 break;
@@ -223,63 +231,75 @@ class omx_venc: public omx_video
         }
         static inline unsigned int SWVENC_Y_SCANLINES(int color_fmt, int height)
         {
-	    unsigned int alignment, scanlines = 0;
+            unsigned int scanlines = 0;
             if (!height)
                 goto invalid_input;
+            /*mapping the ZSL to NV12 color format for now
+            * remove the mapping once ZSL design is in place */
+            if(color_fmt == COLOR_FMT_NV12_ZSL)
+                color_fmt = COLOR_FMT_NV12;
             switch (color_fmt)
             {
             case COLOR_FMT_NV21:
+                scanlines = VENUS_Y_SCANLINES(COLOR_FMT_NV21, height);
+                break;
             case COLOR_FMT_NV12:
-                alignment = 32;
+                scanlines = VENUS_Y_SCANLINES(COLOR_FMT_NV12, height);
                 break;
             case COLOR_FMT_NV12_ZSL:
-                alignment = 64;
+                scanlines = VENUS_Y_SCANLINES(COLOR_FMT_NV12_ZSL, height);
                 break;
             default:
                 return 0;
             }
-            scanlines = ALIGN(height, alignment);
             invalid_input:
                 return scanlines;
         }
         static inline unsigned int SWVENC_UV_SCANLINES(int color_fmt, int height)
         {
-            unsigned int alignment, scanlines = 0;
+            unsigned int uv_canlines = 0;
             if (!height)
                 goto invalid_input;
+            /*mapping the ZSL to NV12 color format for now
+            * remove the mapping once ZSL design is in place */
+            if(color_fmt == COLOR_FMT_NV12_ZSL)
+                color_fmt = COLOR_FMT_NV12;
             switch (color_fmt)
             {
                 case COLOR_FMT_NV21:
+                    uv_canlines = VENUS_UV_SCANLINES(COLOR_FMT_NV21, height);
+                    break;
                 case COLOR_FMT_NV12:
+                    uv_canlines = VENUS_UV_SCANLINES(COLOR_FMT_NV12, height);
+                    break;
                 case COLOR_FMT_NV12_ZSL:
-                    alignment = 16;
+                    uv_canlines = VENUS_UV_SCANLINES(COLOR_FMT_NV12_ZSL, height);
                     break;
                 default:
                     goto invalid_input;
             }
-            scanlines = ALIGN((height+1)>>1, alignment);
             invalid_input:
-                return scanlines;
+                return uv_canlines;
         }
         static inline unsigned int SWVENC_BUFFER_SIZE(int color_fmt, int width, int height)
         {
-            unsigned int uv_alignment = 0, size = 0;
-            unsigned int y_plane, uv_plane, y_stride,uv_stride, y_scanlines, uv_scanlines;
+            unsigned int size = 0;
             if (!width || !height)
                 goto invalid_input;
-            y_stride = SWVENC_Y_STRIDE(color_fmt, width);
-            uv_stride = y_stride;
-            y_scanlines = SWVENC_Y_SCANLINES(color_fmt, height);
-            uv_scanlines = SWVENC_UV_SCANLINES(color_fmt, height);
+            /*mapping the ZSL to NV12 color format for now
+            * remove the mapping once ZSL design is in place */
+            if(color_fmt == COLOR_FMT_NV12_ZSL)
+                color_fmt = COLOR_FMT_NV12;
             switch (color_fmt)
             {
                 case COLOR_FMT_NV21:
+                    size = VENUS_BUFFER_SIZE(COLOR_FMT_NV21, width, height);
+                    break;
                 case COLOR_FMT_NV12:
+                    size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12, width, height);
+                    break;
                 case COLOR_FMT_NV12_ZSL:
-                    uv_alignment = 4096;
-                    y_plane = y_stride * y_scanlines;
-                    uv_plane = uv_stride * uv_scanlines + uv_alignment;
-                    size = ALIGN((y_plane + uv_plane),4096);
+                    size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12_ZSL, width, height);
                     break;
                default:
                    break;

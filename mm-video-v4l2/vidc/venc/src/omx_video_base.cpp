@@ -1698,14 +1698,6 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 memcpy(pParam, &m_sParamProfileLevel, sizeof(m_sParamProfileLevel));
                 break;
             }
-        case OMX_QcomIndexConfigH264EntropyCodingCabac:
-            {
-                VALIDATE_OMX_PARAM_DATA(paramData, QOMX_VIDEO_H264ENTROPYCODINGTYPE);
-                QOMX_VIDEO_H264ENTROPYCODINGTYPE * pParam = (QOMX_VIDEO_H264ENTROPYCODINGTYPE*)paramData;
-                DEBUG_PRINT_LOW("get_parameter: OMX_QcomIndexConfigH264EntropyCodingCabac");
-                memcpy(pParam, &m_sParamEntropy, sizeof(m_sParamEntropy));
-                break;
-            }
             /*Component should support this port definition*/
         case OMX_IndexParamAudioInit:
             {
@@ -2054,14 +2046,6 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 memcpy(consumerUsage, &m_sParamConsumerUsage, sizeof(m_sParamConsumerUsage));
                 DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamConsumerUsageBits %x",
                     m_sParamConsumerUsage);
-                break;
-            }
-        case OMX_QTIIndexParamVideoEnableBlur:
-            {
-                VALIDATE_OMX_PARAM_DATA(paramData, OMX_QTI_VIDEO_CONFIG_BLURINFO);
-                OMX_QTI_VIDEO_CONFIG_BLURINFO *pBlurInfo =
-                    reinterpret_cast<OMX_QTI_VIDEO_CONFIG_BLURINFO *>(paramData);
-                memcpy(pBlurInfo, &m_blurInfo, sizeof(OMX_QTI_VIDEO_CONFIG_BLURINFO));
                 break;
             }
         case OMX_IndexParamVideoSliceFMO:
@@ -4347,6 +4331,7 @@ OMX_ERRORTYPE  omx_video::component_role_enum(OMX_IN OMX_HANDLETYPE hComp,
             eRet = OMX_ErrorNoMore;
         }
     } else if (!strncmp((char*)m_nkind, "OMX.qcom.video.encoder.hevc", OMX_MAX_STRINGNAME_SIZE) ||
+                !strncmp((char*)m_nkind, "OMX.qcom.video.encoder.hevc.cq", OMX_MAX_STRINGNAME_SIZE) ||
                 !strncmp((char*)m_nkind, "OMX.qcom.video.encoder.heic", OMX_MAX_STRINGNAME_SIZE)) {
         if ((0 == index) && role) {
             strlcpy((char *)role, "video_encoder.hevc", OMX_MAX_STRINGNAME_SIZE);

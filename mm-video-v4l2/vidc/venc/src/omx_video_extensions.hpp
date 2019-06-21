@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -120,10 +120,8 @@ void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
     ADD_PARAM    ("qp-b", OMX_AndroidVendorValueInt32)
     ADD_PARAM_END("qp-b-enable", OMX_AndroidVendorValueInt32)
 
-    ADD_EXTENSION("qti-ext-enc-blurinfo", OMX_QTIIndexParamVideoEnableBlur, OMX_DirInput)
+    ADD_EXTENSION("qti-ext-enc-blurinfo", OMX_QTIIndexConfigVideoBlurResolution, OMX_DirInput)
     ADD_PARAM_END("info", OMX_AndroidVendorValueInt32)
-    ADD_EXTENSION("qti-ext-enc-blurfilter", OMX_QTIIndexConfigVideoBlurResolution, OMX_DirInput)
-    ADD_PARAM_END("strength", OMX_AndroidVendorValueInt32)
 
     ADD_EXTENSION("qti-ext-enc-qp-range", OMX_QcomIndexParamVideoIPBQPRange, OMX_DirOutput)
     ADD_PARAM    ("qp-i-min", OMX_AndroidVendorValueInt32)
@@ -141,6 +139,14 @@ void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
 
     ADD_EXTENSION("qti-ext-enc-vbvdelay", OMX_QTIIndexParamVbvDelay, OMX_DirInput)
     ADD_PARAM_END("value", OMX_AndroidVendorValueInt32)
+    ADD_EXTENSION("qti-ext-enc-roiinfo", OMX_QTIIndexConfigVideoRoiRectRegionInfo, OMX_DirInput)
+    ADD_PARAM    ("timestamp", OMX_AndroidVendorValueInt64)
+    ADD_PARAM    ("type", OMX_AndroidVendorValueString)
+    ADD_PARAM    ("rect-payload", OMX_AndroidVendorValueString)
+    ADD_PARAM_END("rect-payload-ext", OMX_AndroidVendorValueString)
+
+    ADD_EXTENSION("qti-ext-enc-roiinfo-rect-mode", OMX_QTIIndexConfigVideoRoiRectRegionInfo, OMX_DirOutput)
+    ADD_PARAM_END("enable", OMX_AndroidVendorValueInt32)
 }
 
 OMX_ERRORTYPE omx_video::get_vendor_extension_config(
@@ -352,6 +358,18 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
         case OMX_QTIIndexParamVbvDelay:
         {
             setStatus &= vExt.setParamInt32(ext, "value", m_sParamVbvDelay.nVbvDelay);
+            break;
+        }
+        case OMX_QTIIndexConfigVideoRoiRectRegionInfo:
+        {
+            if (vExt.paramCount() == 1) {
+                setStatus &= vExt.setParamInt32(ext, "enable", 1);
+            } else {
+                setStatus &= vExt.setParamInt64(ext, "timestamp", 0);
+                setStatus &= vExt.setParamString(ext, "type", "rect");
+                setStatus &= vExt.setParamString(ext, "rect-payload", "");
+                setStatus &= vExt.setParamString(ext, "rect-payload-ext", "");
+            }
             break;
         }
         default:
@@ -729,7 +747,7 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
             }
             char *rest = exType;
             char *token = strtok_r(exType, "|", &rest);
-            do {
+            while (token != NULL) {
                 extraDataParam.bEnabled = OMX_TRUE;
                 if (!strcmp(token, "advanced")) {
                     extraDataParam.nIndex = (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Advanced;
@@ -748,7 +766,8 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
                 if (err != OMX_ErrorNone) {
                     DEBUG_PRINT_ERROR("set_config: OMX_QcomIndexParamIndexExtraDataType failed !");
                 }
-            } while ((token = strtok_r(NULL, "|", &rest)));
+                token = strtok_r(NULL, "|", &rest);
+            }
             break;
         }
         case OMX_QTIIndexParamColorSpaceConversion:
@@ -811,34 +830,13 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
             }
             break;
         }
-        case OMX_QTIIndexParamVideoEnableBlur:
-        {
-            OMX_QTI_VIDEO_CONFIG_BLURINFO blurInfo;
-
-            memcpy(&blurInfo, &m_blurInfo, sizeof(OMX_QTI_VIDEO_CONFIG_BLURINFO));
-
-            valueSet |= vExt.readParamInt32(ext, "info", (OMX_S32 *)&(blurInfo.nBlurInfo));
-            if (!valueSet) {
-                break;
-            }
-
-            DEBUG_PRINT_HIGH("VENDOR-EXT: set_param: OMX_QTIIndexParamVideoEnableBlur : %u",
-                             blurInfo.nBlurInfo);
-
-            err = set_parameter(
-                    NULL, (OMX_INDEXTYPE)OMX_QTIIndexParamVideoEnableBlur, &blurInfo);
-            if (err != OMX_ErrorNone) {
-                DEBUG_PRINT_ERROR("set_param: OMX_QTIIndexParamVideoEnableBlur failed !");
-            }
-            break;
-        }
         case OMX_QTIIndexConfigVideoBlurResolution:
         {
             OMX_QTI_VIDEO_CONFIG_BLURINFO blurInfo;
 
             memcpy(&blurInfo, &m_blurInfo, sizeof(OMX_QTI_VIDEO_CONFIG_BLURINFO));
 
-            valueSet |= vExt.readParamInt32(ext, "strength", (OMX_S32 *)&(blurInfo.nBlurInfo));
+            valueSet |= vExt.readParamInt32(ext, "info", (OMX_S32 *)&(blurInfo.nBlurInfo));
             if (!valueSet) {
                 break;
             }
@@ -931,6 +929,108 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
                    NULL, (OMX_INDEXTYPE)OMX_QTIIndexParamVbvDelay, &vbvDelay);
             if (err != OMX_ErrorNone) {
                 DEBUG_PRINT_ERROR("set_param: OMX_QTIIndexParamVbvDelay failed !");
+            }
+            break;
+        }
+        case OMX_QTIIndexConfigVideoRoiRectRegionInfo:
+        {
+            if (vExt.paramCount() == 1) {
+                break;
+            }
+            uint32_t format = m_sOutPortDef.format.video.eCompressionFormat;
+            if (format != OMX_VIDEO_CodingHEVC && format != OMX_VIDEO_CodingAVC) {
+                DEBUG_PRINT_ERROR("ROI-Ext: only support avc or hevc");
+                break;
+            }
+            char type[OMX_MAX_STRINGVALUE_SIZE];
+            valueSet = vExt.readParamString(ext, "type", type);
+            if (!valueSet || strncmp(type, "rect", 4)) {
+                DEBUG_PRINT_ERROR("ROI-Ext: type is invalid");
+                break;
+            }
+            int64_t timestamp;
+            valueSet = vExt.readParamInt64(ext, "timestamp", (OMX_S64 *)&timestamp);
+            if (!valueSet) {
+                DEBUG_PRINT_ERROR("ROI-Ext: timestamp is invalid");
+                break;
+            }
+            char rawData[OMX_MAX_STRINGVALUE_SIZE * 2] = {0};
+            valueSet = vExt.readParamString(ext, "rect-payload", rawData);
+            if (!valueSet) {
+                DEBUG_PRINT_ERROR("ROI-Ext: payload is invalid");
+                break;
+            }
+            uint32_t size = strlen(rawData);
+            if (size == 0 || size > (OMX_MAX_STRINGVALUE_SIZE -1)) {
+                DEBUG_PRINT_ERROR("ROI-Ext: payload size is invalid : %u", size);
+                break;
+            }
+            // "payload-ext" is optional, if it's set by the client, joint this string
+            // with the "payload" string and seperate them with ';'
+            if (vExt.readParamString(ext, "rect-payload-ext", rawData + size + 1)) {
+                rawData[size] = ';';
+                size = strlen(rawData);
+            }
+            uint32_t width = m_sOutPortDef.format.video.nFrameWidth;
+            uint32_t height = m_sOutPortDef.format.video.nFrameHeight;
+            DEBUG_PRINT_LOW("ROI-Ext: clip(%ux%u), ts(%lld), payload(%u):%s",
+                    width, height, (long long)timestamp, size, rawData);
+
+            OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_INFO roiInfo;
+            OMX_INIT_STRUCT(&roiInfo, OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_INFO);
+            roiInfo.nTimeStamp = timestamp;
+            roiInfo.nPortIndex = PORT_INDEX_IN;
+
+            // The pattern to parse the String: "top,left-bottom,right=deltaQp;"
+            // each rectangle region string is seperated by ";"
+            // For example, the rectangle region is: top: 128, left:96, bottom:336, right:272
+            // and delta QP is -9, the string is "128,96-336,272=-9;".
+            uint32_t index = 0;
+            int top, left, bottom, right, deltaQp;
+            char *save = rawData;
+            char *rect = strtok_r(rawData, ";", &save);
+            const char* patternString = "%d,%d-%d,%d=%d";
+            while (rect != NULL) {
+                int tags = sscanf(rect, patternString, &top, &left, &bottom, &right, &deltaQp);
+                if (tags == 5) {
+                    // sanity check
+                    if (top > bottom || left > right || top < 0 || left < 0
+                            || bottom >= (int32_t)height || right >= (int32_t)width
+                            || index == MAX_RECT_ROI_NUM) {
+                        DEBUG_PRINT_ERROR("ROI-Ext: invalid roi info with deltaQp");
+                    } else {
+                        // delta QP range is (-32, 31)
+                        if (deltaQp < -31) {
+                            deltaQp = -31;
+                        }
+                        if (deltaQp > 30) {
+                            deltaQp = 30;
+                        }
+                        roiInfo.nRegions[index].nLeft = (uint32_t)left;
+                        roiInfo.nRegions[index].nTop = (uint32_t)top;
+                        roiInfo.nRegions[index].nRight = (uint32_t)right;
+                        roiInfo.nRegions[index].nBottom = (uint32_t)bottom;
+                        roiInfo.nRegions[index].nDeltaQP = (int8_t)deltaQp;
+                        DEBUG_PRINT_LOW("ROI-Ext: region(%u): t%d-l%d-b%d-r%d: qp:%d",
+                                index, top, left, bottom, right, deltaQp);
+                        index++;
+                    }
+                } else {
+                    DEBUG_PRINT_LOW("error rect : %s", rect);
+                }
+                rect = strtok_r(NULL, ";", &save);
+            }
+            if (index > 0) {
+                roiInfo.nRegionNum = index;
+                err = set_config(NULL, (OMX_INDEXTYPE)OMX_QTIIndexConfigVideoRoiRectRegionInfo,
+                        &roiInfo);
+                if (err != OMX_ErrorNone) {
+                    DEBUG_PRINT_ERROR("ROI-Ext: failed to set roi region info");
+                } else {
+                    DEBUG_PRINT_LOW("ROI-Ext: set %u number of roi region info", index);
+                }
+            } else {
+                DEBUG_PRINT_LOW("ROI-Ext: none valid roi region info");
             }
             break;
         }

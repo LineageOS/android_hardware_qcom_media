@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010 - 2018, The Linux Foundation. All rights reserved.
+Copyright (c) 2010 - 2019, The Linux Foundation. All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -863,6 +863,8 @@ class omx_vdec: public qc_omx_component
         void extract_demux_addr_offsets(OMX_BUFFERHEADERTYPE *buf_hdr);
         OMX_ERRORTYPE handle_demux_data(OMX_BUFFERHEADERTYPE *buf_hdr);
         OMX_U32 count_MB_in_extradata(OMX_OTHER_EXTRADATATYPE *extra);
+        void set_histogram_metadata(private_handle_t *private_handle);
+        struct VideoHistogramMetadata m_hist_metadata;
 
         bool align_pmem_buffers(int pmem_fd, OMX_U32 buffer_size,
                 OMX_U32 alignment);
@@ -1220,6 +1222,7 @@ class omx_vdec: public qc_omx_component
                 [2] = (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m,
                 [3] = (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mMultiView,
                 [4] = (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed,
+                [5] = OMX_COLOR_Format16bitRGB565,
             };
             return (index < sizeof(formatsNonSurfaceMode) / sizeof(OMX_COLOR_FORMATTYPE)) ?
                 formatsNonSurfaceMode[index] : OMX_COLOR_FormatMax;
@@ -1236,6 +1239,7 @@ class omx_vdec: public qc_omx_component
                     [2] = OMX_COLOR_FormatYUV420SemiPlanar,
                     [3] = OMX_COLOR_FormatYUV420Planar,
                     [4] = (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mMultiView,
+                    [5] = OMX_COLOR_Format16bitRGB565,
                 };
                 format = (index < sizeof(formatsDefault) / sizeof(OMX_COLOR_FORMATTYPE)) ?
                     formatsDefault[index] : OMX_COLOR_FormatMax;
