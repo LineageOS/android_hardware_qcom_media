@@ -241,6 +241,8 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
         strlcpy((char *)m_cRole, "video_encoder.vp8",OMX_MAX_STRINGNAME_SIZE);
         codec_type = OMX_VIDEO_CodingVP8;
     } else if (!strncmp((char *)m_nkind, "OMX.qcom.video.encoder.hevc",    \
+                OMX_MAX_STRINGNAME_SIZE) ||
+               !strncmp((char *)m_nkind, "OMX.qcom.video.encoder.hevc.cq",    \
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_encoder.hevc", OMX_MAX_STRINGNAME_SIZE);
         codec_type = OMX_VIDEO_CodingHEVC;
@@ -1028,6 +1030,8 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 }
                 else if (!strncmp((char*)m_nkind, "OMX.qcom.video.encoder.hevc",\
                             OMX_MAX_STRINGNAME_SIZE) ||
+                        !strncmp((char*)m_nkind, "OMX.qcom.video.encoder.hevc.cq",\
+                            OMX_MAX_STRINGNAME_SIZE) ||
                         !strncmp((char*)m_nkind, "OMX.qcom.video.encoder.heic",\
                             OMX_MAX_STRINGNAME_SIZE)) {
                     m_sParamHEVC.eProfile = (OMX_VIDEO_HEVCPROFILETYPE)m_sParamProfileLevel.eProfile;
@@ -1075,7 +1079,8 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                         DEBUG_PRINT_ERROR("ERROR: Setparameter: unknown Index %s", comp_role->cRole);
                         eRet =OMX_ErrorUnsupportedSetting;
                     }
-                } else if (!strncmp((char*)m_nkind, "OMX.qcom.video.encoder.hevc",OMX_MAX_STRINGNAME_SIZE)) {
+                } else if (!strncmp((char*)m_nkind, "OMX.qcom.video.encoder.hevc",OMX_MAX_STRINGNAME_SIZE) ||
+                           !strncmp((char*)m_nkind, "OMX.qcom.video.encoder.hevc.cq",OMX_MAX_STRINGNAME_SIZE)) {
                     if (!strncmp((const char*)comp_role->cRole,"video_encoder.hevc",OMX_MAX_STRINGNAME_SIZE)) {
                         strlcpy((char*)m_cRole,"video_encoder.hevc",OMX_MAX_STRINGNAME_SIZE);
                     } else {
