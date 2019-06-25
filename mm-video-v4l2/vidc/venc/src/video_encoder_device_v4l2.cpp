@@ -1177,9 +1177,10 @@ void venc_dev::free_extradata(struct extradata_buffer_info *extradata_info)
             extradata_info->ion[i].uaddr = NULL;
             venc_handle->free_ion_memory(&extradata_info->ion[i]);
         }
-        memset(extradata_info, 0, sizeof(*extradata_info));
-        extradata_info->ion[i].data_fd = -1;
+        memset(&extradata_info->ion[i].alloc_data, 0, sizeof(struct ion_allocation_data));
     }
+    extradata_info->buffer_size = 0;
+    extradata_info->count = 0;
     extradata_info->allocated = OMX_FALSE;
 #else
     (void)extradata_info;
