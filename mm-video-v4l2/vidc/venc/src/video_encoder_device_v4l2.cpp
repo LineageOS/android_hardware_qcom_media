@@ -4543,7 +4543,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
         }
 
         plane[extra_idx].bytesused = 0;
-        plane[extra_idx].length = input_extradata_info.size;
+        plane[extra_idx].length = input_extradata_info.buffer_size;
         plane[extra_idx].m.userptr = (unsigned long) (input_extradata_info.uaddr + extradata_index * input_extradata_info.buffer_size);
 #ifdef USE_ION
         plane[extra_idx].reserved[0] = input_extradata_info.ion.data_fd;
@@ -4982,7 +4982,7 @@ bool venc_dev::venc_set_extradata(OMX_U32 extra_data, OMX_BOOL enable)
         case OMX_ExtraDataVideoLTRInfo:
             control.value = V4L2_MPEG_VIDC_EXTRADATA_LTR;
             break;
-#if NEED_TO_REVISIT
+#ifdef V4L2_MPEG_VIDC_EXTRADATA_INPUT_CROP
         case OMX_ExtraDataFrameDimension:
             control.value = V4L2_MPEG_VIDC_EXTRADATA_INPUT_CROP;
             break;
