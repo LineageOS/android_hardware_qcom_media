@@ -162,6 +162,14 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
         RETURN(OMX_ErrorInsufficientResources);
     }
 
+    sRet = swvenc_check_inst_load(m_hSwVenc);
+    if (sRet != SWVENC_S_SUCCESS)
+    {
+        DEBUG_PRINT_ERROR("swvenc_init returned %d, ret insufficient resources",
+         sRet);
+        RETURN(OMX_ErrorInsufficientResources);
+    }
+
     m_stopped = true;
 
     //Intialise the OMX layer variables
