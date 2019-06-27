@@ -27,3 +27,6 @@ include hardware/qcom/media/conf_files/$(TARGET_BOARD_PLATFORM)/$(TARGET_BOARD_P
 endif
 
 endif
+
+#Vendor property to enable Codec2 for audio and OMX for Video
+PRODUCT_PROPERTY_OVERRIDES += debug.stagefright.ccodec=1
