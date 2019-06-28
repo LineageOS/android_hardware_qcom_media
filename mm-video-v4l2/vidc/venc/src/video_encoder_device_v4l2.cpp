@@ -2889,6 +2889,11 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
         }
     }
 
+    if (!handle_dynamic_config(bufhdr)) {
+        DEBUG_PRINT_ERROR("%s Failed to set dynamic configs", __func__);
+        return false;
+    }
+
     if (!streaming[OUTPUT_PORT]) {
         enum v4l2_buf_type buf_type;
         buf_type=V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
@@ -2960,11 +2965,6 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
 
     if (!handle_input_extradata(buf)) {
         DEBUG_PRINT_ERROR("%s Failed to handle input extradata", __func__);
-        return false;
-    }
-
-    if (!handle_dynamic_config(bufhdr)) {
-        DEBUG_PRINT_ERROR("%s Failed to set dynamic configs", __func__);
         return false;
     }
 
