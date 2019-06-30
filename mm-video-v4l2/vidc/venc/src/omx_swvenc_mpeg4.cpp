@@ -3384,6 +3384,9 @@ SWVENC_STATUS omx_venc::swvenc_set_profile_level
           case OMX_VIDEO_H263Level40:
              Level.h263 = SWVENC_LEVEL_H263_40;
              break;
+          case OMX_VIDEO_H263Level45:
+             Level.h263 = SWVENC_LEVEL_H263_45;
+             break;
           case OMX_VIDEO_H263Level50:
              Level.h263 = SWVENC_LEVEL_H263_50;
              break;
