@@ -10261,12 +10261,16 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
     portDefn->eDomain    = OMX_PortDomainVideo;
     memset(&fmt, 0x0, sizeof(struct v4l2_format));
     if (0 == portDefn->nPortIndex) {
+        int ret = 0;
         if (secure_mode) {
-            eRet = get_buffer_req(&drv_ctx.ip_buf);
-            if (eRet) {
-                DEBUG_PRINT_ERROR("%s:get_buffer_req(ip_buf) failed", __func__);
-                return eRet;
+            fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
+            fmt.fmt.pix_mp.pixelformat = output_capability;
+            ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_FMT, &fmt);
+            if (ret) {
+                DEBUG_PRINT_ERROR("Get Resolution failed");
+                return OMX_ErrorHardware;
             }
+            drv_ctx.ip_buf.buffer_size = fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
         }
         portDefn->eDir =  OMX_DirInput;
         portDefn->nBufferCountActual = drv_ctx.ip_buf.actualcount;
