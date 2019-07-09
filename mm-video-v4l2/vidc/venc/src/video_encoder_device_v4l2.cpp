@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -1703,15 +1703,10 @@ bool venc_dev::venc_open(OMX_U32 codec)
         idrperiod.idrperiod = 1;
         minqp = 0;
         maxqp = 51;
-        if (codec == OMX_VIDEO_CodingImageHEIC) {
-            m_sVenc_cfg.input_width = DEFAULT_TILE_DIMENSION;
-            m_sVenc_cfg.input_height= DEFAULT_TILE_DIMENSION;
-            m_sVenc_cfg.dvs_width = DEFAULT_TILE_DIMENSION;
-            m_sVenc_cfg.dvs_height = DEFAULT_TILE_DIMENSION;
+        if (codec == OMX_VIDEO_CodingImageHEIC)
             codec_profile.profile = V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN_STILL_PIC;
-        } else {
+        else
             codec_profile.profile = V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN;
-        }
         profile_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_1;
     } else if (codec == QOMX_VIDEO_CodingTME) {
         m_sVenc_cfg.codectype = V4L2_PIX_FMT_TME;
@@ -1811,18 +1806,6 @@ bool venc_dev::venc_open(OMX_U32 codec)
     bufreq.count = 2;
     ret = ioctl(m_nDriver_fd,VIDIOC_REQBUFS, &bufreq);
     m_sOutput_buff_property.mincount = m_sOutput_buff_property.actualcount = bufreq.count;
-
-    if (m_codec == OMX_VIDEO_CodingImageHEIC) {
-        if (!venc_set_grid_enable()) {
-            DEBUG_PRINT_ERROR("Failed to enable grid");
-            return false;
-        }
-
-        if (!venc_set_ratectrl_cfg(OMX_Video_ControlRateConstantQuality)) {
-            DEBUG_PRINT_ERROR("Failed to set rate control:CQ");
-            return false;
-        }
-    }
 
     if(venc_handle->is_secure_session()) {
         control.id = V4L2_CID_MPEG_VIDC_VIDEO_SECURE;
