@@ -3097,13 +3097,14 @@ SWVENC_STATUS omx_venc::swvenc_empty_buffer_done
                   size = handle->size;
               }
            }
-           int status = munmap(p_ipbuffer->p_buffer, size);
-           DEBUG_PRINT_HIGH("Unmapped pBuffer <%p> size <%d> status <%d>", p_ipbuffer->p_buffer, size, status);
+
+           DEBUG_PRINT_HIGH("Unmapping pBuffer <%p> size <%d>", p_ipbuffer->p_buffer, size);
+           if (-1 == munmap(p_ipbuffer->p_buffer, size))
+               DEBUG_PRINT_HIGH("Unmap failed");
         }
 #endif
         post_event ((unsigned long)omxhdr,error,OMX_COMPONENT_GENERATE_EBD);
     }
-
     RETURN(eRet);
 }
 
