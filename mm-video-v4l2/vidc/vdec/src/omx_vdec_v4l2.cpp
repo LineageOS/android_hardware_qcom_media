@@ -6348,9 +6348,6 @@ int omx_vdec::async_message_process (void *context, void* message)
                     sem_post(&omx->m_safe_flush);
                 }
             }
-            if (v4l2_buf_ptr->flags & V4L2_BUF_FLAG_KEYFRAME) {
-                omxhdr->nFlags |= OMX_BUFFERFLAG_SYNCFRAME;
-            }
             omx->post_event ((unsigned long)omxhdr,vdec_msg->status_code,
                     OMX_COMPONENT_GENERATE_EBD);
             break;
