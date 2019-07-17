@@ -1480,9 +1480,13 @@ bool venc_dev::venc_open(OMX_U32 codec)
         idrperiod.idrperiod = 1;
         minqp = 0;
         maxqp = 51;
-        if (codec == OMX_VIDEO_CodingImageHEIC)
+        if (codec == OMX_VIDEO_CodingImageHEIC) {
+            m_sVenc_cfg.input_width = DEFAULT_TILE_DIMENSION;
+            m_sVenc_cfg.input_height= DEFAULT_TILE_DIMENSION;
+            m_sVenc_cfg.dvs_width = DEFAULT_TILE_DIMENSION;
+            m_sVenc_cfg.dvs_height = DEFAULT_TILE_DIMENSION;
             codec_profile.profile = V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_STILL_PICTURE;
-        else
+        } else
             codec_profile.profile = V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN;
         profile_level.level = V4L2_MPEG_VIDEO_HEVC_LEVEL_1;
     }
@@ -1566,6 +1570,13 @@ bool venc_dev::venc_open(OMX_U32 codec)
 
     ret = ioctl(m_nDriver_fd, VIDIOC_S_FMT, &fmt);
     m_sInput_buff_property.datasize=fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
+
+    if (m_codec == OMX_VIDEO_CodingImageHEIC) {
+        if (!venc_set_grid_enable()) {
+            DEBUG_PRINT_ERROR("Failed to enable grid");
+            return false;
+        }
+    }
 
     bufreq.memory = V4L2_MEMORY_USERPTR;
     bufreq.count = 2;
