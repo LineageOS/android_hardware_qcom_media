@@ -199,6 +199,8 @@ Only the three quirks included above are recognized at this point:
             <Limit name="frame-rate" range="1-2" />
             <Limit name="concurrent-instances" max="16" />
             <Limit name="quality" range="0-100" default="80" />
+            <Limit name="performance-point-8192x4320" value="3" />
+            <Limit name="performance-point-4096x2304" value="5" />
             <Feature name="bitrate-modes" value="CQ" />
         </MediaCodec>
         <!-- Video Software -->
