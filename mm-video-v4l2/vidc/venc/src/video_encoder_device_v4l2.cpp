@@ -633,7 +633,7 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
     unsigned int index = 0;
     int height = m_sVenc_cfg.input_height;
     int width = m_sVenc_cfg.input_width;
-    OMX_TICKS nTimeStamp = buf.timestamp.tv_sec * 1000000 + buf.timestamp.tv_usec;
+    OMX_TICKS nTimeStamp = static_cast<OMX_TICKS>(buf.timestamp.tv_sec) * 1000000 + buf.timestamp.tv_usec;
     int fd = buf.m.planes[0].reserved[0];
     char *p_extradata = NULL;
     OMX_OTHER_EXTRADATATYPE *data = NULL;
