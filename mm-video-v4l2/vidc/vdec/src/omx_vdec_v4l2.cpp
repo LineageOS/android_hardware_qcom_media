@@ -6491,18 +6491,13 @@ int omx_vdec::async_message_process (void *context, void* message)
                        || (omx->drv_ctx.frame_size.left != vdec_msg->msgdata.output_frame.framesize.left)
                        || (omx->drv_ctx.frame_size.top != vdec_msg->msgdata.output_frame.framesize.top)
                        || (omx->drv_ctx.frame_size.right != vdec_msg->msgdata.output_frame.framesize.right)
-                       || (omx->drv_ctx.frame_size.bottom != vdec_msg->msgdata.output_frame.framesize.bottom)
-                       || (omx->drv_ctx.video_resolution.frame_width != vdec_msg->msgdata.output_frame.picsize.frame_width)
-                       || (omx->drv_ctx.video_resolution.frame_height != vdec_msg->msgdata.output_frame.picsize.frame_height) )) {
+                       || (omx->drv_ctx.frame_size.bottom != vdec_msg->msgdata.output_frame.framesize.bottom) )) {
 
-                       DEBUG_PRINT_HIGH("Parameters Changed From: Len: %u, WxH: %dx%d, L: %u, T: %u, R: %u, B: %u --> Len: %u, WxH: %dx%d, L: %u, T: %u, R: %u, B: %u",
+                       DEBUG_PRINT_HIGH("Parameters Changed From: Len: %u, L: %u, T: %u, R: %u, B: %u --> Len: %u, L: %u, T: %u, R: %u, B: %u",
                                omx->prev_n_filled_len,
-                               omx->drv_ctx.video_resolution.frame_width,
-                               omx->drv_ctx.video_resolution.frame_height,
                                omx->drv_ctx.frame_size.left, omx->drv_ctx.frame_size.top,
                                omx->drv_ctx.frame_size.right, omx->drv_ctx.frame_size.bottom,
-                               omxhdr->nFilledLen, vdec_msg->msgdata.output_frame.picsize.frame_width,
-                               vdec_msg->msgdata.output_frame.picsize.frame_height,
+                               omxhdr->nFilledLen,
                                vdec_msg->msgdata.output_frame.framesize.left,
                                vdec_msg->msgdata.output_frame.framesize.top,
                                vdec_msg->msgdata.output_frame.framesize.right,
@@ -6511,33 +6506,6 @@ int omx_vdec::async_message_process (void *context, void* message)
                        memcpy(&omx->drv_ctx.frame_size,
                                &vdec_msg->msgdata.output_frame.framesize,
                                sizeof(struct vdec_framesize));
-
-                       omx->drv_ctx.video_resolution.frame_width =
-                               vdec_msg->msgdata.output_frame.picsize.frame_width;
-                       omx->drv_ctx.video_resolution.frame_height =
-                               vdec_msg->msgdata.output_frame.picsize.frame_height;
-                       if (omx->drv_ctx.output_format == VDEC_YUV_FORMAT_NV12) {
-                           omx->drv_ctx.video_resolution.stride =
-                               VENUS_Y_STRIDE(COLOR_FMT_NV12, omx->drv_ctx.video_resolution.frame_width);
-                           omx->drv_ctx.video_resolution.scan_lines =
-                               VENUS_Y_SCANLINES(COLOR_FMT_NV12, omx->drv_ctx.video_resolution.frame_height);
-                       } else if (omx->drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_UBWC) {
-                           omx->drv_ctx.video_resolution.stride =
-                               VENUS_Y_STRIDE(COLOR_FMT_NV12_UBWC, omx->drv_ctx.video_resolution.frame_width);
-                           omx->drv_ctx.video_resolution.scan_lines =
-                               VENUS_Y_SCANLINES(COLOR_FMT_NV12_UBWC, omx->drv_ctx.video_resolution.frame_height);
-                       } else if (omx->drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_TP10_UBWC) {
-                           omx->drv_ctx.video_resolution.stride =
-                               VENUS_Y_STRIDE(COLOR_FMT_NV12_BPP10_UBWC, omx->drv_ctx.video_resolution.frame_width);
-                           omx->drv_ctx.video_resolution.scan_lines =
-                               VENUS_Y_SCANLINES(COLOR_FMT_NV12_BPP10_UBWC, omx->drv_ctx.video_resolution.frame_height);
-                        }
-                        else if(omx->drv_ctx.output_format == VDEC_YUV_FORMAT_P010_VENUS) {
-                           omx->drv_ctx.video_resolution.stride =
-                               VENUS_Y_STRIDE(COLOR_FMT_P010, omx->drv_ctx.video_resolution.frame_width);
-                           omx->drv_ctx.video_resolution.scan_lines =
-                               VENUS_Y_SCANLINES(COLOR_FMT_P010, omx->drv_ctx.video_resolution.frame_height);
-                        }
 
                        if(!reconfig_event_sent) {
                            omx->post_event(OMX_CORE_OUTPUT_PORT_INDEX,
