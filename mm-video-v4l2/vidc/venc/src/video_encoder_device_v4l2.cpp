@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2018, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -35,6 +35,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "video_encoder_device_v4l2.h"
 #include "omx_video_encoder.h"
 #include "media/msm_vidc_utils.h"
+#ifdef HYPERVISOR
+#include "hypv_intercept.h"
+#endif
 #ifdef USE_ION
 #include <linux/msm_ion.h>
 #endif
@@ -63,6 +66,11 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <utils/Trace.h>
 
 #define YUV_STATS_LIBRARY_NAME "libgpustats.so" // UBWC case: use GPU library
+
+#ifdef HYPERVISOR
+#define ioctl(x, y, z) hypv_ioctl(x, y, z)
+#define poll(x, y, z)  hypv_poll(x, y, z)
+#endif
 
 #undef ALIGN
 #define ALIGN(x, to_align) ((((unsigned long) x) + (to_align - 1)) & ~(to_align - 1))
@@ -1637,17 +1645,22 @@ bool venc_dev::venc_open(OMX_U32 codec)
     struct v4l2_control control;
     OMX_STRING device_name = (OMX_STRING)"/dev/video33";
     char property_value[PROPERTY_VALUE_MAX] = {0};
-    char platform_name[PROPERTY_VALUE_MAX] = {0};
     FILE *soc_file = NULL;
     char buffer[10];
 
-    property_get("ro.board.platform", platform_name, "0");
+    property_get("ro.board.platform", m_platform_name, "0");
 
-    if (!strncmp(platform_name, "msm8610", 7)) {
+    if (!strncmp(m_platform_name, "msm8610", 7)) {
         device_name = (OMX_STRING)"/dev/video/q6_enc";
         supported_rc_modes = (RC_ALL & ~RC_CBR_CFR);
     }
-    m_nDriver_fd = open (device_name, O_RDWR);
+
+#ifdef HYPERVISOR
+    m_nDriver_fd = hypv_open(device_name, O_RDWR);
+#else
+    m_nDriver_fd = open(device_name, O_RDWR);
+#endif
+
     if ((int)m_nDriver_fd < 0) {
         DEBUG_PRINT_ERROR("ERROR: Omx_venc::Comp Init Returning failure");
         return false;
@@ -1910,7 +1923,11 @@ void venc_dev::venc_close()
         DEBUG_PRINT_HIGH("venc_close X");
         unsubscribe_to_events(m_nDriver_fd);
         close(m_poll_efd);
+#ifdef HYPERVISOR
+        hypv_close(m_nDriver_fd);
+#else
         close(m_nDriver_fd);
+#endif
         m_nDriver_fd = -1;
     }
 
@@ -4411,6 +4428,13 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                     if (getMetaData(handle, GET_UBWC_CR_STATS_INFO, (void *)cam_ubwc_stats) == 0) {
                         if (cam_ubwc_stats[0].bDataValid) {
                             switch (cam_ubwc_stats[0].version) {
+                            case UBWC_1_0:
+                                {
+                                    // Camera hw doesn't support UBWC stats in trinket and sends
+                                    // a hardcoded compression factor in nCRStatsTile32
+                                    compression_ratio = cam_ubwc_stats[0].ubwc_stats.nCRStatsTile32;
+                                }
+                                break;
                             case UBWC_2_0:
                             case UBWC_3_0:
                                 {
@@ -7206,6 +7230,12 @@ void venc_dev::venc_get_consumer_usage(OMX_U32* usage) {
         DEBUG_PRINT_INFO("Clear UBWC and set HEIF consumer usage bit");
         *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
         *usage |= GRALLOC_USAGE_PRIVATE_HEIF_VIDEO;
+    }
+
+    if (!strncmp(m_platform_name, "trinket", 7)) {
+        if (m_sVenc_cfg.input_width < 640 || m_sVenc_cfg.input_height < 480) {
+            *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
+        }
     }
 
     DEBUG_PRINT_INFO("venc_get_consumer_usage 0x%x", *usage);
