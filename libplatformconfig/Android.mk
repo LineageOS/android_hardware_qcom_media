@@ -19,10 +19,12 @@ include $(BUILD_COPY_HEADERS)
 
 LOCAL_CFLAGS := $(COMMON_CFLAGS) $(libplatformconfig-def)
 
+ifeq ($(TARGET_ENABLE_VIDC_INTSAN), true)
 LOCAL_SANITIZE := integer_overflow
 ifeq ($(TARGET_ENABLE_VIDC_INTSAN_DIAG), true)
 $(warning INTSAN_DIAG_ENABLED)
 LOCAL_SANITIZE_DIAG := integer_overflow
+endif
 endif
 
 LOCAL_SHARED_LIBRARIES += \
