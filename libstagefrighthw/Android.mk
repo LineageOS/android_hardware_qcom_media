@@ -30,10 +30,12 @@ LOCAL_SRC_FILES := \
 
 LOCAL_CFLAGS := $(PV_CFLAGS_MINUS_VISIBILITY)
 
+ifeq ($(TARGET_ENABLE_VIDC_INTSAN), true)
 LOCAL_SANITIZE := integer_overflow
 ifeq ($(TARGET_ENABLE_VIDC_INTSAN_DIAG), true)
 $(warning INTSAN_DIAG_ENABLED)
 LOCAL_SANITIZE_DIAG := integer_overflow
+endif
 endif
 
 ifeq ($(PLATFORM_SDK_VERSION), 18)  #JB_MR2

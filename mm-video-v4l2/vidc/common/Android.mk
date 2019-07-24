@@ -41,10 +41,12 @@ LOCAL_CFLAGS                    := $(libmm-vidc-def)
 LOCAL_C_INCLUDES                := $(libmm-vidc-inc)
 
 # The type of overflow check must be specified for static libraries
+ifeq ($(TARGET_ENABLE_VIDC_INTSAN), true)
 LOCAL_SANITIZE := signed-integer-overflow unsigned-integer-overflow
 ifeq ($(TARGET_ENABLE_VIDC_INTSAN_DIAG), true)
 $(warning INTSAN_DIAG_ENABLED)
 LOCAL_SANITIZE_DIAG := signed-integer-overflow unsigned-integer-overflow
+endif
 endif
 
 LOCAL_PRELINK_MODULE      := false

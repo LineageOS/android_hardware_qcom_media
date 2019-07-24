@@ -72,9 +72,12 @@ LOCAL_C_INCLUDES        += $(TOP)/hardware/qcom/media/libplatformconfig
 LOCAL_HEADER_LIBRARIES := \
         libutils_headers
 
+ifeq ($(TARGET_ENABLE_VIDC_INTSAN), true)
 LOCAL_SANITIZE := integer_overflow
-ifeq ($(TARGET_MSM_VIDC_INTSAN_DIAG),true)
+ifeq ($(TARGET_ENABLE_VIDC_INTSAN_DIAG), true)
+$(warning INTSAN_DIAG_ENABLED)
 LOCAL_SANITIZE_DIAG := integer_overflow
+endif
 endif
 
 LOCAL_PRELINK_MODULE    := false
@@ -124,9 +127,12 @@ endif
 endif
 LOCAL_CFLAGS            := $(OMXCORE_CFLAGS)
 
+ifeq ($(TARGET_ENABLE_VIDC_INTSAN), true)
 LOCAL_SANITIZE := integer_overflow
-ifeq ($(TARGET_MSM_VIDC_INTSAN_DIAG),true)
+ifeq ($(TARGET_ENABLE_VIDC_INTSAN_DIAG), true)
+$(warning INTSAN_DIAG_ENABLED)
 LOCAL_SANITIZE_DIAG := integer_overflow
+endif
 endif
 
 LOCAL_SRC_FILES         := src/common/omx_core_cmp.cpp
