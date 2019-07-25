@@ -10,8 +10,9 @@ PRODUCT_COPY_FILES += \
     $(CONFIG_PATH)/mediacodec-seccomp.policy:$(TARGET_COPY_OUT_VENDOR)/etc/seccomp_policy/mediacodec.policy \
     $(CONFIG_PATH)/system_properties.xml:$(TARGET_COPY_OUT_VENDOR)/etc/system_properties.xml
 
-# Enable debug mode for CLANG/LLVM integer-overflow sanitization
-TARGET_ENABLE_VIDC_INTSAN_DIAG := true
+# Enable DIAG mode for CLANG/LLVM integer-overflow sanitization
+# NOTE: DIAG mode should be used only for debug builds
+TARGET_ENABLE_VIDC_INTSAN_DIAG := false
 
 # Vendor property overrides
 ifeq ($(GENERIC_ODM_IMAGE),true)
@@ -21,6 +22,12 @@ ifeq ($(GENERIC_ODM_IMAGE),true)
   PRODUCT_ODM_PROPERTIES += debug.stagefright.omx_default_rank=1000
 else
   $(warning "Enabling codec2.0 SW only for non-generic odm build variant")
-  #Rank SW C2 codecs first
-  PRODUCT_PROPERTY_OVERRIDES += debug.stagefright.ccodec=1
+  #Rank OMX SW codecs lower than OMX HW codecs
+  PRODUCT_PROPERTY_OVERRIDES += debug.stagefright.omx_default_rank.sw-audio=1
+  PRODUCT_PROPERTY_OVERRIDES += debug.stagefright.omx_default_rank=0
 endif
+
+# Produce packages addition
+PRODUCT_PACKAGES += \
+    libcodec2_vndk.vendor \
+    libcodec2_hidl@1.0.vendor

@@ -72,6 +72,11 @@ LOCAL_C_INCLUDES        += $(TOP)/hardware/qcom/media/libplatformconfig
 LOCAL_HEADER_LIBRARIES := \
         libutils_headers
 
+LOCAL_SANITIZE := integer_overflow
+ifeq ($(TARGET_MSM_VIDC_INTSAN_DIAG),true)
+LOCAL_SANITIZE_DIAG := integer_overflow
+endif
+
 LOCAL_PRELINK_MODULE    := false
 LOCAL_MODULE            := libOmxCore
 LOCAL_MODULE_TAGS       := optional
@@ -118,6 +123,11 @@ LOCAL_SHARED_LIBRARIES  += libplatformconfig
 endif
 endif
 LOCAL_CFLAGS            := $(OMXCORE_CFLAGS)
+
+LOCAL_SANITIZE := integer_overflow
+ifeq ($(TARGET_MSM_VIDC_INTSAN_DIAG),true)
+LOCAL_SANITIZE_DIAG := integer_overflow
+endif
 
 LOCAL_SRC_FILES         := src/common/omx_core_cmp.cpp
 LOCAL_SRC_FILES         += src/common/qc_omx_core.c

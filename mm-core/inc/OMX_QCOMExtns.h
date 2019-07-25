@@ -1506,8 +1506,6 @@ typedef enum OMX_QTI_VIDC_EXTRADATATYPE
     OMX_QTI_VIDC_ExtraData_HDR10HIST =                  0x7F100008,
 } OMX_QTI_VIDC_EXTRADATATYPE;
 
-#define OMX_QTI_VIDC_ExtraData_LTRInfo OMX_QTI_VIDC_ExtraData_LTRInfo
-
 struct ExtraDataMap {
         const char *type;
         OMX_QTI_VIDC_EXTRADATATYPE index;

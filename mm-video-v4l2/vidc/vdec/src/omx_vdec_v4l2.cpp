@@ -211,9 +211,9 @@ void* async_message_thread (void *input)
                 vdec_msg.msgdata.output_frame.flags = true; // INSUFFICIENT event
                 DEBUG_PRINT_HIGH("VIDC Port Reconfig received insufficient");
                 omx->dpb_bit_depth = ptr[2];
-                DEBUG_PRINT_HIGH("VIDC Port Reconfig Bitdepth - %d", ptr[3]);
+                DEBUG_PRINT_HIGH("VIDC Port Reconfig Bitdepth - %d", ptr[2]);
                 omx->m_progressive = ptr[3];
-                DEBUG_PRINT_HIGH("VIDC Port Reconfig PicStruct - %d", ptr[4]);
+                DEBUG_PRINT_HIGH("VIDC Port Reconfig PicStruct - %d", ptr[3]);
                 omx->m_color_space = (ptr[4] == MSM_VIDC_BT2020 ? (omx_vdec::BT2020):
                                       (omx_vdec:: EXCEPT_BT2020));
                 DEBUG_PRINT_HIGH("VIDC Port Reconfig ColorSpace - %d", omx->m_color_space);
@@ -1559,11 +1559,18 @@ int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer)
         }
     }
 
-    buf_index = buffer - m_out_mem_ptr;
-    bufaddr = (char *)drv_ctx.ptr_outputbuffer[buf_index].bufferaddr;
+    vdec_bufferpayload *vdec_buf = NULL;
+    if (client_buffers.is_color_conversion_enabled()) {
+        buf_index = buffer - m_intermediate_out_mem_ptr;
+        vdec_buf = &drv_ctx.ptr_intermediate_outputbuffer[buf_index];
+    } else {
+        buf_index = buffer - m_out_mem_ptr;
+        vdec_buf = &drv_ctx.ptr_outputbuffer[buf_index];
+    }
+    bufaddr = (char *)vdec_buf->bufferaddr;
     if (dynamic_buf_mode && !secure_mode) {
-        bufaddr = ion_map(drv_ctx.ptr_outputbuffer[buf_index].pmem_fd,
-                          drv_ctx.ptr_outputbuffer[buf_index].buffer_len);
+        bufaddr = ion_map(vdec_buf->pmem_fd,
+                          vdec_buf->buffer_len);
         //mmap returns (void *)-1 on failure and sets error code in errno.
         if (bufaddr == MAP_FAILED) {
             DEBUG_PRINT_ERROR("mmap failed - errno: %d", errno);
@@ -1652,8 +1659,8 @@ int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer)
     }
 
     if (dynamic_buf_mode && !secure_mode) {
-        ion_unmap(drv_ctx.ptr_outputbuffer[buf_index].pmem_fd, bufaddr,
-                  drv_ctx.ptr_outputbuffer[buf_index].buffer_len);
+        ion_unmap(vdec_buf->pmem_fd, bufaddr,
+                  vdec_buf->buffer_len);
     }
     return 0;
 }
@@ -6540,8 +6547,17 @@ int omx_vdec::async_message_process (void *context, void* message)
                                            OMX_IndexConfigCommonOutputCrop,
                                            OMX_COMPONENT_GENERATE_PORT_RECONFIG);
                            reconfig_event_sent = true;
-                       } else {
-                           /* Update C2D with new resolution */
+                       }
+                       /* Update C2D with new resolution */
+                       omx->m_progressive = omx->drv_ctx.interlace == VDEC_InterlaceFrameProgressive;
+                       if (!omx->client_buffers.update_buffer_req()) {
+                           DEBUG_PRINT_ERROR("Setting C2D buffer requirements failed");
+                       }
+                   } else if (omxhdr->nFilledLen) {
+                       /* Check whether interlaced info changed and update C2D */
+                       int bProgressive = omx->drv_ctx.interlace == VDEC_InterlaceFrameProgressive;
+                       if (omx->m_progressive != bProgressive) {
+                           omx->m_progressive = bProgressive;
                            if (!omx->client_buffers.update_buffer_req()) {
                                DEBUG_PRINT_ERROR("Setting C2D buffer requirements failed");
                            }
@@ -7157,13 +7173,15 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
     portDefn->eDomain    = OMX_PortDomainVideo;
     memset(&fmt, 0x0, sizeof(struct v4l2_format));
     if (0 == portDefn->nPortIndex) {
-        if (secure_mode) {
-            eRet = get_buffer_req(&drv_ctx.ip_buf);
-            if (eRet) {
-                DEBUG_PRINT_ERROR("%s:get_buffer_req(ip_buf) failed", __func__);
-                return eRet;
-            }
+        int ret = 0;
+        fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
+        fmt.fmt.pix_mp.pixelformat = output_capability;
+        ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_FMT, &fmt);
+        if (ret) {
+            DEBUG_PRINT_ERROR("Get Resolution failed");
+            return OMX_ErrorHardware;
         }
+        drv_ctx.ip_buf.buffer_size = fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
         portDefn->eDir =  OMX_DirInput;
         portDefn->nBufferCountActual = drv_ctx.ip_buf.actualcount;
         portDefn->nBufferCountMin    = drv_ctx.ip_buf.mincount;
@@ -7175,10 +7193,6 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
         portDefn->format.video.xFramerate = m_fps_received;
         portDefn->bEnabled   = m_inp_bEnabled;
         portDefn->bPopulated = m_inp_bPopulated;
-
-        fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
-        fmt.fmt.pix_mp.pixelformat = output_capability;
-        ioctl(drv_ctx.video_driver_fd, VIDIOC_G_FMT, &fmt);
     } else if (1 == portDefn->nPortIndex) {
         unsigned int buf_size = 0;
         int ret = 0;
@@ -8485,20 +8499,16 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
                 src_format = (ColorConvertFormat) found->second;;
             }
 
-            if (c2dcc.isPropChanged(width, omx->m_progressive != MSM_VIDC_PIC_STRUCT_PROGRESSIVE?
-                                                    (height+1)/2 : height,
+            if (c2dcc.isPropChanged(width, is_interlaced ? (height+1)/2 : height,
                                     width, height, src_format, dest_format, 0, 0)) {
                 DEBUG_PRINT_INFO("C2D: Set Resolution, Interlace(%s) Conversion(%#X -> %#X)"
                                  " src(%dX%d) dest(%dX%d)",
-                                 (omx->m_progressive != MSM_VIDC_PIC_STRUCT_PROGRESSIVE) ? "true": "false",
+                                 is_interlaced ? "true": "false",
                                  src_format, dest_format, width,
-                                 omx->m_progressive !=
-                                 MSM_VIDC_PIC_STRUCT_PROGRESSIVE?(height+1)/2 : height,
+                                 is_interlaced ? (height+1)/2 : height,
                                  width, height);
                 status = c2dcc.setResolution(width,
-                                             omx->m_progressive !=
-                                             MSM_VIDC_PIC_STRUCT_PROGRESSIVE?
-                                             (height+1)/2 : height,
+                                             is_interlaced ? (height+1)/2 : height,
                                              width, height,
                                              src_format, dest_format,
                                              0, 0);
