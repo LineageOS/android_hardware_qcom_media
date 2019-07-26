@@ -167,6 +167,8 @@ venc_dev::venc_dev(class omx_venc *venc_class)
             (int32_t *)&m_debug.out_buffer_log, 0);
     Platform::Config::getInt32(Platform::vidc_enc_csc_custom_matrix,
             (int32_t *)&is_csc_custom_matrix_enabled, 0);
+    Platform::Config::getInt32(Platform::vidc_enc_auto_blur_disable,
+            (int32_t *)&is_auto_blur_disabled, 0);
 
     char property_value[PROPERTY_VALUE_MAX] = {0};
 
@@ -1630,6 +1632,14 @@ bool venc_dev::venc_open(OMX_U32 codec)
         control.value = 0x7fffffff;
         if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control))
             DEBUG_PRINT_ERROR("Failed to set V4L2_CID_MPEG_VIDC_VIDEO_NUM_P_FRAME\n");
+    }
+
+    //Disable auto blur by default
+    if (is_auto_blur_disabled) {
+        control.id = V4L2_CID_MPEG_VIDC_VIDEO_BLUR_DIMENSIONS;
+        control.value = 0x2;
+        if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control))
+           DEBUG_PRINT_ERROR("Failed to set V4L2_CID_MPEG_VIDC_VIDEO_BLUR_DIMENSIONS\n");
     }
 
 
