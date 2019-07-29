@@ -30,7 +30,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define LOG_TAG "SidebandStreamHandle"
 
 #include <string.h>
-#include <utils/Log.h>
+#include <log/log.h>
 
 #include "SidebandStreamHandle.h"
 

@@ -128,47 +128,19 @@ typedef struct OMXComponentCapabilityFlagsType {
 void* message_thread_enc(void *input)
 {
     omx_video* omx = reinterpret_cast<omx_video*>(input);
-    unsigned char id;
-    int n;
-
-    fd_set readFds;
-    int res = 0;
-    struct timeval tv;
+    int ret;
 
     DEBUG_PRINT_HIGH("omx_venc: message thread start");
     prctl(PR_SET_NAME, (unsigned long)"VideoEncMsgThread", 0, 0, 0);
     while (!omx->msg_thread_stop) {
-
-        tv.tv_sec = 2;
-        tv.tv_usec = 0;
-
-        FD_ZERO(&readFds);
-        FD_SET(omx->m_pipe_in, &readFds);
-
-        res = select(omx->m_pipe_in + 1, &readFds, NULL, NULL, &tv);
-        if (res < 0) {
-            DEBUG_PRINT_ERROR("select() ERROR: %s", strerror(errno));
+        ret = omx->signal.wait(2 * 1000000000);
+        if (ret == ETIMEDOUT || omx->msg_thread_stop) {
             continue;
-        } else if (res == 0 /*timeout*/ || omx->msg_thread_stop) {
-            continue;
-        }
-
-        n = read(omx->m_pipe_in, &id, 1);
-        if (0 == n) {
+        } else if (ret) {
+            DEBUG_PRINT_ERROR("omx_venc: message_thread_enc wait on condition failed, exiting");
             break;
         }
-
-        if (1 == n) {
-            omx->process_event_cb(omx, id);
-        }
-#ifdef QLE_BUILD
-        if (n < 0) break;
-#else
-        if ((n < 0) && (errno != EINTR)) {
-            DEBUG_PRINT_LOW("ERROR: read from pipe failed, ret %d errno %d", n, errno);
-            break;
-        }
-#endif
+        omx->process_event_cb(omx);
     }
     DEBUG_PRINT_HIGH("omx_venc: message thread stop");
     return 0;
@@ -177,13 +149,7 @@ void* message_thread_enc(void *input)
 void post_message(omx_video *omx, unsigned char id)
 {
     DEBUG_PRINT_LOW("omx_venc: post_message %d", id);
-    int ret_value;
-    ret_value = write(omx->m_pipe_out, &id, 1);
-    if (ret_value <= 0) {
-        DEBUG_PRINT_ERROR("post_message to pipe failed : %s", strerror(errno));
-    } else {
-        DEBUG_PRINT_LOW("post_message to pipe done %d",ret_value);
-    }
+    omx->signal.signal();
 }
 
 // omx_cmd_queue destructor
@@ -264,8 +230,6 @@ omx_video::omx_video():
     pdest_frame(NULL),
     secure_session(false),
     mEmptyEosBuffer(NULL),
-    m_pipe_in(-1),
-    m_pipe_out(-1),
     m_pInput_pmem(NULL),
     m_pOutput_pmem(NULL),
 #ifdef USE_ION
@@ -351,10 +315,6 @@ omx_video::~omx_video()
         DEBUG_PRINT_HIGH("omx_video: Waiting on Msg Thread exit");
         pthread_join(msg_thread_id,NULL);
     }
-    close(m_pipe_in);
-    close(m_pipe_out);
-    m_pipe_in = -1;
-    m_pipe_out = -1;
     DEBUG_PRINT_HIGH("omx_video: Waiting on Async Thread exit");
     /*For V4L2 based drivers, pthread_join is done in device_close
      * so no need to do it here*/
@@ -392,7 +352,7 @@ omx_video::~omx_video()
    None.
 
    ========================================================================== */
-void omx_video::process_event_cb(void *ctxt, unsigned char id)
+void omx_video::process_event_cb(void *ctxt)
 {
     unsigned long p1; // Parameter - 1
     unsigned long p2; // Parameter - 2
@@ -433,8 +393,7 @@ void omx_video::process_event_cb(void *ctxt, unsigned char id)
 
         /*process message if we have one*/
         if (qsize > 0) {
-            id = ident;
-            switch (id) {
+            switch (ident) {
                 case OMX_COMPONENT_GENERATE_EVENT:
                     if (pThis->m_pCallbacks.EventHandler) {
                         switch (p1) {
@@ -710,7 +669,7 @@ void omx_video::process_event_cb(void *ctxt, unsigned char id)
                     break;
 
                 default:
-                    DEBUG_PRINT_LOW("process_event_cb unknown msg id 0x%02x", id);
+                    DEBUG_PRINT_LOW("process_event_cb unknown msg id 0x%02x", (unsigned int)ident);
                     break;
             }
         }
@@ -1506,10 +1465,11 @@ bool omx_video::post_event(unsigned long p1,
         m_cmd_q.insert_entry(p1,p2,id);
     }
 
+    pthread_mutex_unlock(&m_lock);
+
     bRet = true;
     DEBUG_PRINT_LOW("Value of this pointer in post_event %p",this);
     post_message(this, id);
-    pthread_mutex_unlock(&m_lock);
 
     return bRet;
 }
@@ -2171,6 +2131,28 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     eRet = OMX_ErrorHardware;
                 }
                 pParam->bDisable = pq_status ? OMX_FALSE : OMX_TRUE;
+                break;
+            }
+        case OMX_IndexParamConsumerUsageBits:
+            {
+                OMX_U32 *pParam = reinterpret_cast<OMX_U32 *>(paramData);
+
+                DEBUG_PRINT_HIGH("%s:%s: OMX_IndexParamConsumerUsageBits",__FILE__,__FUNCTION__);
+
+                if (pParam)
+                {
+                   *pParam = GRALLOC_USAGE_HW_VIDEO_ENCODER;
+                   if (secure_session)
+                     *pParam |= GRALLOC_USAGE_PROTECTED;
+
+                   DEBUG_PRINT_HIGH("Usage Bits = 0x%x", *pParam);
+                }
+                else
+                {
+                  DEBUG_PRINT_ERROR("%s:%s: OMX_IndexParamConsumerUsageBits: null ptr param passed",
+                    __FILE__,__FUNCTION__);
+                  eRet = OMX_ErrorBadParameter;
+                }
                 break;
             }
         default:
@@ -3063,10 +3045,16 @@ OMX_ERRORTYPE omx_video::free_input_buffer(OMX_BUFFERHEADERTYPE *bufferHdr)
             if(!secure_session) {
                 munmap (m_pInput_pmem[index].buffer,m_pInput_pmem[index].size);
             } else {
-                free(m_pInput_pmem[index].buffer);
+                if (allocate_native_handle) {
+                    native_handle_t *handle = (native_handle_t *)m_pInput_pmem[index].buffer;
+                    native_handle_close(handle);
+                    native_handle_delete(handle);
+                } else {
+                    free(m_pInput_pmem[index].buffer);
+                }
             }
             m_pInput_pmem[index].buffer = NULL;
-            close (m_pInput_pmem[index].fd);
+            close(m_pInput_pmem[index].fd);
 #ifdef USE_ION
             free_ion_memory(&m_pInput_ion[index]);
 #endif
@@ -3343,10 +3331,23 @@ OMX_ERRORTYPE  omx_video::allocate_input_buffer(
         } else {
             //This should only be used for passing reference to source type and
             //secure handle fd struct native_handle_t*
-            m_pInput_pmem[i].buffer = malloc(sizeof(OMX_U32) + sizeof(native_handle_t*));
-            if (m_pInput_pmem[i].buffer == NULL) {
-                DEBUG_PRINT_ERROR("%s: failed to allocate native-handle", __func__);
-                return OMX_ErrorInsufficientResources;
+            if (allocate_native_handle) {
+                native_handle_t *nh = native_handle_create(1 /*numFds*/, 3 /*numInts*/);
+                if (!nh) {
+                    DEBUG_PRINT_ERROR("Native handle create failed");
+                    return OMX_ErrorInsufficientResources;
+                }
+                nh->data[0] = m_pInput_pmem[i].fd;
+                nh->data[1] = 0;
+                nh->data[2] = 0;
+                nh->data[3] = ALIGN(m_sInPortDef.nBufferSize, 4096);
+                m_pInput_pmem[i].buffer = (OMX_U8 *)nh;
+            } else {
+                m_pInput_pmem[i].buffer = malloc(sizeof(OMX_U32) + sizeof(native_handle_t*));
+                if (m_pInput_pmem[i].buffer == NULL) {
+                    DEBUG_PRINT_ERROR("%s: failed to allocate native-handle", __func__);
+                    return OMX_ErrorInsufficientResources;
+                }
             }
             (*bufferHdr)->nAllocLen = sizeof(OMX_U32) + sizeof(native_handle_t*);
         }

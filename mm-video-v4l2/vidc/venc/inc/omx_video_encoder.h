@@ -113,7 +113,10 @@ class omx_venc: public omx_video
         perf_control m_perf_control;
 };
 
-#ifdef _UBWC_
+#ifdef _HW_RGBA
+    #define QOMX_DEFAULT_COLOR_FMT    QOMX_COLOR_Format32bitRGBA8888
+    #define V4L2_DEFAULT_OUTPUT_COLOR_FMT   V4L2_PIX_FMT_RGB32
+#elif _UBWC_
     #define QOMX_DEFAULT_COLOR_FMT    QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed
     #define V4L2_DEFAULT_OUTPUT_COLOR_FMT   V4L2_PIX_FMT_NV12_UBWC
 #elif _NV21_

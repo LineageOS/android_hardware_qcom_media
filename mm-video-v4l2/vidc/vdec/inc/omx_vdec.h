@@ -583,7 +583,7 @@ class omx_vdec: public qc_omx_component
         virtual ~omx_vdec();  // destructor
 
         static int async_message_process (void *context, void* message);
-        static void process_event_cb(void *ctxt,unsigned char id);
+        static void process_event_cb(void *ctxt);
 
         OMX_ERRORTYPE allocate_buffer(
                 OMX_HANDLETYPE hComp,
@@ -706,9 +706,8 @@ class omx_vdec: public qc_omx_component
         void free_extradata();
         int update_resolution(int width, int height, int stride, int scan_lines);
         OMX_ERRORTYPE is_video_session_supported();
+        Signal signal;
 #endif
-        int  m_pipe_in;
-        int  m_pipe_out;
         pthread_t msg_thread_id;
         pthread_t async_thread_id;
         bool is_component_secure();

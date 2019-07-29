@@ -6,7 +6,9 @@ LOCAL_SRC_FILES := \
 
 LOCAL_CFLAGS :=
 
-LOCAL_C_INCLUDES:= $(TARGET_OUT_HEADERS)/qcom/display
+LOCAL_C_INCLUDES:= \
+    $(TARGET_OUT_HEADERS)/qcom/display \
+    $(TOP)/system/core/libutils/include/
 
 LOCAL_SHARED_LIBRARIES := \
   libcutils \
@@ -28,6 +30,7 @@ LOCAL_SHARED_LIBRARIES := libcutils libc libhardware libsidebandstreamhandle lib
 LOCAL_MODULE_TAGS := optional
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/ \
                     hardware/libhardware/include/hardware \
+                    $(TOP)/system/core/libutils/include/
 
 LOCAL_MODULE_OWNER := qti
 LOCAL_VENDOR_MODULE := true

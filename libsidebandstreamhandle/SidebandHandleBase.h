@@ -32,7 +32,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <utils/Errors.h>
 #include <cutils/native_handle.h>
-#include <cutils/log.h>
+#include <log/log.h>
 
 // ----------------------------------------------------------------------------
 namespace android {
