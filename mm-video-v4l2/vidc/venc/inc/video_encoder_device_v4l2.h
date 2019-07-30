@@ -460,7 +460,7 @@ class venc_dev
         bool venc_set_extradata_hdr10metadata(OMX_U32 omx_profile);
         bool venc_store_dynamic_config(OMX_INDEXTYPE type, OMX_PTR config);
         bool venc_cvp_enable(private_handle_t *handle);
-        bool venc_get_cvp_metadata(private_handle_t *handle);
+        bool venc_get_cvp_metadata(private_handle_t *handle, struct v4l2_buffer *buf);
         bool venc_superframe_enable(private_handle_t *handle);
 
         OMX_U32 pmem_free();
