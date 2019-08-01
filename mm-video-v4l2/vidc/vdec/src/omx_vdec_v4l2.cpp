@@ -7113,10 +7113,13 @@ void omx_vdec::fix_drv_output_format()
         if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10) {
             drv_ctx.output_format = VDEC_YUV_FORMAT_NV12_TP10_UBWC;
             capture_capability = V4L2_PIX_FMT_NV12_TP10_UBWC;
+        } else {
+            // 8 bit depth uses the default.
+            // from 10 bit to 8 bit resolution change case
+            // we can't rely on default value. we need to re-init these
+            drv_ctx.output_format = VDEC_YUV_FORMAT_NV12_UBWC;
+            capture_capability = V4L2_PIX_FMT_NV12_UBWC;
         }
-        // 8 bit depth uses the default.
-        // Combined mode
-        // V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_NONE
     }
     DEBUG_PRINT_LOW("%s: Drv output format %#X Capture capability %#X",
                     __func__,
