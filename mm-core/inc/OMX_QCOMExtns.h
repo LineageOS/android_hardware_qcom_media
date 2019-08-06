@@ -703,6 +703,8 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     OMX_QTIIndexConfigVideoRoiRectRegionInfo = 0x7F100007,
 
     OMX_QTIIndexParamNativeRecorder = 0x7F100008,
+
+    OMX_QTIIndexParamVideoDecoderOutputFrameRate = 0x7F100009,
 };
 
 /**
@@ -1824,6 +1826,12 @@ typedef struct QOMX_VIDEO_CUSTOM_BUFFERSIZE {
         OMX_U32 nPortIndex;
         OMX_U32 nBufferSize;
 } QOMX_VIDEO_CUSTOM_BUFFERSIZE;
+
+typedef struct QOMX_VIDEO_OUTPUT_FRAME_RATE {
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 fps;
+} QOMX_VIDEO_OUTPUT_FRAME_RATE;
 
 #define OMX_QCOM_INDEX_PARAM_VIDEO_SYNCFRAMEDECODINGMODE "OMX.QCOM.index.param.video.SyncFrameDecodingMode"
 #define OMX_QCOM_INDEX_PARAM_INDEXEXTRADATA "OMX.QCOM.index.param.IndexExtraData"
