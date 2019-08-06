@@ -257,8 +257,26 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
         secure_session = true;
     } else if (!strncmp((char *)m_nkind, "OMX.qcom.video.encoder.tme",    \
                 OMX_MAX_STRINGNAME_SIZE)) {
-        strlcpy((char *)m_cRole, "video_encoder.tme", OMX_MAX_STRINGNAME_SIZE);
-        codec_type = (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingTME;
+        char platform_name[PROP_VALUE_MAX] = {0};
+        char version[PROP_VALUE_MAX] = {0};
+        property_get("ro.board.platform", platform_name, "0");  //HW ID
+        if (!strcmp(platform_name, "sm6150")) {
+            if (property_get("vendor.media.target.version", version, "0") &&
+                (atoi(version) == 0)){
+                 //Sku version, TME is enabled on this target
+                strlcpy((char *)m_cRole, "video_encoder.tme", OMX_MAX_STRINGNAME_SIZE);
+                codec_type = (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingTME;
+            }
+            else {
+                //TME is disabled for Moorea
+                DEBUG_PRINT_LOW("TME is not supported");
+                eRet = OMX_ErrorInvalidComponentName;
+            }
+        }
+        else {
+            DEBUG_PRINT_LOW("TME is not supported");
+            eRet = OMX_ErrorInvalidComponentName;
+        }
     } else {
         DEBUG_PRINT_ERROR("ERROR: Unknown Component");
         eRet = OMX_ErrorInvalidComponentName;
