@@ -2801,7 +2801,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         }
                     } // Check OUTPUT Streaming
 
-                    venc_get_cvp_metadata(handle);
+                    venc_get_cvp_metadata(handle, &buf);
 
                     struct UBWCStats cam_ubwc_stats[2];
                     unsigned long long int compression_ratio = 1 << 16;
@@ -4322,19 +4322,19 @@ bool venc_dev::venc_cvp_enable(private_handle_t *handle)
             m_cvp_meta_enabled = true;
             DEBUG_PRINT_HIGH("CVP metadata enabled");
         } else {
-            DEBUG_PRINT_ERROR("ERROR: invalid CVP metadata, size %d",
-                    cvpMetadata.size);
+            DEBUG_PRINT_ERROR("ERROR: External CVP mode disabled for this session and continue!");
             clearMetaData(handle, SET_CVP_METADATA);
         }
     }
     return true;
 }
 
-bool venc_dev::venc_get_cvp_metadata(private_handle_t *handle)
+bool venc_dev::venc_get_cvp_metadata(private_handle_t *handle, struct v4l2_buffer *buf)
 {
     if (!m_cvp_meta_enabled)
         return true;
 
+    buf->flags &= ~V4L2_BUF_FLAG_CVPMETADATA_SKIP;
     cvpMetadata.size = 0;
     if (getMetaData(handle, GET_CVP_METADATA, &cvpMetadata) == 0) {
         clearMetaData(handle, SET_CVP_METADATA);
@@ -4342,10 +4342,14 @@ bool venc_dev::venc_get_cvp_metadata(private_handle_t *handle)
             DEBUG_PRINT_ERROR("ERROR: Invalid CVP metadata size %d",
                 cvpMetadata.size);
             cvpMetadata.size = 0;
+            /* If camera sends metadata of size not matching to CVP_METADATA_SIZE,
+               it is considered as an error case. So, do not add skip flag */
             return false;
         }
         DEBUG_PRINT_LOW("CVP metadata size %d", cvpMetadata.size);
     } else {
+        buf->flags |= V4L2_BUF_FLAG_CVPMETADATA_SKIP;
+        DEBUG_PRINT_LOW("venc_empty_buf: V4L2_BUF_FLAG_CVPMETADATA_SKIP is set");
         DEBUG_PRINT_LOW("CVP metadata not available");
     }
     return true;
