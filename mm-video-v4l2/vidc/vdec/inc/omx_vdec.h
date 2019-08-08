@@ -181,7 +181,8 @@ extern "C" {
 #define MAX_NUM_INPUT_OUTPUT_BUFFERS VIDEO_MAX_FRAME
 #endif
 
-#define MIN_NUM_INPUT_OUTPUT_EXTRADATA_BUFFERS 32 // 32 (max cap when VPP enabled)
+// Aligning to MAX NUM INPUT & OUTPUT
+#define MIN_NUM_INPUT_OUTPUT_EXTRADATA_BUFFERS MAX_NUM_INPUT_OUTPUT_BUFFERS
 
 /* STATUS CODES */
 /* Base value for status codes */
