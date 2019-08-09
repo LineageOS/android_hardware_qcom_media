@@ -265,7 +265,7 @@ struct extradata_buffer_info {
 struct statistics {
     struct timeval prev_tv;
     int prev_fbd;
-    int bytes_generated;
+    OMX_U32 bytes_generated;
 };
 
 enum rc_modes {
