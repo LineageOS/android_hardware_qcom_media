@@ -2793,7 +2793,8 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         }
                     } // Check OUTPUT Streaming
 
-                    venc_get_cvp_metadata(handle, &buf);
+                    if (!venc_get_cvp_metadata(handle, &buf))
+                        return false;
 
                     struct UBWCStats cam_ubwc_stats[2];
                     unsigned long long int compression_ratio = 1 << 16;
@@ -4304,6 +4305,8 @@ bool venc_dev::venc_cvp_enable(private_handle_t *handle)
             }
             m_cvp_meta_enabled = true;
             DEBUG_PRINT_HIGH("CVP metadata enabled");
+            if (!venc_set_cvp_skipratio_controls())
+                return false;
         } else {
             DEBUG_PRINT_ERROR("ERROR: External CVP mode disabled for this session and continue!");
             clearMetaData(handle, SET_CVP_METADATA);
@@ -4312,10 +4315,38 @@ bool venc_dev::venc_cvp_enable(private_handle_t *handle)
     return true;
 }
 
+bool venc_dev::venc_set_cvp_skipratio_controls()
+{
+    struct v4l2_control ctrl;
+
+    if (!cvpMetadata.cvp_frame_rate || !cvpMetadata.capture_frame_rate) {
+        DEBUG_PRINT_LOW("ERROR: Invalid cvp frame rate received");
+        return true;
+    }
+
+    ctrl.id = V4L2_CID_MPEG_VIDC_CAPTURE_FRAME_RATE;
+    ctrl.value = cvpMetadata.capture_frame_rate;
+    if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &ctrl)) {
+        DEBUG_PRINT_ERROR("ERROR: Setting capture frame rate control failed");
+        return false;
+    }
+
+    ctrl.id = V4L2_CID_MPEG_VIDC_CVP_FRAME_RATE;
+    ctrl.value = cvpMetadata.cvp_frame_rate;
+    if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &ctrl)) {
+        DEBUG_PRINT_LOW("ERROR: Setting cvp frame rate control failed");
+        return false;
+    }
+    return true;
+}
+
 bool venc_dev::venc_get_cvp_metadata(private_handle_t *handle, struct v4l2_buffer *buf)
 {
     if (!m_cvp_meta_enabled)
         return true;
+
+    unsigned int capture_rate = cvpMetadata.capture_frame_rate;
+    unsigned int cvp_rate = cvpMetadata.cvp_frame_rate;
 
     buf->flags &= ~V4L2_BUF_FLAG_CVPMETADATA_SKIP;
     cvpMetadata.size = 0;
@@ -4334,6 +4365,11 @@ bool venc_dev::venc_get_cvp_metadata(private_handle_t *handle, struct v4l2_buffe
         buf->flags |= V4L2_BUF_FLAG_CVPMETADATA_SKIP;
         DEBUG_PRINT_LOW("venc_empty_buf: V4L2_BUF_FLAG_CVPMETADATA_SKIP is set");
         DEBUG_PRINT_LOW("CVP metadata not available");
+    }
+    if ((cvpMetadata.capture_frame_rate != capture_rate) ||
+        (cvpMetadata.cvp_frame_rate != cvp_rate)) {
+        if(!venc_set_cvp_skipratio_controls())
+            return false;
     }
     return true;
 }
