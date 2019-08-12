@@ -336,7 +336,6 @@ Only the three quirks included above are recognized at this point:
             <Feature name="secure-playback" required="true" />
             <Limit name="concurrent-instances" max="3" />
             <Limit name="performance-point-3840x2160" value="60" />
-            <Limit name="performance-point-4096x2160" value="60" />
             <Limit name="performance-point-4096x2304" value="60" />
         </MediaCodec>
         <MediaCodec name="OMX.qcom.video.decoder.mpeg2" type="video/mpeg2" >
@@ -417,7 +416,6 @@ Only the three quirks included above are recognized at this point:
             <Feature name="secure-playback" required="true" />
             <Limit name="concurrent-instances" max="3" />
             <Limit name="performance-point-3840x2160" value="60" />
-            <Limit name="performance-point-4096x2160" value="60" />
             <Limit name="performance-point-4096x2304" value="60" />
         </MediaCodec>
         <MediaCodec name="OMX.qcom.video.decoder.hevc" type="video/hevc" >
@@ -453,7 +451,6 @@ Only the three quirks included above are recognized at this point:
             <Feature name="secure-playback" required="true" />
             <Limit name="concurrent-instances" max="3" />
             <Limit name="performance-point-3840x2160" value="60" />
-            <Limit name="performance-point-4096x2160" value="60" />
             <Limit name="performance-point-4096x2304" value="60" />
         </MediaCodec>
         <!-- Video Software -->
