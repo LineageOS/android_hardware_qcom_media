@@ -10,7 +10,11 @@ PRODUCT_COPY_FILES += \
     $(CONFIG_PATH)/mediacodec-seccomp.policy:$(TARGET_COPY_OUT_VENDOR)/etc/seccomp_policy/mediacodec.policy \
     $(CONFIG_PATH)/system_properties.xml:$(TARGET_COPY_OUT_VENDOR)/etc/system_properties.xml
 
+# Enable CLANG/LLVM integer-overflow sanitization
+TARGET_ENABLE_VIDC_INTSAN := false
+
 # Enable DIAG mode for CLANG/LLVM integer-overflow sanitization
+# TARGET_ENABLE_VIDC_INTSAN must be set to 'true' before enabling DIAG mode
 # NOTE: DIAG mode should be used only for debug builds
 TARGET_ENABLE_VIDC_INTSAN_DIAG := false
 

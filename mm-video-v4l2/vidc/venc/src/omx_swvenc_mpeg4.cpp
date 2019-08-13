@@ -189,6 +189,14 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
         RETURN(OMX_ErrorInsufficientResources);
     }
 
+    sRet = swvenc_check_inst_load(m_hSwVenc);
+    if (sRet != SWVENC_S_SUCCESS)
+    {
+        DEBUG_PRINT_ERROR("swvenc_init returned %d, ret insufficient resources",
+         sRet);
+        RETURN(OMX_ErrorInsufficientResources);
+    }
+
     m_stopped = true;
 
     //Intialise the OMX layer variables
@@ -2531,9 +2539,9 @@ OMX_ERRORTYPE omx_venc::dev_get_supported_profile_level(OMX_VIDEO_PARAM_PROFILEL
             if (profileLevelType->nProfileIndex == 0)
             {
                 profileLevelType->eProfile = OMX_VIDEO_MPEG4ProfileSimple;
-                profileLevelType->eLevel   = OMX_VIDEO_MPEG4Level6;
+                profileLevelType->eLevel   = OMX_VIDEO_MPEG4Level5;
 
-                DEBUG_PRINT_LOW("MPEG-4 simple profile, level 6");
+                DEBUG_PRINT_LOW("MPEG-4 simple profile, level 5");
             }
             else
             {
@@ -3085,13 +3093,14 @@ SWVENC_STATUS omx_venc::swvenc_empty_buffer_done
                   size = handle->size;
               }
            }
-           int status = munmap(p_ipbuffer->p_buffer, size);
-           DEBUG_PRINT_HIGH("Unmapped pBuffer <%p> size <%d> status <%d>", p_ipbuffer->p_buffer, size, status);
+
+           DEBUG_PRINT_HIGH("Unmapping pBuffer <%p> size <%d>", p_ipbuffer->p_buffer, size);
+           if (-1 == munmap(p_ipbuffer->p_buffer, size))
+               DEBUG_PRINT_HIGH("Unmap failed");
         }
 #endif
         post_event ((unsigned long)omxhdr,error,OMX_COMPONENT_GENERATE_EBD);
     }
-
     RETURN(eRet);
 }
 
@@ -3336,9 +3345,6 @@ SWVENC_STATUS omx_venc::swvenc_set_profile_level
              break;
           case OMX_VIDEO_MPEG4Level5:
              Level.mpeg4 = SWVENC_LEVEL_MPEG4_5;
-             break;
-          case OMX_VIDEO_MPEG4Level6:
-             Level.mpeg4 = SWVENC_LEVEL_MPEG4_6;
              break;
           default:
              DEBUG_PRINT_ERROR("ERROR: UNKNOWN LEVEL");

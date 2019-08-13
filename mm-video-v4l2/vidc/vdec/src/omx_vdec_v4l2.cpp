@@ -173,8 +173,8 @@ void* async_message_thread (void *input)
                 vdec_msg.msgdata.output_frame.client_data=(void*)&v4l2_buf;
                 vdec_msg.msgdata.output_frame.len=plane[0].bytesused;
                 vdec_msg.msgdata.output_frame.bufferaddr=(void*)plane[0].m.userptr;
-                vdec_msg.msgdata.output_frame.time_stamp= ((uint64_t)v4l2_buf.timestamp.tv_sec * (uint64_t)1000000) +
-                    (uint64_t)v4l2_buf.timestamp.tv_usec;
+                vdec_msg.msgdata.output_frame.time_stamp= ((int64_t)v4l2_buf.timestamp.tv_sec * (int64_t)1000000) +
+                    (int64_t)v4l2_buf.timestamp.tv_usec;
 
                 if (omx->async_message_process(input,&vdec_msg) < 0) {
                     DEBUG_PRINT_HIGH("async_message_thread Exited");
@@ -6348,9 +6348,6 @@ int omx_vdec::async_message_process (void *context, void* message)
                     sem_post(&omx->m_safe_flush);
                 }
             }
-            if (v4l2_buf_ptr->flags & V4L2_BUF_FLAG_KEYFRAME) {
-                omxhdr->nFlags |= OMX_BUFFERFLAG_SYNCFRAME;
-            }
             omx->post_event ((unsigned long)omxhdr,vdec_msg->status_code,
                     OMX_COMPONENT_GENERATE_EBD);
             break;
@@ -6494,18 +6491,13 @@ int omx_vdec::async_message_process (void *context, void* message)
                        || (omx->drv_ctx.frame_size.left != vdec_msg->msgdata.output_frame.framesize.left)
                        || (omx->drv_ctx.frame_size.top != vdec_msg->msgdata.output_frame.framesize.top)
                        || (omx->drv_ctx.frame_size.right != vdec_msg->msgdata.output_frame.framesize.right)
-                       || (omx->drv_ctx.frame_size.bottom != vdec_msg->msgdata.output_frame.framesize.bottom)
-                       || (omx->drv_ctx.video_resolution.frame_width != vdec_msg->msgdata.output_frame.picsize.frame_width)
-                       || (omx->drv_ctx.video_resolution.frame_height != vdec_msg->msgdata.output_frame.picsize.frame_height) )) {
+                       || (omx->drv_ctx.frame_size.bottom != vdec_msg->msgdata.output_frame.framesize.bottom) )) {
 
-                       DEBUG_PRINT_HIGH("Parameters Changed From: Len: %u, WxH: %dx%d, L: %u, T: %u, R: %u, B: %u --> Len: %u, WxH: %dx%d, L: %u, T: %u, R: %u, B: %u",
+                       DEBUG_PRINT_HIGH("Parameters Changed From: Len: %u, L: %u, T: %u, R: %u, B: %u --> Len: %u, L: %u, T: %u, R: %u, B: %u",
                                omx->prev_n_filled_len,
-                               omx->drv_ctx.video_resolution.frame_width,
-                               omx->drv_ctx.video_resolution.frame_height,
                                omx->drv_ctx.frame_size.left, omx->drv_ctx.frame_size.top,
                                omx->drv_ctx.frame_size.right, omx->drv_ctx.frame_size.bottom,
-                               omxhdr->nFilledLen, vdec_msg->msgdata.output_frame.picsize.frame_width,
-                               vdec_msg->msgdata.output_frame.picsize.frame_height,
+                               omxhdr->nFilledLen,
                                vdec_msg->msgdata.output_frame.framesize.left,
                                vdec_msg->msgdata.output_frame.framesize.top,
                                vdec_msg->msgdata.output_frame.framesize.right,
@@ -6514,33 +6506,6 @@ int omx_vdec::async_message_process (void *context, void* message)
                        memcpy(&omx->drv_ctx.frame_size,
                                &vdec_msg->msgdata.output_frame.framesize,
                                sizeof(struct vdec_framesize));
-
-                       omx->drv_ctx.video_resolution.frame_width =
-                               vdec_msg->msgdata.output_frame.picsize.frame_width;
-                       omx->drv_ctx.video_resolution.frame_height =
-                               vdec_msg->msgdata.output_frame.picsize.frame_height;
-                       if (omx->drv_ctx.output_format == VDEC_YUV_FORMAT_NV12) {
-                           omx->drv_ctx.video_resolution.stride =
-                               VENUS_Y_STRIDE(COLOR_FMT_NV12, omx->drv_ctx.video_resolution.frame_width);
-                           omx->drv_ctx.video_resolution.scan_lines =
-                               VENUS_Y_SCANLINES(COLOR_FMT_NV12, omx->drv_ctx.video_resolution.frame_height);
-                       } else if (omx->drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_UBWC) {
-                           omx->drv_ctx.video_resolution.stride =
-                               VENUS_Y_STRIDE(COLOR_FMT_NV12_UBWC, omx->drv_ctx.video_resolution.frame_width);
-                           omx->drv_ctx.video_resolution.scan_lines =
-                               VENUS_Y_SCANLINES(COLOR_FMT_NV12_UBWC, omx->drv_ctx.video_resolution.frame_height);
-                       } else if (omx->drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_TP10_UBWC) {
-                           omx->drv_ctx.video_resolution.stride =
-                               VENUS_Y_STRIDE(COLOR_FMT_NV12_BPP10_UBWC, omx->drv_ctx.video_resolution.frame_width);
-                           omx->drv_ctx.video_resolution.scan_lines =
-                               VENUS_Y_SCANLINES(COLOR_FMT_NV12_BPP10_UBWC, omx->drv_ctx.video_resolution.frame_height);
-                        }
-                        else if(omx->drv_ctx.output_format == VDEC_YUV_FORMAT_P010_VENUS) {
-                           omx->drv_ctx.video_resolution.stride =
-                               VENUS_Y_STRIDE(COLOR_FMT_P010, omx->drv_ctx.video_resolution.frame_width);
-                           omx->drv_ctx.video_resolution.scan_lines =
-                               VENUS_Y_SCANLINES(COLOR_FMT_P010, omx->drv_ctx.video_resolution.frame_height);
-                        }
 
                        if(!reconfig_event_sent) {
                            omx->post_event(OMX_CORE_OUTPUT_PORT_INDEX,
@@ -7148,10 +7113,13 @@ void omx_vdec::fix_drv_output_format()
         if (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10) {
             drv_ctx.output_format = VDEC_YUV_FORMAT_NV12_TP10_UBWC;
             capture_capability = V4L2_PIX_FMT_NV12_TP10_UBWC;
+        } else {
+            // 8 bit depth uses the default.
+            // from 10 bit to 8 bit resolution change case
+            // we can't rely on default value. we need to re-init these
+            drv_ctx.output_format = VDEC_YUV_FORMAT_NV12_UBWC;
+            capture_capability = V4L2_PIX_FMT_NV12_UBWC;
         }
-        // 8 bit depth uses the default.
-        // Combined mode
-        // V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_NONE
     }
     DEBUG_PRINT_LOW("%s: Drv output format %#X Capture capability %#X",
                     __func__,

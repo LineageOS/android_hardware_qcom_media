@@ -167,6 +167,8 @@ venc_dev::venc_dev(class omx_venc *venc_class)
             (int32_t *)&m_debug.out_buffer_log, 0);
     Platform::Config::getInt32(Platform::vidc_enc_csc_custom_matrix,
             (int32_t *)&is_csc_custom_matrix_enabled, 0);
+    Platform::Config::getInt32(Platform::vidc_enc_auto_blur_disable,
+            (int32_t *)&is_auto_blur_disabled, 0);
 
     char property_value[PROPERTY_VALUE_MAX] = {0};
 
@@ -633,7 +635,7 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
     unsigned int index = 0;
     int height = m_sVenc_cfg.input_height;
     int width = m_sVenc_cfg.input_width;
-    OMX_TICKS nTimeStamp = buf.timestamp.tv_sec * 1000000 + buf.timestamp.tv_usec;
+    OMX_TICKS nTimeStamp = static_cast<OMX_TICKS>(buf.timestamp.tv_sec) * 1000000 + buf.timestamp.tv_usec;
     int fd = buf.m.planes[0].reserved[0];
     char *p_extradata = NULL;
     OMX_OTHER_EXTRADATATYPE *data = NULL;
@@ -1480,9 +1482,13 @@ bool venc_dev::venc_open(OMX_U32 codec)
         idrperiod.idrperiod = 1;
         minqp = 0;
         maxqp = 51;
-        if (codec == OMX_VIDEO_CodingImageHEIC)
+        if (codec == OMX_VIDEO_CodingImageHEIC) {
+            m_sVenc_cfg.input_width = DEFAULT_TILE_DIMENSION;
+            m_sVenc_cfg.input_height= DEFAULT_TILE_DIMENSION;
+            m_sVenc_cfg.dvs_width = DEFAULT_TILE_DIMENSION;
+            m_sVenc_cfg.dvs_height = DEFAULT_TILE_DIMENSION;
             codec_profile.profile = V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_STILL_PICTURE;
-        else
+        } else
             codec_profile.profile = V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN;
         profile_level.level = V4L2_MPEG_VIDEO_HEVC_LEVEL_1;
     }
@@ -1567,6 +1573,13 @@ bool venc_dev::venc_open(OMX_U32 codec)
     ret = ioctl(m_nDriver_fd, VIDIOC_S_FMT, &fmt);
     m_sInput_buff_property.datasize=fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
 
+    if (m_codec == OMX_VIDEO_CodingImageHEIC) {
+        if (!venc_set_grid_enable()) {
+            DEBUG_PRINT_ERROR("Failed to enable grid");
+            return false;
+        }
+    }
+
     bufreq.memory = V4L2_MEMORY_USERPTR;
     bufreq.count = 2;
 
@@ -1619,6 +1632,14 @@ bool venc_dev::venc_open(OMX_U32 codec)
         control.value = 0x7fffffff;
         if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control))
             DEBUG_PRINT_ERROR("Failed to set V4L2_CID_MPEG_VIDC_VIDEO_NUM_P_FRAME\n");
+    }
+
+    //Disable auto blur by default
+    if (is_auto_blur_disabled) {
+        control.id = V4L2_CID_MPEG_VIDC_VIDEO_BLUR_DIMENSIONS;
+        control.value = 0x2;
+        if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control))
+           DEBUG_PRINT_ERROR("Failed to set V4L2_CID_MPEG_VIDC_VIDEO_BLUR_DIMENSIONS\n");
     }
 
 
@@ -1799,19 +1820,6 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
             DEBUG_PRINT_ERROR("Driver returned invalid data, port = %d ret = %d Count = %d",
                 port, ret, (unsigned int)control.value);
             return false;
-        }
-
-        // Increase buffer-header count for metadata-mode on input port
-        // to improve buffering and reduce bottlenecks in clients
-        if (metadatamode) {
-            DEBUG_PRINT_LOW("FW returned buffer count = %d , overwriting with 9",
-                control.value);
-            minCount = 9;
-        }
-
-        if (m_sVenc_cfg.input_height * m_sVenc_cfg.input_width >= 3840*2160) {
-            DEBUG_PRINT_LOW("Increasing buffer count = %d to 11", minCount);
-            minCount = 11;
         }
 
         /* Need more buffers for HFR usecase */
