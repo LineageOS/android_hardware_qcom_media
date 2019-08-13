@@ -55,15 +55,10 @@ void venc_dev::venc_get_consumer_usage(OMX_U32* usage)
             *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
             DEBUG_PRINT_INFO("Clear UBWC consumer usage bits as 10-bit linear color requested");
         }
-    } else if (mUseLinearColorFormat & REQUEST_LINEAR_COLOR_8_BIT) {
+    } else if (mUseLinearColorFormat & REQUEST_LINEAR_COLOR_8_BIT ||
+            m_codec == OMX_VIDEO_CodingImageHEIC) {
         *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
         DEBUG_PRINT_INFO("Clear UBWC consumer usage bits as 8-bit linear color requested");
-    }
-
-    if (m_codec == OMX_VIDEO_CodingImageHEIC) {
-        DEBUG_PRINT_INFO("Clear UBWC and set HEIF consumer usage bit");
-        *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
-        *usage |= GRALLOC_USAGE_PRIVATE_HEIF_VIDEO;
     }
 
     DEBUG_PRINT_INFO("venc_get_consumer_usage 0x%x", *usage);

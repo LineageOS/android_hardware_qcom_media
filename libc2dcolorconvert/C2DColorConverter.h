@@ -108,7 +108,6 @@ enum ColorConvertFormat {
     RGBA8888,
     RGBA8888_UBWC,
     NV12_2K,
-    NV12_512,
     NV12_128m,
     NV12_UBWC,
     TP10_UBWC,
