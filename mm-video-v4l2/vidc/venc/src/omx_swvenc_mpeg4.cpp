@@ -2591,9 +2591,12 @@ OMX_ERRORTYPE omx_venc::dev_get_supported_profile_level(OMX_VIDEO_PARAM_PROFILEL
             if (profileLevelType->nProfileIndex == 0)
             {
                 profileLevelType->eProfile = OMX_VIDEO_MPEG4ProfileSimple;
-                profileLevelType->eLevel   = OMX_VIDEO_MPEG4Level6;
-
-                DEBUG_PRINT_LOW("MPEG-4 simple profile, level 6");
+                #ifdef DISABLE_720P
+                    profileLevelType->eLevel   = OMX_VIDEO_MPEG4Level5;
+                #else
+                    profileLevelType->eLevel   = OMX_VIDEO_MPEG4Level6;
+                #endif
+                DEBUG_PRINT_LOW("MPEG-4 simple profile, level %d",profileLevelType->eLevel);
             }
             else
             {
@@ -3350,9 +3353,11 @@ SWVENC_STATUS omx_venc::swvenc_set_profile_level
           case OMX_VIDEO_MPEG4Level5:
              Level.mpeg4 = SWVENC_LEVEL_MPEG4_5;
              break;
+#ifndef DISABLE_720P
           case OMX_VIDEO_MPEG4Level6:
              Level.mpeg4 = SWVENC_LEVEL_MPEG4_6;
              break;
+#endif
           default:
              DEBUG_PRINT_ERROR("ERROR: UNKNOWN LEVEL");
              Ret = SWVENC_S_FAILURE;
