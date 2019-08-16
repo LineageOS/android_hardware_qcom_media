@@ -70,22 +70,23 @@ omx_core_cb_type core[] =
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.encoder.amrnb", "libOmxAmrEnc.so", "audio_encoder.amrnb"),
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.aac", "libOmxAacDec.so", "audio_decoder.aac"),
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.multiaac", "libOmxAacDec.so", "audio_decoder.aac"),
-    OMX_REGISTRY_ENTRY("OMX.qti.vdec.vpp", "libOmxVpp.so", "video_decoder.vpp"),
 
 #ifdef _NILE_
     //Entries specific to msmnile
+    OMX_REGISTRY_ENTRY("OMX.qti.vdec.vpp", "libOmxVpp.so", "video_decoder.vpp"),
 #endif //_NILE_
 
 #if defined(_STEPPE_) || defined(_ATOLL_)
     //Entries specific to msmsteppe
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.tme", "libOmxVenc.so", "video_encoder.tme"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.tme.secure", "libOmxVenc.so", "video_encoder.tme"),
+    OMX_REGISTRY_ENTRY("OMX.qti.vdec.vpp", "libOmxVpp.so", "video_decoder.vpp"),
 #endif //_STEPPE_ || _ATOLL_
 
-#ifndef _ATOLL_
+#if !defined(_ATOLL_) || !defined(_TRINKET)
     OMX_REGISTRY_ENTRY("OMX.qti.video.decoder.vc1sw", "libOmxSwVdec.so", "video_decoder.vc1"),
     OMX_REGISTRY_ENTRY("OMX.qti.video.decoder.wmvsw", "libOmxSwVdec.so", "video_decoder.vc1"),
-#endif //_ATOLL_
+#endif //_ATOLL_ || _TRINKET_
 };
 
 const unsigned int SIZE_OF_CORE = sizeof(core) / sizeof(omx_core_cb_type);
