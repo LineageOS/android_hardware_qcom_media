@@ -2545,17 +2545,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
             }
         case (OMX_INDEXTYPE)OMX_IndexParamVideoAndroidImageGrid:
             {
-                DEBUG_PRINT_LOW("venc_set_param: OMX_IndexParamVideoAndroidImageGrid");
-
-                if (m_codec != OMX_VIDEO_CodingImageHEIC) {
-                    DEBUG_PRINT_ERROR("OMX_IndexParamVideoAndroidImageGrid is only set for HEIC (HW tiling)");
-                    return true;
-                }
-
-                if (!venc_set_grid_enable()) {
-                    DEBUG_PRINT_ERROR("ERROR: Failed to set grid-enable");
-                    return false;
-                }
+                DEBUG_PRINT_LOW("venc_set_param: OMX_IndexParamVideoAndroidImageGrid. Ignore!");
                 break;
             }
         case OMX_IndexParamVideoIntraRefresh:
