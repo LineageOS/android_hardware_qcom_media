@@ -11196,8 +11196,10 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                                       cr_stats_info->stats_tile_160, cr_stats_info->stats_tile_192,
                                       cr_stats_info->stats_tile_256);
                           }
-                          setMetaData((private_handle_t *)native_buffer[buf_index].privatehandle,
-                              SET_UBWC_CR_STATS_INFO, (void*)stats);
+                          if (m_enable_android_native_buffers) {
+                              setMetaData((private_handle_t *)native_buffer[buf_index].privatehandle,
+                                  SET_UBWC_CR_STATS_INFO, (void*)stats);
+                          }
                     break;
                 case MSM_VIDC_EXTRADATA_STREAM_USERDATA:
                     if (client_extradata & OMX_EXTNUSER_EXTRADATA) {
