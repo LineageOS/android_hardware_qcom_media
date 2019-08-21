@@ -636,7 +636,7 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
     int height = m_sVenc_cfg.input_height;
     int width = m_sVenc_cfg.input_width;
     OMX_TICKS nTimeStamp = static_cast<OMX_TICKS>(buf.timestamp.tv_sec) * 1000000 + buf.timestamp.tv_usec;
-    int fd = buf.m.planes[0].reserved[0];
+    int fd = buf.m.planes[0].reserved[MSM_VIDC_BUFFER_FD];
     char *p_extradata = NULL;
     OMX_OTHER_EXTRADATATYPE *data = NULL;
     struct roidata roi;
@@ -2857,12 +2857,12 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                     plane[0].data_offset = 0;
                     plane[0].length = handle->size;
                     plane[0].bytesused = handle->size;
-                    plane[0].reserved[2] = (unsigned long int)compression_ratio;
+                    plane[0].reserved[MSM_VIDC_COMP_RATIO] = (unsigned long int)compression_ratio;
                     char v4l2ColorFormatStr[200];
                     get_v4l2_color_format_as_string(v4l2ColorFormatStr, sizeof(v4l2ColorFormatStr), m_sVenc_cfg.inputformat);
                     DEBUG_PRINT_LOW("venc_empty_buf: Opaque camera buf: fd = %d "
                                 ": filled %d of %d format 0x%lx (%s) CR %d", fd, plane[0].bytesused,
-                                plane[0].length, m_sVenc_cfg.inputformat, v4l2ColorFormatStr, plane[0].reserved[2]);
+                                plane[0].length, m_sVenc_cfg.inputformat, v4l2ColorFormatStr, plane[0].reserved[MSM_VIDC_COMP_RATIO]);
                 }
             } else {
                 // Metadata mode
@@ -2945,9 +2945,9 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
         plane[extra_idx].length = input_extradata_info.buffer_size;
         plane[extra_idx].m.userptr = (unsigned long)input_extradata_info.ion[extradata_index].uaddr;
 #ifdef USE_ION
-        plane[extra_idx].reserved[0] = input_extradata_info.ion[extradata_index].data_fd;
+        plane[extra_idx].reserved[MSM_VIDC_BUFFER_FD] = input_extradata_info.ion[extradata_index].data_fd;
 #endif
-        plane[extra_idx].reserved[1] = 0;
+        plane[extra_idx].reserved[MSM_VIDC_DATA_OFFSET] = 0;
         plane[extra_idx].data_offset = 0;
     } else if (extra_idx >= VIDEO_MAX_PLANES) {
         DEBUG_PRINT_ERROR("Extradata index higher than expected: %d\n", extra_idx);
@@ -2957,8 +2957,8 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
     buf.index = index;
     buf.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
     buf.memory = V4L2_MEMORY_USERPTR;
-    plane[0].reserved[0] = fd;
-    plane[0].reserved[1] = 0;
+    plane[0].reserved[MSM_VIDC_BUFFER_FD] = fd;
+    plane[0].reserved[MSM_VIDC_DATA_OFFSET] = 0;
     buf.m.planes = plane;
     buf.length = num_input_planes;
     buf.timestamp.tv_sec = bufhdr->nTimeStamp / 1000000;
@@ -3102,8 +3102,8 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
             buf.index = (unsigned)v4l2Id;
             buf.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
             buf.memory = V4L2_MEMORY_USERPTR;
-            plane[0].reserved[0] = MetaBufferUtil::getFdAt(hnd, i);
-            plane[0].reserved[1] = 0;
+            plane[0].reserved[MSM_VIDC_BUFFER_FD] = MetaBufferUtil::getFdAt(hnd, i);
+            plane[0].reserved[MSM_VIDC_DATA_OFFSET] = 0;
             plane[0].data_offset = MetaBufferUtil::getIntAt(hnd, i, MetaBufferUtil::INT_OFFSET);
             plane[0].m.userptr = (unsigned long)meta_buf;
             plane[0].length = plane[0].bytesused = MetaBufferUtil::getIntAt(hnd, i, MetaBufferUtil::INT_SIZE);
@@ -3116,7 +3116,7 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
             extra_idx = EXTRADATA_IDX(num_input_planes);
 
             if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
-                int fd = plane[0].reserved[0];
+                int fd = plane[0].reserved[MSM_VIDC_BUFFER_FD];
                 OMX_U32 extradata_index;
                 if (!venc_get_index_from_fd(fd, &extradata_index)) {
                     DEBUG_PRINT_ERROR("Extradata index not found for fd: %d\n", fd);
@@ -3126,8 +3126,8 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
                 plane[extra_idx].bytesused = input_extradata_info.buffer_size;
                 plane[extra_idx].length = input_extradata_info.buffer_size;
                 plane[extra_idx].m.userptr = (unsigned long)input_extradata_info.ion[extradata_index].uaddr;
-                plane[extra_idx].reserved[0] = input_extradata_info.ion[extradata_index].data_fd;
-                plane[extra_idx].reserved[1] = 0;
+                plane[extra_idx].reserved[MSM_VIDC_BUFFER_FD] = input_extradata_info.ion[extradata_index].data_fd;
+                plane[extra_idx].reserved[MSM_VIDC_DATA_OFFSET] = 0;
                 plane[extra_idx].data_offset = 0;
             } else if (extra_idx >= VIDEO_MAX_PLANES) {
                 DEBUG_PRINT_ERROR("Extradata index higher than expected: %d\n", extra_idx);
@@ -3141,7 +3141,7 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
             bufTimeStamp = bufhdr->nTimeStamp + MetaBufferUtil::getIntAt(hnd, i, MetaBufferUtil::INT_TIMESTAMP) / 1000;
 
             DEBUG_PRINT_LOW(" Q Batch [%d of %d] : buf=%p fd=%d len=%d TS=%lld",
-                i, numBufs, bufhdr, plane[0].reserved[0], plane[0].length, bufTimeStamp);
+                i, numBufs, bufhdr, plane[0].reserved[MSM_VIDC_BUFFER_FD], plane[0].length, bufTimeStamp);
             buf.timestamp.tv_sec = bufTimeStamp / 1000000;
             buf.timestamp.tv_usec = (bufTimeStamp % 1000000);
 
@@ -3236,8 +3236,8 @@ bool venc_dev::venc_fill_buf(void *buffer, void *pmem_data_buf,unsigned index,un
     buf.memory = V4L2_MEMORY_USERPTR;
     plane[0].length = bufhdr->nAllocLen;
     plane[0].bytesused = bufhdr->nFilledLen;
-    plane[0].reserved[0] = fd;
-    plane[0].reserved[1] = 0;
+    plane[0].reserved[MSM_VIDC_BUFFER_FD] = fd;
+    plane[0].reserved[MSM_VIDC_DATA_OFFSET] = 0;
     plane[0].data_offset = bufhdr->nOffset;
     buf.m.planes = plane;
     buf.length = num_output_planes;
@@ -3261,9 +3261,9 @@ bool venc_dev::venc_fill_buf(void *buffer, void *pmem_data_buf,unsigned index,un
         plane[extra_idx].length = output_extradata_info.buffer_size;
         plane[extra_idx].m.userptr = (unsigned long)output_extradata_info.ion[index].uaddr;
 #ifdef USE_ION
-        plane[extra_idx].reserved[0] = output_extradata_info.ion[index].data_fd;
+        plane[extra_idx].reserved[MSM_VIDC_BUFFER_FD] = output_extradata_info.ion[index].data_fd;
 #endif
-        plane[extra_idx].reserved[1] = 0;
+        plane[extra_idx].reserved[MSM_VIDC_DATA_OFFSET] = 0;
         plane[extra_idx].data_offset = 0;
     } else if (extra_idx >= VIDEO_MAX_PLANES) {
         DEBUG_PRINT_ERROR("Extradata index higher than expected: %d", extra_idx);

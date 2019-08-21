@@ -206,15 +206,15 @@ void* async_message_thread (void *input)
 
                 vdec_msg.msgcode=VDEC_MSG_EVT_CONFIG_CHANGED;
                 vdec_msg.status_code=VDEC_S_SUCCESS;
-                vdec_msg.msgdata.output_frame.picsize.frame_height = ptr[0];
-                vdec_msg.msgdata.output_frame.picsize.frame_width = ptr[1];
+                vdec_msg.msgdata.output_frame.picsize.frame_height = ptr[MSM_VIDC_HEIGHT];
+                vdec_msg.msgdata.output_frame.picsize.frame_width = ptr[MSM_VIDC_WIDTH];
                 vdec_msg.msgdata.output_frame.flags = true; // INSUFFICIENT event
                 DEBUG_PRINT_HIGH("VIDC Port Reconfig received insufficient");
-                omx->dpb_bit_depth = ptr[2];
-                DEBUG_PRINT_HIGH("VIDC Port Reconfig Bitdepth - %d", ptr[2]);
-                omx->m_progressive = ptr[3];
-                DEBUG_PRINT_HIGH("VIDC Port Reconfig PicStruct - %d", ptr[3]);
-                omx->m_color_space = (ptr[4] == MSM_VIDC_BT2020 ? (omx_vdec::BT2020):
+                omx->dpb_bit_depth = ptr[MSM_VIDC_BIT_DEPTH];
+                DEBUG_PRINT_HIGH("VIDC Port Reconfig Bitdepth - %d", ptr[MSM_VIDC_BIT_DEPTH]);
+                omx->m_progressive = ptr[MSM_VIDC_PIC_STRUCT];
+                DEBUG_PRINT_HIGH("VIDC Port Reconfig PicStruct - %d", ptr[MSM_VIDC_PIC_STRUCT]);
+                omx->m_color_space = (ptr[MSM_VIDC_COLOR_SPACE] == MSM_VIDC_BT2020 ? (omx_vdec::BT2020):
                                       (omx_vdec:: EXCEPT_BT2020));
                 DEBUG_PRINT_HIGH("VIDC Port Reconfig ColorSpace - %d", omx->m_color_space);
                 if (omx->async_message_process(input,&vdec_msg) < 0) {
@@ -5145,10 +5145,10 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
     plane.length = drv_ctx.ip_buf.buffer_size;
     plane.m.userptr = (unsigned long)temp_buffer->bufferaddr -
         (unsigned long)temp_buffer->offset;
-    plane.reserved[0] = temp_buffer->pmem_fd;
-    plane.reserved[1] = temp_buffer->offset;
-    plane.reserved[3] = (unsigned long)buffer->pMarkData;
-    plane.reserved[4] = (unsigned long)buffer->hMarkTargetComponent;
+    plane.reserved[MSM_VIDC_BUFFER_FD] = temp_buffer->pmem_fd;
+    plane.reserved[MSM_VIDC_DATA_OFFSET] = temp_buffer->offset;
+    plane.reserved[MSM_VIDC_INPUT_TAG_1] = (unsigned long)buffer->pMarkData;
+    plane.reserved[MSM_VIDC_INPUT_TAG_2] = (unsigned long)buffer->hMarkTargetComponent;
     plane.data_offset = 0;
     buf.m.planes = &plane;
     buf.length = 1;
@@ -5405,8 +5405,8 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
     plane[0].m.userptr =
         (unsigned long)omx_ptr_outputbuffer[bufIndex].bufferaddr -
         (unsigned long)omx_ptr_outputbuffer[bufIndex].offset;
-    plane[0].reserved[0] = omx_ptr_outputbuffer[bufIndex].pmem_fd;
-    plane[0].reserved[1] = omx_ptr_outputbuffer[bufIndex].offset;
+    plane[0].reserved[MSM_VIDC_BUFFER_FD] = omx_ptr_outputbuffer[bufIndex].pmem_fd;
+    plane[0].reserved[MSM_VIDC_DATA_OFFSET] = omx_ptr_outputbuffer[bufIndex].offset;
     plane[0].data_offset = 0;
     extra_idx = EXTRADATA_IDX(drv_ctx.num_planes);
     if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
@@ -5414,9 +5414,9 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
         plane[extra_idx].length = drv_ctx.extradata_info.buffer_size;
         plane[extra_idx].m.userptr = (long unsigned int)drv_ctx.extradata_info.ion[bufIndex].uaddr;
 #ifdef USE_ION
-        plane[extra_idx].reserved[0] = drv_ctx.extradata_info.ion[bufIndex].data_fd;
+        plane[extra_idx].reserved[MSM_VIDC_BUFFER_FD] = drv_ctx.extradata_info.ion[bufIndex].data_fd;
 #endif
-        plane[extra_idx].reserved[1] = 0;
+        plane[extra_idx].reserved[MSM_VIDC_DATA_OFFSET] = 0;
         plane[extra_idx].data_offset = 0;
     } else if (extra_idx >= VIDEO_MAX_PLANES) {
         DEBUG_PRINT_ERROR("Extradata index higher than expected: %u", extra_idx);
@@ -6390,8 +6390,8 @@ int omx_vdec::async_message_process (void *context, void* message)
                    (((struct vdec_output_frameinfo *)omxhdr->pOutputPortPrivate
                      - omx_ptr_respbuffer) < (int)omx->drv_ctx.op_buf.actualcount)) {
 
-               omxhdr->pMarkData = (OMX_PTR)(unsigned long)plane[0].reserved[3];
-               omxhdr->hMarkTargetComponent = (OMX_HANDLETYPE)(unsigned long)plane[0].reserved[4];
+               omxhdr->pMarkData = (OMX_PTR)(unsigned long)plane[0].reserved[MSM_VIDC_INPUT_TAG_1];
+               omxhdr->hMarkTargetComponent = (OMX_HANDLETYPE)(unsigned long)plane[0].reserved[MSM_VIDC_INPUT_TAG_2];
 
                if (vdec_msg->msgdata.output_frame.len <=  omxhdr->nAllocLen) {
                    omxhdr->nFilledLen = vdec_msg->msgdata.output_frame.len;
@@ -6449,23 +6449,6 @@ int omx_vdec::async_message_process (void *context, void* message)
                            vdec_msg->msgdata.output_frame.framesize.bottom = omx->m_extradata_misr.output_crop_rect.nHeight;
                            vdec_msg->msgdata.output_frame.picsize.frame_width = omx->m_extradata_misr.output_width;
                            vdec_msg->msgdata.output_frame.picsize.frame_height = omx->m_extradata_misr.output_height;
-                       } else {
-                           DEBUG_PRINT_LOW("Read FBD crop from v4l2 reserved fields");
-                           vdec_msg->msgdata.output_frame.framesize.left = plane[0].reserved[2];
-                           vdec_msg->msgdata.output_frame.framesize.top = plane[0].reserved[3];
-                           vdec_msg->msgdata.output_frame.framesize.right = plane[0].reserved[2] + plane[0].reserved[4];
-                           vdec_msg->msgdata.output_frame.framesize.bottom = plane[0].reserved[3] + plane[0].reserved[5];
-                           vdec_msg->msgdata.output_frame.picsize.frame_width = plane[0].reserved[6];
-                           vdec_msg->msgdata.output_frame.picsize.frame_height = plane[0].reserved[7];
-
-                           /* Copy these values back to OMX internal variables to make both handlign same*/
-
-                           omx->m_extradata_misr.output_crop_rect.nLeft = vdec_msg->msgdata.output_frame.framesize.left;
-                           omx->m_extradata_misr.output_crop_rect.nTop = vdec_msg->msgdata.output_frame.framesize.top;
-                           omx->m_extradata_misr.output_crop_rect.nWidth = vdec_msg->msgdata.output_frame.framesize.right;
-                           omx->m_extradata_misr.output_crop_rect.nHeight = vdec_msg->msgdata.output_frame.framesize.bottom;
-                           omx->m_extradata_misr.output_width = vdec_msg->msgdata.output_frame.picsize.frame_width;
-                           omx->m_extradata_misr.output_height = vdec_msg->msgdata.output_frame.picsize.frame_height;
                        }
                    }
 
