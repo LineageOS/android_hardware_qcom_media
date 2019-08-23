@@ -13,4 +13,6 @@ PRODUCT_COPY_FILES += \
     $(CONFIG_PATH)/system_properties.xml:$(TARGET_COPY_OUT_VENDOR)/etc/system_properties.xml
 
 # Vendor property overrides
-
+    #Rank OMX SW codecs lower than OMX HW codecs
+    PRODUCT_PROPERTY_OVERRIDES += debug.stagefright.omx_default_rank.sw-audio=1
+    PRODUCT_PROPERTY_OVERRIDES += debug.stagefright.omx_default_rank=0

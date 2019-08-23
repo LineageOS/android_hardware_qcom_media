@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Copyright (C) 2012-2018 The Linux Foundation. All rights reserved.
+<!-- Copyright (C) 2012-2019 The Linux Foundation. All rights reserved.
 
      Not a contribution.
 
@@ -131,6 +131,7 @@ Only the three quirks included above are recognized at this point:
 -->
 
 <MediaCodecs>
+    <Include href="media_codecs_google_audio.xml" />
     <Include href="media_codecs_vendor_audio.xml" />
     <Include href="media_codecs_google_telephony.xml" />
     <Settings>
@@ -193,7 +194,7 @@ Only the three quirks included above are recognized at this point:
             <Quirk name="requires-loaded-to-idle-after-allocation" />
             <Limit name="size" min="512x512" max="512x512" />
             <Limit name="frame-rate" range="1-20" />
-            <Limit name="concurrent-instances" max="6" />
+            <Limit name="concurrent-instances" max="16" />
             <Limit name="quality" range="0-100" default="80" />
             <Limit name="performance-point-512x512" value="480" />
             <Feature name="bitrate-modes" value="CQ" />

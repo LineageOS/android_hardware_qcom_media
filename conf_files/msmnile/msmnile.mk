@@ -19,3 +19,9 @@ PRODUCT_COPY_FILES += \
 PRODUCT_PACKAGES += \
     libcodec2_vndk.vendor \
     libcodec2_hidl@1.0.vendor
+# Enable Codec2.0 HAL for pure AOSP variants.
+ifeq ($(GENERIC_ODM_IMAGE),true)
+DEVICE_MANIFEST_FILE += hardware/qcom/media/conf_files/msmnile/c2_manifest_vendor.xml
+else
+DEVICE_MANIFEST_FILE += hardware/qcom/media/conf_files/msmnile/c2_manifest.xml
+endif
