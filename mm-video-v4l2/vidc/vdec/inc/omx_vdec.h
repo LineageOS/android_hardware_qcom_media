@@ -181,7 +181,8 @@ extern "C" {
 #define MAX_NUM_INPUT_OUTPUT_BUFFERS VIDEO_MAX_FRAME
 #endif
 
-#define MIN_NUM_INPUT_OUTPUT_EXTRADATA_BUFFERS 32 // 32 (max cap when VPP enabled)
+// Aligning to MAX NUM INPUT & OUTPUT
+#define MIN_NUM_INPUT_OUTPUT_EXTRADATA_BUFFERS MAX_NUM_INPUT_OUTPUT_BUFFERS
 
 /* STATUS CODES */
 /* Base value for status codes */
@@ -324,7 +325,7 @@ struct vdec_output_frameinfo {
 	size_t offset;
 	size_t len;
 	uint32_t flags;
-	int64_t time_stamp;
+	uint64_t time_stamp;
 	enum vdec_picture pic_type;
 	void *client_data;
 	struct vdec_picsize picsize;

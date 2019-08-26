@@ -55,15 +55,10 @@ void venc_dev::venc_get_consumer_usage(OMX_U32* usage)
             *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
             DEBUG_PRINT_INFO("Clear UBWC consumer usage bits as 10-bit linear color requested");
         }
-    } else if (mUseLinearColorFormat & REQUEST_LINEAR_COLOR_8_BIT) {
+    } else if (mUseLinearColorFormat & REQUEST_LINEAR_COLOR_8_BIT ||
+            m_codec == OMX_VIDEO_CodingImageHEIC) {
         *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
         DEBUG_PRINT_INFO("Clear UBWC consumer usage bits as 8-bit linear color requested");
-    }
-
-    if (m_codec == OMX_VIDEO_CodingImageHEIC) {
-        DEBUG_PRINT_INFO("Clear UBWC and set HEIF consumer usage bit");
-        *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
-        *usage |= GRALLOC_USAGE_PRIVATE_HEIF_VIDEO;
     }
 
     DEBUG_PRINT_INFO("venc_get_consumer_usage 0x%x", *usage);
@@ -787,17 +782,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
             }
         case (OMX_INDEXTYPE)OMX_IndexParamVideoAndroidImageGrid:
             {
-                DEBUG_PRINT_LOW("venc_set_param: OMX_IndexParamVideoAndroidImageGrid");
-
-                if (m_codec != OMX_VIDEO_CodingImageHEIC) {
-                    DEBUG_PRINT_ERROR("OMX_IndexParamVideoAndroidImageGrid is only set for HEIC (HW tiling)");
-                    return true;
-                }
-
-                if (!venc_set_grid_enable()) {
-                    DEBUG_PRINT_ERROR("ERROR: Failed to set grid-enable");
-                    return false;
-                }
+                DEBUG_PRINT_LOW("venc_set_param: OMX_IndexParamVideoAndroidImageGrid. Ignore!");
                 break;
             }
         case OMX_IndexParamVideoIntraRefresh:

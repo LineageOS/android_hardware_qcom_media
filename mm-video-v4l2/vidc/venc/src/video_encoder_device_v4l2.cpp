@@ -440,14 +440,14 @@ void* venc_dev::async_venc_message_thread (void *input)
         /* calc avg. fps, bitrate */
         struct timeval tv;
         gettimeofday(&tv,NULL);
-        OMX_U64 time_diff = (tv.tv_sec * 1000000ULL + tv.tv_usec) -
-                (stats.prev_tv.tv_sec * 1000000ULL + stats.prev_tv.tv_usec);
+        OMX_U64 time_diff = ((uint64_t) tv.tv_sec * (uint64_t) 1000000ULL + (uint64_t) tv.tv_usec) -
+                ((uint64_t) stats.prev_tv.tv_sec * (uint64_t) 1000000ULL + (uint64_t) stats.prev_tv.tv_usec);
         if (time_diff >= 1000000) {
             OMX_U32 num_fbd = omx->handle->fbd - stats.prev_fbd;
             if (stats.prev_tv.tv_sec && num_fbd && time_diff) {
                 float framerate = num_fbd * 1000000/(float)time_diff;
-                OMX_U32 bitrate = (stats.bytes_generated * 8 / num_fbd) * framerate;
-                DEBUG_PRINT_INFO("stats: avg. fps %0.2f, bitrate %d",
+                OMX_U64 bitrate = (stats.bytes_generated * 8 / num_fbd) * framerate;
+                DEBUG_PRINT_INFO("stats: avg. fps %0.2f, bitrate %llu",
                     framerate, bitrate);
             }
             stats.prev_tv = tv;
@@ -935,7 +935,6 @@ int venc_dev::venc_set_format(int format)
 
         switch (color_format) {
         case NV12_128m:
-        case NV12_512:
             return venc_set_color_format((OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m);
         case NV12_UBWC:
             return venc_set_color_format((OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed);
@@ -1367,23 +1366,6 @@ int venc_dev::venc_input_log_buffers(OMX_BUFFERHEADERTYPE *pbuffer, int fd, int 
             }
             for (i = 0; i < m_sVenc_cfg.input_height/2; i++) {
                 fwrite(ptemp, m_sVenc_cfg.input_width, 1, m_debug.infile);
-                ptemp += stride;
-            }
-        } else if (color_format == COLOR_FMT_NV12_512) {
-            stride = VENUS_Y_STRIDE(color_format, m_sVenc_cfg.input_width);
-            scanlines = VENUS_Y_SCANLINES(color_format, m_sVenc_cfg.input_height);
-
-            for (i = 0; i < scanlines; i++) {
-                fwrite(ptemp, stride, 1, m_debug.infile);
-                ptemp += stride;
-            }
-            if (metadatamode == 1) {
-                ptemp = pvirt + (stride * scanlines);
-            } else {
-                ptemp = (unsigned char *)pbuffer->pBuffer + (stride * scanlines);
-            }
-            for (i = 0; i < scanlines/2; i++) {
-                fwrite(ptemp, stride, 1, m_debug.infile);
                 ptemp += stride;
             }
         } else if (color_format == COLOR_FMT_RGBA8888) {
@@ -2686,8 +2668,8 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                             m_sVenc_cfg.inputformat = isUBWC ? V4L2_PIX_FMT_NV12_UBWC : V4L2_PIX_FMT_NV12;
                             DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = NV12 %s", isUBWC ? "UBWC" : "Linear");
                         } else if (handle->format == HAL_PIXEL_FORMAT_NV12_HEIF) {
-                            m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV12_512;
-                            DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = NV12_512");
+                            m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV12;
+                            DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = NV12");
                         } else if (handle->format == HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC) {
                             m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV12_UBWC;
                             DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = NV12_UBWC");
@@ -2801,7 +2783,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         }
                     } // Check OUTPUT Streaming
 
-                    venc_get_cvp_metadata(handle);
+                    venc_get_cvp_metadata(handle, &buf);
 
                     struct UBWCStats cam_ubwc_stats[2];
                     unsigned long long int compression_ratio = 1 << 16;
@@ -3017,9 +2999,6 @@ unsigned long venc_dev::get_media_colorformat(unsigned long inputformat)
     switch (inputformat) {
         case V4L2_PIX_FMT_NV12:
             color_format = COLOR_FMT_NV12;
-            break;
-        case V4L2_PIX_FMT_NV12_512:
-            color_format = COLOR_FMT_NV12_512;
             break;
         case V4L2_PIX_FMT_NV12_UBWC:
             color_format = COLOR_FMT_NV12_UBWC;
@@ -3595,10 +3574,7 @@ unsigned long venc_dev::venc_get_color_format(OMX_COLOR_FORMATTYPE eColorFormat)
     }
 
     if (m_codec == OMX_VIDEO_CodingImageHEIC)
-        format = V4L2_PIX_FMT_NV12_512;
-
-    if (m_codec == OMX_VIDEO_CodingImageHEIC)
-        format = V4L2_PIX_FMT_NV12_512;
+        format = V4L2_PIX_FMT_NV12;
 
     return format;
 }
@@ -3644,10 +3620,7 @@ bool venc_dev::venc_set_color_format(OMX_COLOR_FORMATTYPE color_format)
     }
 
     if (m_codec == OMX_VIDEO_CodingImageHEIC)
-        m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV12_512;
-
-    if (m_codec == OMX_VIDEO_CodingImageHEIC)
-        m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV12_512;
+        m_sVenc_cfg.inputformat = V4L2_PIX_FMT_NV12;
 
     memset(&fmt, 0, sizeof(fmt));
     fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
@@ -4322,19 +4295,19 @@ bool venc_dev::venc_cvp_enable(private_handle_t *handle)
             m_cvp_meta_enabled = true;
             DEBUG_PRINT_HIGH("CVP metadata enabled");
         } else {
-            DEBUG_PRINT_ERROR("ERROR: invalid CVP metadata, size %d",
-                    cvpMetadata.size);
+            DEBUG_PRINT_ERROR("ERROR: External CVP mode disabled for this session and continue!");
             clearMetaData(handle, SET_CVP_METADATA);
         }
     }
     return true;
 }
 
-bool venc_dev::venc_get_cvp_metadata(private_handle_t *handle)
+bool venc_dev::venc_get_cvp_metadata(private_handle_t *handle, struct v4l2_buffer *buf)
 {
     if (!m_cvp_meta_enabled)
         return true;
 
+    buf->flags &= ~V4L2_BUF_FLAG_CVPMETADATA_SKIP;
     cvpMetadata.size = 0;
     if (getMetaData(handle, GET_CVP_METADATA, &cvpMetadata) == 0) {
         clearMetaData(handle, SET_CVP_METADATA);
@@ -4342,10 +4315,14 @@ bool venc_dev::venc_get_cvp_metadata(private_handle_t *handle)
             DEBUG_PRINT_ERROR("ERROR: Invalid CVP metadata size %d",
                 cvpMetadata.size);
             cvpMetadata.size = 0;
+            /* If camera sends metadata of size not matching to CVP_METADATA_SIZE,
+               it is considered as an error case. So, do not add skip flag */
             return false;
         }
         DEBUG_PRINT_LOW("CVP metadata size %d", cvpMetadata.size);
     } else {
+        buf->flags |= V4L2_BUF_FLAG_CVPMETADATA_SKIP;
+        DEBUG_PRINT_LOW("venc_empty_buf: V4L2_BUF_FLAG_CVPMETADATA_SKIP is set");
         DEBUG_PRINT_LOW("CVP metadata not available");
     }
     return true;

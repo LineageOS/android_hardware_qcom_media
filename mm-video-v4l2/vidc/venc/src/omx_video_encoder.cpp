@@ -231,11 +231,6 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_encoder.avc",OMX_MAX_STRINGNAME_SIZE);
         codec_type = OMX_VIDEO_CodingAVC;
-    } else if(!strncmp((char *)m_nkind, "OMX.qcom.video.encoder.avc.secure",\
-                OMX_MAX_STRINGNAME_SIZE)) {
-        strlcpy((char *)m_cRole, "video_encoder.avc",OMX_MAX_STRINGNAME_SIZE);
-        codec_type = OMX_VIDEO_CodingAVC;
-        secure_session = true;
     } else if (!strncmp((char *)m_nkind, "OMX.qcom.video.encoder.vp8",    \
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_encoder.vp8",OMX_MAX_STRINGNAME_SIZE);
@@ -250,11 +245,6 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_encoder.hevc", OMX_MAX_STRINGNAME_SIZE);
         codec_type = OMX_VIDEO_CodingImageHEIC;
-    } else if (!strncmp((char *)m_nkind, "OMX.qcom.video.encoder.hevc.secure",    \
-                OMX_MAX_STRINGNAME_SIZE)) {
-        strlcpy((char *)m_cRole, "video_encoder.hevc", OMX_MAX_STRINGNAME_SIZE);
-        codec_type = OMX_VIDEO_CodingHEVC;
-        secure_session = true;
     } else {
         DEBUG_PRINT_ERROR("ERROR: Unknown Component");
         eRet = OMX_ErrorInvalidComponentName;
@@ -543,8 +533,8 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     m_sParamAndroidImageGrid.bEnabled = OMX_FALSE;
     m_sParamAndroidImageGrid.nTileWidth = DEFAULT_TILE_DIMENSION;
     m_sParamAndroidImageGrid.nTileHeight = DEFAULT_TILE_DIMENSION;
-    m_sParamAndroidImageGrid.nGridRows = DEFAULT_TILE_COUNT;
-    m_sParamAndroidImageGrid.nGridCols = DEFAULT_TILE_COUNT;
+    m_sParamAndroidImageGrid.nGridRows = DEFAULT_TILE_ROWS;
+    m_sParamAndroidImageGrid.nGridCols = DEFAULT_TILE_COLS;
 
     OMX_INIT_STRUCT(&m_sParamLTRCount, QOMX_VIDEO_PARAM_LTRCOUNT_TYPE);
     m_sParamLTRCount.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
@@ -942,15 +932,7 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             }
         case OMX_IndexParamVideoAndroidImageGrid:
             {
-                VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_ANDROID_IMAGEGRIDTYPE);
-                DEBUG_PRINT_LOW("set_parameter: OMX_IndexParamVideoAndroidImageGrid");
-                OMX_VIDEO_PARAM_ANDROID_IMAGEGRIDTYPE* pParam =
-                    (OMX_VIDEO_PARAM_ANDROID_IMAGEGRIDTYPE*)paramData;
-                if (!handle->venc_set_param(paramData, (OMX_INDEXTYPE)OMX_IndexParamVideoAndroidImageGrid)) {
-                    DEBUG_PRINT_ERROR("ERROR: Request for setting image grid enable failed");
-                    return OMX_ErrorUnsupportedSetting;
-                }
-                memcpy(&m_sParamAndroidImageGrid, pParam, sizeof(m_sParamAndroidImageGrid));
+                DEBUG_PRINT_LOW("set_parameter: OMX_IndexParamVideoAndroidImageGrid. Ignore!");
                 break;
             }
         case OMX_IndexParamVideoProfileLevelCurrent:
@@ -971,12 +953,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     m_sParamAVC.eProfile = (OMX_VIDEO_AVCPROFILETYPE)m_sParamProfileLevel.eProfile;
                     m_sParamAVC.eLevel = (OMX_VIDEO_AVCLEVELTYPE)m_sParamProfileLevel.eLevel;
                     DEBUG_PRINT_LOW("AVC profile = %d, level = %d", m_sParamAVC.eProfile,
-                            m_sParamAVC.eLevel);
-                } else if (!strncmp((char *)m_nkind, "OMX.qcom.video.encoder.avc.secure",\
-                            OMX_MAX_STRINGNAME_SIZE)) {
-                    m_sParamAVC.eProfile = (OMX_VIDEO_AVCPROFILETYPE)m_sParamProfileLevel.eProfile;
-                    m_sParamAVC.eLevel = (OMX_VIDEO_AVCLEVELTYPE)m_sParamProfileLevel.eLevel;
-                    DEBUG_PRINT_LOW("\n AVC profile = %d, level = %d", m_sParamAVC.eProfile,
                             m_sParamAVC.eLevel);
                 }
                 else if (!strncmp((char*)m_nkind, "OMX.qcom.video.encoder.vp8",\
@@ -1023,13 +999,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                         DEBUG_PRINT_ERROR("ERROR: Setparameter: unknown Index %s", comp_role->cRole);
                         eRet =OMX_ErrorUnsupportedSetting;
                     }
-                } else if (!strncmp((char*)m_nkind, "OMX.qcom.video.encoder.avc.secure",OMX_MAX_STRINGNAME_SIZE)) {
-                    if (!strncmp((char*)comp_role->cRole,"video_encoder.avc",OMX_MAX_STRINGNAME_SIZE)) {
-                        strlcpy((char*)m_cRole,"video_encoder.avc",OMX_MAX_STRINGNAME_SIZE);
-                    } else {
-                        DEBUG_PRINT_ERROR("ERROR: Setparameter: unknown Index %s\n", comp_role->cRole);
-                        eRet =OMX_ErrorUnsupportedSetting;
-                    }
                 } else if (!strncmp((char*)m_nkind, "OMX.qcom.video.encoder.vp8",OMX_MAX_STRINGNAME_SIZE)) {
                     if (!strncmp((const char*)comp_role->cRole,"video_encoder.vp8",OMX_MAX_STRINGNAME_SIZE)) {
                         strlcpy((char*)m_cRole,"video_encoder.vp8",OMX_MAX_STRINGNAME_SIZE);
@@ -1039,13 +1008,6 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     }
                 } else if (!strncmp((char*)m_nkind, "OMX.qcom.video.encoder.hevc",OMX_MAX_STRINGNAME_SIZE) ||
                         !strncmp((char*)m_nkind, "OMX.qcom.video.encoder.hevc.cq",OMX_MAX_STRINGNAME_SIZE)) {
-                    if (!strncmp((const char*)comp_role->cRole,"video_encoder.hevc",OMX_MAX_STRINGNAME_SIZE)) {
-                        strlcpy((char*)m_cRole,"video_encoder.hevc",OMX_MAX_STRINGNAME_SIZE);
-                    } else {
-                        DEBUG_PRINT_ERROR("ERROR: Setparameter: unknown Index %s", comp_role->cRole);
-                        eRet = OMX_ErrorUnsupportedSetting;
-                    }
-                } else if (!strncmp((char*)m_nkind, "OMX.qcom.video.encoder.hevc.secure",OMX_MAX_STRINGNAME_SIZE)) {
                     if (!strncmp((const char*)comp_role->cRole,"video_encoder.hevc",OMX_MAX_STRINGNAME_SIZE)) {
                         strlcpy((char*)m_cRole,"video_encoder.hevc",OMX_MAX_STRINGNAME_SIZE);
                     } else {
@@ -1604,12 +1566,6 @@ bool omx_venc::update_profile_level()
         m_sParamAVC.eProfile = (OMX_VIDEO_AVCPROFILETYPE)eProfile;
         m_sParamAVC.eLevel = (OMX_VIDEO_AVCLEVELTYPE)eLevel;
         DEBUG_PRINT_LOW("AVC profile = %d, level = %d", m_sParamAVC.eProfile,
-                m_sParamAVC.eLevel);
-    } else if (!strncmp((char *)m_nkind, "OMX.qcom.video.encoder.avc.secure",\
-                OMX_MAX_STRINGNAME_SIZE)) {
-        m_sParamAVC.eProfile = (OMX_VIDEO_AVCPROFILETYPE)eProfile;
-        m_sParamAVC.eLevel = (OMX_VIDEO_AVCLEVELTYPE)eLevel;
-        DEBUG_PRINT_LOW("\n AVC profile = %d, level = %d", m_sParamAVC.eProfile,
                 m_sParamAVC.eLevel);
     }
     else if (!strncmp((char *)m_nkind, "OMX.qcom.video.encoder.vp8",\

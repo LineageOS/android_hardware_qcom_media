@@ -172,6 +172,7 @@ Only the three quirks included above are recognized at this point:
  |          | 3840    2160    120     220     3888000             |
  |          | 4096    2160    60      220     2073600             |
  |          | 8192    4320    24      220     3317760             |
+ | hevc.cq  | 512     512     3825    220     3916800     3916800 |
  | mpeg4-sw | 1280    720     30      4       108000      108000  |
  | vp8      | 1280    720     60      70      216000      2073600 |
  |          | 1920    1088    60      70      489600              |
@@ -253,6 +254,7 @@ Only the three quirks included above are recognized at this point:
             <Limit name="concurrent-instances" max="16" />
             <Limit name="quality" range="0-100" default="80" />
             <Feature name="bitrate-modes" value="CQ" />
+            <Limit name="performance-point-512x512" value="3825" />
         </MediaCodec>
         <MediaCodec name="OMX.qcom.video.encoder.heic" type="image/vnd.android.heic" >
             <Quirk name="requires-allocate-on-input-ports" />
@@ -336,7 +338,6 @@ Only the three quirks included above are recognized at this point:
             <Feature name="secure-playback" required="true" />
             <Limit name="concurrent-instances" max="3" />
             <Limit name="performance-point-3840x2160" value="60" />
-            <Limit name="performance-point-4096x2160" value="60" />
             <Limit name="performance-point-4096x2304" value="60" />
         </MediaCodec>
         <MediaCodec name="OMX.qcom.video.decoder.mpeg2" type="video/mpeg2" >
@@ -417,7 +418,6 @@ Only the three quirks included above are recognized at this point:
             <Feature name="secure-playback" required="true" />
             <Limit name="concurrent-instances" max="3" />
             <Limit name="performance-point-3840x2160" value="60" />
-            <Limit name="performance-point-4096x2160" value="60" />
             <Limit name="performance-point-4096x2304" value="60" />
         </MediaCodec>
         <MediaCodec name="OMX.qcom.video.decoder.hevc" type="video/hevc" >
@@ -453,7 +453,6 @@ Only the three quirks included above are recognized at this point:
             <Feature name="secure-playback" required="true" />
             <Limit name="concurrent-instances" max="3" />
             <Limit name="performance-point-3840x2160" value="60" />
-            <Limit name="performance-point-4096x2160" value="60" />
             <Limit name="performance-point-4096x2304" value="60" />
         </MediaCodec>
         <!-- Video Software -->
