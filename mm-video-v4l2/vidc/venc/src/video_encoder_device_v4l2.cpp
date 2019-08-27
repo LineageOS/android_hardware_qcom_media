@@ -670,14 +670,17 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
 
     if (m_cvp_meta_enabled && cvpMetadata.size == CVP_METADATA_SIZE) {
         packet_size = sizeof(struct msm_vidc_extradata_header) - sizeof(unsigned int)
-                           + sizeof(struct msm_vidc_enc_cvp_metadata_payload);
+                           + cvpMetadata.size;
 
         if (filled_len + packet_size <= input_extradata_info.buffer_size) {
+            struct  msm_vidc_enc_cvp_metadata_payload *payload_cvp;
             data->nSize = ALIGN(packet_size, 4);
             data->nVersion.nVersion = OMX_SPEC_VERSION;
             data->nPortIndex = PORT_INDEX_IN;
             data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_CVP_METADATA;
-            data->nDataSize = sizeof(struct msm_vidc_enc_cvp_metadata_payload);
+            data->nDataSize = cvpMetadata.size;
+            payload_cvp = (struct  msm_vidc_enc_cvp_metadata_payload *)(data->data);
+            memcpy(payload_cvp->data, cvpMetadata.payload, cvpMetadata.size);
             filled_len += data->nSize;
             data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
         } else {
