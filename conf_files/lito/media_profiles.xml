@@ -111,7 +111,7 @@
     <EncoderProfile quality="high" fileFormat="mp4" duration="30">
       <Video codec="h264"
              bitRate="42000000"
-             width="4096"
+             width="3840"
              height="2160"
              frameRate="30" />
 
@@ -281,7 +281,7 @@
     <EncoderProfile quality="timelapsehigh" fileFormat="mp4" duration="30">
       <Video codec="h264"
              bitRate="42000000"
-             width="4096"
+             width="3840"
              height="2160"
              frameRate="30" />
 
@@ -470,7 +470,7 @@
     <EncoderProfile quality="high" fileFormat="mp4" duration="30">
       <Video codec="h264"
              bitRate="42000000"
-             width="4096"
+             width="3840"
              height="2160"
              frameRate="30" />
 
@@ -633,7 +633,7 @@
     <EncoderProfile quality="timelapsehigh" fileFormat="mp4" duration="30">
       <Video codec="h264"
              bitRate="42000000"
-             width="4096"
+             width="3840"
              height="2160"
              frameRate="30" />
 
@@ -1120,7 +1120,7 @@
     <EncoderProfile quality="high" fileFormat="mp4" duration="30">
       <Video codec="h264"
              bitRate="42000000"
-             width="4096"
+             width="3840"
              height="2160"
              frameRate="30" />
 
@@ -1290,7 +1290,7 @@
     <EncoderProfile quality="timelapsehigh" fileFormat="mp4" duration="30">
       <Video codec="h264"
              bitRate="42000000"
-             width="4096"
+             width="3840"
              height="2160"
              frameRate="30" />
 
@@ -1480,7 +1480,7 @@
     <EncoderProfile quality="high" fileFormat="mp4" duration="30">
       <Video codec="h264"
              bitRate="42000000"
-             width="4096"
+             width="3840"
              height="2160"
              frameRate="30" />
 
@@ -1650,7 +1650,7 @@
     <EncoderProfile quality="timelapsehigh" fileFormat="mp4" duration="30">
       <Video codec="h264"
              bitRate="42000000"
-             width="4096"
+             width="3840"
              height="2160"
              frameRate="30" />
 
@@ -1840,7 +1840,7 @@
     <EncoderProfile quality="high" fileFormat="mp4" duration="30">
       <Video codec="h264"
              bitRate="42000000"
-             width="4096"
+             width="3840"
              height="2160"
              frameRate="30" />
 
@@ -2010,7 +2010,7 @@
     <EncoderProfile quality="timelapsehigh" fileFormat="mp4" duration="30">
       <Video codec="h264"
              bitRate="42000000"
-             width="4096"
+             width="3840"
              height="2160"
              frameRate="30" />
 
