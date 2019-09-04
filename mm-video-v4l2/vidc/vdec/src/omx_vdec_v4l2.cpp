@@ -5533,6 +5533,7 @@ OMX_ERRORTYPE  omx_vdec::get_config(OMX_IN OMX_HANDLETYPE      hComp,
                             break;
                         default:
                             DEBUG_PRINT_HIGH("Unknown perf level %d, reporting Nominal instead", control.value);
+                            [[fallthrough]];
                             /* Fall through */
                         case V4L2_CID_MPEG_VIDC_PERF_LEVEL_NOMINAL:
                             perf->ePerfLevel = OMX_QCOM_PerfLevelNominal;
