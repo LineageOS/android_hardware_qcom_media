@@ -1703,8 +1703,13 @@ bool venc_dev::venc_open(OMX_U32 codec)
         idrperiod.idrperiod = 1;
         minqp = 0;
         maxqp = 51;
-        if (codec == OMX_VIDEO_CodingImageHEIC)
+        if (codec == OMX_VIDEO_CodingImageHEIC) {
+            m_sVenc_cfg.input_width = DEFAULT_TILE_DIMENSION;
+            m_sVenc_cfg.input_height = DEFAULT_TILE_DIMENSION;
+            m_sVenc_cfg.dvs_width = DEFAULT_TILE_DIMENSION;
+            m_sVenc_cfg.dvs_height = DEFAULT_TILE_DIMENSION;
             codec_profile.profile = V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN_STILL_PIC;
+        }
         else
             codec_profile.profile = V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN;
         profile_level.level = V4L2_MPEG_VIDC_VIDEO_HEVC_LEVEL_MAIN_TIER_LEVEL_1;
@@ -1794,6 +1799,18 @@ bool venc_dev::venc_open(OMX_U32 codec)
 
     ret = ioctl(m_nDriver_fd, VIDIOC_S_FMT, &fmt);
     m_sInput_buff_property.datasize=fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
+
+    if (m_codec == OMX_VIDEO_CodingImageHEIC) {
+        if (!venc_set_grid_enable()) {
+            DEBUG_PRINT_ERROR("Failed to enable grid");
+            return false;
+        }
+
+        if (!venc_set_ratectrl_cfg(OMX_Video_ControlRateConstantQuality)) {
+            DEBUG_PRINT_ERROR("Failed to set rate control:CQ");
+            return false;
+        }
+    }
 
     bufreq.memory = V4L2_MEMORY_USERPTR;
     bufreq.count = 2;
@@ -2545,17 +2562,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
             }
         case (OMX_INDEXTYPE)OMX_IndexParamVideoAndroidImageGrid:
             {
-                DEBUG_PRINT_LOW("venc_set_param: OMX_IndexParamVideoAndroidImageGrid");
-
-                if (m_codec != OMX_VIDEO_CodingImageHEIC) {
-                    DEBUG_PRINT_ERROR("OMX_IndexParamVideoAndroidImageGrid is only set for HEIC (HW tiling)");
-                    return true;
-                }
-
-                if (!venc_set_grid_enable()) {
-                    DEBUG_PRINT_ERROR("ERROR: Failed to set grid-enable");
-                    return false;
-                }
+                DEBUG_PRINT_LOW("venc_set_param: OMX_IndexParamVideoAndroidImageGrid. Ignore!");
                 break;
             }
         case OMX_IndexParamVideoIntraRefresh:
