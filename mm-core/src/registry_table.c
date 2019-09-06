@@ -83,7 +83,7 @@ omx_core_cb_type core[] =
     OMX_REGISTRY_ENTRY("OMX.qti.vdec.vpp", "libOmxVpp.so", "video_decoder.vpp"),
 #endif //_STEPPE_ || _ATOLL_
 
-#if !defined(_ATOLL_) || !defined(_TRINKET)
+#if !defined(_ATOLL_) && !defined(_TRINKET_)
     OMX_REGISTRY_ENTRY("OMX.qti.video.decoder.vc1sw", "libOmxSwVdec.so", "video_decoder.vc1"),
     OMX_REGISTRY_ENTRY("OMX.qti.video.decoder.wmvsw", "libOmxSwVdec.so", "video_decoder.vc1"),
 #endif //_ATOLL_ || _TRINKET_
