@@ -88,15 +88,11 @@ libmm-vdec-inc          += $(call project-path-for,qcom-media)/libc2dcolorconver
 libmm-vdec-inc          += $(call project-path-for,qcom-media)/hypv-intercept
 libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/mm-video/SwVdec
 libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/mm-video/swvdec
-libmm-vdec-inc          += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 
 ifeq ($(PLATFORM_SDK_VERSION), 18)  #JB_MR2
 libmm-vdec-def += -DANDROID_JELLYBEAN_MR2=1
 libmm-vdec-inc += $(call project-path-for,qcom-media)/libstagefrighthw
 endif
-
-# Common Dependencies
-libmm-vdec-add-dep := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 ifeq ($(call is-platform-sdk-version-at-least, 19),true)
 # This feature is enabled for Android KK+
@@ -140,10 +136,10 @@ LOCAL_HEADER_LIBRARIES := \
         libnativebase_headers \
         libutils_headers \
         libhardware_headers \
-        display_headers
+        display_headers \
+        generated_kernel_headers
 
 LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
-LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-vdec-add-dep)
 
 LOCAL_PRELINK_MODULE    := false
 LOCAL_SHARED_LIBRARIES  := liblog libcutils libdl libqdutils
@@ -179,10 +175,10 @@ LOCAL_HEADER_LIBRARIES := \
         media_plugin_headers \
         libnativebase_headers \
         libutils_headers \
-        libhardware_headers
+        libhardware_headers \
+        generated_kernel_headers
 
 LOCAL_C_INCLUDES              += $(libmm-vdec-inc)
-LOCAL_ADDITIONAL_DEPENDENCIES := $(libmm-vdec-add-dep)
 
 LOCAL_PRELINK_MODULE          := false
 LOCAL_SHARED_LIBRARIES        := liblog libcutils
