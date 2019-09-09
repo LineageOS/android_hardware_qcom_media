@@ -502,8 +502,8 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     m_sParamAndroidImageGrid.bEnabled = OMX_FALSE;
     m_sParamAndroidImageGrid.nTileWidth = DEFAULT_TILE_DIMENSION;
     m_sParamAndroidImageGrid.nTileHeight = DEFAULT_TILE_DIMENSION;
-    m_sParamAndroidImageGrid.nGridRows = DEFAULT_TILE_COUNT;
-    m_sParamAndroidImageGrid.nGridCols = DEFAULT_TILE_COUNT;
+    m_sParamAndroidImageGrid.nGridRows = DEFAULT_TILE_ROWS;
+    m_sParamAndroidImageGrid.nGridCols = DEFAULT_TILE_COLS;
 
     OMX_INIT_STRUCT(&m_sParamLTRCount, QOMX_VIDEO_PARAM_LTRCOUNT_TYPE);
     m_sParamLTRCount.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
@@ -914,15 +914,7 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             }
         case OMX_IndexParamVideoAndroidImageGrid:
             {
-                VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_ANDROID_IMAGEGRIDTYPE);
-                DEBUG_PRINT_LOW("set_param:OMX_IndexParamVideoAndroidImageGrid");
-                OMX_VIDEO_PARAM_ANDROID_IMAGEGRIDTYPE* pParam =
-                    (OMX_VIDEO_PARAM_ANDROID_IMAGEGRIDTYPE*)paramData;
-                if (!handle->venc_set_param(paramData, (OMX_INDEXTYPE)OMX_IndexParamVideoAndroidImageGrid)) {
-                    DEBUG_PRINT_ERROR("ERROR: Request for setting image grid failed");
-                    return OMX_ErrorUnsupportedSetting;
-                }
-                memcpy(&m_sParamAndroidImageGrid, pParam, sizeof(m_sParamAndroidImageGrid));
+                DEBUG_PRINT_LOW("set_param:OMX_IndexParamVideoAndroidImageGrid. Ignore!");
                 break;
             }
         case OMX_IndexParamVideoProfileLevelCurrent:
