@@ -56,6 +56,7 @@
 #define ALIGN256 256
 #define ALIGN128 128
 #define ALIGN32 32
+#define ALIGN64 64
 #define ALIGN16 16
 
 #define ADRENO_PIXELFORMAT_R8G8B8A8 28
@@ -112,6 +113,8 @@ enum ColorConvertFormat {
     NV12_UBWC,
     TP10_UBWC,
     YCbCr420_VENUS_P010,
+    P010,
+    VENUS_P010,
     NO_COLOR_FORMAT
 };
 
