@@ -176,13 +176,14 @@ class omx_video: public qc_omx_component
                 ~omx_c2d_conv();
                 bool init();
                 bool open(unsigned int height,unsigned int width,
-                        ColorConvertFormat src,
-                        ColorConvertFormat dest,unsigned int src_stride);
+                        ColorConvertFormat src, ColorConvertFormat dest,
+                        unsigned int src_stride, unsigned int flags);
                 bool convert(int src_fd, void *src_base, void *src_viraddr,
                         int dest_fd, void *dest_base, void *dest_viraddr);
                 bool get_buffer_size(int port,unsigned int &buf_size);
                 int get_src_format();
                 void close();
+                bool isUBWCChanged(unsigned int flags);
             private:
                 C2DColorConverterBase *c2dcc;
                 pthread_mutex_t c_lock;
@@ -190,6 +191,7 @@ class omx_video: public qc_omx_component
                 ColorConvertFormat src_format;
                 createC2DColorConverter_t *mConvertOpen;
                 destroyC2DColorConverter_t *mConvertClose;
+                unsigned int mFlags = 0;
         };
         omx_c2d_conv c2d_conv;
 #endif
@@ -564,7 +566,7 @@ class omx_video: public qc_omx_component
         }
 
         void complete_pending_buffer_done_cbs();
-        bool is_conv_needed(int, int);
+        bool is_conv_needed(int);
         void print_debug_color_aspects(ColorAspects *aspects, const char *prefix);
 
         OMX_ERRORTYPE get_vendor_extension_config(
