@@ -267,6 +267,7 @@ Only the three quirks included above are recognized at this point:
             <Limit name="concurrent-instances" max="6" />
             <Limit name="quality" range="0-100" default="80" />
             <Feature name="bitrate-modes" value="CQ" />
+            <Limit name="performance-point-none" value="0" />
         </MediaCodec>
         <!-- Video Software -->
         <MediaCodec name="OMX.qcom.video.encoder.h263sw" type="video/3gpp" >
