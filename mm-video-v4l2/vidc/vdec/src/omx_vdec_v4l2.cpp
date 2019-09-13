@@ -3142,7 +3142,7 @@ OMX_ERRORTYPE  omx_vdec::send_command_proxy(OMX_IN OMX_HANDLETYPE hComp,
                struct timespec ts;
 
                clock_gettime(CLOCK_REALTIME, &ts);
-               ts.tv_sec += 2;
+               ts.tv_sec += 1;
                DEBUG_PRINT_LOW("waiting for %d EBDs of CODEC CONFIG buffers ",
                        m_queued_codec_config_count);
                BITMASK_SET(&m_flags, OMX_COMPONENT_FLUSH_DEFERRED);
@@ -12809,9 +12809,9 @@ bool omx_vdec::allocate_color_convert_buf::get_color_format(OMX_COLOR_FORMATTYPE
 
 void omx_vdec::send_codec_config() {
     if (codec_config_flag) {
-        unsigned long p1 = 0; // Parameter - 1
-        unsigned long p2 = 0; // Parameter - 2
-        unsigned long ident = 0;
+        unsigned long p1 = 0, p2 = 0;
+        unsigned long p3 = 0, p4 = 0;
+        unsigned long ident = 0, ident2 = 0;
         pthread_mutex_lock(&m_lock);
         DEBUG_PRINT_LOW("\n Check Queue for codec_config buffer \n");
         while (m_etb_q.m_size) {
@@ -12829,6 +12829,21 @@ void omx_vdec::send_codec_config() {
                 }
             } else if (ident == OMX_COMPONENT_GENERATE_ETB) {
                 if (((OMX_BUFFERHEADERTYPE *)p2)->nFlags & OMX_BUFFERFLAG_CODECCONFIG) {
+                    while (m_ftb_q.m_size) {
+                        m_ftb_q.pop_entry(&p3,&p4,&ident2);
+                        if (ident2 == OMX_COMPONENT_GENERATE_FTB) {
+                            pthread_mutex_unlock(&m_lock);
+                            if (fill_this_buffer_proxy((OMX_HANDLETYPE)p3,\
+                                        (OMX_BUFFERHEADERTYPE *)p4) != OMX_ErrorNone) {
+                                DEBUG_PRINT_ERROR("\n fill_this_buffer_proxy failure");
+                                omx_report_error ();
+                            }
+                            pthread_mutex_lock(&m_lock);
+                        } else if (ident2 == OMX_COMPONENT_GENERATE_FBD) {
+                            fill_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p3);
+                        }
+                    }
+                    pthread_mutex_unlock(&m_lock);
                     if (empty_this_buffer_proxy((OMX_HANDLETYPE)p1,\
                                 (OMX_BUFFERHEADERTYPE *)p2) != OMX_ErrorNone) {
                         DEBUG_PRINT_ERROR("\n empty_this_buffer_proxy failure");
