@@ -1814,13 +1814,6 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
             return false;
         }
 
-        /* Need more buffers for HFR usecase */
-        if (operating_rate >= 120 || (m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) >= 120) {
-            minCount = MAX(minCount, 16);
-            DEBUG_PRINT_HIGH("fps %d, operating rate %d, input min count %d",
-                   (int)(m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den), operating_rate, minCount);
-        }
-
         // Request MAX_V4L2_BUFS from V4L2 in batch mode.
         // Keep the original count for the client
         if (metadatamode && mBatchSize) {
@@ -1915,13 +1908,6 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
             // mBatchSize buffers
             minCount = MAX((unsigned int)control.value, mBatchSize) + mBatchSize;
             DEBUG_PRINT_LOW("set min count %d as mBatchSize %d", minCount, mBatchSize);
-        }
-
-        /* Need more buffers for HFR usecase */
-        if (operating_rate >= 120 || (m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) >= 120) {
-            minCount = MAX(minCount, 16);
-            DEBUG_PRINT_HIGH("fps %d, operating rate %d, output min count %d",
-                   (int)(m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den), operating_rate, minCount);
         }
 
         m_sOutput_buff_property.mincount = minCount;
