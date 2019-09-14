@@ -4795,7 +4795,6 @@ void omx_swvdec::ion_memory_free(struct vdec_ion *p_ion_buf_info)
         (unsigned int)p_ion_buf_info->alloc_data.heap_id_mask);
 
     if (p_ion_buf_info->data_fd >= 0) {
-        close(p_ion_buf_info->data_fd);
         p_ion_buf_info->data_fd = -1;
     }
 
