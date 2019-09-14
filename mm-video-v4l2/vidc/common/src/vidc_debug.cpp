@@ -50,18 +50,18 @@ void print_v4l2_buffer(const char *str, struct v4l2_buffer *v4l2)
             "%s: %s: idx %2d userptr %#lx fd %d off %d size %d filled %d flags %#x\n",
             str, v4l2->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE ?
             "OUTPUT" : "CAPTURE", v4l2->index,
-            v4l2->m.planes[0].m.userptr, v4l2->m.planes[0].reserved[0],
-            v4l2->m.planes[0].reserved[1], v4l2->m.planes[0].length,
+            v4l2->m.planes[0].m.userptr, v4l2->m.planes[0].reserved[MSM_VIDC_BUFFER_FD],
+            v4l2->m.planes[0].reserved[MSM_VIDC_DATA_OFFSET], v4l2->m.planes[0].length,
             v4l2->m.planes[0].bytesused, v4l2->flags);
     else
         DEBUG_PRINT_HIGH(
             "%s: %s: idx %2d userptr %#lx fd %d off %d size %d filled %d flags %#x, extradata: fd %d off %d size %d filled %d\n",
             str, v4l2->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE ?
             "OUTPUT" : "CAPTURE", v4l2->index,
-            v4l2->m.planes[0].m.userptr, v4l2->m.planes[0].reserved[0],
-            v4l2->m.planes[0].reserved[1], v4l2->m.planes[0].length,
-            v4l2->m.planes[0].bytesused, v4l2->m.planes[1].reserved[0],
-            v4l2->flags, v4l2->m.planes[1].reserved[1],
+            v4l2->m.planes[0].m.userptr, v4l2->m.planes[0].reserved[MSM_VIDC_BUFFER_FD],
+            v4l2->m.planes[0].reserved[MSM_VIDC_DATA_OFFSET], v4l2->m.planes[0].length,
+            v4l2->m.planes[0].bytesused, v4l2->m.planes[1].reserved[MSM_VIDC_BUFFER_FD],
+            v4l2->flags, v4l2->m.planes[1].reserved[MSM_VIDC_DATA_OFFSET],
             v4l2->m.planes[1].length, v4l2->m.planes[1].bytesused);
 }
 
