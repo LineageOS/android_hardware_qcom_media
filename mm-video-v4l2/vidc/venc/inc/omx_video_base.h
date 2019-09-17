@@ -215,6 +215,8 @@ static const char* MEM_DEVICE = "/dev/pmem_smipool";
 #define VEN_LEVEL_H263_70    0x1C/* H.263 Level 70  */
 #endif //_TARGET_KERNEL_VERSION_49_
 
+class omx_video;
+void post_message(omx_video *omx, unsigned char id);
 void* message_thread_enc(void *);
 
 enum omx_venc_extradata_types {
