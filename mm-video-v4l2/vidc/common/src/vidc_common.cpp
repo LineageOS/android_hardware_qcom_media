@@ -132,19 +132,6 @@ pl_map profile_level_converter::level_hevc_omx_to_v4l2 ({
             {OMX_VIDEO_HEVCMainTierLevel6,  V4L2_MPEG_VIDEO_HEVC_LEVEL_6},
             {OMX_VIDEO_HEVCMainTierLevel61, V4L2_MPEG_VIDEO_HEVC_LEVEL_6_1},
             {OMX_VIDEO_HEVCMainTierLevel62, V4L2_MPEG_VIDEO_HEVC_LEVEL_6_2},
-            {OMX_VIDEO_HEVCHighTierLevel1,  V4L2_MPEG_VIDEO_HEVC_LEVEL_1},
-            {OMX_VIDEO_HEVCHighTierLevel2,  V4L2_MPEG_VIDEO_HEVC_LEVEL_2},
-            {OMX_VIDEO_HEVCHighTierLevel21, V4L2_MPEG_VIDEO_HEVC_LEVEL_2_1},
-            {OMX_VIDEO_HEVCHighTierLevel3,  V4L2_MPEG_VIDEO_HEVC_LEVEL_3},
-            {OMX_VIDEO_HEVCHighTierLevel31, V4L2_MPEG_VIDEO_HEVC_LEVEL_3_1},
-            {OMX_VIDEO_HEVCHighTierLevel4,  V4L2_MPEG_VIDEO_HEVC_LEVEL_4},
-            {OMX_VIDEO_HEVCHighTierLevel41, V4L2_MPEG_VIDEO_HEVC_LEVEL_4_1},
-            {OMX_VIDEO_HEVCHighTierLevel5,  V4L2_MPEG_VIDEO_HEVC_LEVEL_5},
-            {OMX_VIDEO_HEVCHighTierLevel51, V4L2_MPEG_VIDEO_HEVC_LEVEL_5_1},
-            {OMX_VIDEO_HEVCHighTierLevel52, V4L2_MPEG_VIDEO_HEVC_LEVEL_5_2},
-            {OMX_VIDEO_HEVCHighTierLevel6,  V4L2_MPEG_VIDEO_HEVC_LEVEL_6},
-            {OMX_VIDEO_HEVCHighTierLevel61, V4L2_MPEG_VIDEO_HEVC_LEVEL_6_1},
-            {OMX_VIDEO_HEVCHighTierLevel62, V4L2_MPEG_VIDEO_HEVC_LEVEL_6_2},
         });
 
 pl_map profile_level_converter::level_hevc_v4l2_to_omx ({});
@@ -318,14 +305,14 @@ bool profile_level_converter::find_tier(int codec, int omx_level, unsigned int *
     return true;
 }
 
-bool profile_level_converter::convert_omx_level_to_v4l2(int codec, int omx_level, int *v4l2_level, unsigned int *tier)
+bool profile_level_converter::convert_omx_level_to_v4l2(int codec, int omx_level, int *v4l2_level)
 {
     pl_map *level_map;
 
     if (!find_map(level_omx_to_v4l2_map, codec, &level_map))
         return false;
 
-    return find_item(*level_map, omx_level, v4l2_level) && find_tier(codec, omx_level, tier);
+    return find_item(*level_map, omx_level, v4l2_level);
 }
 
 void get_gralloc_format_as_string(char * buf, int buf_len, int format) {

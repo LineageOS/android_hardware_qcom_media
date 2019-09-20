@@ -1235,6 +1235,7 @@ bool venc_dev::venc_set_level(OMX_U32 eLevel)
     int rc;
     struct v4l2_control control;
     unsigned int tier = V4L2_MPEG_VIDEO_HEVC_TIER_HIGH;
+    OMX_U32 omx_profile_level = eLevel;
 
     DEBUG_PRINT_LOW("venc_set_level:: eLevel = %u",
                     (unsigned int)eLevel);
@@ -1244,8 +1245,16 @@ bool venc_dev::venc_set_level(OMX_U32 eLevel)
                     (unsigned int)eLevel );
         return true;
 	}
-
-	if (!profile_level_converter::convert_omx_level_to_v4l2(m_sVenc_cfg.codectype, eLevel, &control.value, &tier)) {
+    if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
+        if(!profile_level_converter::find_tier(m_sVenc_cfg.codectype, eLevel, &tier)) {
+            DEBUG_PRINT_ERROR("Failed to find HEVC v4l2 level tier for OMX level : %d", eLevel);
+            return true;
+        }
+        /* HEVC high tier profile levels are mapped to same V4L2 profile levels as main tier profile levels */
+        if (tier == V4L2_MPEG_VIDEO_HEVC_TIER_HIGH)
+            omx_profile_level = eLevel >> 1;
+    }
+	if (!profile_level_converter::convert_omx_level_to_v4l2(m_sVenc_cfg.codectype, omx_profile_level, &control.value)) {
         DEBUG_PRINT_ERROR("Failed to find v4l2 level for OMX level : %d" \
                         " Codec : %lu", eLevel, m_sVenc_cfg.codectype);
         return true;
