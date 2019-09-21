@@ -4501,15 +4501,15 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                     }
                                     enum vdec_output_format op_format;
                                     if (portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
-                                                     QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m ||
-                                        portFmt->eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar) {
+                                                     QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m) {
                                         op_format = (enum vdec_output_format)VDEC_YUV_FORMAT_NV12;
                                         fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12;
                                         //check if the required color format is a supported flexible format
                                         is_flexible_format = check_supported_flexible_formats(portFmt->eColorFormat);
                                     } else if (portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
                                                    QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed ||
-                                               portFmt->eColorFormat == OMX_COLOR_FormatYUV420Planar) {
+                                               portFmt->eColorFormat == OMX_COLOR_FormatYUV420Planar ||
+                                        portFmt->eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar) {
                                         op_format = (enum vdec_output_format)VDEC_YUV_FORMAT_NV12_UBWC;
                                         fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12_UBWC;
                                         //check if the required color format is a supported flexible format
