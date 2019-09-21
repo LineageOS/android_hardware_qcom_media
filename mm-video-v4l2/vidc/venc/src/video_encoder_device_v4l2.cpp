@@ -2134,25 +2134,6 @@ unsigned venc_dev::venc_start(void)
     venc_reconfig_reqbufs();
     resume_in_stopped = 0;
 
-    if (m_codec == OMX_VIDEO_CodingImageHEIC && mIsGridset) {
-        struct v4l2_format fmt;
-        memset(&fmt, 0, sizeof(fmt));
-        fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-        fmt.fmt.pix_mp.height = DEFAULT_TILE_DIMENSION;
-        fmt.fmt.pix_mp.width = DEFAULT_TILE_DIMENSION;
-        fmt.fmt.pix_mp.pixelformat = m_sVenc_cfg.codectype;
-        DEBUG_PRINT_INFO("set format type %d, wxh %dx%d, pixelformat %#x",
-            fmt.type, fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height,
-            fmt.fmt.pix_mp.pixelformat);
-        if (ioctl(m_nDriver_fd, VIDIOC_S_FMT, &fmt)) {
-            DEBUG_PRINT_ERROR("set format failed, type %d, wxh %dx%d, pixelformat %#x",
-                fmt.type, fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height,
-                fmt.fmt.pix_mp.pixelformat);
-            hw_overload = errno == EBUSY;
-            return false;
-        }
-    }
-
     buf_type=V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     DEBUG_PRINT_LOW("send_command_proxy(): Idle-->Executing");
     ret=ioctl(m_nDriver_fd, VIDIOC_STREAMON,&buf_type);
