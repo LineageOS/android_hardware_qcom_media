@@ -851,7 +851,7 @@ class omx_vdec: public qc_omx_component
         void adjust_timestamp(OMX_S64 &act_timestamp);
         void set_frame_rate(OMX_S64 act_timestamp);
         bool handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr);
-        void convert_color_space_info(OMX_U32 primaries, OMX_U32 range,
+        void convert_color_space_info(OMX_U32 primaries,
             OMX_U32 transfer, OMX_U32 matrix,
             ColorAspects *aspects);
         bool handle_color_space_info(void *data);

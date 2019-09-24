@@ -7472,7 +7472,7 @@ void omx_vdec::set_frame_rate(OMX_S64 act_timestamp)
     prev_ts = act_timestamp;
 }
 
-void omx_vdec::convert_color_space_info(OMX_U32 primaries, OMX_U32 range,
+void omx_vdec::convert_color_space_info(OMX_U32 primaries,
     OMX_U32 transfer, OMX_U32 matrix, ColorAspects *aspects)
 {
     switch (primaries) {
@@ -7501,8 +7501,6 @@ void omx_vdec::convert_color_space_info(OMX_U32 primaries, OMX_U32 range,
             aspects->mPrimaries = m_client_color_space.sAspects.mPrimaries;
             break;
     }
-
-    aspects->mRange = range ? ColorAspects::RangeFull : ColorAspects::RangeLimited;
 
     switch (transfer) {
         case MSM_VIDC_TRANSFER_BT709_5:
@@ -7586,7 +7584,7 @@ bool omx_vdec::handle_color_space_info(void *data)
 
                 if (seqdisp_payload && seqdisp_payload->color_descp) {
 
-                    convert_color_space_info(seqdisp_payload->color_primaries, 0,
+                    convert_color_space_info(seqdisp_payload->color_primaries,
                             seqdisp_payload->transfer_char, seqdisp_payload->matrix_coeffs,
                             aspects);
                     /* MPEG2 seqdisp payload doesn't give range info. Hence assing the value
@@ -7601,17 +7599,20 @@ bool omx_vdec::handle_color_space_info(void *data)
         case V4L2_PIX_FMT_HEVC:
             {
                 struct msm_vidc_vui_display_info_payload *display_info_payload;
+                OMX_U32 range;
                 display_info_payload = (struct msm_vidc_vui_display_info_payload*)data;
 
                 /* Refer H264 Spec @ Rec. ITU-T H.264 (02/2014) to understand this code */
 
-                if (display_info_payload->video_signal_present_flag &&
-                        display_info_payload->color_description_present_flag) {
-                    convert_color_space_info(display_info_payload->color_primaries,
-                            display_info_payload->video_full_range_flag,
-                            display_info_payload->transfer_char,
-                            display_info_payload->matrix_coeffs,
-                            aspects);
+                if (display_info_payload->video_signal_present_flag) {
+                    range = display_info_payload->video_full_range_flag;
+                    aspects->mRange = range ? ColorAspects::RangeFull : ColorAspects::RangeLimited;
+                    if (display_info_payload->color_description_present_flag) {
+                        convert_color_space_info(display_info_payload->color_primaries,
+                                display_info_payload->transfer_char,
+                                display_info_payload->matrix_coeffs,
+                                aspects);
+                    }
                 }
             }
             break;
