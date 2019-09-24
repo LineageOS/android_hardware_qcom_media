@@ -480,6 +480,9 @@ bool venc_dev::venc_store_dynamic_config(OMX_INDEXTYPE config_type, OMX_PTR conf
         case OMX_IndexConfigVideoVp8ReferenceFrame:
             memcpy(&newConfig.config_data.vp8refframe, config, sizeof(OMX_VIDEO_VP8REFERENCEFRAMETYPE));
             break;
+        case OMX_IndexConfigCommonMirror:
+            memcpy(&newConfig.config_data.mirror, config, sizeof(OMX_CONFIG_MIRRORTYPE));
+            break;
         default:
             DEBUG_PRINT_INFO("Unsupported dynamic config.");
             return false;

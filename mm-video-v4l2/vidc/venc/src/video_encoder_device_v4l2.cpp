@@ -616,6 +616,11 @@ bool venc_dev::handle_dynamic_config(OMX_BUFFERHEADERTYPE *bufferHdr)
                 if (!venc_config_bitrate(&iter->config_data.bitrate))
                     goto bailout;
                 break;
+            case OMX_IndexConfigCommonMirror:
+                DEBUG_PRINT_LOW("handle_dynamic_config: OMX_IndexConfigCommonMirror");
+                if (!venc_set_mirror(iter->config_data.mirror.eMirror))
+                    goto bailout;
+                break;
             default:
                 DEBUG_PRINT_ERROR("Unsupported dynamic config type %d with timestamp %lld us", iter->type, iter->timestamp);
                 goto bailout;
