@@ -525,6 +525,7 @@ class venc_dev
             QOMX_VIDEO_INTRAPERIODTYPE intraperiod;
             OMX_CONFIG_INTRAREFRESHVOPTYPE intravoprefresh;
             OMX_CONFIG_ROTATIONTYPE rotation;
+            OMX_CONFIG_MIRRORTYPE mirror;
             OMX_VIDEO_VP8REFERENCEFRAMETYPE vp8refframe;
             OMX_QCOM_VIDEO_CONFIG_LTRMARK_TYPE markltr;
             OMX_QCOM_VIDEO_CONFIG_LTRUSE_TYPE useltr;
