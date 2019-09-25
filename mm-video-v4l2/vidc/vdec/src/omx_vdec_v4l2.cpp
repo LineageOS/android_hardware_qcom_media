@@ -206,15 +206,15 @@ void* async_message_thread (void *input)
 
                 vdec_msg.msgcode=VDEC_MSG_EVT_CONFIG_CHANGED;
                 vdec_msg.status_code=VDEC_S_SUCCESS;
-                vdec_msg.msgdata.output_frame.picsize.frame_height = ptr[0];
-                vdec_msg.msgdata.output_frame.picsize.frame_width = ptr[1];
+                vdec_msg.msgdata.output_frame.picsize.frame_height = ptr[MSM_VIDC_HEIGHT];
+                vdec_msg.msgdata.output_frame.picsize.frame_width = ptr[MSM_VIDC_WIDTH];
                 vdec_msg.msgdata.output_frame.flags = true; // INSUFFICIENT event
                 DEBUG_PRINT_HIGH("VIDC Port Reconfig received insufficient");
-                omx->dpb_bit_depth = ptr[2];
-                DEBUG_PRINT_HIGH("VIDC Port Reconfig Bitdepth - %d", ptr[2]);
-                omx->m_progressive = ptr[3];
-                DEBUG_PRINT_HIGH("VIDC Port Reconfig PicStruct - %d", ptr[3]);
-                omx->m_color_space = (ptr[4] == MSM_VIDC_BT2020 ? (omx_vdec::BT2020):
+                omx->dpb_bit_depth = ptr[MSM_VIDC_BIT_DEPTH];
+                DEBUG_PRINT_HIGH("VIDC Port Reconfig Bitdepth - %d", ptr[MSM_VIDC_BIT_DEPTH]);
+                omx->m_progressive = ptr[MSM_VIDC_PIC_STRUCT];
+                DEBUG_PRINT_HIGH("VIDC Port Reconfig PicStruct - %d", ptr[MSM_VIDC_PIC_STRUCT]);
+                omx->m_color_space = (ptr[MSM_VIDC_COLOR_SPACE] == MSM_VIDC_BT2020 ? (omx_vdec::BT2020):
                                       (omx_vdec:: EXCEPT_BT2020));
                 DEBUG_PRINT_HIGH("VIDC Port Reconfig ColorSpace - %d", omx->m_color_space);
                 if (omx->async_message_process(input,&vdec_msg) < 0) {
@@ -2449,7 +2449,7 @@ OMX_ERRORTYPE  omx_vdec::send_command_proxy(OMX_IN OMX_HANDLETYPE hComp,
                struct timespec ts;
 
                clock_gettime(CLOCK_REALTIME, &ts);
-               ts.tv_sec += 2;
+               ts.tv_sec += 1;
                DEBUG_PRINT_LOW("waiting for %d EBDs of CODEC CONFIG buffers ",
                        m_queued_codec_config_count);
                BITMASK_SET(&m_flags, OMX_COMPONENT_FLUSH_DEFERRED);
@@ -2828,15 +2828,16 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
                             QOMX_VIDEO_AVCProfileMain,
                             QOMX_VIDEO_AVCProfileConstrainedHigh,
                             QOMX_VIDEO_AVCProfileHigh };
-    int hevc_profiles[4] = { OMX_VIDEO_HEVCProfileMain,
+    int hevc_profiles[5] = { OMX_VIDEO_HEVCProfileMain,
                              OMX_VIDEO_HEVCProfileMain10,
+                             OMX_VIDEO_HEVCProfileMainStill,
                              OMX_VIDEO_HEVCProfileMain10HDR10,
                              OMX_VIDEO_HEVCProfileMain10HDR10Plus };
     int mpeg2_profiles[2] = { OMX_VIDEO_MPEG2ProfileSimple,
                               OMX_VIDEO_MPEG2ProfileMain};
     int vp9_profiles[3] = { OMX_VIDEO_VP9Profile0,
                             OMX_VIDEO_VP9Profile2,
-                            OMX_VIDEO_VP9Profile2HDR};
+                            OMX_VIDEO_VP9Profile2HDR };
 
     if (!profileLevelType)
         return OMX_ErrorBadParameter;
@@ -2949,39 +2950,9 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
     /* Check if the profile is supported by driver or not  */
     /* During query caps of profile driver sends a mask of */
     /* of all v4l2 profiles supported(in the flags field)  */
-    if((output_capability != V4L2_PIX_FMT_HEVC) &&
-         (output_capability != V4L2_PIX_FMT_VP9)) {
-        if (!profile_level_converter::convert_omx_profile_to_v4l2(output_capability, profileLevelType->eProfile, &v4l2_profile)) {
-            DEBUG_PRINT_ERROR("Invalid profile, cannot find corresponding omx profile");
-            return OMX_ErrorHardware;
-        }
-    }else if(output_capability == V4L2_PIX_FMT_HEVC) { //convert omx profile to v4l2 profile for HEVC Main10 and Main10HDR10 profiles,seperately
-        switch (profileLevelType->eProfile) {
-            case OMX_VIDEO_HEVCProfileMain:
-                v4l2_profile = V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN;
-                break;
-            case OMX_VIDEO_HEVCProfileMain10:
-            case OMX_VIDEO_HEVCProfileMain10HDR10:
-            case OMX_VIDEO_HEVCProfileMain10HDR10Plus:
-                v4l2_profile = V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_10;
-                break;
-            default:
-                DEBUG_PRINT_ERROR("Invalid profile, cannot find corresponding omx profile");
-                return OMX_ErrorHardware;
-        }
-    }else { //convert omx profile to v4l2 profile for VP9 Profile2 and VP9 Profile2HDR profiles,seperately
-        switch (profileLevelType->eProfile) {
-            case OMX_VIDEO_VP9Profile0:
-                v4l2_profile = V4L2_MPEG_VIDEO_VP9_PROFILE_0;
-                break;
-            case OMX_VIDEO_VP9Profile2:
-            case OMX_VIDEO_VP9Profile2HDR:
-                v4l2_profile = V4L2_MPEG_VIDEO_VP9_PROFILE_2;
-                break;
-            default:
-                DEBUG_PRINT_ERROR("Invalid profile, cannot find corresponding omx profile");
-                return OMX_ErrorHardware;
-        }
+    if (!profile_level_converter::convert_omx_profile_to_v4l2(output_capability, profileLevelType->eProfile, &v4l2_profile)) {
+        DEBUG_PRINT_ERROR("Invalid profile, cannot find corresponding omx profile");
+        return OMX_ErrorHardware;
     }
     if(!((profile_cap.flags >> v4l2_profile) & 0x1)) {
         DEBUG_PRINT_ERROR("%s: Invalid index corresponding profile not supported : %d ",__FUNCTION__, profileLevelType->eProfile);
@@ -5145,10 +5116,10 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
     plane.length = drv_ctx.ip_buf.buffer_size;
     plane.m.userptr = (unsigned long)temp_buffer->bufferaddr -
         (unsigned long)temp_buffer->offset;
-    plane.reserved[0] = temp_buffer->pmem_fd;
-    plane.reserved[1] = temp_buffer->offset;
-    plane.reserved[3] = (unsigned long)buffer->pMarkData;
-    plane.reserved[4] = (unsigned long)buffer->hMarkTargetComponent;
+    plane.reserved[MSM_VIDC_BUFFER_FD] = temp_buffer->pmem_fd;
+    plane.reserved[MSM_VIDC_DATA_OFFSET] = temp_buffer->offset;
+    plane.reserved[MSM_VIDC_INPUT_TAG_1] = (unsigned long)buffer->pMarkData;
+    plane.reserved[MSM_VIDC_INPUT_TAG_2] = (unsigned long)buffer->hMarkTargetComponent;
     plane.data_offset = 0;
     buf.m.planes = &plane;
     buf.length = 1;
@@ -5405,8 +5376,8 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
     plane[0].m.userptr =
         (unsigned long)omx_ptr_outputbuffer[bufIndex].bufferaddr -
         (unsigned long)omx_ptr_outputbuffer[bufIndex].offset;
-    plane[0].reserved[0] = omx_ptr_outputbuffer[bufIndex].pmem_fd;
-    plane[0].reserved[1] = omx_ptr_outputbuffer[bufIndex].offset;
+    plane[0].reserved[MSM_VIDC_BUFFER_FD] = omx_ptr_outputbuffer[bufIndex].pmem_fd;
+    plane[0].reserved[MSM_VIDC_DATA_OFFSET] = omx_ptr_outputbuffer[bufIndex].offset;
     plane[0].data_offset = 0;
     extra_idx = EXTRADATA_IDX(drv_ctx.num_planes);
     if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
@@ -5414,9 +5385,9 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
         plane[extra_idx].length = drv_ctx.extradata_info.buffer_size;
         plane[extra_idx].m.userptr = (long unsigned int)drv_ctx.extradata_info.ion[bufIndex].uaddr;
 #ifdef USE_ION
-        plane[extra_idx].reserved[0] = drv_ctx.extradata_info.ion[bufIndex].data_fd;
+        plane[extra_idx].reserved[MSM_VIDC_BUFFER_FD] = drv_ctx.extradata_info.ion[bufIndex].data_fd;
 #endif
-        plane[extra_idx].reserved[1] = 0;
+        plane[extra_idx].reserved[MSM_VIDC_DATA_OFFSET] = 0;
         plane[extra_idx].data_offset = 0;
     } else if (extra_idx >= VIDEO_MAX_PLANES) {
         DEBUG_PRINT_ERROR("Extradata index higher than expected: %u", extra_idx);
@@ -6390,8 +6361,8 @@ int omx_vdec::async_message_process (void *context, void* message)
                    (((struct vdec_output_frameinfo *)omxhdr->pOutputPortPrivate
                      - omx_ptr_respbuffer) < (int)omx->drv_ctx.op_buf.actualcount)) {
 
-               omxhdr->pMarkData = (OMX_PTR)(unsigned long)plane[0].reserved[3];
-               omxhdr->hMarkTargetComponent = (OMX_HANDLETYPE)(unsigned long)plane[0].reserved[4];
+               omxhdr->pMarkData = (OMX_PTR)(unsigned long)plane[0].reserved[MSM_VIDC_INPUT_TAG_1];
+               omxhdr->hMarkTargetComponent = (OMX_HANDLETYPE)(unsigned long)plane[0].reserved[MSM_VIDC_INPUT_TAG_2];
 
                if (vdec_msg->msgdata.output_frame.len <=  omxhdr->nAllocLen) {
                    omxhdr->nFilledLen = vdec_msg->msgdata.output_frame.len;
@@ -6449,23 +6420,6 @@ int omx_vdec::async_message_process (void *context, void* message)
                            vdec_msg->msgdata.output_frame.framesize.bottom = omx->m_extradata_misr.output_crop_rect.nHeight;
                            vdec_msg->msgdata.output_frame.picsize.frame_width = omx->m_extradata_misr.output_width;
                            vdec_msg->msgdata.output_frame.picsize.frame_height = omx->m_extradata_misr.output_height;
-                       } else {
-                           DEBUG_PRINT_LOW("Read FBD crop from v4l2 reserved fields");
-                           vdec_msg->msgdata.output_frame.framesize.left = plane[0].reserved[2];
-                           vdec_msg->msgdata.output_frame.framesize.top = plane[0].reserved[3];
-                           vdec_msg->msgdata.output_frame.framesize.right = plane[0].reserved[2] + plane[0].reserved[4];
-                           vdec_msg->msgdata.output_frame.framesize.bottom = plane[0].reserved[3] + plane[0].reserved[5];
-                           vdec_msg->msgdata.output_frame.picsize.frame_width = plane[0].reserved[6];
-                           vdec_msg->msgdata.output_frame.picsize.frame_height = plane[0].reserved[7];
-
-                           /* Copy these values back to OMX internal variables to make both handlign same*/
-
-                           omx->m_extradata_misr.output_crop_rect.nLeft = vdec_msg->msgdata.output_frame.framesize.left;
-                           omx->m_extradata_misr.output_crop_rect.nTop = vdec_msg->msgdata.output_frame.framesize.top;
-                           omx->m_extradata_misr.output_crop_rect.nWidth = vdec_msg->msgdata.output_frame.framesize.right;
-                           omx->m_extradata_misr.output_crop_rect.nHeight = vdec_msg->msgdata.output_frame.framesize.bottom;
-                           omx->m_extradata_misr.output_width = vdec_msg->msgdata.output_frame.picsize.frame_width;
-                           omx->m_extradata_misr.output_height = vdec_msg->msgdata.output_frame.picsize.frame_height;
                        }
                    }
 
@@ -8711,15 +8665,29 @@ bool omx_vdec::allocate_color_convert_buf::get_color_format(OMX_COLOR_FORMATTYPE
 void omx_vdec::send_codec_config()
 {
     if (codec_config_flag) {
-        unsigned long p1 = 0; // Parameter - 1
-        unsigned long p2 = 0; // Parameter - 2
-        unsigned long ident = 0;
+        unsigned long p1 = 0, p2 = 0;
+        unsigned long p3 = 0, p4 = 0;
+        unsigned long ident = 0, ident2 = 0;
         pthread_mutex_lock(&m_lock);
         DEBUG_PRINT_LOW("\n Check Queue for codec_config buffer \n");
         while (m_etb_q.m_size) {
             m_etb_q.pop_entry(&p1,&p2,&ident);
             if (ident == OMX_COMPONENT_GENERATE_ETB) {
                 if (((OMX_BUFFERHEADERTYPE *)p2)->nFlags & OMX_BUFFERFLAG_CODECCONFIG) {
+                    while (m_ftb_q.m_size) {
+                        m_ftb_q.pop_entry(&p3,&p4,&ident2);
+                        if (ident2 == OMX_COMPONENT_GENERATE_FTB) {
+                            pthread_mutex_unlock(&m_lock);
+                            if (fill_this_buffer_proxy((OMX_HANDLETYPE)p3,\
+                                        (OMX_BUFFERHEADERTYPE *)p4) != OMX_ErrorNone) {
+                                DEBUG_PRINT_ERROR("\n fill_this_buffer_proxy failure");
+                                omx_report_error ();
+                            }
+                            pthread_mutex_lock(&m_lock);
+                        } else if (ident2 == OMX_COMPONENT_GENERATE_FBD) {
+                            fill_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p3);
+                        }
+                    }
                     pthread_mutex_unlock(&m_lock);
                     if (empty_this_buffer_proxy((OMX_HANDLETYPE)p1,\
                                 (OMX_BUFFERHEADERTYPE *)p2) != OMX_ErrorNone) {
