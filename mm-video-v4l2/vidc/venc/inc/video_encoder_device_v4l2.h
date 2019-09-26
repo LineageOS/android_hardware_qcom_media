@@ -264,7 +264,7 @@ struct extradata_buffer_info {
 
 struct statistics {
     struct timeval prev_tv;
-    int prev_fbd;
+    OMX_U32 prev_fbd;
     OMX_U32 bytes_generated;
 };
 
@@ -348,7 +348,7 @@ class venc_dev
         OMX_U32 m_nDriver_fd;
         int m_poll_efd;
         int num_input_planes, num_output_planes;
-        int etb, ebd, ftb, fbd;
+        OMX_U32 etb, ebd, ftb, fbd;
 
         int nPframes_cache;
         int stopped;
