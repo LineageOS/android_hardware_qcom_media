@@ -56,6 +56,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "media/hardware/HardwareAPI.h"
 #include <unordered_map>
 #include <media/msm_media_info.h>
+#include <list>
 
 #include <linux/msm_ion.h>
 #if TARGET_ION_ABI_VERSION >= 2
@@ -413,6 +414,18 @@ struct vdec_msginfo {
 struct vdec_framerate {
 	unsigned long fps_denominator;
 	unsigned long fps_numerator;
+};
+
+struct hdr10plusInfo {
+    bool is_new;
+    unsigned int cookie;
+    OMX_TICKS timestamp;
+    OMX_U32 nSize;
+    OMX_VERSIONTYPE nVersion;
+    OMX_U32 nPortIndex;
+    OMX_U32 nParamSize;
+    OMX_U32 nParamSizeUsed;
+    OMX_U8 payload[MAX_HDR10PLUSINFO_SIZE];
 };
 
 #ifdef USE_ION
@@ -1103,6 +1116,9 @@ class omx_vdec: public qc_omx_component
         OMX_BUFFERHEADERTYPE  *m_client_output_extradata_mem_ptr;
         // number of input bitstream error frame count
         unsigned int m_inp_err_count;
+
+        pthread_mutex_t m_hdr10pluslock;
+        std::list<hdr10plusInfo> m_hdr10pluslist;
 #ifdef _ANDROID_
         // Timestamp list
         ts_arr_list           m_timestamp_list;
@@ -1130,6 +1146,8 @@ class omx_vdec: public qc_omx_component
         // encapsulate the waiting states.
         uint64_t m_flags;
 
+        OMX_U32 m_etb_count;
+        OMX_TICKS m_etb_timestamp;
         // store I/P PORT state
         OMX_BOOL m_inp_bEnabled;
         // store O/P PORT state
@@ -1452,6 +1470,11 @@ class omx_vdec: public qc_omx_component
         void get_preferred_color_aspects(ColorAspects& preferredColorAspects);
         void get_preferred_hdr_info(HDRStaticInfo& preferredHDRInfo);
         bool vdec_query_cap(struct v4l2_queryctrl &cap);
+        bool store_hdr10plusinfo(DescribeHDR10PlusInfoParams *hdr10plusinfo);
+        void update_hdr10plusinfo_cookie_using_timestamp(OMX_PTR cookie, OMX_TICKS timestamp);
+        void convert_hdr10plusinfo_to_metadata(OMX_PTR cookie, ColorMetaData &colorData);
+        void remove_hdr10plusinfo_using_cookie(OMX_PTR cookie);
+        void clear_hdr10plusinfo();
 public:
         bool is_down_scalar_enabled;
         bool m_is_split_mode;
