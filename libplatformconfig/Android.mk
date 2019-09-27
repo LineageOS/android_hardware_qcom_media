@@ -17,6 +17,7 @@ COMMON_CFLAGS := -O3
 
 include $(BUILD_COPY_HEADERS)
 
+ifneq ($(TARGET_PROVIDES_LIBPLATFORMCONFIG), true)
 LOCAL_CFLAGS := $(COMMON_CFLAGS) $(libplatformconfig-def)
 
 LOCAL_SHARED_LIBRARIES += \
@@ -49,3 +50,4 @@ LOCAL_MODULE := libplatformconfig
 LOCAL_VENDOR_MODULE := true
 
 include $(BUILD_SHARED_LIBRARY)
+endif
