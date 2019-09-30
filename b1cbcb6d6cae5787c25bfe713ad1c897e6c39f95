@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "930a06c6_f647702f",
+        "filename": "mm-video-v4l2/vidc/common/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 27,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2019-09-30T21:47:38Z",
+      "side": 1,
+      "message": "Remove",
+      "range": {
+        "startLine": 27,
+        "startChar": 23,
+        "endLine": 27,
+        "endChar": 30
+      },
+      "revId": "b1cbcb6d6cae5787c25bfe713ad1c897e6c39f95",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "20495dfd_95a1c967",
+        "filename": "mm-video-v4l2/vidc/common/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 29,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2019-09-30T21:47:38Z",
+      "side": 1,
+      "message": "Remove.",
+      "range": {
+        "startLine": 29,
+        "startChar": 23,
+        "endLine": 29,
+        "endChar": 30
+      },
+      "revId": "b1cbcb6d6cae5787c25bfe713ad1c897e6c39f95",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
