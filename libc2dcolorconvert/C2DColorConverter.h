@@ -172,6 +172,7 @@ class C2DColorConverter{
   size_t mDstSize;
   size_t mSrcYSize;
   size_t mDstYSize;
+  C2D_TARGET_CONFIG mRotation;
   ColorConvertFormat mSrcFormat;
   ColorConvertFormat mDstFormat;
   int32_t mFlags;
@@ -195,6 +196,7 @@ class C2DColorConverter{
                      size_t dstHeight, ColorConvertFormat srcFormat,
                      ColorConvertFormat dstFormat, int32_t flags,
                      size_t srcStride);
+  void setRotation(int32_t rotation);
   int32_t getBuffSize(int32_t port);
   bool getBuffFilledLen(int32_t port, unsigned int &filled_length);
   bool getBuffReq(int32_t port, C2DBuffReq *req);

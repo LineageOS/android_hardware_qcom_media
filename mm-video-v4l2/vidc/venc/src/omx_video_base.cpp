@@ -291,6 +291,7 @@ omx_video::omx_video():
     mMapPixelFormat2Converter.insert({
             {HAL_PIXEL_FORMAT_RGBA_8888, RGBA8888},
             {HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC, NV12_UBWC},
+            {HAL_PIXEL_FORMAT_NV12_ENCODEABLE, NV12_128m},
                 });
 
     pthread_mutex_init(&m_lock, NULL);
@@ -5067,6 +5068,11 @@ bool omx_video::is_conv_needed(private_handle_t *handle)
     bRet = false;
 #endif
     bRet |= interlaced;
+    if (m_c2d_rotation && (m_sConfigFrameRotation.nRotation == 90 ||
+        m_sConfigFrameRotation.nRotation == 180 ||
+        m_sConfigFrameRotation.nRotation == 270)) {
+        bRet = true;
+    }
     DEBUG_PRINT_LOW("RGBA conversion %s. Format %d Flag %d interlace_flag = %d",
                                 bRet ? "Needed":"Not-Needed", handle->format,
                                 handle->flags, interlaced);
@@ -5171,6 +5177,12 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
                                 m_sInPortDef.format.video.nFrameHeight,
                                 c2dSrcFmt, c2dDestFmt,
                                 handle->flags, handle->width)) {
+            DEBUG_PRINT_HIGH("C2D setRotation - %u", m_sConfigFrameRotation.nRotation);
+            if (m_c2d_rotation && (m_sConfigFrameRotation.nRotation == 90 ||
+                m_sConfigFrameRotation.nRotation == 180 ||
+                m_sConfigFrameRotation.nRotation == 270)) {
+                c2dcc.setRotation(m_sConfigFrameRotation.nRotation);
+            }
             DEBUG_PRINT_HIGH("C2D setResolution (0x%X -> 0x%x) HxW (%dx%d) Stride (%d)",
                              c2dSrcFmt, c2dDestFmt,
                              m_sInPortDef.format.video.nFrameHeight,
