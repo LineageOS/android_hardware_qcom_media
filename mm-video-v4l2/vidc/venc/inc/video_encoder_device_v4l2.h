@@ -376,6 +376,7 @@ class venc_dev
         bool is_csc_custom_matrix_enabled;
         bool is_auto_blur_disabled;
         bool csc_enable;
+        bool m_bDimensionsNeedFlip;
         unsigned long get_media_colorformat(unsigned long);
 
     private:
@@ -435,6 +436,7 @@ class venc_dev
         bool venc_set_extradata(OMX_U32 extra_data, OMX_BOOL enable);
         bool venc_reconfig_reqbufs();
         bool venc_set_vpe_rotation(OMX_S32 rotation_angle);
+        bool venc_prepare_c2d_rotation(OMX_S32 rotation_angle);
         bool venc_set_mirror(OMX_MIRRORTYPE mirror);
         bool venc_set_ltrcount(OMX_U32 count);
         bool venc_set_useltr(OMX_U32 frameIdx);

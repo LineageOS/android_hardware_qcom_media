@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2018, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2019, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -783,6 +783,7 @@ class omx_video: public qc_omx_component
         OMX_U64 profile_start_time;
         OMX_U64 profile_last_time;
         bool profile_etb();
+        int32_t m_c2d_rotation;
 };
 
 #endif // __OMX_VIDEO_BASE_H__
