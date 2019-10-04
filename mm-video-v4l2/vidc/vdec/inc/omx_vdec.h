@@ -150,7 +150,7 @@ extern "C" {
         (unsigned)((OMX_BUFFERHEADERTYPE *)bufHdr)->nTimeStamp)
 
 #define DEFAULT_FPS 30
-#define MAX_SUPPORTED_FPS 240
+#define MAX_SUPPORTED_FPS 960
 #define DEFAULT_WIDTH_ALIGNMENT 128
 #define DEFAULT_HEIGHT_ALIGNMENT 32
 
