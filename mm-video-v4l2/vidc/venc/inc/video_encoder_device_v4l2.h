@@ -264,7 +264,7 @@ struct extradata_buffer_info {
 
 struct statistics {
     struct timeval prev_tv;
-    int prev_fbd;
+    OMX_U32 prev_fbd;
     OMX_U32 bytes_generated;
 };
 
@@ -348,7 +348,7 @@ class venc_dev
         OMX_U32 m_nDriver_fd;
         int m_poll_efd;
         int num_input_planes, num_output_planes;
-        int etb, ebd, ftb, fbd;
+        OMX_U32 etb, ebd, ftb, fbd;
 
         int nPframes_cache;
         int stopped;
@@ -525,6 +525,7 @@ class venc_dev
             QOMX_VIDEO_INTRAPERIODTYPE intraperiod;
             OMX_CONFIG_INTRAREFRESHVOPTYPE intravoprefresh;
             OMX_CONFIG_ROTATIONTYPE rotation;
+            OMX_CONFIG_MIRRORTYPE mirror;
             OMX_VIDEO_VP8REFERENCEFRAMETYPE vp8refframe;
             OMX_QCOM_VIDEO_CONFIG_LTRMARK_TYPE markltr;
             OMX_QCOM_VIDEO_CONFIG_LTRUSE_TYPE useltr;
