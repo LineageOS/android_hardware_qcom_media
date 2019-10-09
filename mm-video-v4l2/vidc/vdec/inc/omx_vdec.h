@@ -1475,6 +1475,7 @@ class omx_vdec: public qc_omx_component
         void convert_hdr10plusinfo_to_metadata(OMX_PTR cookie, ColorMetaData &colorData);
         void remove_hdr10plusinfo_using_cookie(OMX_PTR cookie);
         void clear_hdr10plusinfo();
+        void get_hdr10plusinfo(DescribeHDR10PlusInfoParams *hdr10plusdata);
 public:
         bool is_down_scalar_enabled;
         bool m_is_split_mode;
