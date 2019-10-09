@@ -4287,7 +4287,7 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                            ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_FMT, &fmt);
                                            if (ret) {
                                                DEBUG_PRINT_ERROR("Set Resolution failed");
-                                               eRet = OMX_ErrorUnsupportedSetting;
+                                               eRet = errno == EBUSY ? OMX_ErrorInsufficientResources : OMX_ErrorUnsupportedSetting;
                                            } else
                                                eRet = get_buffer_req(&drv_ctx.op_buf);
                                        }
@@ -4429,7 +4429,7 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                            }
                                            if (ret) {
                                                DEBUG_PRINT_ERROR("Set Resolution failed");
-                                               eRet = OMX_ErrorUnsupportedSetting;
+                                               eRet = errno == EBUSY ? OMX_ErrorInsufficientResources : OMX_ErrorUnsupportedSetting;
                                            } else {
                                                if (!is_down_scalar_enabled)
                                                    eRet = get_buffer_req(&drv_ctx.op_buf);
@@ -5528,7 +5528,7 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
         }
 
         if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
-            ret = errno == -EBUSY ? OMX_ErrorInsufficientResources :
+            ret = errno == EBUSY ? OMX_ErrorInsufficientResources :
                     OMX_ErrorUnsupportedSetting;
             DEBUG_PRINT_ERROR("Failed to set operating rate %u fps (%s)",
                     rate->nU32 >> 16, errno == -EBUSY ? "HW Overload" : strerror(errno));
