@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "edf468b6_a191a0b9",
+        "filename": "mm-video-v4l2/vidc/common/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 27,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2019-10-09T21:24:23Z",
+      "side": 1,
+      "message": "Should be removed.",
+      "range": {
+        "startLine": 27,
+        "startChar": 23,
+        "endLine": 27,
+        "endChar": 30
+      },
+      "revId": "d69adca563bd460b5281ba6f0c63c6bdcce3b959",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "5003b524_fce12274",
+        "filename": "mm-video-v4l2/vidc/common/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 29,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2019-10-09T21:24:23Z",
+      "side": 1,
+      "message": "Ditto.",
+      "range": {
+        "startLine": 29,
+        "startChar": 23,
+        "endLine": 29,
+        "endChar": 30
+      },
+      "revId": "d69adca563bd460b5281ba6f0c63c6bdcce3b959",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
