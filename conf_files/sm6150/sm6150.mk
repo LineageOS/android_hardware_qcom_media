@@ -44,3 +44,8 @@ else
   PRODUCT_PROPERTY_OVERRIDES += debug.stagefright.omx_default_rank.sw-audio=1
   PRODUCT_PROPERTY_OVERRIDES += debug.stagefright.omx_default_rank=0
 endif
+
+# Enable Codec2.0 HAL for pure AOSP variants.
+ifeq ($(GENERIC_ODM_IMAGE),true)
+DEVICE_MANIFEST_FILE += hardware/qcom/media/conf_files/$(MSMSTEPPE)/c2_manifest.xml
+endif
