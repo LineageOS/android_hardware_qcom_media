@@ -7510,7 +7510,7 @@ void omx_vdec::set_frame_rate(OMX_S64 act_timestamp)
 {
     OMX_U32 new_frame_interval = 0;
     if (VALID_TS(act_timestamp) && VALID_TS(prev_ts) && act_timestamp != prev_ts
-            && llabs(act_timestamp - prev_ts) > 2000) {
+            && (llabs(act_timestamp - prev_ts) > 2000 || frm_int == 0)) {
         new_frame_interval = client_set_fps ? frm_int : (act_timestamp - prev_ts) > 0 ?
             llabs(act_timestamp - prev_ts) : llabs(act_timestamp - prev_ts_actual);
         if (new_frame_interval != frm_int || frm_int == 0) {
