@@ -119,6 +119,7 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     hw_overload = false;
     mBatchSize = 0;
     m_roi_enabled = false;
+    m_roi_type = ROI_NONE;
     m_cvp_meta_enabled = false;
     m_cvp_first_metadata = false;
     low_latency_mode = false;
@@ -4605,8 +4606,9 @@ bool venc_dev::venc_set_hdr_info(const MasteringDisplay& mastering_disp_info,
 *==================================================================================*/
 bool venc_dev::venc_set_roi_region_qp_info(OMX_QTI_VIDEO_CONFIG_ROI_RECT_REGION_INFO *roiRegionInfo)
 {
-    if (!m_roi_enabled) {
-        DEBUG_PRINT_ERROR("ROI-Region: roi info not enabled");
+    if (!m_roi_enabled || m_roi_type == ROI_NONE) {
+        DEBUG_PRINT_ERROR("ROI-Region: roi info not enabled (%d) or unknown roi type (%u)",
+            m_roi_enabled, m_roi_type);
         return false;
     }
     if (!roiRegionInfo) {
@@ -4676,53 +4678,124 @@ OMX_U32 venc_dev::append_extradata_roi_region_qp_info(OMX_OTHER_EXTRADATATYPE *d
     DEBUG_PRINT_LOW("ROI-Region: clip(%ux%u: %s), mb(%ux%u), region(num:%u, ts:%lld)",
             width, height, isHevc ? "hevc" : "avc", mbRow, mbCol, regionInfo.nRegionNum,
             regionInfo.nTimeStamp);
-    OMX_U32 mbRowAligned = ALIGN(mbRow, 8);
-    numBytes = mbRowAligned * mbCol * 2;
-    OMX_U32 numBytesAligned = ALIGN(numBytes, 4);
 
-    data->nDataSize = ALIGN(sizeof(struct msm_vidc_roi_deltaqp_payload), 256)
-                        + numBytesAligned;
-    data->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) + data->nDataSize, 4);
-    if (data->nSize > freeSize) {
-        DEBUG_PRINT_ERROR("ROI-Region: Buffer size(%u) is less than ROI extradata size(%u)",
-                 freeSize, data->nSize);
-        data->nDataSize = 0;
-        data->nSize = 0;
-        return 0;
-    }
+    if (m_roi_type == ROI_2BYTE) {
+        OMX_U32 mbRowAligned = ALIGN(mbRow, 8);
+        numBytes = mbRowAligned * mbCol * 2;
+        OMX_U32 numBytesAligned = ALIGN(numBytes, 4);
 
-    data->nVersion.nVersion = OMX_SPEC_VERSION;
-    data->nPortIndex = 0;
-    data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_ROI_QP;
-    struct msm_vidc_roi_deltaqp_payload *roiData =
-            (struct msm_vidc_roi_deltaqp_payload *)(data->data);
-    roiData->b_roi_info = true;
-    roiData->mbi_info_size = numBytesAligned;
-    roiData->data[0] = (unsigned int)(ALIGN(&roiData->data[1], 256)
-            - (unsigned long)roiData->data);
-    OMX_U16* exDataBuf = (OMX_U16*)((OMX_U8*)roiData->data + roiData->data[0]);
-    OMX_U32 mb = 0;
-    OMX_U16 *pData = NULL;
-
-    for (OMX_U8 i = 0; i < regionInfo.nRegionNum; i++) {
-        mbLeft = regionInfo.nRegions[i].nLeft >> mbBit;
-        mbTop = regionInfo.nRegions[i].nTop >> mbBit;
-        mbRight = regionInfo.nRegions[i].nRight >> mbBit;
-        mbBottom = regionInfo.nRegions[i].nBottom >> mbBit;
-        deltaQP = regionInfo.nRegions[i].nDeltaQP;
-        if (mbLeft >= mbRow || mbRight >= mbRow
-                || mbTop >= mbCol || mbBottom >= mbCol) {
-            continue;
+        data->nDataSize = ALIGN(sizeof(struct msm_vidc_roi_deltaqp_payload), 256)
+                            + numBytesAligned;
+        data->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) + data->nDataSize, 4);
+        if (data->nSize > freeSize) {
+            DEBUG_PRINT_ERROR("ROI-Region: Buffer size(%u) is less than ROI extradata size(%u)",
+                     freeSize, data->nSize);
+            data->nDataSize = 0;
+            data->nSize = 0;
+            return 0;
         }
-        for (OMX_U32 row = mbTop; row <= mbBottom; row++) {
-            for (OMX_U32 col = mbLeft; col <= mbRight; col++) {
-                mb = row * mbRowAligned + col;
-                pData = exDataBuf + mb;
-               *pData = (1 << 11) | ((deltaQP & 0x3F) << 4);
+
+        data->nVersion.nVersion = OMX_SPEC_VERSION;
+        data->nPortIndex = 0;
+        data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_ROI_QP;
+        struct msm_vidc_roi_deltaqp_payload *roiData =
+                (struct msm_vidc_roi_deltaqp_payload *)(data->data);
+        roiData->b_roi_info = true;
+        roiData->mbi_info_size = numBytesAligned;
+        roiData->data[0] = (unsigned int)(ALIGN(&roiData->data[1], 256)
+                - (unsigned long)roiData->data);
+        OMX_U16* exDataBuf = (OMX_U16*)((OMX_U8*)roiData->data + roiData->data[0]);
+        OMX_U32 mb = 0;
+        OMX_U16 *pData = NULL;
+
+        for (OMX_U8 i = 0; i < regionInfo.nRegionNum; i++) {
+            mbLeft = regionInfo.nRegions[i].nLeft >> mbBit;
+            mbTop = regionInfo.nRegions[i].nTop >> mbBit;
+            mbRight = regionInfo.nRegions[i].nRight >> mbBit;
+            mbBottom = regionInfo.nRegions[i].nBottom >> mbBit;
+            deltaQP = regionInfo.nRegions[i].nDeltaQP;
+            if (mbLeft >= mbRow || mbRight >= mbRow
+                    || mbTop >= mbCol || mbBottom >= mbCol) {
+                continue;
+            }
+            for (OMX_U32 row = mbTop; row <= mbBottom; row++) {
+                for (OMX_U32 col = mbLeft; col <= mbRight; col++) {
+                    mb = row * mbRowAligned + col;
+                    pData = exDataBuf + mb;
+                   *pData = (1 << 11) | ((deltaQP & 0x3F) << 4);
+                }
             }
         }
+        DEBUG_PRINT_LOW("ROI-Region(2Byte): set roi: raw size: %u", numBytesAligned);
+    } else if (m_roi_type == ROI_2BIT) {
+        numBytes = (mbRow * mbCol * 2 + 7) >> 3;
+        data->nDataSize = sizeof(struct msm_vidc_roi_qp_payload) + numBytes;
+        data->nSize = ALIGN(sizeof(OMX_OTHER_EXTRADATATYPE) + data->nDataSize, 4);
+
+        if (data->nSize > freeSize) {
+            DEBUG_PRINT_ERROR("ROI-Region: Buffer size(%u) is less than ROI extradata size(%u)",
+                    freeSize, data->nSize);
+            data->nDataSize = 0;
+            data->nSize = 0;
+            return 0;
+        }
+
+        data->nVersion.nVersion = OMX_SPEC_VERSION;
+        data->nPortIndex = 0;
+        data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_ROI_QP;
+        struct msm_vidc_roi_qp_payload *roiData =
+                (struct msm_vidc_roi_qp_payload *)(data->data);
+        roiData->b_roi_info = true;
+        roiData->mbi_info_size = numBytes;
+        roiData->lower_qp_offset = 0;
+        roiData->upper_qp_offset = 0;
+        OMX_U8 flag = 0x1;
+        OMX_U32 mb, mb_byte = 0;
+        OMX_U8 mb_bit = 0;
+        OMX_U8 *pData = NULL;
+
+        for (OMX_U8 i = 0; i < regionInfo.nRegionNum; i++) {
+            mbLeft = regionInfo.nRegions[i].nLeft >> mbBit;
+            mbTop = regionInfo.nRegions[i].nTop >> mbBit;
+            mbRight = regionInfo.nRegions[i].nRight >> mbBit;
+            mbBottom = regionInfo.nRegions[i].nBottom >> mbBit;
+            deltaQP = regionInfo.nRegions[i].nDeltaQP;
+            if (mbLeft >= mbRow || mbRight >= mbRow
+                    || mbTop >= mbCol || mbBottom >= mbCol
+                    || deltaQP == 0) {
+                continue;
+            }
+            // choose the minimum absolute value for lower and upper offset
+            if (deltaQP < 0) {
+                if (roiData->lower_qp_offset == 0) {
+                    roiData->lower_qp_offset = deltaQP;
+                } else if (roiData->lower_qp_offset < deltaQP) {
+                    roiData->lower_qp_offset = deltaQP;
+                }
+                flag = 0x1;
+            } else {
+                if (roiData->upper_qp_offset == 0) {
+                    roiData->upper_qp_offset = deltaQP;
+                } else if (roiData->upper_qp_offset > deltaQP) {
+                    roiData->upper_qp_offset = deltaQP;
+                }
+                flag = 0x2;
+            }
+            for (OMX_U32 row = mbTop; row <= mbBottom; row++) {
+                for (OMX_U32 col = mbLeft; col <= mbRight; col++) {
+                    mb = row * mbRow + col;
+                    mb_byte = mb >> 2;
+                    mb_bit = (3 - (mb & 0x3)) << 1;
+                    pData = (OMX_U8 *)roiData->data + mb_byte;
+                    *pData |= (flag << mb_bit);
+                }
+            }
+        }
+        DEBUG_PRINT_LOW("ROI-Region(2Bit):set roi low:%d,up:%d", roiData->lower_qp_offset, roiData->upper_qp_offset);
+    } else {
+        DEBUG_PRINT_ERROR("Invalied roi type : %u", m_roi_type);
+        return 0;
     }
-    DEBUG_PRINT_LOW("ROI-Region: set roi: raw size: %u", numBytesAligned);
     return data->nSize;
 }
 
