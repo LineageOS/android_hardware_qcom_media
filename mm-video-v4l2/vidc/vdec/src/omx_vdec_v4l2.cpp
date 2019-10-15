@@ -11425,12 +11425,12 @@ bool omx_vdec::handle_mastering_display_color_info(void* data)
     HDRStaticInfo* hdr_info = &m_internal_hdr_info.sInfo;
     bool internal_disp_changed_flag = false;
 
-    internal_disp_changed_flag |= (hdr_info->sType1.mR.x != mastering_display_payload->nDisplayPrimariesX[0]) ||
-        (hdr_info->sType1.mR.y != mastering_display_payload->nDisplayPrimariesY[0]);
-    internal_disp_changed_flag |= (hdr_info->sType1.mG.x != mastering_display_payload->nDisplayPrimariesX[1]) ||
-        (hdr_info->sType1.mG.y != mastering_display_payload->nDisplayPrimariesY[1]);
-    internal_disp_changed_flag |= (hdr_info->sType1.mB.x != mastering_display_payload->nDisplayPrimariesX[2]) ||
-        (hdr_info->sType1.mB.y != mastering_display_payload->nDisplayPrimariesY[2]);
+    internal_disp_changed_flag |= (hdr_info->sType1.mG.x != mastering_display_payload->nDisplayPrimariesX[0]) ||
+        (hdr_info->sType1.mG.y != mastering_display_payload->nDisplayPrimariesY[0]);
+    internal_disp_changed_flag |= (hdr_info->sType1.mB.x != mastering_display_payload->nDisplayPrimariesX[1]) ||
+        (hdr_info->sType1.mB.y != mastering_display_payload->nDisplayPrimariesY[1]);
+    internal_disp_changed_flag |= (hdr_info->sType1.mR.x != mastering_display_payload->nDisplayPrimariesX[2]) ||
+        (hdr_info->sType1.mR.y != mastering_display_payload->nDisplayPrimariesY[2]);
 
     internal_disp_changed_flag |= (hdr_info->sType1.mW.x != mastering_display_payload->nWhitePointX) ||
         (hdr_info->sType1.mW.y != mastering_display_payload->nWhitePointY);
@@ -11444,12 +11444,12 @@ bool omx_vdec::handle_mastering_display_color_info(void* data)
         (hdr_info->sType1.mMinDisplayLuminance != mastering_display_payload->nMinDisplayMasteringLuminance);
 
     if (internal_disp_changed_flag) {
-        hdr_info->sType1.mR.x = mastering_display_payload->nDisplayPrimariesX[0];
-        hdr_info->sType1.mR.y = mastering_display_payload->nDisplayPrimariesY[0];
-        hdr_info->sType1.mG.x = mastering_display_payload->nDisplayPrimariesX[1];
-        hdr_info->sType1.mG.y = mastering_display_payload->nDisplayPrimariesY[1];
-        hdr_info->sType1.mB.x = mastering_display_payload->nDisplayPrimariesX[2];
-        hdr_info->sType1.mB.y = mastering_display_payload->nDisplayPrimariesY[2];
+        hdr_info->sType1.mG.x = mastering_display_payload->nDisplayPrimariesX[0];
+        hdr_info->sType1.mG.y = mastering_display_payload->nDisplayPrimariesY[0];
+        hdr_info->sType1.mB.x = mastering_display_payload->nDisplayPrimariesX[1];
+        hdr_info->sType1.mB.y = mastering_display_payload->nDisplayPrimariesY[1];
+        hdr_info->sType1.mR.x = mastering_display_payload->nDisplayPrimariesX[2];
+        hdr_info->sType1.mR.y = mastering_display_payload->nDisplayPrimariesY[2];
         hdr_info->sType1.mW.x = mastering_display_payload->nWhitePointX;
         hdr_info->sType1.mW.y = mastering_display_payload->nWhitePointY;
 
