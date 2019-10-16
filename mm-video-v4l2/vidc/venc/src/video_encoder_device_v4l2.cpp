@@ -1538,6 +1538,17 @@ bool venc_dev::venc_open(OMX_U32 codec)
         fdesc.index++;
     }
 
+    if(venc_handle->is_secure_session()) {
+        control.id = V4L2_CID_MPEG_VIDC_VIDEO_SECURE;
+        control.value = 1;
+        DEBUG_PRINT_HIGH("ioctl: open secure device");
+        ret=ioctl(m_nDriver_fd, VIDIOC_S_CTRL,&control);
+        if (ret) {
+            DEBUG_PRINT_ERROR("ioctl: open secure dev fail, rc %d", ret);
+            return false;
+        }
+    }
+
     if (venc_handle->is_secure_session()) {
         m_sOutput_buff_property.alignment = SZ_1M;
         m_sInput_buff_property.alignment  = SZ_1M;
@@ -1591,17 +1602,6 @@ bool venc_dev::venc_open(OMX_U32 codec)
     bufreq.count = 2;
     ret = ioctl(m_nDriver_fd,VIDIOC_REQBUFS, &bufreq);
     m_sOutput_buff_property.mincount = m_sOutput_buff_property.actualcount = bufreq.count;
-
-    if(venc_handle->is_secure_session()) {
-        control.id = V4L2_CID_MPEG_VIDC_VIDEO_SECURE;
-        control.value = 1;
-        DEBUG_PRINT_HIGH("ioctl: open secure device");
-        ret=ioctl(m_nDriver_fd, VIDIOC_S_CTRL,&control);
-        if (ret) {
-            DEBUG_PRINT_ERROR("ioctl: open secure dev fail, rc %d", ret);
-            return false;
-        }
-    }
 
     resume_in_stopped = 0;
     metadatamode = 0;
