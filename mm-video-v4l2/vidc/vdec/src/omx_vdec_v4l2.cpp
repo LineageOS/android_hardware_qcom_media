@@ -7154,6 +7154,7 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
 {
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
     struct v4l2_format fmt;
+    struct v4l2_control control;
     if (!portDefn) {
         DEBUG_PRINT_ERROR("update_portdef: invalid params");
         return OMX_ErrorBadParameter;
@@ -7172,6 +7173,17 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
             return OMX_ErrorHardware;
         }
         drv_ctx.ip_buf.buffer_size = fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
+
+        control.id = V4L2_CID_MIN_BUFFERS_FOR_OUTPUT;
+        ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_CTRL, &control);
+        if (ret) {
+            DEBUG_PRINT_ERROR("Get input buffer count failed");
+            return OMX_ErrorHardware;
+        }
+        drv_ctx.ip_buf.mincount = control.value;
+        if (drv_ctx.ip_buf.actualcount < control.value)
+            drv_ctx.ip_buf.actualcount = control.value;
+
         portDefn->eDir =  OMX_DirInput;
         portDefn->nBufferCountActual = drv_ctx.ip_buf.actualcount;
         portDefn->nBufferCountMin    = drv_ctx.ip_buf.mincount;
