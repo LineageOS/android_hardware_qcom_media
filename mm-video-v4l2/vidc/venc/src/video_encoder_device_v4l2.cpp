@@ -1837,6 +1837,7 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
 
         minCount = MAX((unsigned int)control.value, minCount);
         m_sInput_buff_property.mincount = minCount;
+        m_sInput_buff_property.actualcount = m_sInput_buff_property.mincount;
 
         fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
         fmt.fmt.pix_mp.height = m_sVenc_cfg.input_height;
@@ -1850,9 +1851,6 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
             return false;
         }
         m_sInput_buff_property.datasize=fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
-
-        if (m_sInput_buff_property.actualcount < m_sInput_buff_property.mincount)
-            m_sInput_buff_property.actualcount = m_sInput_buff_property.mincount;
 
         *min_buff_count = m_sInput_buff_property.mincount;
         *actual_buff_count = m_sInput_buff_property.actualcount;
@@ -1925,9 +1923,7 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
         }
 
         m_sOutput_buff_property.mincount = minCount;
-
-        if (m_sOutput_buff_property.actualcount < m_sOutput_buff_property.mincount)
-            m_sOutput_buff_property.actualcount = m_sOutput_buff_property.mincount;
+        m_sOutput_buff_property.actualcount = m_sOutput_buff_property.mincount;
 
         *min_buff_count = m_sOutput_buff_property.mincount;
         *actual_buff_count = m_sOutput_buff_property.actualcount;
