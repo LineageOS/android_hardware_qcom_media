@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010 - 2018, The Linux Foundation. All rights reserved.
+Copyright (c) 2010 - 2019, The Linux Foundation. All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -170,7 +170,8 @@ extern "C" {
 #define MAX_NUM_INPUT_OUTPUT_BUFFERS 64
 #endif
 
-#define MIN_NUM_INPUT_OUTPUT_EXTRADATA_BUFFERS 32 // 32 (max cap when VPP enabled)
+// Aligning to MAX NUM INPUT & OUTPUT
+#define MIN_NUM_INPUT_OUTPUT_EXTRADATA_BUFFERS MAX_NUM_INPUT_OUTPUT_BUFFERS
 
 #define OMX_FRAMEINFO_EXTRADATA 0x00010000
 #define OMX_INTERLACE_EXTRADATA 0x00020000
