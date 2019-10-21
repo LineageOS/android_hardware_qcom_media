@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "d189fae4_1c4e3f77",
+        "filename": "libc2dcolorconvert/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 17,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2019-10-21T09:37:44Z",
+      "side": 1,
+      "message": "Spaces, not tabs.",
+      "range": {
+        "startLine": 17,
+        "startChar": 0,
+        "endLine": 17,
+        "endChar": 1
+      },
+      "revId": "23665c7fc5a467f476173c6cfc58b4353e09f92e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "01d525c8_19b88d89",
+        "filename": "mm-video-v4l2/vidc/vdec/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 111,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2019-10-21T09:37:44Z",
+      "side": 1,
+      "message": "Spaces, not tabs.",
+      "range": {
+        "startLine": 111,
+        "startChar": 0,
+        "endLine": 111,
+        "endChar": 1
+      },
+      "revId": "23665c7fc5a467f476173c6cfc58b4353e09f92e",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
