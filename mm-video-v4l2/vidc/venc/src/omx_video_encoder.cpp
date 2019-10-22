@@ -273,6 +273,11 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
                 eRet = OMX_ErrorInvalidComponentName;
             }
         }
+        else if (!strcmp(platform_name, "atoll")) {
+            //TME is enabled on ATOLL
+            strlcpy((char *)m_cRole, "video_encoder.tme", OMX_MAX_STRINGNAME_SIZE);
+            codec_type = (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingTME;
+        }
         else {
             DEBUG_PRINT_LOW("TME is not supported");
             eRet = OMX_ErrorInvalidComponentName;
