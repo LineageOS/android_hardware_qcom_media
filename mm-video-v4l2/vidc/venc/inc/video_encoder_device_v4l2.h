@@ -475,6 +475,7 @@ class venc_dev
         bool m_hdr10meta_enabled;
         ColorMetaData colorData= {};
 
+        bool m_cvp_first_metadata;
         bool m_cvp_meta_enabled;
         CVPMetadata cvpMetadata;
         pthread_mutex_t pause_resume_mlock;
