@@ -2464,7 +2464,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
     struct v4l2_buffer buf;
     struct v4l2_requestbuffers bufreq;
     struct v4l2_plane plane[VIDEO_MAX_PLANES];
-    int rc = 0, extra_idx;
+    int rc = 0, extra_idx, c2d_enabled = 0;
     OMX_U32 extradata_index;
     bool interlace_flag = false;
     struct OMX_BUFFERHEADERTYPE *bufhdr;
@@ -2847,6 +2847,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                 // color_format == 1 ==> RGBA to YUV Color-converted buffer
                 // Buffers color-converted via C2D have 601 color
                 if (!streaming[OUTPUT_PORT]) {
+                    c2d_enabled = 1;
                     DEBUG_PRINT_HIGH("Setting colorspace 601 for Color-converted buffer");
                     venc_set_colorspace(MSM_VIDC_BT601_6_625, color_space.range,
                             MSM_VIDC_TRANSFER_601_6_525, MSM_VIDC_MATRIX_601_6_525);
@@ -2877,6 +2878,18 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
         enum v4l2_buf_type buf_type;
         buf_type=V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
         int ret;
+
+        // Some 3rd APPs use NativeRecorder to implement their applications
+        // like screenrecorder, implicitly enable B-frame may cause issues.
+        // So disallow implicit B-frame when input format is non-UBWC or RGBA(c2d enabled).
+        if ((m_sVenc_cfg.inputformat != V4L2_PIX_FMT_NV12_TP10_UBWC &&
+             m_sVenc_cfg.inputformat != V4L2_PIX_FMT_NV12_UBWC) || c2d_enabled) {
+            DEBUG_PRINT_HIGH("Disallow implicitly enable B-frames");
+            if (!set_native_recoder(OMX_FALSE)) {
+                DEBUG_PRINT_ERROR("Failed to set Native Recorder");
+                return false;
+            }
+        }
 
         if (!downscalar_enabled) {
             OMX_U32 inp_width = 0, inp_height = 0, out_width = 0, out_height = 0;
