@@ -4272,6 +4272,10 @@ bool venc_dev::venc_superframe_enable(private_handle_t *handle)
 bool venc_dev::venc_cvp_enable(private_handle_t *handle)
 {
     cvpMetadata.size = 0;
+    if (temporal_layers_config.nMaxLayers > 1) {
+        DEBUG_PRINT_INFO("venc_cvp_enable: disabling CVP as max layers %u", temporal_layers_config.nMaxLayers);
+        return true;
+    }
     if (getMetaData(handle, GET_CVP_METADATA, &cvpMetadata) == 0) {
         if (cvpMetadata.size == CVP_METADATA_SIZE) {
             struct v4l2_control control;
