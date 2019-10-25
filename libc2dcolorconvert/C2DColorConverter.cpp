@@ -166,6 +166,9 @@ bool C2DColorConverter::setResolution(size_t srcWidth, size_t srcHeight,
     int32_t retval = -1;
     if (enabled) {
         pthread_mutex_lock(&mLock);
+
+        ClearSurfaces();
+
         mSrcWidth = srcWidth;
         mSrcHeight = srcHeight;
         mSrcStride = srcStride;
@@ -314,6 +317,37 @@ bool C2DColorConverter::isYUVSurface(ColorConvertFormat format)
     }
 }
 
+void C2DColorConverter::ClearSurfaces()
+{
+        if (mSrcSurface) {
+            mC2DDestroySurface(mSrcSurface);
+            mSrcSurface = 0;
+        }
+
+         if (mSrcSurfaceDef) {
+            if (isYUVSurface(mSrcFormat)) {
+                delete ((C2D_YUV_SURFACE_DEF *)mSrcSurfaceDef);
+            } else {
+                delete ((C2D_RGB_SURFACE_DEF *)mSrcSurfaceDef);
+            }
+            mSrcSurfaceDef = NULL;
+        }
+
+        if (mDstSurface) {
+            mC2DDestroySurface(mDstSurface);
+            mDstSurface = 0;
+        }
+
+        if (mDstSurfaceDef) {
+            if (isYUVSurface(mDstFormat)) {
+                delete ((C2D_YUV_SURFACE_DEF *)mDstSurfaceDef);
+            } else {
+                delete ((C2D_RGB_SURFACE_DEF *)mDstSurfaceDef);
+            }
+            mDstSurfaceDef = NULL;
+        }
+}
+
 int32_t C2DColorConverter::getDummySurfaceDef(ColorConvertFormat format,
                                             size_t width, size_t height,
                                             bool isSource)
@@ -321,16 +355,6 @@ int32_t C2DColorConverter::getDummySurfaceDef(ColorConvertFormat format,
     void *surfaceDef = NULL;
     C2D_SURFACE_TYPE hostSurfaceType;
     C2D_STATUS ret;
-
-    if (isSource){
-        if (mSrcSurface) {
-            mC2DDestroySurface(mSrcSurface);
-            mSrcSurface = 0;
-        }
-    } else if (mDstSurface) {
-        mC2DDestroySurface(mDstSurface);
-        mDstSurface = 0;
-    }
 
     if (isYUVSurface(format)) {
         C2D_YUV_SURFACE_DEF **surfaceYUVDef = (C2D_YUV_SURFACE_DEF **)

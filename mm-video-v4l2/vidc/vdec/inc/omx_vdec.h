@@ -1211,6 +1211,7 @@ class omx_vdec: public qc_omx_component
         int32_t m_arb_mode_override;
         volatile int32_t m_queued_codec_config_count;
         OMX_U32 current_perf_level;
+        int32_t m_thumbnail_yuv_output;
 
         class perf_control {
             typedef int (*perf_lock_acquire_t)(int, int, int*, int);

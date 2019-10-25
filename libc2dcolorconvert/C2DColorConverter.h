@@ -202,6 +202,7 @@ class C2DColorConverter{
   bool convertC2D(int srcFd, void *srcBase, void * srcData,
                   int dstFd, void *dstBase, void * dstData);
   bool isYUVSurface(ColorConvertFormat format);
+  void ClearSurfaces();
   int32_t getDummySurfaceDef(ColorConvertFormat format, size_t width,
                              size_t height, bool isSource);
   C2D_STATUS updateYUVSurfaceDef(uint8_t *addr, void *base, void * data, bool isSource);
