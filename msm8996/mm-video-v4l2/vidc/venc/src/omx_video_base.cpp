@@ -4908,16 +4908,18 @@ bool omx_video::omx_c2d_conv::convert(int src_fd, void *src_base, void *src_vira
 }
 
 bool omx_video::omx_c2d_conv::open(unsigned int height,unsigned int width,
-        ColorConvertFormat src, ColorConvertFormat dest,unsigned int src_stride)
+        ColorConvertFormat src, ColorConvertFormat dest,unsigned int src_stride,
+        unsigned int flags)
 {
     bool status = false;
     pthread_mutex_lock(&c_lock);
     if (!c2dcc) {
         c2dcc = mConvertOpen(width, height, width, height,
-                src,dest,0,src_stride);
+                src, dest, flags, src_stride);
         if (c2dcc) {
             src_format = src;
             status = true;
+            mFlags = flags;
         } else
             DEBUG_PRINT_ERROR("mConvertOpen failed");
     }
@@ -4980,11 +4982,16 @@ bool omx_video::omx_c2d_conv::get_buffer_size(int port,unsigned int &buf_size)
     }
     return ret;
 }
-
-bool omx_video::is_conv_needed(int hal_fmt, int hal_flags)
+bool omx_video::omx_c2d_conv::isUBWCChanged(unsigned int flags)
 {
-    bool bRet = hal_fmt == HAL_PIXEL_FORMAT_RGBA_8888 &&
-        !(hal_flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED);
+    return (mFlags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED) !=
+           (flags  & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED);
+}
+
+bool omx_video::is_conv_needed(int hal_fmt)
+{
+    bool bRet = hal_fmt == HAL_PIXEL_FORMAT_RGBA_8888;
+
 #ifdef _HW_RGBA
     bRet = false;
 #endif
@@ -5036,20 +5043,21 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
       updated correctly*/
 
     if (buffer->nFilledLen > 0 && handle) {
-        if (c2d_opened && handle->format != c2d_conv.get_src_format()) {
+        if (c2d_opened && (handle->format != c2d_conv.get_src_format() ||
+                           c2d_conv.isUBWCChanged(handle->flags))) {
             c2d_conv.close();
             c2d_opened = false;
         }
 
         if (!c2d_opened) {
-            mUsesColorConversion = is_conv_needed(handle->format, handle->flags);
+            mUsesColorConversion = is_conv_needed(handle->format);
             if (mUsesColorConversion) {
                 DEBUG_PRINT_INFO("open Color conv forW: %u, H: %u",
                         (unsigned int)m_sInPortDef.format.video.nFrameWidth,
                         (unsigned int)m_sInPortDef.format.video.nFrameHeight);
                 if (!c2d_conv.open(m_sInPortDef.format.video.nFrameHeight,
                             m_sInPortDef.format.video.nFrameWidth,
-                            RGBA8888, NV12_128m, handle->width)) {
+                            RGBA8888, NV12_128m, handle->width, handle->flags)) {
                     m_pCallbacks.EmptyBufferDone(hComp,m_app_data,buffer);
                     DEBUG_PRINT_ERROR("Color conv open failed");
                     return OMX_ErrorBadParameter;
@@ -5255,7 +5263,7 @@ OMX_ERRORTYPE omx_video::push_input_buffer(OMX_HANDLETYPE hComp)
             Input_pmem_info.offset = 0;
             Input_pmem_info.size = handle->size;
             m_graphicBufferSize = handle->size;
-            if (is_conv_needed(handle->format, handle->flags))
+            if (is_conv_needed(handle->format))
                 ret = convert_queue_buffer(hComp,Input_pmem_info,index);
             else if (handle->format == HAL_PIXEL_FORMAT_NV12_ENCODEABLE ||
                     handle->format == QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m ||
