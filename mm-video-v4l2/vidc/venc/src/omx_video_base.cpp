@@ -330,13 +330,6 @@ omx_video::omx_video():
 omx_video::~omx_video()
 {
     DEBUG_PRINT_HIGH("~omx_video(): Inside Destructor()");
-    if (msg_thread_created) {
-        msg_thread_stop = true;
-        post_message(this, OMX_COMPONENT_CLOSE_MSG);
-        DEBUG_PRINT_HIGH("omx_video: Waiting on Msg Thread exit");
-        pthread_join(msg_thread_id,NULL);
-    }
-    DEBUG_PRINT_HIGH("omx_video: Waiting on Async Thread exit");
     /*For V4L2 based drivers, pthread_join is done in device_close
      * so no need to do it here*/
     pthread_mutex_destroy(&m_lock);
@@ -2158,6 +2151,14 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 QOMX_INDEXDOWNSCALAR *pDownScalarParam =
                     reinterpret_cast<QOMX_INDEXDOWNSCALAR *>(paramData);
                 memcpy(pDownScalarParam, &m_sParamDownScalar, sizeof(m_sParamDownScalar));
+                break;
+            }
+        case OMX_IndexParamVideoAndroidVp8Encoder:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_ANDROID_VP8ENCODERTYPE);
+                OMX_VIDEO_PARAM_ANDROID_VP8ENCODERTYPE *pVp8Params =
+                        reinterpret_cast<OMX_VIDEO_PARAM_ANDROID_VP8ENCODERTYPE*>(paramData);
+                memcpy(pVp8Params,&m_sParamVP8Encoder,sizeof(m_sParamVP8Encoder));
                 break;
             }
         case OMX_IndexParamConsumerUsageBits:

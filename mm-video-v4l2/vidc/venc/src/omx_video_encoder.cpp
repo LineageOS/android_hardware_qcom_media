@@ -552,6 +552,10 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     m_sParamVP8.nDCTPartitions = 0;
     m_sParamVP8.bErrorResilientMode = OMX_FALSE;
 
+    OMX_INIT_STRUCT(&m_sParamVP8Encoder,OMX_VIDEO_PARAM_ANDROID_VP8ENCODERTYPE);
+    m_sParamVP8Encoder.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
+    m_sParamVP8Encoder.nKeyFrameInterval = 30;
+
     // HEVC specific init
     OMX_INIT_STRUCT(&m_sParamHEVC, OMX_VIDEO_PARAM_HEVCTYPE);
     m_sParamHEVC.nPortIndex = (OMX_U32) PORT_INDEX_OUT;
@@ -971,7 +975,21 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 memcpy(&m_sParamVP8,pParam, sizeof(struct OMX_VIDEO_PARAM_VP8TYPE));
                 break;
             }
-        case (OMX_INDEXTYPE)OMX_IndexParamVideoHevc:
+        case (OMX_INDEXTYPE)OMX_IndexParamVideoAndroidVp8Encoder:
+            {
+                VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_ANDROID_VP8ENCODERTYPE);
+                OMX_VIDEO_PARAM_ANDROID_VP8ENCODERTYPE* pParam = (OMX_VIDEO_PARAM_ANDROID_VP8ENCODERTYPE*)paramData;
+                OMX_VIDEO_PARAM_ANDROID_VP8ENCODERTYPE vp8_param;
+                DEBUG_PRINT_LOW("set_parameter: OMX_IndexParamVideoAndroidVp8Encoder");
+
+                memcpy(&vp8_param, pParam, sizeof( struct OMX_VIDEO_PARAM_ANDROID_VP8ENCODERTYPE));
+                if (handle->venc_set_param(&vp8_param, (OMX_INDEXTYPE)OMX_IndexParamVideoAndroidVp8Encoder) != true) {
+                    return OMX_ErrorUnsupportedSetting;
+                }
+                memcpy(&m_sParamVP8Encoder, &vp8_param, sizeof(struct OMX_VIDEO_PARAM_ANDROID_VP8ENCODERTYPE));
+                break;
+            }
+            case (OMX_INDEXTYPE)OMX_IndexParamVideoHevc:
             {
                 VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_HEVCTYPE);
                 OMX_VIDEO_PARAM_HEVCTYPE* pParam = (OMX_VIDEO_PARAM_HEVCTYPE*)paramData;

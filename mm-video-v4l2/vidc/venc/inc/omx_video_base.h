@@ -141,6 +141,8 @@ static const char* MEM_DEVICE = "/dev/ion";
 #define LEGACY_CAM_METADATA_TYPE encoder_media_buffer_type
 #endif
 
+class omx_video;
+void post_message(omx_video *omx, unsigned char id);
 void* message_thread_enc(void *);
 bool is_ubwc_interlaced(private_handle_t *handle);
 
@@ -683,6 +685,7 @@ class omx_video: public qc_omx_component
         OMX_VIDEO_PARAM_H263TYPE m_sParamH263;
         OMX_VIDEO_PARAM_AVCTYPE m_sParamAVC;
         OMX_VIDEO_PARAM_VP8TYPE m_sParamVP8;
+        OMX_VIDEO_PARAM_ANDROID_VP8ENCODERTYPE m_sParamVP8Encoder;
         OMX_VIDEO_PARAM_HEVCTYPE m_sParamHEVC;
         QOMX_VIDEO_PARAM_TMETYPE m_sParamTME;
         OMX_U32 tme_payload_version;

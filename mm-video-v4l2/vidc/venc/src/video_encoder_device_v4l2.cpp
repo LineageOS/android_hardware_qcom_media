@@ -1937,6 +1937,13 @@ void venc_dev::venc_close()
         if (async_thread_created)
             pthread_join(m_tid,NULL);
 
+        if (venc_handle->msg_thread_created) {
+            venc_handle->msg_thread_created = false;
+            venc_handle->msg_thread_stop = true;
+            post_message(venc_handle, omx_video::OMX_COMPONENT_CLOSE_MSG);
+            DEBUG_PRINT_HIGH("omx_video: Waiting on Msg Thread exit");
+            pthread_join(venc_handle->msg_thread_id, NULL);
+        }
         DEBUG_PRINT_HIGH("venc_close X");
         unsubscribe_to_events(m_nDriver_fd);
         close(m_poll_efd);
@@ -2580,6 +2587,24 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                 }
 
                 break;
+            }
+        case OMX_IndexParamVideoAndroidVp8Encoder:
+            {
+                DEBUG_PRINT_LOW("venc_set_param: OMX_IndexParamVideoAndroidVp8Encoder");
+                OMX_VIDEO_PARAM_ANDROID_VP8ENCODERTYPE *vp8EncodeParams =
+                    (OMX_VIDEO_PARAM_ANDROID_VP8ENCODERTYPE *)paramData;
+
+                if (vp8EncodeParams->nPortIndex == (OMX_U32) PORT_INDEX_OUT) {
+                     int pFrames = vp8EncodeParams->nKeyFrameInterval - 1;
+                     if (venc_set_intra_period(pFrames, 0) == false) {
+                         DEBUG_PRINT_ERROR("ERROR: Request for setting intra period failed");
+                         return false;
+                     }
+
+                 } else {
+                     DEBUG_PRINT_ERROR("ERROR: Invalid Port Index for OMX_IndexParamVideoAndroidVp8Encoder");
+                 }
+                 break;
             }
         case OMX_IndexParamVideoErrorCorrection:
             {
