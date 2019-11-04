@@ -87,6 +87,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define VENC_BFRAME_MAX_HEIGHT      1088
 #define VENC_INFINITE_GOP 0xFFFFFFF
 
+/* TODO: Use sanctioned vendor bits for HEIF
+ * once end to end 64-bit support is available.
+ */
+#define GRALLOC_USAGE_PRIVATE_HEIF_VIDEO (UINT32_C(1) << 27)
 #undef LOG_TAG
 #define LOG_TAG "OMX-VENC: venc_dev"
 
