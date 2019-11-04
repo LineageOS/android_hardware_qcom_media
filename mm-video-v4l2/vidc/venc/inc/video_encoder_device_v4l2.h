@@ -370,7 +370,6 @@ class venc_dev
         bool is_csc_custom_matrix_enabled;
         bool is_auto_blur_disabled;
         bool csc_enable;
-        OMX_U32 fd_list[64];
         unsigned long get_media_colorformat(unsigned long);
 
     private:
@@ -440,7 +439,6 @@ class venc_dev
         bool venc_set_peak_bitrate(OMX_U32 nPeakBitrate);
         bool venc_set_vpx_error_resilience(OMX_BOOL enable);
         bool venc_set_batch_size(OMX_U32 size);
-        bool venc_get_index_from_fd(OMX_U32 buffer_fd, OMX_U32 *index);
         bool venc_set_hierp_layers(OMX_U32 hierp_layers);
         bool venc_set_baselayerid(OMX_U32 baseid);
         bool venc_set_qp(OMX_U32 i_frame_qp, OMX_U32 p_frame_qp,OMX_U32 b_frame_qp, OMX_U32 enable);
