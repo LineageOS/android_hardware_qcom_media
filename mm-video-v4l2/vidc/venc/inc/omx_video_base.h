@@ -152,6 +152,8 @@ static const char* MEM_DEVICE = "/dev/ion";
 #define LEGACY_CAM_METADATA_TYPE encoder_media_buffer_type
 #endif
 
+class omx_video;
+void post_message(omx_video *omx, unsigned char id);
 void* message_thread_enc(void *);
 
 enum omx_venc_extradata_types {
