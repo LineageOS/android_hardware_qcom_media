@@ -977,6 +977,7 @@ int venc_dev::venc_set_format(int format)
 
         switch (color_format) {
         case NV12_128m:
+        case NV12_512:
             return venc_set_color_format((OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m);
         case NV12_UBWC:
             return venc_set_color_format((OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed);
