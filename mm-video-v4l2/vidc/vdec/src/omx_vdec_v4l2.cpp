@@ -9854,14 +9854,18 @@ bool omx_vdec::alloc_map_ion_memory(OMX_U32 buffer_size, vdec_ion *ion_info, int
     }
 
 #ifdef HYPERVISOR
-    flag = 0;
+    flag &= ~ION_FLAG_CACHED;
 #endif
     ion_info->alloc_data.flags = flag;
     ion_info->alloc_data.len = buffer_size;
 
     ion_info->alloc_data.heap_id_mask = ION_HEAP(ION_SYSTEM_HEAP_ID);
     if (secure_mode && (ion_info->alloc_data.flags & ION_FLAG_SECURE)) {
+#ifdef HYPERVISOR
+        ion_info->alloc_data.heap_id_mask = ION_HEAP(ION_SECURE_DISPLAY_HEAP_ID);
+#else
         ion_info->alloc_data.heap_id_mask = ION_HEAP(MEM_HEAP_ID);
+#endif
     }
 
     /* Use secure display cma heap for obvious reasons. */
