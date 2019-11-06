@@ -1538,6 +1538,17 @@ bool venc_dev::venc_open(OMX_U32 codec)
         fdesc.index++;
     }
 
+    if(venc_handle->is_secure_session()) {
+        control.id = V4L2_CID_MPEG_VIDC_VIDEO_SECURE;
+        control.value = 1;
+        DEBUG_PRINT_HIGH("ioctl: open secure device");
+        ret=ioctl(m_nDriver_fd, VIDIOC_S_CTRL,&control);
+        if (ret) {
+            DEBUG_PRINT_ERROR("ioctl: open secure dev fail, rc %d", ret);
+            return false;
+        }
+    }
+
     if (venc_handle->is_secure_session()) {
         m_sOutput_buff_property.alignment = SZ_1M;
         m_sInput_buff_property.alignment  = SZ_1M;
@@ -1591,17 +1602,6 @@ bool venc_dev::venc_open(OMX_U32 codec)
     bufreq.count = 2;
     ret = ioctl(m_nDriver_fd,VIDIOC_REQBUFS, &bufreq);
     m_sOutput_buff_property.mincount = m_sOutput_buff_property.actualcount = bufreq.count;
-
-    if(venc_handle->is_secure_session()) {
-        control.id = V4L2_CID_MPEG_VIDC_VIDEO_SECURE;
-        control.value = 1;
-        DEBUG_PRINT_HIGH("ioctl: open secure device");
-        ret=ioctl(m_nDriver_fd, VIDIOC_S_CTRL,&control);
-        if (ret) {
-            DEBUG_PRINT_ERROR("ioctl: open secure dev fail, rc %d", ret);
-            return false;
-        }
-    }
 
     resume_in_stopped = 0;
     metadatamode = 0;
@@ -1838,6 +1838,7 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
 
         minCount = MAX((unsigned int)control.value, minCount);
         m_sInput_buff_property.mincount = minCount;
+        m_sInput_buff_property.actualcount = m_sInput_buff_property.mincount;
 
         fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
         fmt.fmt.pix_mp.height = m_sVenc_cfg.input_height;
@@ -1851,9 +1852,6 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
             return false;
         }
         m_sInput_buff_property.datasize=fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
-
-        if (m_sInput_buff_property.actualcount < m_sInput_buff_property.mincount)
-            m_sInput_buff_property.actualcount = m_sInput_buff_property.mincount;
 
         *min_buff_count = m_sInput_buff_property.mincount;
         *actual_buff_count = m_sInput_buff_property.actualcount;
@@ -1926,9 +1924,7 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
         }
 
         m_sOutput_buff_property.mincount = minCount;
-
-        if (m_sOutput_buff_property.actualcount < m_sOutput_buff_property.mincount)
-            m_sOutput_buff_property.actualcount = m_sOutput_buff_property.mincount;
+        m_sOutput_buff_property.actualcount = m_sOutput_buff_property.mincount;
 
         *min_buff_count = m_sOutput_buff_property.mincount;
         *actual_buff_count = m_sOutput_buff_property.actualcount;
@@ -4276,6 +4272,10 @@ bool venc_dev::venc_superframe_enable(private_handle_t *handle)
 bool venc_dev::venc_cvp_enable(private_handle_t *handle)
 {
     cvpMetadata.size = 0;
+    if (temporal_layers_config.nMaxLayers > 1) {
+        DEBUG_PRINT_INFO("venc_cvp_enable: disabling CVP as max layers %u", temporal_layers_config.nMaxLayers);
+        return true;
+    }
     if (getMetaData(handle, GET_CVP_METADATA, &cvpMetadata) == 0) {
         if (cvpMetadata.size == CVP_METADATA_SIZE) {
             struct v4l2_control control;

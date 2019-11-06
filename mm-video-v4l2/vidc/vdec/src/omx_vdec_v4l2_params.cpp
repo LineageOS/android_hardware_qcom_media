@@ -651,7 +651,7 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
 
                                            if (ret) {
                                                DEBUG_PRINT_ERROR("Set Resolution failed");
-                                               eRet = OMX_ErrorUnsupportedSetting;
+                                               eRet = errno == EBUSY ? OMX_ErrorInsufficientResources : OMX_ErrorUnsupportedSetting;
                                            } else {
                                                eRet = get_buffer_req(&drv_ctx.op_buf);
                                            }

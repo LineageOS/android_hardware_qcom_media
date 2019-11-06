@@ -231,6 +231,11 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_encoder.avc",OMX_MAX_STRINGNAME_SIZE);
         codec_type = OMX_VIDEO_CodingAVC;
+    } else if(!strncmp((char *)m_nkind, "OMX.qcom.video.encoder.avc.secure",\
+                OMX_MAX_STRINGNAME_SIZE)) {
+        strlcpy((char *)m_cRole, "video_encoder.avc",OMX_MAX_STRINGNAME_SIZE);
+        codec_type = OMX_VIDEO_CodingAVC;
+        secure_session = true;
     } else if (!strncmp((char *)m_nkind, "OMX.qcom.video.encoder.vp8",    \
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_encoder.vp8",OMX_MAX_STRINGNAME_SIZE);
@@ -245,6 +250,11 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_encoder.hevc", OMX_MAX_STRINGNAME_SIZE);
         codec_type = OMX_VIDEO_CodingImageHEIC;
+    } else if (!strncmp((char *)m_nkind, "OMX.qcom.video.encoder.hevc.secure",    \
+                OMX_MAX_STRINGNAME_SIZE)) {
+        strlcpy((char *)m_cRole, "video_encoder.hevc", OMX_MAX_STRINGNAME_SIZE);
+        codec_type = OMX_VIDEO_CodingHEVC;
+        secure_session = true;
     } else {
         DEBUG_PRINT_ERROR("ERROR: Unknown Component");
         eRet = OMX_ErrorInvalidComponentName;
@@ -445,6 +455,7 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
                 &m_sOutPortDef.nBufferSize,
                 m_sOutPortDef.nPortIndex) != true) {
         eRet = OMX_ErrorUndefined;
+        goto init_error;
     }
 
     // Initialize the video color format for input port
@@ -949,6 +960,8 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 m_sParamProfileLevel.eLevel = pParam->eLevel;
 
                 if (!strncmp((char *)m_nkind, "OMX.qcom.video.encoder.avc",\
+                            OMX_MAX_STRINGNAME_SIZE) ||
+                    !strncmp((char *)m_nkind, "OMX.qcom.video.encoder.avc.secure",\
                             OMX_MAX_STRINGNAME_SIZE)) {
                     m_sParamAVC.eProfile = (OMX_VIDEO_AVCPROFILETYPE)m_sParamProfileLevel.eProfile;
                     m_sParamAVC.eLevel = (OMX_VIDEO_AVCLEVELTYPE)m_sParamProfileLevel.eLevel;
@@ -965,6 +978,8 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 else if (!strncmp((char*)m_nkind, "OMX.qcom.video.encoder.hevc",\
                             OMX_MAX_STRINGNAME_SIZE) ||
                         !strncmp((char*)m_nkind, "OMX.qcom.video.encoder.hevc.cq",\
+                            OMX_MAX_STRINGNAME_SIZE) ||
+                        !strncmp((char*)m_nkind, "OMX.qcom.video.encoder.hevc.secure",\
                             OMX_MAX_STRINGNAME_SIZE) ||
                         !strncmp((char*)m_nkind, "OMX.qcom.video.encoder.heic",\
                             OMX_MAX_STRINGNAME_SIZE)) {
@@ -992,7 +1007,8 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     return OMX_ErrorIncorrectStateOperation;
                 }
 
-                if (!strncmp((char*)m_nkind, "OMX.qcom.video.encoder.avc",OMX_MAX_STRINGNAME_SIZE)) {
+                if (!strncmp((char*)m_nkind, "OMX.qcom.video.encoder.avc",OMX_MAX_STRINGNAME_SIZE) ||
+                    !strncmp((char*)m_nkind, "OMX.qcom.video.encoder.avc.secure",OMX_MAX_STRINGNAME_SIZE)) {
                     if (!strncmp((char*)comp_role->cRole,"video_encoder.avc",OMX_MAX_STRINGNAME_SIZE)) {
                         strlcpy((char*)m_cRole,"video_encoder.avc",OMX_MAX_STRINGNAME_SIZE);
                     } else {
@@ -1007,7 +1023,8 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                         eRet =OMX_ErrorUnsupportedSetting;
                     }
                 } else if (!strncmp((char*)m_nkind, "OMX.qcom.video.encoder.hevc",OMX_MAX_STRINGNAME_SIZE) ||
-                        !strncmp((char*)m_nkind, "OMX.qcom.video.encoder.hevc.cq",OMX_MAX_STRINGNAME_SIZE)) {
+                        !strncmp((char*)m_nkind, "OMX.qcom.video.encoder.hevc.cq",OMX_MAX_STRINGNAME_SIZE) ||
+                        !strncmp((char*)m_nkind, "OMX.qcom.video.encoder.hevc.secure",OMX_MAX_STRINGNAME_SIZE)) {
                     if (!strncmp((const char*)comp_role->cRole,"video_encoder.hevc",OMX_MAX_STRINGNAME_SIZE)) {
                         strlcpy((char*)m_cRole,"video_encoder.hevc",OMX_MAX_STRINGNAME_SIZE);
                     } else {
@@ -1562,6 +1579,8 @@ bool omx_venc::update_profile_level()
     m_sParamProfileLevel.eLevel = (OMX_VIDEO_AVCLEVELTYPE)eLevel;
 
     if (!strncmp((char *)m_nkind, "OMX.qcom.video.encoder.avc",\
+                OMX_MAX_STRINGNAME_SIZE) ||
+        !strncmp((char *)m_nkind, "OMX.qcom.video.encoder.avc.secure",\
                 OMX_MAX_STRINGNAME_SIZE)) {
         m_sParamAVC.eProfile = (OMX_VIDEO_AVCPROFILETYPE)eProfile;
         m_sParamAVC.eLevel = (OMX_VIDEO_AVCLEVELTYPE)eLevel;
@@ -1578,6 +1597,8 @@ bool omx_venc::update_profile_level()
     else if (!strncmp((char *)m_nkind, "OMX.qcom.video.encoder.hevc",\
                 OMX_MAX_STRINGNAME_SIZE) ||
             !strncmp((char *)m_nkind, "OMX.qcom.video.encoder.hevc.cq",\
+                OMX_MAX_STRINGNAME_SIZE) ||
+            !strncmp((char *)m_nkind, "OMX.qcom.video.encoder.hevc.secure",\
                 OMX_MAX_STRINGNAME_SIZE) ||
             !strncmp((char *)m_nkind, "OMX.qcom.video.encoder.heic",\
                 OMX_MAX_STRINGNAME_SIZE)) {
