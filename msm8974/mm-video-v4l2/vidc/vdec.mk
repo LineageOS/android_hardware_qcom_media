@@ -111,11 +111,13 @@ libmm-vdec-inc      += frameworks/av/include/media/stagefright
 
 LOCAL_MODULE                    := libOmxVdec
 LOCAL_MODULE_TAGS               := optional
+LOCAL_PROPRIETARY_MODULE        := true
 LOCAL_CFLAGS                    := $(libOmxVdec-def)
 LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 
 LOCAL_HEADER_LIBRARIES  := generated_kernel_headers
 
+LOCAL_PRELINK_MODULE    := false
 LOCAL_SHARED_LIBRARIES  := liblog libutils libui libbinder libcutils libdl
 
 LOCAL_SHARED_LIBRARIES  += libdivxdrmdecrypt
