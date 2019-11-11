@@ -280,6 +280,12 @@ enum rc_modes {
         | RC_CBR_VFR | RC_CBR_CFR | RC_MBR_CFR | RC_MBR_VFR | RC_CQ)
 };
 
+enum roi_type {
+    ROI_NONE = V4L2_CID_MPEG_VIDC_VIDEO_ROI_TYPE_NONE,
+    ROI_2BIT = V4L2_CID_MPEG_VIDC_VIDEO_ROI_TYPE_2BIT,
+    ROI_2BYTE = V4L2_CID_MPEG_VIDC_VIDEO_ROI_TYPE_2BYTE,
+};
+
 class venc_dev
 {
     public:
@@ -487,6 +493,7 @@ class venc_dev
             OMX_QTI_VIDEO_CONFIG_ROIINFO info;
         };
         bool m_roi_enabled;
+        roi_type m_roi_type;
         pthread_mutex_t m_roilock;
         std::list<roidata> m_roilist;
         void get_roi_for_timestamp(struct roidata &roi, OMX_TICKS timestamp);

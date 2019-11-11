@@ -933,8 +933,25 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                     return false;
                 }
 
-                if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Enc_ROI && pParam->bEnabled)
+                if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Enc_ROI && pParam->bEnabled) {
                     m_roi_enabled = true;
+                    struct v4l2_control control;
+                    control.id = V4L2_CID_MPEG_VIDC_VIDEO_ROI_TYPE;
+                    control.value = ROI_NONE;
+                    if (ioctl(m_nDriver_fd, VIDIOC_G_CTRL, &control)) {
+                        DEBUG_PRINT_ERROR("ERROR: failed to query supported ROI type");
+                        m_roi_type = ROI_NONE;
+                    } else {
+                        auto type = static_cast<roi_type>(control.value);
+                        if (type != ROI_2BIT && type != ROI_2BYTE) {
+                            DEBUG_PRINT_LOW("invalid ROI type : %u", m_roi_type);
+                            m_roi_type = ROI_NONE;
+                        } else {
+                            m_roi_type = type;
+                            DEBUG_PRINT_LOW("queried ROI type : %u", m_roi_type);
+                        }
+                    }
+                }
 
                 break;
             }
