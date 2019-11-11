@@ -2346,6 +2346,11 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                     return true;
                 }
 
+                if(m_codec == OMX_VIDEO_CodingImageHEIC){
+                    DEBUG_PRINT_ERROR("OMX_IndexParamVideoAndroidImageGrid is not supported for HEIC (HW tiling)");
+                    return true;
+                }
+
                 if (!venc_set_tile_dimension(pParam->nTileWidth)) {
                     DEBUG_PRINT_ERROR("ERROR: Failed to set tile dimension %d",
                                         pParam->nTileWidth);
