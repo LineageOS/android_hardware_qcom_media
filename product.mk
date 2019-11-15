@@ -1,4 +1,4 @@
-MSM_VIDC_TARGET_LIST := sdm845 sdm710
+MSM_VIDC_TARGET_LIST := sdm845 sdm710 qcs605
 
 ifeq ($(call is-board-platform-in-list, $(QCOM_BOARD_PLATFORMS)),true)
 
