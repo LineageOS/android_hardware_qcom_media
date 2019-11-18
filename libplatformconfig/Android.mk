@@ -33,12 +33,9 @@ LOCAL_SHARED_LIBRARIES += \
             libcutils \
             libutils
 
-LOCAL_STATIC_LIBRARIES := libOmxVidcCommon
-
 LOCAL_C_INCLUDES += \
             external/expat/lib \
             $(LOCAL_PATH)/../mm-core/inc \
-            $(LOCAL_PATH)/../mm-video-v4l2/vidc/common/inc/ \
 
 LOCAL_SRC_FILES := PlatformConfig.cpp
 LOCAL_SRC_FILES += ConfigParser.cpp

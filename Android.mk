@@ -11,11 +11,11 @@ endif #TARGET_USES_QMAA
 ifeq ($(call is-board-platform-in-list, $(QCOM_BOARD_PLATFORMS)),true)
 include $(QCOM_MEDIA_ROOT)/libstagefrighthw/Android.mk
 include $(QCOM_MEDIA_ROOT)/mm-core/Android.mk
+include $(QCOM_MEDIA_ROOT)/libplatformconfig/Android.mk
 endif
 
 ifeq ($(call is-board-platform-in-list, $(MSM_VIDC_TARGET_LIST)),true)
 ifeq ($(VIDC_STUB_HAL),false)
-include $(QCOM_MEDIA_ROOT)/libplatformconfig/Android.mk
 include $(QCOM_MEDIA_ROOT)/mm-video-v4l2/Android.mk
 include $(QCOM_MEDIA_ROOT)/libc2dcolorconvert/Android.mk
 endif #VIDC_STUB_HAL
