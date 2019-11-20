@@ -90,6 +90,10 @@ omx_venc::omx_venc()
     m_debug.in_buffer_log = atoi(property_value);
 
     property_value[0] = '\0';
+    property_get("vendor.vidc.enc.log.in.rotated", property_value, "0");
+    m_debug.in_buffer_rotated_log = atoi(property_value);
+
+    property_value[0] = '\0';
     property_get("vendor.vidc.enc.log.out", property_value, "0");
     m_debug.out_buffer_log = atoi(property_value);
 
@@ -552,17 +556,21 @@ OMX_ERRORTYPE  omx_venc::set_parameter
                     RETURN(OMX_ErrorUnsupportedSetting);
                 }
 
-                /* set the frame size */
-                Prop.id = SWVENC_PROPERTY_ID_FRAME_SIZE;
-                Prop.info.frame_size.height = portDefn->format.video.nFrameHeight;
-                Prop.info.frame_size.width  = portDefn->format.video.nFrameWidth;
+                // don't update frame size if it's unchanged
+                if (m_sInPortDef.format.video.nFrameWidth != portDefn->format.video.nFrameWidth
+                        || m_sInPortDef.format.video.nFrameHeight != portDefn->format.video.nFrameHeight) {
+                    /* set the frame size */
+                    Prop.id = SWVENC_PROPERTY_ID_FRAME_SIZE;
+                    Prop.info.frame_size.height = portDefn->format.video.nFrameHeight;
+                    Prop.info.frame_size.width  = portDefn->format.video.nFrameWidth;
 
-                Ret = swvenc_setproperty(m_hSwVenc, &Prop);
-                if (Ret != SWVENC_S_SUCCESS)
-                {
-                   DEBUG_PRINT_ERROR("%s, swvenc_setproperty failed (%d)",
-                     __FUNCTION__, Ret);
-                   RETURN(OMX_ErrorUnsupportedSetting);
+                    Ret = swvenc_setproperty(m_hSwVenc, &Prop);
+                    if (Ret != SWVENC_S_SUCCESS)
+                    {
+                        DEBUG_PRINT_ERROR("%s, swvenc_setproperty failed (%d)",
+                                __FUNCTION__, Ret);
+                    RETURN(OMX_ErrorUnsupportedSetting);
+                    }
                 }
 
                 /* set the input frame-rate */
@@ -1849,7 +1857,7 @@ OMX_ERRORTYPE omx_venc::swvenc_do_flip_inport() {
     Prop.info.frame_size.width = inHeight;
 
     DEBUG_PRINT_HIGH("setting flipped dimensions to swencoder, WxH (%d x %d)",
-            inWidth, inHeight);
+            Prop.info.frame_size.width, Prop.info.frame_size.height);
     Ret = swvenc_setproperty(m_hSwVenc, &Prop);
     if (Ret != SWVENC_S_SUCCESS) {
         // currently, set dimensions to encoder can only be called when encoder is
@@ -2388,6 +2396,7 @@ bool omx_venc::dev_empty_buf
 
     if (m_debug.in_buffer_log)
     {
+       // dump before rotation, un-rotated buffer
        swvenc_input_log_buffers((const char*)ipbuffer.p_buffer, ipbuffer.filled_length);
     }
 
@@ -2395,6 +2404,11 @@ bool omx_venc::dev_empty_buf
         if(!swvenc_do_rotate((int)fd, ipbuffer, (OMX_U32)index)) {
             DEBUG_PRINT_ERROR("rotate failed");
             return OMX_ErrorUndefined;
+        }
+        if (m_debug.in_buffer_rotated_log) {
+            // dump after rotation, rotated buffer
+            DEBUG_PRINT_ERROR("dump rotated");
+            swvenc_input_log_rotated_buffers((const char*)ipbuffer.p_buffer, ipbuffer.filled_length);
         }
     }
 
@@ -2873,8 +2887,8 @@ int omx_venc::dev_output_log_buffers(const char *buffer, int bufferlen, uint64_t
     if (m_debug.out_buffer_log && !m_debug.outfile)
     {
         int size = 0;
-        int width = m_sInPortDef.format.video.nFrameWidth;
-        int height = m_sInPortDef.format.video.nFrameHeight;
+        int width = m_sOutPortDef.format.video.nFrameWidth;
+        int height = m_sOutPortDef.format.video.nFrameHeight;
         if(SWVENC_CODEC_MPEG4 == m_codec)
         {
            size = snprintf(m_debug.outfile_name, PROPERTY_VALUE_MAX,
@@ -2953,6 +2967,59 @@ int omx_venc::swvenc_input_log_buffers(const char *buffer, int bufferlen)
        for(int i = 0; i < height/2; i++)
        {
           fwrite(temp, width, 1, m_debug.infile);
+          temp += stride;
+      }
+   }
+
+   RETURN(0);
+}
+
+int omx_venc::swvenc_input_log_rotated_buffers(const char *buffer, int bufferlen)
+{
+   int width = m_sInPortDef.format.video.nFrameWidth;
+   int height = m_sInPortDef.format.video.nFrameHeight;
+   if (m_bIsInFlipDone) {
+       auto v = width;
+       width = height;
+       height = v;
+   }
+   int stride = SWVENC_Y_STRIDE(COLOR_FMT_NV12, width);
+   int scanlines = SWVENC_Y_SCANLINES(COLOR_FMT_NV12, height);
+   char *temp = (char*)buffer;
+
+   if (!m_debug.inrotatedfile)
+   {
+       int size = snprintf(m_debug.inrotatedfile_name, PROPERTY_VALUE_MAX,
+                      "%s/input_enc_rotated_%d_%d_%p.yuv",
+                      m_debug.log_loc, width, height, this);
+       if ((size > PROPERTY_VALUE_MAX) || (size < 0))
+       {
+           DEBUG_PRINT_ERROR("Failed to open input rotated file: %s for logging size:%d",
+                              m_debug.inrotatedfile_name, size);
+           RETURN(-1);
+       }
+       DEBUG_PRINT_LOW("input rotated filename = %s", m_debug.inrotatedfile_name);
+       m_debug.inrotatedfile = fopen (m_debug.inrotatedfile_name, "ab");
+       if (!m_debug.inrotatedfile)
+       {
+           DEBUG_PRINT_HIGH("Failed to open input rotated file: %s for logging",
+              m_debug.inrotatedfile_name);
+           m_debug.inrotatedfile_name[0] = '\0';
+           RETURN(-1);
+       }
+   }
+   if (m_debug.inrotatedfile && buffer && bufferlen)
+   {
+       DEBUG_PRINT_LOW("%s buffer length: %d", __func__, bufferlen);
+       for (int i = 0; i < height; i++)
+       {
+          fwrite(temp, width, 1, m_debug.inrotatedfile);
+          temp += stride;
+       }
+       temp = (char*)(buffer + (stride * scanlines));
+       for(int i = 0; i < height/2; i++)
+       {
+          fwrite(temp, width, 1, m_debug.inrotatedfile);
           temp += stride;
       }
    }
