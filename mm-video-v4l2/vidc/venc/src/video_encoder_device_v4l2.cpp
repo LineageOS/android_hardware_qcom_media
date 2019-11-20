@@ -2109,6 +2109,12 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
             DEBUG_PRINT_LOW("Set buffer count = %d as metadata mode and batchmode enabled", minCount);
         }
 
+        // reset min count to 4 for HEIC cases
+        if (mIsGridset) {
+            minCount = 4;
+            DEBUG_PRINT_LOW("Set buffer count = %d for HEIC", minCount);
+        }
+
         minCount = MAX((unsigned int)control.value, minCount);
         m_sInput_buff_property.mincount = minCount;
 
