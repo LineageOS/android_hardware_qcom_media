@@ -567,8 +567,10 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                             return false;
                         }
 
-                        if (num_input_planes > 1)
-                            input_extradata_info.count = m_sInput_buff_property.actualcount + 1;
+                        if (num_input_planes > 1) {
+                            input_extradata_info.count = m_sInput_buff_property.actualcount;
+                            venc_handle->m_client_in_extradata_info.set_extradata_info(input_extradata_info.buffer_size, input_extradata_info.count);
+                        }
 
                         if (!downscalar_enabled) {
                             m_sVenc_cfg.dvs_height = portDefn->format.video.nFrameHeight;
@@ -648,8 +650,10 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                             return false;
                         }
 
-                        if (num_output_planes > 1)
+                        if (num_output_planes > 1) {
                             output_extradata_info.count = m_sOutput_buff_property.actualcount;
+                            venc_handle->m_client_out_extradata_info.set_extradata_info(output_extradata_info.buffer_size, output_extradata_info.count);
+                        }
                     } else {
                         DEBUG_PRINT_LOW("venc_set_param: OMX_IndexParamPortDefinition: parameters not changed on port %d",
                             portDefn->nPortIndex);
@@ -929,8 +933,25 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                     return false;
                 }
 
-                if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Enc_ROI && pParam->bEnabled)
+                if (pParam->nIndex == (OMX_INDEXTYPE)OMX_QTI_ExtraDataCategory_Enc_ROI && pParam->bEnabled) {
                     m_roi_enabled = true;
+                    struct v4l2_control control;
+                    control.id = V4L2_CID_MPEG_VIDC_VIDEO_ROI_TYPE;
+                    control.value = ROI_NONE;
+                    if (ioctl(m_nDriver_fd, VIDIOC_G_CTRL, &control)) {
+                        DEBUG_PRINT_ERROR("ERROR: failed to query supported ROI type");
+                        m_roi_type = ROI_NONE;
+                    } else {
+                        auto type = static_cast<roi_type>(control.value);
+                        if (type != ROI_2BIT && type != ROI_2BYTE) {
+                            DEBUG_PRINT_LOW("invalid ROI type : %u", m_roi_type);
+                            m_roi_type = ROI_NONE;
+                        } else {
+                            m_roi_type = type;
+                            DEBUG_PRINT_LOW("queried ROI type : %u", m_roi_type);
+                        }
+                    }
+                }
 
                 break;
             }

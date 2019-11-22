@@ -280,6 +280,12 @@ enum rc_modes {
         | RC_CBR_VFR | RC_CBR_CFR | RC_MBR_CFR | RC_MBR_VFR | RC_CQ)
 };
 
+enum roi_type {
+    ROI_NONE = V4L2_CID_MPEG_VIDC_VIDEO_ROI_TYPE_NONE,
+    ROI_2BIT = V4L2_CID_MPEG_VIDC_VIDEO_ROI_TYPE_2BIT,
+    ROI_2BYTE = V4L2_CID_MPEG_VIDC_VIDEO_ROI_TYPE_2BYTE,
+};
+
 class venc_dev
 {
     public:
@@ -370,7 +376,6 @@ class venc_dev
         bool is_csc_custom_matrix_enabled;
         bool is_auto_blur_disabled;
         bool csc_enable;
-        OMX_U32 fd_list[64];
         unsigned long get_media_colorformat(unsigned long);
 
     private:
@@ -440,7 +445,6 @@ class venc_dev
         bool venc_set_peak_bitrate(OMX_U32 nPeakBitrate);
         bool venc_set_vpx_error_resilience(OMX_BOOL enable);
         bool venc_set_batch_size(OMX_U32 size);
-        bool venc_get_index_from_fd(OMX_U32 buffer_fd, OMX_U32 *index);
         bool venc_set_hierp_layers(OMX_U32 hierp_layers);
         bool venc_set_baselayerid(OMX_U32 baseid);
         bool venc_set_qp(OMX_U32 i_frame_qp, OMX_U32 p_frame_qp,OMX_U32 b_frame_qp, OMX_U32 enable);
@@ -489,6 +493,7 @@ class venc_dev
             OMX_QTI_VIDEO_CONFIG_ROIINFO info;
         };
         bool m_roi_enabled;
+        roi_type m_roi_type;
         pthread_mutex_t m_roilock;
         std::list<roidata> m_roilist;
         void get_roi_for_timestamp(struct roidata &roi, OMX_TICKS timestamp);
