@@ -16,6 +16,11 @@
      limitations under the License.
 -->
 <Included>
+    <Encoders>
+        <MediaCodec name="OMX.qcom.audio.encoder.mpegh" type="audio/mhas" rank="0">
+            <Limit name="concurrent-instances" max="1" />
+        </MediaCodec>
+    </Encoders>
     <Decoders>
         <MediaCodec name="OMX.google.opus.decoder" type="audio/opus" update="true" rank="100"/>
         <!-- SimpleOMXComponet based software decoder-->

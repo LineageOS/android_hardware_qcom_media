@@ -439,14 +439,21 @@ void* venc_dev::async_venc_message_thread (void *input)
 
         /* calc avg. fps, bitrate */
         struct timeval tv;
+        OMX_U64 current_time;
+        OMX_U64 prev_time;
         gettimeofday(&tv,NULL);
-        OMX_U64 time_diff = ((uint64_t) tv.tv_sec * (uint64_t) 1000000ULL + (uint64_t) tv.tv_usec) -
-                ((uint64_t) stats.prev_tv.tv_sec * (uint64_t) 1000000ULL + (uint64_t) stats.prev_tv.tv_usec);
-        if (time_diff >= 1000000) {
+        current_time = (OMX_U64)tv.tv_sec * 1000000ULL + (OMX_U64)tv.tv_usec;
+        prev_time = (OMX_U64)stats.prev_tv.tv_sec * 1000000ULL + (OMX_U64)stats.prev_tv.tv_usec;
+        if (current_time < prev_time) {
+            stats.prev_tv = tv;
+            stats.bytes_generated = 0;
+            stats.prev_fbd = omx->handle->fbd;
+        } else if (current_time - prev_time  >= 1000000ULL) {
             OMX_U32 num_fbd = omx->handle->fbd - stats.prev_fbd;
+            OMX_U64 time_diff = current_time - prev_time;
             if (stats.prev_tv.tv_sec && num_fbd && time_diff) {
-                float framerate = num_fbd * 1000000/(float)time_diff;
-                OMX_U64 bitrate = (stats.bytes_generated * 8 / num_fbd) * framerate;
+                float framerate = ((OMX_U64)num_fbd * 1000000ULL) / (float)time_diff;
+                OMX_U64 bitrate = ((OMX_U64)stats.bytes_generated * 8 / (float)num_fbd) * framerate;
                 DEBUG_PRINT_INFO("stats: avg. fps %0.2f, bitrate %llu",
                     framerate, bitrate);
             }
@@ -616,6 +623,11 @@ bool venc_dev::handle_dynamic_config(OMX_BUFFERHEADERTYPE *bufferHdr)
                 if (!venc_config_bitrate(&iter->config_data.bitrate))
                     goto bailout;
                 break;
+            case OMX_IndexConfigCommonMirror:
+                DEBUG_PRINT_LOW("handle_dynamic_config: OMX_IndexConfigCommonMirror");
+                if (!venc_set_mirror(iter->config_data.mirror.eMirror))
+                    goto bailout;
+                break;
             default:
                 DEBUG_PRINT_ERROR("Unsupported dynamic config type %d with timestamp %lld us", iter->type, iter->timestamp);
                 goto bailout;
@@ -636,7 +648,7 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
     int height = m_sVenc_cfg.input_height;
     int width = m_sVenc_cfg.input_width;
     OMX_TICKS nTimeStamp = static_cast<OMX_TICKS>(buf.timestamp.tv_sec) * 1000000 + buf.timestamp.tv_usec;
-    int fd = buf.m.planes[0].reserved[0];
+    int fd = buf.m.planes[0].reserved[MSM_VIDC_BUFFER_FD];
     char *p_extradata = NULL;
     OMX_OTHER_EXTRADATATYPE *data = NULL;
     struct roidata roi;
@@ -670,14 +682,17 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
 
     if (m_cvp_meta_enabled && cvpMetadata.size == CVP_METADATA_SIZE) {
         packet_size = sizeof(struct msm_vidc_extradata_header) - sizeof(unsigned int)
-                           + sizeof(struct msm_vidc_enc_cvp_metadata_payload);
+                           + cvpMetadata.size;
 
         if (filled_len + packet_size <= input_extradata_info.buffer_size) {
+            struct  msm_vidc_enc_cvp_metadata_payload *payload_cvp;
             data->nSize = ALIGN(packet_size, 4);
             data->nVersion.nVersion = OMX_SPEC_VERSION;
             data->nPortIndex = PORT_INDEX_IN;
             data->eType = (OMX_EXTRADATATYPE)MSM_VIDC_EXTRADATA_CVP_METADATA;
-            data->nDataSize = sizeof(struct msm_vidc_enc_cvp_metadata_payload);
+            data->nDataSize = cvpMetadata.size;
+            payload_cvp = (struct  msm_vidc_enc_cvp_metadata_payload *)(data->data);
+            memcpy(payload_cvp->data, cvpMetadata.payload, cvpMetadata.size);
             filled_len += data->nSize;
             data = (OMX_OTHER_EXTRADATATYPE *)((char *)data + data->nSize);
         } else {
@@ -962,9 +977,11 @@ OMX_ERRORTYPE venc_dev::venc_get_supported_profile_level(OMX_VIDEO_PARAM_PROFILE
                             QOMX_VIDEO_AVCProfileMain,
                             QOMX_VIDEO_AVCProfileConstrainedHigh,
                             QOMX_VIDEO_AVCProfileHigh };
-    int hevc_profiles[3] = { OMX_VIDEO_HEVCProfileMain,
+    int hevc_profiles[5] = { OMX_VIDEO_HEVCProfileMain,
+                             OMX_VIDEO_HEVCProfileMain10,
+                             OMX_VIDEO_HEVCProfileMainStill,
                              OMX_VIDEO_HEVCProfileMain10HDR10,
-                             OMX_VIDEO_HEVCProfileMainStill };
+                             OMX_VIDEO_HEVCProfileMain10HDR10Plus };
 
     if (!profileLevelType)
         return OMX_ErrorBadParameter;
@@ -1674,6 +1691,13 @@ void venc_dev::venc_close()
         if (async_thread_created)
             pthread_join(m_tid,NULL);
 
+        if (venc_handle->msg_thread_created) {
+            venc_handle->msg_thread_created = false;
+            venc_handle->msg_thread_stop = true;
+            post_message(venc_handle, omx_video::OMX_COMPONENT_CLOSE_MSG);
+            DEBUG_PRINT_HIGH("omx_video: Waiting on Msg Thread exit");
+            pthread_join(venc_handle->msg_thread_id, NULL);
+        }
         DEBUG_PRINT_HIGH("venc_close X");
         unsubscribe_to_events(m_nDriver_fd);
         close(m_poll_efd);
@@ -1804,13 +1828,6 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
             return false;
         }
 
-        /* Need more buffers for HFR usecase */
-        if (operating_rate >= 120 || (m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) >= 120) {
-            minCount = MAX(minCount, 16);
-            DEBUG_PRINT_HIGH("fps %d, operating rate %d, input min count %d",
-                   (int)(m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den), operating_rate, minCount);
-        }
-
         // Request MAX_V4L2_BUFS from V4L2 in batch mode.
         // Keep the original count for the client
         if (metadatamode && mBatchSize) {
@@ -1905,13 +1922,6 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
             // mBatchSize buffers
             minCount = MAX((unsigned int)control.value, mBatchSize) + mBatchSize;
             DEBUG_PRINT_LOW("set min count %d as mBatchSize %d", minCount, mBatchSize);
-        }
-
-        /* Need more buffers for HFR usecase */
-        if (operating_rate >= 120 || (m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) >= 120) {
-            minCount = MAX(minCount, 16);
-            DEBUG_PRINT_HIGH("fps %d, operating rate %d, output min count %d",
-                   (int)(m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den), operating_rate, minCount);
         }
 
         m_sOutput_buff_property.mincount = minCount;
@@ -2135,25 +2145,6 @@ unsigned venc_dev::venc_start(void)
     /* set buffercount before start */
     venc_reconfig_reqbufs();
     resume_in_stopped = 0;
-
-    if (m_codec == OMX_VIDEO_CodingImageHEIC && mIsGridset) {
-        struct v4l2_format fmt;
-        memset(&fmt, 0, sizeof(fmt));
-        fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-        fmt.fmt.pix_mp.height = DEFAULT_TILE_DIMENSION;
-        fmt.fmt.pix_mp.width = DEFAULT_TILE_DIMENSION;
-        fmt.fmt.pix_mp.pixelformat = m_sVenc_cfg.codectype;
-        DEBUG_PRINT_INFO("set format type %d, wxh %dx%d, pixelformat %#x",
-            fmt.type, fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height,
-            fmt.fmt.pix_mp.pixelformat);
-        if (ioctl(m_nDriver_fd, VIDIOC_S_FMT, &fmt)) {
-            DEBUG_PRINT_ERROR("set format failed, type %d, wxh %dx%d, pixelformat %#x",
-                fmt.type, fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height,
-                fmt.fmt.pix_mp.pixelformat);
-            hw_overload = errno == EBUSY;
-            return false;
-        }
-    }
 
     buf_type=V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     DEBUG_PRINT_LOW("send_command_proxy(): Idle-->Executing");
@@ -2783,7 +2774,8 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         }
                     } // Check OUTPUT Streaming
 
-                    venc_get_cvp_metadata(handle, &buf);
+                    if (!venc_get_cvp_metadata(handle, &buf))
+                        return false;
 
                     struct UBWCStats cam_ubwc_stats[2];
                     unsigned long long int compression_ratio = 1 << 16;
@@ -2846,12 +2838,12 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                     plane[0].data_offset = 0;
                     plane[0].length = handle->size;
                     plane[0].bytesused = handle->size;
-                    plane[0].reserved[2] = (unsigned long int)compression_ratio;
+                    plane[0].reserved[MSM_VIDC_COMP_RATIO] = (unsigned long int)compression_ratio;
                     char v4l2ColorFormatStr[200];
                     get_v4l2_color_format_as_string(v4l2ColorFormatStr, sizeof(v4l2ColorFormatStr), m_sVenc_cfg.inputformat);
                     DEBUG_PRINT_LOW("venc_empty_buf: Opaque camera buf: fd = %d "
                                 ": filled %d of %d format 0x%lx (%s) CR %d", fd, plane[0].bytesused,
-                                plane[0].length, m_sVenc_cfg.inputformat, v4l2ColorFormatStr, plane[0].reserved[2]);
+                                plane[0].length, m_sVenc_cfg.inputformat, v4l2ColorFormatStr, plane[0].reserved[MSM_VIDC_COMP_RATIO]);
                 }
             } else {
                 // Metadata mode
@@ -2934,9 +2926,9 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
         plane[extra_idx].length = input_extradata_info.buffer_size;
         plane[extra_idx].m.userptr = (unsigned long)input_extradata_info.ion[extradata_index].uaddr;
 #ifdef USE_ION
-        plane[extra_idx].reserved[0] = input_extradata_info.ion[extradata_index].data_fd;
+        plane[extra_idx].reserved[MSM_VIDC_BUFFER_FD] = input_extradata_info.ion[extradata_index].data_fd;
 #endif
-        plane[extra_idx].reserved[1] = 0;
+        plane[extra_idx].reserved[MSM_VIDC_DATA_OFFSET] = 0;
         plane[extra_idx].data_offset = 0;
     } else if (extra_idx >= VIDEO_MAX_PLANES) {
         DEBUG_PRINT_ERROR("Extradata index higher than expected: %d\n", extra_idx);
@@ -2946,8 +2938,8 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
     buf.index = index;
     buf.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
     buf.memory = V4L2_MEMORY_USERPTR;
-    plane[0].reserved[0] = fd;
-    plane[0].reserved[1] = 0;
+    plane[0].reserved[MSM_VIDC_BUFFER_FD] = fd;
+    plane[0].reserved[MSM_VIDC_DATA_OFFSET] = 0;
     buf.m.planes = plane;
     buf.length = num_input_planes;
     buf.timestamp.tv_sec = bufhdr->nTimeStamp / 1000000;
@@ -3091,8 +3083,8 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
             buf.index = (unsigned)v4l2Id;
             buf.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
             buf.memory = V4L2_MEMORY_USERPTR;
-            plane[0].reserved[0] = MetaBufferUtil::getFdAt(hnd, i);
-            plane[0].reserved[1] = 0;
+            plane[0].reserved[MSM_VIDC_BUFFER_FD] = MetaBufferUtil::getFdAt(hnd, i);
+            plane[0].reserved[MSM_VIDC_DATA_OFFSET] = 0;
             plane[0].data_offset = MetaBufferUtil::getIntAt(hnd, i, MetaBufferUtil::INT_OFFSET);
             plane[0].m.userptr = (unsigned long)meta_buf;
             plane[0].length = plane[0].bytesused = MetaBufferUtil::getIntAt(hnd, i, MetaBufferUtil::INT_SIZE);
@@ -3105,7 +3097,7 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
             extra_idx = EXTRADATA_IDX(num_input_planes);
 
             if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
-                int fd = plane[0].reserved[0];
+                int fd = plane[0].reserved[MSM_VIDC_BUFFER_FD];
                 OMX_U32 extradata_index;
                 if (!venc_get_index_from_fd(fd, &extradata_index)) {
                     DEBUG_PRINT_ERROR("Extradata index not found for fd: %d\n", fd);
@@ -3115,8 +3107,8 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
                 plane[extra_idx].bytesused = input_extradata_info.buffer_size;
                 plane[extra_idx].length = input_extradata_info.buffer_size;
                 plane[extra_idx].m.userptr = (unsigned long)input_extradata_info.ion[extradata_index].uaddr;
-                plane[extra_idx].reserved[0] = input_extradata_info.ion[extradata_index].data_fd;
-                plane[extra_idx].reserved[1] = 0;
+                plane[extra_idx].reserved[MSM_VIDC_BUFFER_FD] = input_extradata_info.ion[extradata_index].data_fd;
+                plane[extra_idx].reserved[MSM_VIDC_DATA_OFFSET] = 0;
                 plane[extra_idx].data_offset = 0;
             } else if (extra_idx >= VIDEO_MAX_PLANES) {
                 DEBUG_PRINT_ERROR("Extradata index higher than expected: %d\n", extra_idx);
@@ -3130,7 +3122,7 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
             bufTimeStamp = bufhdr->nTimeStamp + MetaBufferUtil::getIntAt(hnd, i, MetaBufferUtil::INT_TIMESTAMP) / 1000;
 
             DEBUG_PRINT_LOW(" Q Batch [%d of %d] : buf=%p fd=%d len=%d TS=%lld",
-                i, numBufs, bufhdr, plane[0].reserved[0], plane[0].length, bufTimeStamp);
+                i, numBufs, bufhdr, plane[0].reserved[MSM_VIDC_BUFFER_FD], plane[0].length, bufTimeStamp);
             buf.timestamp.tv_sec = bufTimeStamp / 1000000;
             buf.timestamp.tv_usec = (bufTimeStamp % 1000000);
 
@@ -3225,8 +3217,8 @@ bool venc_dev::venc_fill_buf(void *buffer, void *pmem_data_buf,unsigned index,un
     buf.memory = V4L2_MEMORY_USERPTR;
     plane[0].length = bufhdr->nAllocLen;
     plane[0].bytesused = bufhdr->nFilledLen;
-    plane[0].reserved[0] = fd;
-    plane[0].reserved[1] = 0;
+    plane[0].reserved[MSM_VIDC_BUFFER_FD] = fd;
+    plane[0].reserved[MSM_VIDC_DATA_OFFSET] = 0;
     plane[0].data_offset = bufhdr->nOffset;
     buf.m.planes = plane;
     buf.length = num_output_planes;
@@ -3250,9 +3242,9 @@ bool venc_dev::venc_fill_buf(void *buffer, void *pmem_data_buf,unsigned index,un
         plane[extra_idx].length = output_extradata_info.buffer_size;
         plane[extra_idx].m.userptr = (unsigned long)output_extradata_info.ion[index].uaddr;
 #ifdef USE_ION
-        plane[extra_idx].reserved[0] = output_extradata_info.ion[index].data_fd;
+        plane[extra_idx].reserved[MSM_VIDC_BUFFER_FD] = output_extradata_info.ion[index].data_fd;
 #endif
-        plane[extra_idx].reserved[1] = 0;
+        plane[extra_idx].reserved[MSM_VIDC_DATA_OFFSET] = 0;
         plane[extra_idx].data_offset = 0;
     } else if (extra_idx >= VIDEO_MAX_PLANES) {
         DEBUG_PRINT_ERROR("Extradata index higher than expected: %d", extra_idx);
@@ -4294,6 +4286,8 @@ bool venc_dev::venc_cvp_enable(private_handle_t *handle)
             }
             m_cvp_meta_enabled = true;
             DEBUG_PRINT_HIGH("CVP metadata enabled");
+            if (!venc_set_cvp_skipratio_controls())
+                return false;
         } else {
             DEBUG_PRINT_ERROR("ERROR: External CVP mode disabled for this session and continue!");
             clearMetaData(handle, SET_CVP_METADATA);
@@ -4302,10 +4296,38 @@ bool venc_dev::venc_cvp_enable(private_handle_t *handle)
     return true;
 }
 
+bool venc_dev::venc_set_cvp_skipratio_controls()
+{
+    struct v4l2_control ctrl;
+
+    if (!cvpMetadata.cvp_frame_rate || !cvpMetadata.capture_frame_rate) {
+        DEBUG_PRINT_LOW("ERROR: Invalid cvp frame rate received");
+        return true;
+    }
+
+    ctrl.id = V4L2_CID_MPEG_VIDC_CAPTURE_FRAME_RATE;
+    ctrl.value = cvpMetadata.capture_frame_rate;
+    if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &ctrl)) {
+        DEBUG_PRINT_ERROR("ERROR: Setting capture frame rate control failed");
+        return false;
+    }
+
+    ctrl.id = V4L2_CID_MPEG_VIDC_CVP_FRAME_RATE;
+    ctrl.value = cvpMetadata.cvp_frame_rate;
+    if (ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &ctrl)) {
+        DEBUG_PRINT_LOW("ERROR: Setting cvp frame rate control failed");
+        return false;
+    }
+    return true;
+}
+
 bool venc_dev::venc_get_cvp_metadata(private_handle_t *handle, struct v4l2_buffer *buf)
 {
     if (!m_cvp_meta_enabled)
         return true;
+
+    unsigned int capture_rate = cvpMetadata.capture_frame_rate;
+    unsigned int cvp_rate = cvpMetadata.cvp_frame_rate;
 
     buf->flags &= ~V4L2_BUF_FLAG_CVPMETADATA_SKIP;
     cvpMetadata.size = 0;
@@ -4324,6 +4346,11 @@ bool venc_dev::venc_get_cvp_metadata(private_handle_t *handle, struct v4l2_buffe
         buf->flags |= V4L2_BUF_FLAG_CVPMETADATA_SKIP;
         DEBUG_PRINT_LOW("venc_empty_buf: V4L2_BUF_FLAG_CVPMETADATA_SKIP is set");
         DEBUG_PRINT_LOW("CVP metadata not available");
+    }
+    if ((cvpMetadata.capture_frame_rate != capture_rate) ||
+        (cvpMetadata.cvp_frame_rate != cvp_rate)) {
+        if(!venc_set_cvp_skipratio_controls())
+            return false;
     }
     return true;
 }

@@ -693,6 +693,9 @@ enum OMX_QCOM_EXTN_INDEXTYPE
 
     /* Configure Rectangle Region based ROI info */
     OMX_QTIIndexConfigVideoRoiRectRegionInfo = 0x7F100007,
+
+    /*"OMX.google.android.index.describeHDR10PlusInfo"*/
+    OMX_QTIIndexConfigDescribeHDR10PlusInfo = 0x7F100008,
 };
 
 /**

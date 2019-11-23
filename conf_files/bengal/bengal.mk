@@ -1,4 +1,4 @@
-CONFIG_PATH := hardware/qcom/media/conf_files/lito
+CONFIG_PATH := hardware/qcom/media/conf_files/bengal
 #Bring all FEATURE FLAG (Compilation) here
 
 PRODUCT_COPY_FILES += \
@@ -12,15 +12,8 @@ PRODUCT_COPY_FILES += \
     $(CONFIG_PATH)/mediacodec-seccomp.policy:$(TARGET_COPY_OUT_VENDOR)/etc/seccomp_policy/mediacodec.policy \
     $(CONFIG_PATH)/system_properties.xml:$(TARGET_COPY_OUT_VENDOR)/etc/system_properties.xml
 
-# Enable CLANG/LLVM integer-overflow sanitization
-TARGET_ENABLE_VIDC_INTSAN := true
-
-# Enable DIAG mode for CLANG/LLVM integer-overflow sanitization
-# TARGET_ENABLE_VIDC_INTSAN must be set to 'true' before enabling DIAG mode
-# NOTE: DIAG mode should be used only for debug builds
-TARGET_ENABLE_VIDC_INTSAN_DIAG := false
-
 # Vendor property overrides
+
 ifeq ($(GENERIC_ODM_IMAGE),true)
   $(warning "Forcing codec2.0 HW for generic odm build variant")
   #Set default ranks and rank Codec 2.0 over OMX codecs

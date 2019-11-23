@@ -11,7 +11,7 @@ PRODUCT_COPY_FILES += \
     $(CONFIG_PATH)/system_properties.xml:$(TARGET_COPY_OUT_VENDOR)/etc/system_properties.xml
 
 # Enable CLANG/LLVM integer-overflow sanitization
-TARGET_ENABLE_VIDC_INTSAN := false
+TARGET_ENABLE_VIDC_INTSAN := true
 
 # Enable DIAG mode for CLANG/LLVM integer-overflow sanitization
 # TARGET_ENABLE_VIDC_INTSAN must be set to 'true' before enabling DIAG mode

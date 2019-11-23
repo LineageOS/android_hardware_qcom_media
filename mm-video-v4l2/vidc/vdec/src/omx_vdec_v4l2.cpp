@@ -206,15 +206,15 @@ void* async_message_thread (void *input)
 
                 vdec_msg.msgcode=VDEC_MSG_EVT_CONFIG_CHANGED;
                 vdec_msg.status_code=VDEC_S_SUCCESS;
-                vdec_msg.msgdata.output_frame.picsize.frame_height = ptr[0];
-                vdec_msg.msgdata.output_frame.picsize.frame_width = ptr[1];
+                vdec_msg.msgdata.output_frame.picsize.frame_height = ptr[MSM_VIDC_HEIGHT];
+                vdec_msg.msgdata.output_frame.picsize.frame_width = ptr[MSM_VIDC_WIDTH];
                 vdec_msg.msgdata.output_frame.flags = true; // INSUFFICIENT event
                 DEBUG_PRINT_HIGH("VIDC Port Reconfig received insufficient");
-                omx->dpb_bit_depth = ptr[2];
-                DEBUG_PRINT_HIGH("VIDC Port Reconfig Bitdepth - %d", ptr[2]);
-                omx->m_progressive = ptr[3];
-                DEBUG_PRINT_HIGH("VIDC Port Reconfig PicStruct - %d", ptr[3]);
-                omx->m_color_space = (ptr[4] == MSM_VIDC_BT2020 ? (omx_vdec::BT2020):
+                omx->dpb_bit_depth = ptr[MSM_VIDC_BIT_DEPTH];
+                DEBUG_PRINT_HIGH("VIDC Port Reconfig Bitdepth - %d", ptr[MSM_VIDC_BIT_DEPTH]);
+                omx->m_progressive = ptr[MSM_VIDC_PIC_STRUCT];
+                DEBUG_PRINT_HIGH("VIDC Port Reconfig PicStruct - %d", ptr[MSM_VIDC_PIC_STRUCT]);
+                omx->m_color_space = (ptr[MSM_VIDC_COLOR_SPACE] == MSM_VIDC_BT2020 ? (omx_vdec::BT2020):
                                       (omx_vdec:: EXCEPT_BT2020));
                 DEBUG_PRINT_HIGH("VIDC Port Reconfig ColorSpace - %d", omx->m_color_space);
                 if (omx->async_message_process(input,&vdec_msg) < 0) {
@@ -696,6 +696,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     pthread_mutex_init(&m_lock, NULL);
     pthread_mutex_init(&c_lock, NULL);
     pthread_mutex_init(&buf_lock, NULL);
+    pthread_mutex_init(&m_hdr10pluslock, NULL);
     sem_init(&m_cmd_lock,0,0);
     sem_init(&m_safe_flush, 0, 0);
     streaming[CAPTURE_PORT] =
@@ -728,6 +729,9 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
 
     m_client_hdr_info.nPortIndex = (OMX_U32)OMX_CORE_INPUT_PORT_INDEX;
     m_internal_hdr_info.nPortIndex = (OMX_U32)OMX_CORE_OUTPUT_PORT_INDEX;
+
+    m_etb_count = 0;
+    m_etb_timestamp = 0;
 
     m_color_space = EXCEPT_BT2020;
 
@@ -849,9 +853,11 @@ omx_vdec::~omx_vdec()
     unsubscribe_to_events(drv_ctx.video_driver_fd);
     close(m_poll_efd);
     close(drv_ctx.video_driver_fd);
+    clear_hdr10plusinfo();
     pthread_mutex_destroy(&m_lock);
     pthread_mutex_destroy(&c_lock);
     pthread_mutex_destroy(&buf_lock);
+    pthread_mutex_destroy(&m_hdr10pluslock);
     sem_destroy(&m_cmd_lock);
     if (perf_flag) {
         DEBUG_PRINT_HIGH("--> TOTAL PROCESSING TIME");
@@ -2449,7 +2455,7 @@ OMX_ERRORTYPE  omx_vdec::send_command_proxy(OMX_IN OMX_HANDLETYPE hComp,
                struct timespec ts;
 
                clock_gettime(CLOCK_REALTIME, &ts);
-               ts.tv_sec += 2;
+               ts.tv_sec += 1;
                DEBUG_PRINT_LOW("waiting for %d EBDs of CODEC CONFIG buffers ",
                        m_queued_codec_config_count);
                BITMASK_SET(&m_flags, OMX_COMPONENT_FLUSH_DEFERRED);
@@ -2744,6 +2750,8 @@ void omx_vdec::notify_flush_done(void *ctxt)
             pThis->m_cb.EventHandler(&pThis->m_cmp, pThis->m_app_data,
                     OMX_EventCmdComplete,OMX_CommandFlush,
                     OMX_CORE_INPUT_PORT_INDEX,NULL );
+            //clear hdr10plusinfo list upon input flush done
+            clear_hdr10plusinfo();
         }
     }
 }
@@ -2828,15 +2836,17 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
                             QOMX_VIDEO_AVCProfileMain,
                             QOMX_VIDEO_AVCProfileConstrainedHigh,
                             QOMX_VIDEO_AVCProfileHigh };
-    int hevc_profiles[4] = { OMX_VIDEO_HEVCProfileMain,
+    int hevc_profiles[5] = { OMX_VIDEO_HEVCProfileMain,
                              OMX_VIDEO_HEVCProfileMain10,
+                             OMX_VIDEO_HEVCProfileMainStill,
                              OMX_VIDEO_HEVCProfileMain10HDR10,
                              OMX_VIDEO_HEVCProfileMain10HDR10Plus };
     int mpeg2_profiles[2] = { OMX_VIDEO_MPEG2ProfileSimple,
                               OMX_VIDEO_MPEG2ProfileMain};
-    int vp9_profiles[3] = { OMX_VIDEO_VP9Profile0,
+    int vp9_profiles[4] = { OMX_VIDEO_VP9Profile0,
                             OMX_VIDEO_VP9Profile2,
-                            OMX_VIDEO_VP9Profile2HDR};
+                            OMX_VIDEO_VP9Profile2HDR,
+                            OMX_VIDEO_VP9Profile2HDR10Plus};
 
     if (!profileLevelType)
         return OMX_ErrorBadParameter;
@@ -2949,39 +2959,9 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
     /* Check if the profile is supported by driver or not  */
     /* During query caps of profile driver sends a mask of */
     /* of all v4l2 profiles supported(in the flags field)  */
-    if((output_capability != V4L2_PIX_FMT_HEVC) &&
-         (output_capability != V4L2_PIX_FMT_VP9)) {
-        if (!profile_level_converter::convert_omx_profile_to_v4l2(output_capability, profileLevelType->eProfile, &v4l2_profile)) {
-            DEBUG_PRINT_ERROR("Invalid profile, cannot find corresponding omx profile");
-            return OMX_ErrorHardware;
-        }
-    }else if(output_capability == V4L2_PIX_FMT_HEVC) { //convert omx profile to v4l2 profile for HEVC Main10 and Main10HDR10 profiles,seperately
-        switch (profileLevelType->eProfile) {
-            case OMX_VIDEO_HEVCProfileMain:
-                v4l2_profile = V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN;
-                break;
-            case OMX_VIDEO_HEVCProfileMain10:
-            case OMX_VIDEO_HEVCProfileMain10HDR10:
-            case OMX_VIDEO_HEVCProfileMain10HDR10Plus:
-                v4l2_profile = V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_10;
-                break;
-            default:
-                DEBUG_PRINT_ERROR("Invalid profile, cannot find corresponding omx profile");
-                return OMX_ErrorHardware;
-        }
-    }else { //convert omx profile to v4l2 profile for VP9 Profile2 and VP9 Profile2HDR profiles,seperately
-        switch (profileLevelType->eProfile) {
-            case OMX_VIDEO_VP9Profile0:
-                v4l2_profile = V4L2_MPEG_VIDEO_VP9_PROFILE_0;
-                break;
-            case OMX_VIDEO_VP9Profile2:
-            case OMX_VIDEO_VP9Profile2HDR:
-                v4l2_profile = V4L2_MPEG_VIDEO_VP9_PROFILE_2;
-                break;
-            default:
-                DEBUG_PRINT_ERROR("Invalid profile, cannot find corresponding omx profile");
-                return OMX_ErrorHardware;
-        }
+    if (!profile_level_converter::convert_omx_profile_to_v4l2(output_capability, profileLevelType->eProfile, &v4l2_profile)) {
+        DEBUG_PRINT_ERROR("Invalid profile, cannot find corresponding omx profile");
+        return OMX_ErrorHardware;
     }
     if(!((profile_cap.flags >> v4l2_profile) & 0x1)) {
         DEBUG_PRINT_ERROR("%s: Invalid index corresponding profile not supported : %d ",__FUNCTION__, profileLevelType->eProfile);
@@ -3096,6 +3076,12 @@ OMX_ERRORTYPE  omx_vdec::get_config(OMX_IN OMX_HANDLETYPE      hComp,
             get_preferred_hdr_info(params->sInfo);
             print_debug_hdr_color_info(&(params->sInfo), "GetConfig HDR");
 
+            break;
+        }
+        case OMX_QTIIndexConfigDescribeHDR10PlusInfo:
+        {
+            VALIDATE_OMX_PARAM_DATA(configData, DescribeHDR10PlusInfoParams);
+            //TODO
             break;
         }
         case OMX_IndexConfigAndroidVendorExtension:
@@ -3250,6 +3236,13 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
         memcpy(&m_client_hdr_info, params, sizeof(DescribeHDRStaticInfoParams));
         return ret;
 
+    } else if ((int)configIndex == (int)OMX_QTIIndexConfigDescribeHDR10PlusInfo) {
+        VALIDATE_OMX_PARAM_DATA(configData, DescribeHDR10PlusInfoParams);
+        if (!store_hdr10plusinfo((DescribeHDR10PlusInfoParams *)configData)) {
+            DEBUG_PRINT_ERROR("Failed to set hdr10plus info");
+        }
+        return ret;
+
     } else if ((int)configIndex == (int)OMX_IndexConfigAndroidVendorExtension) {
         VALIDATE_OMX_PARAM_DATA(configData, OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE);
 
@@ -3338,6 +3331,8 @@ OMX_ERRORTYPE  omx_vdec::get_extension_index(OMX_IN OMX_HANDLETYPE      hComp,
         *indexType = (OMX_INDEXTYPE)OMX_QTIIndexConfigDescribeColorAspects;
     } else if (extn_equals(paramName, "OMX.google.android.index.describeHDRStaticInfo")) {
         *indexType = (OMX_INDEXTYPE)OMX_QTIIndexConfigDescribeHDRColorInfo;
+    } else if (extn_equals(paramName, "OMX.google.android.index.describeHDR10PlusInfo")) {
+        *indexType = (OMX_INDEXTYPE)OMX_QTIIndexConfigDescribeHDR10PlusInfo;
     }else {
         DEBUG_PRINT_ERROR("Extension: %s not implemented", paramName);
         return OMX_ErrorNotImplemented;
@@ -4969,8 +4964,14 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
         buffer->pBuffer = (OMX_U8*)drv_ctx.ptr_inputbuffer[nBufferIndex].bufferaddr;
     }
 
-    DEBUG_PRINT_LOW("[ETB] BHdr(%p) pBuf(%p) nTS(%lld) nFL(%u)",
-            buffer, buffer->pBuffer, buffer->nTimeStamp, (unsigned int)buffer->nFilledLen);
+    m_etb_count++;
+    //To handle wrap around case. m_etb_count++ to ensure value is non-zero.
+    if (!m_etb_count)
+        m_etb_count++;
+    m_etb_timestamp = buffer->nTimeStamp;
+    DEBUG_PRINT_LOW("[ETB] nCnt(%u) BHdr(%p) pBuf(%p) nTS(%lld) nFL(%u)",
+            m_etb_count, buffer, buffer->pBuffer, buffer->nTimeStamp, (unsigned int)buffer->nFilledLen);
+    buffer->pMarkData = (OMX_PTR)(unsigned long)m_etb_count;
     post_event ((unsigned long)hComp,(unsigned long)buffer,OMX_COMPONENT_GENERATE_ETB);
 
     time_stamp_dts.insert_timestamp(buffer);
@@ -5023,7 +5024,7 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
     /* return zero length and not an EOS buffer */
     if ((buffer->nFilledLen == 0) &&
             ((buffer->nFlags & OMX_BUFFERFLAG_EOS) == 0)) {
-        DEBUG_PRINT_HIGH("return zero legth buffer");
+        DEBUG_PRINT_HIGH("return zero length buffer");
         post_event ((unsigned long)buffer,VDEC_S_SUCCESS,
                 OMX_COMPONENT_GENERATE_EBD);
         return OMX_ErrorNone;
@@ -5136,6 +5137,8 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
         buf.flags = V4L2_BUF_FLAG_EOS;
     }
 
+    // update hdr10plusinfo list with cookie as pMarkData
+    update_hdr10plusinfo_cookie_using_timestamp(buffer->pMarkData, buffer->nTimeStamp);
 
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
     buf.index = nPortIndex;
@@ -5145,10 +5148,10 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
     plane.length = drv_ctx.ip_buf.buffer_size;
     plane.m.userptr = (unsigned long)temp_buffer->bufferaddr -
         (unsigned long)temp_buffer->offset;
-    plane.reserved[0] = temp_buffer->pmem_fd;
-    plane.reserved[1] = temp_buffer->offset;
-    plane.reserved[3] = (unsigned long)buffer->pMarkData;
-    plane.reserved[4] = (unsigned long)buffer->hMarkTargetComponent;
+    plane.reserved[MSM_VIDC_BUFFER_FD] = temp_buffer->pmem_fd;
+    plane.reserved[MSM_VIDC_DATA_OFFSET] = temp_buffer->offset;
+    plane.reserved[MSM_VIDC_INPUT_TAG_1] = (unsigned long)buffer->pMarkData;
+    plane.reserved[MSM_VIDC_INPUT_TAG_2] = (unsigned long)buffer->hMarkTargetComponent;
     plane.data_offset = 0;
     buf.m.planes = &plane;
     buf.length = 1;
@@ -5405,8 +5408,8 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
     plane[0].m.userptr =
         (unsigned long)omx_ptr_outputbuffer[bufIndex].bufferaddr -
         (unsigned long)omx_ptr_outputbuffer[bufIndex].offset;
-    plane[0].reserved[0] = omx_ptr_outputbuffer[bufIndex].pmem_fd;
-    plane[0].reserved[1] = omx_ptr_outputbuffer[bufIndex].offset;
+    plane[0].reserved[MSM_VIDC_BUFFER_FD] = omx_ptr_outputbuffer[bufIndex].pmem_fd;
+    plane[0].reserved[MSM_VIDC_DATA_OFFSET] = omx_ptr_outputbuffer[bufIndex].offset;
     plane[0].data_offset = 0;
     extra_idx = EXTRADATA_IDX(drv_ctx.num_planes);
     if (extra_idx && (extra_idx < VIDEO_MAX_PLANES)) {
@@ -5414,9 +5417,9 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
         plane[extra_idx].length = drv_ctx.extradata_info.buffer_size;
         plane[extra_idx].m.userptr = (long unsigned int)drv_ctx.extradata_info.ion[bufIndex].uaddr;
 #ifdef USE_ION
-        plane[extra_idx].reserved[0] = drv_ctx.extradata_info.ion[bufIndex].data_fd;
+        plane[extra_idx].reserved[MSM_VIDC_BUFFER_FD] = drv_ctx.extradata_info.ion[bufIndex].data_fd;
 #endif
-        plane[extra_idx].reserved[1] = 0;
+        plane[extra_idx].reserved[MSM_VIDC_DATA_OFFSET] = 0;
         plane[extra_idx].data_offset = 0;
     } else if (extra_idx >= VIDEO_MAX_PLANES) {
         DEBUG_PRINT_ERROR("Extradata index higher than expected: %u", extra_idx);
@@ -6390,8 +6393,8 @@ int omx_vdec::async_message_process (void *context, void* message)
                    (((struct vdec_output_frameinfo *)omxhdr->pOutputPortPrivate
                      - omx_ptr_respbuffer) < (int)omx->drv_ctx.op_buf.actualcount)) {
 
-               omxhdr->pMarkData = (OMX_PTR)(unsigned long)plane[0].reserved[3];
-               omxhdr->hMarkTargetComponent = (OMX_HANDLETYPE)(unsigned long)plane[0].reserved[4];
+               omxhdr->pMarkData = (OMX_PTR)(unsigned long)plane[0].reserved[MSM_VIDC_INPUT_TAG_1];
+               omxhdr->hMarkTargetComponent = (OMX_HANDLETYPE)(unsigned long)plane[0].reserved[MSM_VIDC_INPUT_TAG_2];
 
                if (vdec_msg->msgdata.output_frame.len <=  omxhdr->nAllocLen) {
                    omxhdr->nFilledLen = vdec_msg->msgdata.output_frame.len;
@@ -6449,23 +6452,6 @@ int omx_vdec::async_message_process (void *context, void* message)
                            vdec_msg->msgdata.output_frame.framesize.bottom = omx->m_extradata_misr.output_crop_rect.nHeight;
                            vdec_msg->msgdata.output_frame.picsize.frame_width = omx->m_extradata_misr.output_width;
                            vdec_msg->msgdata.output_frame.picsize.frame_height = omx->m_extradata_misr.output_height;
-                       } else {
-                           DEBUG_PRINT_LOW("Read FBD crop from v4l2 reserved fields");
-                           vdec_msg->msgdata.output_frame.framesize.left = plane[0].reserved[2];
-                           vdec_msg->msgdata.output_frame.framesize.top = plane[0].reserved[3];
-                           vdec_msg->msgdata.output_frame.framesize.right = plane[0].reserved[2] + plane[0].reserved[4];
-                           vdec_msg->msgdata.output_frame.framesize.bottom = plane[0].reserved[3] + plane[0].reserved[5];
-                           vdec_msg->msgdata.output_frame.picsize.frame_width = plane[0].reserved[6];
-                           vdec_msg->msgdata.output_frame.picsize.frame_height = plane[0].reserved[7];
-
-                           /* Copy these values back to OMX internal variables to make both handlign same*/
-
-                           omx->m_extradata_misr.output_crop_rect.nLeft = vdec_msg->msgdata.output_frame.framesize.left;
-                           omx->m_extradata_misr.output_crop_rect.nTop = vdec_msg->msgdata.output_frame.framesize.top;
-                           omx->m_extradata_misr.output_crop_rect.nWidth = vdec_msg->msgdata.output_frame.framesize.right;
-                           omx->m_extradata_misr.output_crop_rect.nHeight = vdec_msg->msgdata.output_frame.framesize.bottom;
-                           omx->m_extradata_misr.output_width = vdec_msg->msgdata.output_frame.picsize.frame_width;
-                           omx->m_extradata_misr.output_height = vdec_msg->msgdata.output_frame.picsize.frame_height;
                        }
                    }
 
@@ -7518,7 +7504,7 @@ void omx_vdec::set_frame_rate(OMX_S64 act_timestamp)
     prev_ts = act_timestamp;
 }
 
-void omx_vdec::convert_color_space_info(OMX_U32 primaries, OMX_U32 range,
+void omx_vdec::convert_color_space_info(OMX_U32 primaries,
     OMX_U32 transfer, OMX_U32 matrix, ColorAspects *aspects)
 {
     switch (primaries) {
@@ -7547,8 +7533,6 @@ void omx_vdec::convert_color_space_info(OMX_U32 primaries, OMX_U32 range,
             aspects->mPrimaries = m_client_color_space.sAspects.mPrimaries;
             break;
     }
-
-    aspects->mRange = range ? ColorAspects::RangeFull : ColorAspects::RangeLimited;
 
     switch (transfer) {
         case MSM_VIDC_TRANSFER_BT709_5:
@@ -7632,7 +7616,7 @@ bool omx_vdec::handle_color_space_info(void *data)
 
                 if (seqdisp_payload && seqdisp_payload->color_descp) {
 
-                    convert_color_space_info(seqdisp_payload->color_primaries, 0,
+                    convert_color_space_info(seqdisp_payload->color_primaries,
                             seqdisp_payload->transfer_char, seqdisp_payload->matrix_coeffs,
                             aspects);
                     /* MPEG2 seqdisp payload doesn't give range info. Hence assing the value
@@ -7647,17 +7631,20 @@ bool omx_vdec::handle_color_space_info(void *data)
         case V4L2_PIX_FMT_HEVC:
             {
                 struct msm_vidc_vui_display_info_payload *display_info_payload;
+                OMX_U32 range;
                 display_info_payload = (struct msm_vidc_vui_display_info_payload*)data;
 
                 /* Refer H264 Spec @ Rec. ITU-T H.264 (02/2014) to understand this code */
 
-                if (display_info_payload->video_signal_present_flag &&
-                        display_info_payload->color_description_present_flag) {
-                    convert_color_space_info(display_info_payload->color_primaries,
-                            display_info_payload->video_full_range_flag,
-                            display_info_payload->transfer_char,
-                            display_info_payload->matrix_coeffs,
-                            aspects);
+                if (display_info_payload->video_signal_present_flag) {
+                    range = display_info_payload->video_full_range_flag;
+                    aspects->mRange = range ? ColorAspects::RangeFull : ColorAspects::RangeLimited;
+                    if (display_info_payload->color_description_present_flag) {
+                        convert_color_space_info(display_info_payload->color_primaries,
+                                display_info_payload->transfer_char,
+                                display_info_payload->matrix_coeffs,
+                                aspects);
+                    }
                 }
             }
             break;
@@ -8169,6 +8156,8 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                 get_preferred_hdr_info(final_hdr_info);
                 convert_color_aspects_to_metadata(final_color_aspects, color_mdata);
                 convert_hdr_info_to_metadata(final_hdr_info, color_mdata);
+                convert_hdr10plusinfo_to_metadata(p_buf_hdr->pMarkData, color_mdata);
+                remove_hdr10plusinfo_using_cookie(p_buf_hdr->pMarkData);
                 print_debug_hdr_color_info_mdata(&color_mdata);
                 print_debug_hdr10plus_metadata(color_mdata);
                 setMetaData(private_handle, COLOR_METADATA, (void*)&color_mdata);
@@ -8711,15 +8700,29 @@ bool omx_vdec::allocate_color_convert_buf::get_color_format(OMX_COLOR_FORMATTYPE
 void omx_vdec::send_codec_config()
 {
     if (codec_config_flag) {
-        unsigned long p1 = 0; // Parameter - 1
-        unsigned long p2 = 0; // Parameter - 2
-        unsigned long ident = 0;
+        unsigned long p1 = 0, p2 = 0;
+        unsigned long p3 = 0, p4 = 0;
+        unsigned long ident = 0, ident2 = 0;
         pthread_mutex_lock(&m_lock);
         DEBUG_PRINT_LOW("\n Check Queue for codec_config buffer \n");
         while (m_etb_q.m_size) {
             m_etb_q.pop_entry(&p1,&p2,&ident);
             if (ident == OMX_COMPONENT_GENERATE_ETB) {
                 if (((OMX_BUFFERHEADERTYPE *)p2)->nFlags & OMX_BUFFERFLAG_CODECCONFIG) {
+                    while (m_ftb_q.m_size) {
+                        m_ftb_q.pop_entry(&p3,&p4,&ident2);
+                        if (ident2 == OMX_COMPONENT_GENERATE_FTB) {
+                            pthread_mutex_unlock(&m_lock);
+                            if (fill_this_buffer_proxy((OMX_HANDLETYPE)p3,\
+                                        (OMX_BUFFERHEADERTYPE *)p4) != OMX_ErrorNone) {
+                                DEBUG_PRINT_ERROR("\n fill_this_buffer_proxy failure");
+                                omx_report_error ();
+                            }
+                            pthread_mutex_lock(&m_lock);
+                        } else if (ident2 == OMX_COMPONENT_GENERATE_FBD) {
+                            fill_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p3);
+                        }
+                    }
                     pthread_mutex_unlock(&m_lock);
                     if (empty_this_buffer_proxy((OMX_HANDLETYPE)p1,\
                                 (OMX_BUFFERHEADERTYPE *)p2) != OMX_ErrorNone) {
@@ -8975,6 +8978,160 @@ bool omx_vdec::prefetch_buffers(unsigned long prefetch_count,
 
     close(ion_fd);
     return rc;
+}
+
+bool omx_vdec::store_hdr10plusinfo(DescribeHDR10PlusInfoParams *hdr10plusdata)
+{
+    struct hdr10plusInfo metadata;
+
+    if (!hdr10plusdata) {
+        DEBUG_PRINT_ERROR("hdr10plus info not present");
+        return false;
+    }
+
+    if (hdr10plusdata->nParamSize > MAX_HDR10PLUSINFO_SIZE ||
+            hdr10plusdata->nParamSize < 1) {
+        DEBUG_PRINT_ERROR("Invalid hdr10plus metadata size %u", hdr10plusdata->nParamSize);
+        return false;
+    }
+
+    if (output_capability != V4L2_PIX_FMT_VP9) {
+        DEBUG_PRINT_ERROR("DescribeHDR10PlusInfoParams is not supported for %d codec",
+            output_capability);
+        return false;
+    }
+
+    memset(&metadata, 0, sizeof(struct hdr10plusInfo));
+    metadata.nSize = hdr10plusdata->nSize;
+    metadata.nVersion = hdr10plusdata->nVersion;
+    metadata.nPortIndex = hdr10plusdata->nPortIndex;
+    metadata.nParamSize = hdr10plusdata->nParamSize;
+    metadata.nParamSizeUsed = hdr10plusdata->nParamSizeUsed;
+    memcpy(metadata.payload, hdr10plusdata->nValue , hdr10plusdata->nParamSizeUsed);
+    metadata.is_new = true;
+
+    /*
+     * For the first setconfig, set the timestamp as zero. For
+     * the remaining, set the timestamp equal to previous
+     * etb timestamp + 1 to know this hdr10plus data arrived
+     * after previous etb.
+     */
+    if (m_etb_count) {
+        metadata.timestamp = m_etb_timestamp + 1;
+    }
+
+    pthread_mutex_lock(&m_hdr10pluslock);
+    DEBUG_PRINT_LOW("add hdr10plus info to the list with timestamp %lld and size %u",
+        metadata.timestamp, metadata.nParamSizeUsed);
+    m_hdr10pluslist.push_back(metadata);
+    pthread_mutex_unlock(&m_hdr10pluslock);
+
+    return true;
+}
+
+void omx_vdec::update_hdr10plusinfo_cookie_using_timestamp(OMX_PTR markdata, OMX_TICKS timestamp)
+{
+    std::list<hdr10plusInfo>::reverse_iterator iter;
+    unsigned int found = 0;
+    unsigned int cookie = (unsigned int)(unsigned long)markdata;
+
+    if (output_capability != V4L2_PIX_FMT_VP9)
+        return;
+
+    if (m_hdr10pluslist.empty()) {
+        DEBUG_PRINT_HIGH("update_hdr10plusinfo_cookie_using_timestamp: hdr10plusinfo list is empty!");
+        return;
+    }
+
+    /*
+     * look for the hdr10plus data which has timestamp nearest and
+     * lower than the etb timestamp, we should not take the
+     * hdr10plus data which has the timestamp greater than etb timestamp.
+     */
+    pthread_mutex_lock(&m_hdr10pluslock);
+    iter = m_hdr10pluslist.rbegin();
+    while (iter != m_hdr10pluslist.rend()) {
+        if (iter->timestamp <= timestamp && iter->is_new) {
+            found++;
+            if (found == 1) {
+                iter->cookie = cookie;
+                iter->is_new = false;
+                DEBUG_PRINT_LOW("Cookie value %u stored in hdr10plus list with timestamp %lld, size %u",
+                    iter->cookie, iter->timestamp, iter->nParamSizeUsed);
+            }
+        }
+        iter++;
+    }
+    pthread_mutex_unlock(&m_hdr10pluslock);
+
+    if(found > 1)
+        DEBUG_PRINT_HIGH("Multiple hdr10plus data not expected. Continue with the latest");
+}
+
+void omx_vdec::convert_hdr10plusinfo_to_metadata(OMX_PTR markdata, ColorMetaData &colorData)
+{
+    std::list<hdr10plusInfo>::iterator iter;
+    unsigned int cookie = (unsigned int)(unsigned long)markdata;
+
+    if (output_capability != V4L2_PIX_FMT_VP9)
+        return;
+
+    if (m_hdr10pluslist.empty()) {
+        DEBUG_PRINT_HIGH("convert_hdr10plusinfo_to_metadata: hdr10plus list is empty!");
+        return;
+    }
+
+    pthread_mutex_lock(&m_hdr10pluslock);
+    iter = m_hdr10pluslist.begin();
+    while (iter != m_hdr10pluslist.end()) {
+        if (iter->cookie == cookie && !iter->is_new) {
+            colorData.dynamicMetaDataValid = true;
+            colorData.dynamicMetaDataLen = iter->nParamSizeUsed;
+            memcpy(colorData.dynamicMetaDataPayload, iter->payload,
+                iter->nParamSizeUsed);
+            DEBUG_PRINT_LOW("found hdr10plus metadata for cookie %u with timestamp %lld, size %u",
+                cookie, iter->timestamp, colorData.dynamicMetaDataLen);
+            break;
+        }
+        iter++;
+    }
+    pthread_mutex_unlock(&m_hdr10pluslock);
+}
+
+void omx_vdec::remove_hdr10plusinfo_using_cookie(OMX_PTR markdata)
+{
+    std::list<hdr10plusInfo>::iterator iter;
+    unsigned int cookie = (unsigned int)(unsigned long)markdata;
+
+    if (output_capability != V4L2_PIX_FMT_VP9)
+        return;
+
+    if (m_hdr10pluslist.empty()) {
+        DEBUG_PRINT_HIGH("remove_hdr10plusinfo_using_cookie: hdr10plus list is empty!");
+        return;
+    }
+
+    pthread_mutex_lock(&m_hdr10pluslock);
+    iter = m_hdr10pluslist.begin();
+    while (iter != m_hdr10pluslist.end()) {
+        if (iter->cookie == cookie && !iter->is_new) {
+            iter = m_hdr10pluslist.erase(iter);
+            DEBUG_PRINT_LOW("removed hdr10plusinfo from the list for the cookie %u", cookie);
+            break;
+        }
+        iter++;
+    }
+    pthread_mutex_unlock(&m_hdr10pluslock);
+}
+
+void omx_vdec::clear_hdr10plusinfo()
+{
+    if (m_hdr10pluslist.empty() || output_capability != V4L2_PIX_FMT_VP9)
+        return;
+
+    pthread_mutex_lock(&m_hdr10pluslock);
+    m_hdr10pluslist.clear();
+    pthread_mutex_unlock(&m_hdr10pluslock);
 }
 
 void perf_metrics::start()

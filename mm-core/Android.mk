@@ -17,7 +17,7 @@ endif
 #===============================================================================
 
 ifeq ($(filter $(TARGET_BOARD_PLATFORM), kona lito),$(TARGET_BOARD_PLATFORM))
-OMXCORE_CFLAGS += -D_NILE_
+OMXCORE_CFLAGS += -D_KONA_
 else ifeq ($(filter $(TARGET_BOARD_PLATFORM), $(MSMSTEPPE)),$(TARGET_BOARD_PLATFORM))
 OMXCORE_CFLAGS += -D_STEPPE_
 else
@@ -94,10 +94,10 @@ LOCAL_CFLAGS            := $(OMXCORE_CFLAGS)
 
 LOCAL_SRC_FILES         := src/common/omx_core_cmp.cpp
 LOCAL_SRC_FILES         += src/common/qc_omx_core.c
-ifneq (,$(filter lito kona $(MSMSTEPPE),$(TARGET_BOARD_PLATFORM)))
+ifneq (,$(filter lito bengal kona $(MSMSTEPPE),$(TARGET_BOARD_PLATFORM)))
 LOCAL_SRC_FILES         += src/registry_table_android.c
 else
-LOCAL_SRC_FILES         += src/qc_registry_table_android.c
+LOCAL_SRC_FILES         += src/default/qc_registry_table_android.c
 endif
 
 include $(BUILD_SHARED_LIBRARY)
@@ -137,10 +137,10 @@ endif
 
 LOCAL_SRC_FILES         := src/common/omx_core_cmp.cpp
 LOCAL_SRC_FILES         += src/common/qc_omx_core.c
-ifneq (,$(filter lito kona $(MSMSTEPPE),$(TARGET_BOARD_PLATFORM)))
+ifneq (,$(filter lito bengal kona $(MSMSTEPPE),$(TARGET_BOARD_PLATFORM)))
 LOCAL_SRC_FILES         += src/$(MM_CORE_TARGET)/registry_table.c
 else
-LOCAL_SRC_FILES         += src/$(MM_CORE_TARGET)/qc_registry_table.c
+LOCAL_SRC_FILES         += src/$(MM_CORE_TARGET)/default/qc_registry_table.c
 endif
 
 include $(BUILD_SHARED_LIBRARY)
