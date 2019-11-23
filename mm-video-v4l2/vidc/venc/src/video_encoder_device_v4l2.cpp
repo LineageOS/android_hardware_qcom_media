@@ -1937,6 +1937,13 @@ void venc_dev::venc_close()
         if (async_thread_created)
             pthread_join(m_tid,NULL);
 
+        if (venc_handle->msg_thread_created) {
+            venc_handle->msg_thread_created = false;
+            venc_handle->msg_thread_stop = true;
+            post_message(venc_handle, omx_video::OMX_COMPONENT_CLOSE_MSG);
+            DEBUG_PRINT_HIGH("omx_video: Waiting on Msg Thread exit");
+            pthread_join(venc_handle->msg_thread_id, NULL);
+        }
         DEBUG_PRINT_HIGH("venc_close X");
         unsubscribe_to_events(m_nDriver_fd);
         close(m_poll_efd);
@@ -2100,6 +2107,12 @@ bool venc_dev::venc_get_buf_req(OMX_U32 *min_buff_count,
         if (metadatamode && mBatchSize) {
             minCount = MAX_V4L2_BUFS;
             DEBUG_PRINT_LOW("Set buffer count = %d as metadata mode and batchmode enabled", minCount);
+        }
+
+        // reset min count to 4 for HEIC cases
+        if (mIsGridset) {
+            minCount = 4;
+            DEBUG_PRINT_LOW("Set buffer count = %d for HEIC", minCount);
         }
 
         minCount = MAX((unsigned int)control.value, minCount);
