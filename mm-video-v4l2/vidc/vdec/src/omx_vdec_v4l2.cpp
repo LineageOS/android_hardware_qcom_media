@@ -4287,7 +4287,7 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                            ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_FMT, &fmt);
                                            if (ret) {
                                                DEBUG_PRINT_ERROR("Set Resolution failed");
-                                               eRet = OMX_ErrorUnsupportedSetting;
+                                               eRet = errno == EBUSY ? OMX_ErrorInsufficientResources : OMX_ErrorUnsupportedSetting;
                                            } else
                                                eRet = get_buffer_req(&drv_ctx.op_buf);
                                        }
@@ -4429,7 +4429,7 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                            }
                                            if (ret) {
                                                DEBUG_PRINT_ERROR("Set Resolution failed");
-                                               eRet = OMX_ErrorUnsupportedSetting;
+                                               eRet = errno == EBUSY ? OMX_ErrorInsufficientResources : OMX_ErrorUnsupportedSetting;
                                            } else {
                                                if (!is_down_scalar_enabled)
                                                    eRet = get_buffer_req(&drv_ctx.op_buf);
@@ -5528,7 +5528,7 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
         }
 
         if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
-            ret = errno == -EBUSY ? OMX_ErrorInsufficientResources :
+            ret = errno == EBUSY ? OMX_ErrorInsufficientResources :
                     OMX_ErrorUnsupportedSetting;
             DEBUG_PRINT_ERROR("Failed to set operating rate %u fps (%s)",
                     rate->nU32 >> 16, errno == -EBUSY ? "HW Overload" : strerror(errno));
@@ -12617,8 +12617,13 @@ OMX_BUFFERHEADERTYPE* omx_vdec::allocate_color_convert_buf::get_il_buf_hdr
 {
     bool status = true;
     pthread_mutex_lock(&omx->c_lock);
+     /* Whenever port mode is set to kPortModeDynamicANWBuffer, Video Frameworks
+        always uses VideoNativeMetadata and OMX recives buffer type as
+        grallocsource via storeMetaDataInBuffers_l API. The buffer_size
+        will be communicated to frameworks via IndexParamPortdefinition. */
     if (!enabled)
-        buffer_size = omx->drv_ctx.op_buf.buffer_size;
+        buffer_size = omx->dynamic_buf_mode ? sizeof(struct VideoNativeMetadata) :
+                      omx->drv_ctx.op_buf.buffer_size;
     else {
         buffer_size = c2dcc.getBuffSize(C2D_OUTPUT);
     }
@@ -12627,9 +12632,10 @@ OMX_BUFFERHEADERTYPE* omx_vdec::allocate_color_convert_buf::get_il_buf_hdr
 }
 
 OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::set_buffer_req(
-        OMX_U32 buffer_size, OMX_U32 actual_count) {
-    OMX_U32 expectedSize = enabled ? buffer_size_req : omx->drv_ctx.op_buf.buffer_size;
-
+        OMX_U32 buffer_size, OMX_U32 actual_count)
+{
+    OMX_U32 expectedSize = enabled ? buffer_size_req : omx->dynamic_buf_mode ?
+            sizeof(struct VideoDecoderOutputMetaData) : omx->drv_ctx.op_buf.buffer_size;
     if (buffer_size < expectedSize) {
         DEBUG_PRINT_ERROR("OP Requirements: Client size(%u) insufficient v/s requested(%u)",
                 buffer_size, expectedSize);
