@@ -17,7 +17,10 @@ cc_library_shared {
         "-DALLOCATE_OUTPUT_NATIVEHANDLE",
         "-DFLEXYUV_SUPPORTED",
         "-DUSE_ION",
-    ],
+    ] + select(soong_config_variable("qtimedia", "target_uses_legacy_misr_info"), {
+        "true": ["-DVENUS_USES_LEGACY_MISR_INFO"],
+        default: [],
+    }),
 
     include_dirs: [
         "system/memory/libion/include",
