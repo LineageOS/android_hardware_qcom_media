@@ -11412,6 +11412,18 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                             m_extradata_info.output_width = output_crop_payload->width;
                             m_extradata_info.output_height = output_crop_payload->height;
                             m_extradata_info.output_crop_updated = OMX_TRUE;
+#ifdef VENUS_USES_LEGACY_MISR_INFO
+                            DEBUG_PRINT_HIGH("MISR0: %x %x %x %x\n",
+                                output_crop_payload->misr_info[0].misr_dpb_luma[0],
+                                output_crop_payload->misr_info[0].misr_dpb_chroma[0],
+                                output_crop_payload->misr_info[0].misr_opb_luma[0],
+                                output_crop_payload->misr_info[0].misr_opb_chroma[0]);
+                            DEBUG_PRINT_HIGH("MISR1: %x %x %x %x\n",
+                                output_crop_payload->misr_info[1].misr_dpb_luma[0],
+                                output_crop_payload->misr_info[1].misr_dpb_chroma[0],
+                                output_crop_payload->misr_info[1].misr_opb_luma[0],
+                                output_crop_payload->misr_info[1].misr_opb_chroma[0]);
+#else
                             for(unsigned int m=0; m<output_crop_payload->misr_info[0].misr_set; m++) {
                             DEBUG_PRINT_HIGH("MISR0: %x %x %x %x\n",
                                 output_crop_payload->misr_info[0].misr_dpb_luma[m],
@@ -11426,6 +11438,7 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                                                  output_crop_payload->misr_info[1].misr_opb_luma[m],
                                                  output_crop_payload->misr_info[1].misr_opb_chroma[m]);
                             }
+#endif
                             memcpy(m_extradata_info.misr_info, output_crop_payload->misr_info, 2 * sizeof(msm_vidc_misr_info));
                             if (client_extradata & OMX_OUTPUTCROP_EXTRADATA) {
                                 if (p_client_extra) {
@@ -11978,6 +11991,29 @@ void omx_vdec::print_debug_extradata(OMX_OTHER_EXTRADATATYPE *extra)
             (unsigned int)outputcrop_info->frame_num,
             (unsigned int)outputcrop_info->bit_depth_y,
             (unsigned int)outputcrop_info->bit_depth_c);
+
+#ifdef VENUS_USES_LEGACY_MISR_INFO
+
+        DEBUG_PRINT_HIGH(
+            "     top field: misr_dpb_luma: %u \n"
+            "   top field: misr_dpb_chroma: %u \n"
+            "     top field: misr_opb_luma: %u \n"
+            "   top field: misr_opb_chroma: %u \n"
+            "  bottom field: misr_dpb_luma: %u \n"
+            "bottom field: misr_dpb_chroma: %u \n"
+            "  bottom field: misr_opb_luma: %u \n"
+            "bottom field: misr_opb_chroma: %u \n",
+            (unsigned int)outputcrop_info->misr_info[0].misr_dpb_luma,
+            (unsigned int)outputcrop_info->misr_info[0].misr_dpb_chroma,
+            (unsigned int)outputcrop_info->misr_info[0].misr_opb_luma,
+            (unsigned int)outputcrop_info->misr_info[0].misr_opb_chroma,
+            (unsigned int)outputcrop_info->misr_info[1].misr_dpb_luma,
+            (unsigned int)outputcrop_info->misr_info[1].misr_dpb_chroma,
+            (unsigned int)outputcrop_info->misr_info[1].misr_opb_luma,
+            (unsigned int)outputcrop_info->misr_info[1].misr_opb_chroma);
+
+#else
+
         for(unsigned int m=0; m<outputcrop_info->misr_info[0].misr_set; m++) {
             DEBUG_PRINT_HIGH(
             "     top field: misr_dpb_luma(%d): %u \n"
@@ -12000,6 +12036,8 @@ void omx_vdec::print_debug_extradata(OMX_OTHER_EXTRADATATYPE *extra)
             m, (unsigned int)outputcrop_info->misr_info[1].misr_opb_luma[m],
             m, (unsigned int)outputcrop_info->misr_info[1].misr_opb_chroma[m]);
         }
+
+#endif
         DEBUG_PRINT_HIGH("================== End of output crop ===========");
     } else if (extra->eType == OMX_ExtraDataNone) {
         DEBUG_PRINT_HIGH("========== End of Terminator ===========");
