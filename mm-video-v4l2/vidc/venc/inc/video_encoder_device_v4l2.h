@@ -289,7 +289,6 @@ struct extradata_buffer_info {
     enum v4l2_ports port_index;
 #ifdef USE_ION
     struct venc_ion ion;
-    int m_ion_dev;
 #endif
     bool vqzip_sei_found;
 };
@@ -454,7 +453,7 @@ class venc_dev
 #ifdef USE_ION
             int ion_device_fd;
             struct ion_allocation_data alloc_data;
-            struct ion_fd_data ion_alloc_fd;
+            int ion_alloc_fd;
 #endif
         };
 
@@ -563,7 +562,7 @@ class venc_dev
         bool venc_set_batch_size(OMX_U32 size);
         bool venc_calibrate_gop();
         bool venc_set_vqzip_defaults();
-        int venc_get_index_from_fd(OMX_U32 ion_fd, OMX_U32 buffer_fd);
+        bool venc_get_index_from_fd(OMX_U32 buffer_fd, OMX_U32 *index);
         bool venc_validate_hybridhp_params(OMX_U32 layers, OMX_U32 bFrames, OMX_U32 count, int mode);
         bool venc_set_hierp_layers(OMX_U32 hierp_layers);
         bool venc_set_baselayerid(OMX_U32 baseid);

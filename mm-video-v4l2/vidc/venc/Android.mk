@@ -26,7 +26,7 @@ TARGETS_THAT_NEED_SW_VENC_MPEG4 := msm8909 msm8937
 TARGETS_THAT_NEED_SW_VENC_HEVC := msm8992
 TARGETS_THAT_SUPPORT_UBWC := msm8996 msm8998 apq8098_latv
 TARGETS_THAT_SUPPORT_VQZIP := msm8996 msm8998 apq8098_latv
-TARGETS_THAT_SUPPORT_PQ := msm8996 msm8998 apq8098_latv msm8953 sdm660
+TARGETS_THAT_SUPPORT_PQ := msm8996 msm8998 apq8098_latv msm8953
 TARGETS_THAT_USE_NV21 := sdm660 msm8953
 TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_4 := msm8937
 TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_51 := msm8953 sdm660
@@ -103,6 +103,8 @@ endif
 
 # Common Includes
 libmm-venc-inc      := $(LOCAL_PATH)/inc
+libmm-venc-inc      += $(TOP)/system/core/libion/include
+libmm-venc-inc      += $(TOP)/system/core/libion/kernel-headers
 libmm-venc-inc      += $(TOP)/hardware/qcom/media/mm-video-v4l2/vidc/common/inc
 libmm-venc-inc      += hardware/qcom/media/mm-core/inc
 libmm-venc-inc      += hardware/qcom/media/libstagefrighthw
@@ -149,7 +151,7 @@ LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 
 LOCAL_PRELINK_MODULE      := false
-LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl
+LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl libion
 
 ifeq ($(BOARD_USES_ADRENO), true)
 LOCAL_SHARED_LIBRARIES    += libc2dcolorconvert
@@ -189,7 +191,7 @@ LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 
 LOCAL_PRELINK_MODULE      := false
-LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl
+LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl libion
 LOCAL_SHARED_LIBRARIES    += libMpeg4SwEncoder
 ifeq ($(BOARD_USES_ADRENO), true)
 LOCAL_SHARED_LIBRARIES    += libc2dcolorconvert
