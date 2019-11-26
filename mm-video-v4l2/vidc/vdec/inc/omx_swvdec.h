@@ -46,7 +46,7 @@
 
 #include <linux/msm_ion.h>
 #ifndef _TARGET_KERNEL_VERSION_49_
-#include <linux/msm_vidc_dec.h>
+#include "omx_vdec.h"
 #endif
 #include "qc_omx_component.h"
 

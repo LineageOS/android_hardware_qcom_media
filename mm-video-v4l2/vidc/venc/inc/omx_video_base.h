@@ -42,7 +42,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //                             Include Files
 //////////////////////////////////////////////////////////////////////////////
 
-#define LOG_TAG "OMX-VENC"
+//#define LOG_TAG "OMX-VENC"
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/mman.h>
@@ -53,9 +53,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif // _ANDROID_
 #include <pthread.h>
 #include <semaphore.h>
-#ifndef _TARGET_KERNEL_VERSION_49_
-#include <linux/msm_vidc_enc.h>
-#endif
 #include <media/hardware/HardwareAPI.h>
 #include "OMX_Core.h"
 #include "OMX_QCOMExtns.h"
@@ -71,7 +68,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "vidc_debug.h"
 #include <vector>
 #include "vidc_vendor_extensions.h"
-
+#include <ion/ion.h>
+#include <linux/dma-buf.h>
 #ifdef _ANDROID_
 using namespace android;
 #include <utils/Log.h>
@@ -146,12 +144,33 @@ static const char* MEM_DEVICE = "/dev/pmem_smipool";
 #define LEGACY_CAM_METADATA_TYPE encoder_media_buffer_type
 #endif
 
-#ifdef _TARGET_KERNEL_VERSION_49_
-/** ENCODER STATUS CODES*/
+/** STATUS CODES*/
 /* Base value for status codes */
 #define VEN_S_BASE    0x00000000
 #define VEN_S_SUCCESS    (VEN_S_BASE)/* Success */
 #define VEN_S_EFAIL    (VEN_S_BASE+1)/* General failure */
+#define VEN_S_EFATAL    (VEN_S_BASE+2)/* Fatal irrecoverable failure*/
+#define VEN_S_EBADPARAM    (VEN_S_BASE+3)/* Error passed parameters*/
+/*Command called in invalid state*/
+#define VEN_S_EINVALSTATE    (VEN_S_BASE+4)
+#define VEN_S_ENOSWRES    (VEN_S_BASE+5)/* Insufficient OS resources*/
+#define VEN_S_ENOHWRES    (VEN_S_BASE+6)/*Insufficient HW resources */
+#define VEN_S_EBUFFREQ    (VEN_S_BASE+7)/* Buffer requirements were not met*/
+#define VEN_S_EINVALCMD    (VEN_S_BASE+8)/* Invalid command called */
+#define VEN_S_ETIMEOUT    (VEN_S_BASE+9)/* Command timeout. */
+/*Re-attempt was made when multiple invocation not supported for API.*/
+#define VEN_S_ENOREATMPT    (VEN_S_BASE+10)
+#define VEN_S_ENOPREREQ    (VEN_S_BASE+11)/*Pre-requirement is not met for API*/
+#define VEN_S_ECMDQFULL    (VEN_S_BASE+12)/*Command queue is full*/
+#define VEN_S_ENOTSUPP    (VEN_S_BASE+13)/*Command not supported*/
+#define VEN_S_ENOTIMPL    (VEN_S_BASE+14)/*Command not implemented.*/
+#define VEN_S_ENOTPMEM    (VEN_S_BASE+15)/*Buffer is not from PMEM*/
+#define VEN_S_EFLUSHED    (VEN_S_BASE+16)/*returned buffer was flushed*/
+#define VEN_S_EINSUFBUF    (VEN_S_BASE+17)/*provided buffer size insufficient*/
+#define VEN_S_ESAMESTATE    (VEN_S_BASE+18)
+#define VEN_S_EINVALTRANS    (VEN_S_BASE+19)
+
+#define VEN_INTF_VER             1
 
 /*Asynchronous messages from driver*/
 #define VEN_MSG_INDICATION    0
@@ -159,46 +178,68 @@ static const char* MEM_DEVICE = "/dev/pmem_smipool";
 #define VEN_MSG_OUTPUT_BUFFER_DONE    2
 #define VEN_MSG_NEED_OUTPUT_BUFFER    3
 #define VEN_MSG_FLUSH_INPUT_DONE    4
-#define VEN_MSG_FLUSH_OUTPUT_DONE    5
+#define VEN_MSG_FLUSH_OUPUT_DONE    5
 #define VEN_MSG_START    6
 #define VEN_MSG_STOP    7
 #define VEN_MSG_PAUSE    8
 #define VEN_MSG_RESUME    9
-#define VEN_MSG_LTRUSE_FAILED    10
-#define VEN_MSG_HW_OVERLOAD    11
-#define VEN_MSG_MAX_CLIENTS    12
+#define VEN_MSG_STOP_READING_MSG    10
+#define VEN_MSG_LTRUSE_FAILED        11
+#define VEN_MSG_HW_OVERLOAD    12
+#define VEN_MSG_MAX_CLIENTS    13
+
+
+/*Buffer flags bits masks*/
+#define VEN_BUFFLAG_EOS    0x00000001
+#define VEN_BUFFLAG_ENDOFFRAME    0x00000010
+#define VEN_BUFFLAG_SYNCFRAME    0x00000020
+#define VEN_BUFFLAG_EXTRADATA    0x00000040
+#define VEN_BUFFLAG_CODECCONFIG    0x00000080
+
+/*Post processing flags bit masks*/
+#define VEN_EXTRADATA_NONE          0x001
+#define VEN_EXTRADATA_QCOMFILLER    0x002
+#define VEN_EXTRADATA_SLICEINFO     0x100
+#define VEN_EXTRADATA_LTRINFO       0x200
+#define VEN_EXTRADATA_MBINFO        0x400
+
+/*ENCODER CONFIGURATION CONSTANTS*/
+
+/*Encoded video frame types*/
+#define VEN_FRAME_TYPE_I    1/* I frame type */
+#define VEN_FRAME_TYPE_P    2/* P frame type */
+#define VEN_FRAME_TYPE_B    3/* B frame type */
+
+/*Video codec types*/
+#define VEN_CODEC_MPEG4    1/* MPEG4 Codec */
+#define VEN_CODEC_H264    2/* H.264 Codec */
+#define VEN_CODEC_H263    3/* H.263 Codec */
 
 /*Video codec profile types.*/
 #define VEN_PROFILE_MPEG4_SP      1/* 1 - MPEG4 SP profile      */
 #define VEN_PROFILE_MPEG4_ASP     2/* 2 - MPEG4 ASP profile     */
-#define VEN_PROFILE_H264_BASELINE 3/* 3 - H264 Baseline profile */
+#define VEN_PROFILE_H264_BASELINE 3/* 3 - H264 Baseline profile    */
 #define VEN_PROFILE_H264_MAIN     4/* 4 - H264 Main profile     */
 #define VEN_PROFILE_H264_HIGH     5/* 5 - H264 High profile     */
 #define VEN_PROFILE_H263_BASELINE 6/* 6 - H263 Baseline profile */
 
-/*Different methods of Multi slice selection.*/
-#define VEN_MSLICE_OFF    1
-#define VEN_MSLICE_CNT_MB    2 /*number of MBscount per slice*/
-#define VEN_MSLICE_CNT_BYTE    3 /*number of bytes count per slice.*/
-#define VEN_MSLICE_GOB    4 /*Multi slice by GOB for H.263 only.*/
-
 /*Video codec profile level types.*/
-#define VEN_LEVEL_MPEG4_0    0x1/* MPEG4 Level 0  */
-#define VEN_LEVEL_MPEG4_1    0x2/* MPEG4 Level 1  */
-#define VEN_LEVEL_MPEG4_2    0x3/* MPEG4 Level 2  */
-#define VEN_LEVEL_MPEG4_3    0x4/* MPEG4 Level 3  */
-#define VEN_LEVEL_MPEG4_4    0x5/* MPEG4 Level 4  */
-#define VEN_LEVEL_MPEG4_5    0x6/* MPEG4 Level 5  */
-#define VEN_LEVEL_MPEG4_3b    0x7/* MPEG4 Level 3b */
-#define VEN_LEVEL_MPEG4_6    0x8/* MPEG4 Level 6  */
+#define VEN_LEVEL_MPEG4_0     0x1/* MPEG4 Level 0  */
+#define VEN_LEVEL_MPEG4_1     0x2/* MPEG4 Level 1  */
+#define VEN_LEVEL_MPEG4_2     0x3/* MPEG4 Level 2  */
+#define VEN_LEVEL_MPEG4_3     0x4/* MPEG4 Level 3  */
+#define VEN_LEVEL_MPEG4_4     0x5/* MPEG4 Level 4  */
+#define VEN_LEVEL_MPEG4_5     0x6/* MPEG4 Level 5  */
+#define VEN_LEVEL_MPEG4_3b     0x7/* MPEG4 Level 3b */
+#define VEN_LEVEL_MPEG4_6     0x8/* MPEG4 Level 6  */
 
-#define VEN_LEVEL_H264_1    0x9/* H.264 Level 1   */
-#define VEN_LEVEL_H264_1b    0xA/* H.264 Level 1b  */
-#define VEN_LEVEL_H264_1p1    0xB/* H.264 Level 1.1 */
-#define VEN_LEVEL_H264_1p2    0xC/* H.264 Level 1.2 */
-#define VEN_LEVEL_H264_1p3    0xD/* H.264 Level 1.3 */
-#define VEN_LEVEL_H264_2    0xE/* H.264 Level 2   */
-#define VEN_LEVEL_H264_2p1    0xF/* H.264 Level 2.1 */
+#define VEN_LEVEL_H264_1     0x9/* H.264 Level 1   */
+#define VEN_LEVEL_H264_1b        0xA/* H.264 Level 1b  */
+#define VEN_LEVEL_H264_1p1     0xB/* H.264 Level 1.1 */
+#define VEN_LEVEL_H264_1p2     0xC/* H.264 Level 1.2 */
+#define VEN_LEVEL_H264_1p3     0xD/* H.264 Level 1.3 */
+#define VEN_LEVEL_H264_2     0xE/* H.264 Level 2   */
+#define VEN_LEVEL_H264_2p1     0xF/* H.264 Level 2.1 */
 #define VEN_LEVEL_H264_2p2    0x10/* H.264 Level 2.2 */
 #define VEN_LEVEL_H264_3    0x11/* H.264 Level 3   */
 #define VEN_LEVEL_H264_3p1    0x12/* H.264 Level 3.1 */
@@ -213,7 +254,62 @@ static const char* MEM_DEVICE = "/dev/pmem_smipool";
 #define VEN_LEVEL_H263_50    0x1A/* H.263 Level 50  */
 #define VEN_LEVEL_H263_60    0x1B/* H.263 Level 60  */
 #define VEN_LEVEL_H263_70    0x1C/* H.263 Level 70  */
-#endif //_TARGET_KERNEL_VERSION_49_
+
+/*Entropy coding model selection for H.264 encoder.*/
+#define VEN_ENTROPY_MODEL_CAVLC    1
+#define VEN_ENTROPY_MODEL_CABAC    2
+/*Cabac model number (0,1,2) for encoder.*/
+#define VEN_CABAC_MODEL_0    1/* CABAC Model 0. */
+#define VEN_CABAC_MODEL_1    2/* CABAC Model 1. */
+#define VEN_CABAC_MODEL_2    3/* CABAC Model 2. */
+
+/*Deblocking filter control type for encoder.*/
+#define VEN_DB_DISABLE    1/* 1 - Disable deblocking filter*/
+#define VEN_DB_ALL_BLKG_BNDRY    2/* 2 - All blocking boundary filtering*/
+#define VEN_DB_SKIP_SLICE_BNDRY    3/* 3 - Filtering except sliceboundary*/
+
+/*Different methods of Multi slice selection.*/
+#define VEN_MSLICE_OFF    1
+#define VEN_MSLICE_CNT_MB    2 /*number of MBscount per slice*/
+#define VEN_MSLICE_CNT_BYTE    3 /*number of bytes count per slice.*/
+#define VEN_MSLICE_GOB    4 /*Multi slice by GOB for H.263 only.*/
+
+/*Different modes for Rate Control.*/
+#define VEN_RC_OFF    1
+#define VEN_RC_VBR_VFR    2
+#define VEN_RC_VBR_CFR    3
+#define VEN_RC_CBR_VFR    4
+#define VEN_RC_CBR_CFR    5
+
+/*Different modes for flushing buffers*/
+#define VEN_FLUSH_INPUT    1
+#define VEN_FLUSH_OUTPUT    2
+#define VEN_FLUSH_ALL    3
+
+/*Different input formats for YUV data.*/
+#define VEN_INPUTFMT_NV12    1/* NV12 Linear */
+#define VEN_INPUTFMT_NV21    2/* NV21 Linear */
+#define VEN_INPUTFMT_NV12_16M2KA    3/* NV12 Linear */
+
+/*Different allowed rotation modes.*/
+#define VEN_ROTATION_0    1/* 0 degrees */
+#define VEN_ROTATION_90    2/* 90 degrees */
+#define VEN_ROTATION_180    3/* 180 degrees */
+#define VEN_ROTATION_270    4/* 270 degrees */
+
+/*IOCTL timeout values*/
+#define VEN_TIMEOUT_INFINITE    0xffffffff
+
+/*Different allowed intra refresh modes.*/
+#define VEN_IR_OFF    1
+#define VEN_IR_CYCLIC    2
+#define VEN_IR_RANDOM    3
+
+/*IOCTL BASE CODES Not to be used directly by the client.*/
+/* Base value for ioctls that are not related to encoder configuration.*/
+#define VEN_IOCTLBASE_NENC    0x800
+/* Base value for encoder configuration ioctls*/
+#define VEN_IOCTLBASE_ENC    0x850
 
 class omx_video;
 void post_message(omx_video *omx, unsigned char id);
@@ -234,15 +330,24 @@ struct output_metabuffer {
     native_handle_t *nh;
 };
 
-#ifdef _TARGET_KERNEL_VERSION_49_
-struct venc_buffer{
-    unsigned char *ptrbuffer;
-    unsigned long    sz;
-    unsigned long    len;
-    unsigned long    offset;
-    long long    timestamp;
-    unsigned long    flags;
-    void    *clientdata;
+struct venc_range {
+    unsigned long    max;
+    unsigned long    min;
+    unsigned long    step_size;
+};
+
+struct venc_switch{
+    unsigned char    status;
+};
+
+struct venc_allocatorproperty{
+    unsigned long     mincount;
+    unsigned long     maxcount;
+    unsigned long     actualcount;
+    unsigned long     datasize;
+    unsigned long     suffixsize;
+    unsigned long     alignment;
+    unsigned long     bufpoolid;
 };
 
 struct venc_bufferpayload{
@@ -254,22 +359,121 @@ struct venc_bufferpayload{
     unsigned long    filled_len;
 };
 
-struct venc_voptimingcfg{
-    unsigned long    voptime_resolution;
+struct venc_buffer{
+ unsigned char *ptrbuffer;
+ unsigned long    sz;
+ unsigned long    len;
+ unsigned long    offset;
+ long long    timestamp;
+ unsigned long    flags;
+ void    *clientdata;
 };
 
-struct venc_framerate{
-    unsigned long    fps_denominator;
-    unsigned long    fps_numerator;
+struct venc_basecfg{
+    unsigned long    input_width;
+    unsigned long    input_height;
+    unsigned long    dvs_width;
+    unsigned long    dvs_height;
+    unsigned long    codectype;
+    unsigned long    fps_num;
+    unsigned long    fps_den;
+    unsigned long    targetbitrate;
+    unsigned long    inputformat;
 };
 
-struct venc_headerextension{
-    unsigned long    header_extension;
+struct venc_profile{
+    unsigned long    profile;
+};
+struct ven_profilelevel{
+    unsigned long    level;
+};
+
+struct venc_sessionqp{
+    unsigned long    iframeqp;
+    unsigned long    pframqp;
+};
+
+struct venc_qprange{
+    unsigned long    maxqp;
+    unsigned long    minqp;
+};
+
+struct venc_plusptype {
+    unsigned long    plusptype_enable;
+};
+
+struct venc_intraperiod{
+    unsigned long    num_pframes;
+    unsigned long    num_bframes;
+};
+struct venc_seqheader{
+    unsigned char *hdrbufptr;
+    unsigned long    bufsize;
+    unsigned long    hdrlen;
+};
+
+struct venc_capability{
+    unsigned long    codec_types;
+    unsigned long    maxframe_width;
+    unsigned long    maxframe_height;
+    unsigned long    maxtarget_bitrate;
+    unsigned long    maxframe_rate;
+    unsigned long    input_formats;
+    unsigned char    dvs;
+};
+
+struct venc_entropycfg{
+    unsigned longentropysel;
+    unsigned long    cabacmodel;
+};
+
+struct venc_dbcfg{
+    unsigned long    db_mode;
+    unsigned long    slicealpha_offset;
+    unsigned long    slicebeta_offset;
+};
+
+struct venc_intrarefresh{
+    unsigned long    irmode;
+    unsigned long    mbcount;
 };
 
 struct venc_multiclicecfg{
     unsigned long    mslice_mode;
     unsigned long    mslice_size;
+};
+
+struct venc_bufferflush{
+    unsigned long    flush_mode;
+};
+
+struct venc_ratectrlcfg{
+    unsigned long    rcmode;
+};
+
+struct    venc_voptimingcfg{
+    unsigned long    voptime_resolution;
+};
+struct venc_framerate{
+    unsigned long    fps_denominator;
+    unsigned long    fps_numerator;
+};
+
+struct venc_targetbitrate{
+    unsigned long    target_bitrate;
+};
+
+
+struct venc_rotation{
+    unsigned long    rotation;
+};
+
+struct venc_timeout{
+     unsigned long    millisec;
+};
+
+struct venc_headerextension{
+     unsigned long    header_extension;
 };
 
 struct venc_msg{
@@ -279,14 +483,36 @@ struct venc_msg{
     unsigned long    msgdata_size;
 };
 
-struct venc_profile {
-    unsigned long    profile;
+struct venc_recon_addr{
+    unsigned char *pbuffer;
+    unsigned long buffer_size;
+    unsigned long pmem_fd;
+    unsigned long offset;
 };
 
-struct ven_profilelevel {
-    unsigned long    level;
+struct venc_recon_buff_size{
+    int width;
+    int height;
+    int size;
+    int alignment;
 };
-#endif //_TARGET_KERNEL_VERSION_49_
+
+struct venc_ltrmode {
+    unsigned long   ltr_mode;
+};
+
+struct venc_ltrcount {
+    unsigned long   ltr_count;
+};
+
+struct venc_ltrperiod {
+    unsigned long   ltr_period;
+};
+
+struct venc_ltruse {
+    unsigned long   ltr_id;
+    unsigned long   ltr_frames;
+};
 
 typedef struct encoder_meta_buffer_payload_type {
     char data[sizeof(LEGACY_CAM_METADATA_TYPE) + sizeof(int)];
@@ -715,10 +941,13 @@ class omx_video: public qc_omx_component
         //  extensions once added !)
         const VendorExtensionStore mVendorExtensionStore;
 
+        char *ion_map(int fd, int len);
+        OMX_ERRORTYPE ion_unmap(int fd, void *bufaddr, int len);
+
 #ifdef USE_ION
-        int alloc_map_ion_memory(int size,
-                                 struct ion_allocation_data *alloc_data,
-                                 struct ion_fd_data *fd_data,int flag);
+        bool alloc_map_ion_memory(int size,
+                                 venc_ion *ion_info,
+                                 int flag);
         void free_ion_memory(struct venc_ion *buf_ion_info);
 #endif
 
@@ -846,7 +1075,7 @@ class omx_video: public qc_omx_component
         bool hw_overload;
         size_t m_graphicbuffer_size;
         char m_platform[OMX_MAX_STRINGNAME_SIZE];
-		bool m_buffer_freed;
+        bool m_buffer_freed;
 };
 
 #endif // __OMX_VIDEO_BASE_H__
