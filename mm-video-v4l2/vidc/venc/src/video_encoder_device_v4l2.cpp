@@ -439,26 +439,26 @@ void* venc_dev::async_venc_message_thread (void *input)
         }
 
         /* calc avg. fps, bitrate */
-        struct timeval tv;
         OMX_U64 current_time;
         OMX_U64 prev_time;
-        gettimeofday(&tv,NULL);
-        current_time = (OMX_U64)tv.tv_sec * 1000000ULL + (OMX_U64)tv.tv_usec;
-        prev_time = (OMX_U64)stats.prev_tv.tv_sec * 1000000ULL + (OMX_U64)stats.prev_tv.tv_usec;
+        struct timespec curr_tv;
+        clock_gettime(CLOCK_MONOTONIC, &curr_tv);
+        current_time = (OMX_U64)curr_tv.tv_sec * 1000000000ULL + (OMX_U64)curr_tv.tv_nsec;
+        prev_time = (OMX_U64)stats.prev_tv.tv_sec * 1000000000ULL + (OMX_U64)stats.prev_tv.tv_nsec;
         if (current_time < prev_time) {
-            stats.prev_tv = tv;
+            stats.prev_tv = curr_tv;
             stats.bytes_generated = 0;
             stats.prev_fbd = omx->handle->fbd;
-        } else if (current_time - prev_time  >= 1000000ULL) {
+        } else if (current_time - prev_time  >= 1000000000ULL) {    // timestamp is in nano_seconds
             OMX_U32 num_fbd = omx->handle->fbd - stats.prev_fbd;
             OMX_U64 time_diff = current_time - prev_time;
             if (stats.prev_tv.tv_sec && num_fbd && time_diff) {
-                float framerate = ((OMX_U64)num_fbd * 1000000ULL) / (float)time_diff;
+                float framerate = ((OMX_U64)num_fbd * 1000000000ULL) / (float)time_diff;
                 OMX_U64 bitrate = ((OMX_U64)stats.bytes_generated * 8 / (float)num_fbd) * framerate;
                 DEBUG_PRINT_INFO("stats: avg. fps %0.2f, bitrate %llu",
                     framerate, bitrate);
             }
-            stats.prev_tv = tv;
+            stats.prev_tv = curr_tv;
             stats.bytes_generated = 0;
             stats.prev_fbd = omx->handle->fbd;
         }
