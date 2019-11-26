@@ -28,9 +28,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <inttypes.h>
 #include <cstddef>
-#include <qdMetaData.h>
-#include <gralloc_priv.h>
+//#include <qdMetaData.h>
+//#include <gralloc_priv.h>
 #include "extra_data_handler.h"
+//#include "omx_vdec.h"
 
 int debug_level = PRIO_ERROR;
 
