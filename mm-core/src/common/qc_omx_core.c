@@ -508,7 +508,7 @@ OMX_FreeHandle(OMX_IN OMX_HANDLETYPE hComp)
     {
         pthread_mutex_lock(&lock_core);
         /* Unload component library */
-    if( (i < SIZE_OF_CORE) && core[i].so_lib_handle)
+    if( (i < (int)SIZE_OF_CORE) && core[i].so_lib_handle)
     {
            if(check_lib_unload(i))
            {

@@ -219,11 +219,11 @@ bool venc_dev::venc_open(OMX_U32 codec)
   struct venc_ioctl_msg ioctl_msg = {NULL,NULL};
   int r;
   unsigned int   alignment = 0,buffer_size = 0, temp =0;
-  OMX_STRING device_name = "/dev/msm_vidc_enc";
+  OMX_STRING device_name = (OMX_STRING)"/dev/msm_vidc_enc";
   DEBUG_PRINT_ERROR("\n Is component secure %d",
                   venc_encoder->is_secure_session());
   if(venc_encoder->is_secure_session())
-    device_name = "/dev/msm_vidc_enc_sec";
+    device_name = (OMX_STRING)"/dev/msm_vidc_enc_sec";
   m_nDriver_fd = open (device_name,O_RDWR|O_NONBLOCK);
   if(m_nDriver_fd == 0)
   {
@@ -1670,8 +1670,8 @@ bool venc_dev::venc_use_buf(void *buf_addr, unsigned port,unsigned)
 {
   struct venc_ioctl_msg ioctl_msg = {NULL,NULL};
   struct pmem *pmem_tmp;
-  struct venc_bufferpayload dev_buffer = {0};
-  struct venc_allocatorproperty buff_alloc_property = {0};
+  struct venc_bufferpayload dev_buffer;
+  struct venc_allocatorproperty buff_alloc_property;
 
   pmem_tmp = (struct pmem *)buf_addr;
 
@@ -1769,7 +1769,7 @@ bool venc_dev::venc_free_buf(void *buf_addr, unsigned port)
 {
   struct venc_ioctl_msg ioctl_msg = {NULL,NULL};
   struct pmem *pmem_tmp;
-  struct venc_bufferpayload dev_buffer = {0};
+  struct venc_bufferpayload dev_buffer;
 
   pmem_tmp = (struct pmem *)buf_addr;
 
@@ -3184,11 +3184,11 @@ bool venc_dev::venc_validate_profile_level(OMX_U32 *eProfile, OMX_U32 *eLevel)
   mb_per_sec = mb_per_frame * m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den;
 
   do{
-      if(mb_per_frame <= (int)profile_tbl[0])
+      if(mb_per_frame <= (unsigned int)profile_tbl[0])
       {
-        if(mb_per_sec <= (int)profile_tbl[1])
+        if(mb_per_sec <= (unsigned int)profile_tbl[1])
         {
-          if(m_sVenc_cfg.targetbitrate <= (int)profile_tbl[2])
+          if(m_sVenc_cfg.targetbitrate <= (unsigned int)profile_tbl[2])
           {
               new_level = (int)profile_tbl[3];
               new_profile = (int)profile_tbl[4];
@@ -3279,7 +3279,7 @@ bool venc_dev::venc_max_allowed_bitrate_check(OMX_U32 nTargetBitrate)
   }
   while(profile_tbl[0] != 0)
   {
-    if(profile_tbl[3] == m_eLevel)
+    if((int)profile_tbl[3] == m_eLevel)
     {
       if(nTargetBitrate > profile_tbl[2])
       {
