@@ -239,7 +239,7 @@ OMX_S32 extra_data_handler::parse_sliceinfo(
     DEBUG_PRINT_ERROR("unknown error in slice info extradata");
     return -1;
   }
-  for (int i = 0; i < num_slices; i++) {
+  for (OMX_U32 i = 0; i < num_slices; i++) {
     slice_offset = (OMX_U32)(*(data + (i*2 + 1)));
     if ((*(pBuffer + slice_offset + 0) != 0x00) ||
         (*(pBuffer + slice_offset + 1) != 0x00) ||
