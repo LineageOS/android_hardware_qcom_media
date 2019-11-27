@@ -570,7 +570,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     rst_prev_ts(true),
     frm_int(0),
     m_fps_received(0),
-    m_fps_prev(0),
     in_reconfig(false),
     c2d_enable_pending(false),
     m_display_id(NULL),
@@ -6191,32 +6190,17 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
 
         // add current framerate to gralloc meta data
         if ((buffer->nFilledLen > 0) && m_enable_android_native_buffers && omx_base_address) {
-            // If valid fps was received, directly send it to display for the 1st fbd.
+            // If valid fps was received, consider the same if less than dec hfr rate
             // Otherwise, calculate fps using fbd timestamps
-            float refresh_rate = m_fps_prev;
-            if (m_fps_received) {
-                if (1 == proc_frms) {
-                    refresh_rate = m_fps_received / (float)(1<<16);
-                }
-            } else {
-                // calculate and set refresh rate for every frame from second frame onwards
-                // display will assume the default refresh rate for first frame (which is 60 fps)
-                if (m_fps_prev) {
-                    if (drv_ctx.frame_rate.fps_denominator) {
-                        refresh_rate = drv_ctx.frame_rate.fps_numerator /
-                            (float) drv_ctx.frame_rate.fps_denominator;
-                    }
-                }
-            }
-            OMX_U32 fps_limit = m_dec_hfr_fps ? (OMX_U32)m_dec_hfr_fps : 60;
-            if (refresh_rate > fps_limit) {
-                refresh_rate = fps_limit;
-            }
+            float refresh_rate = (m_fps_received >> 16) ? (m_fps_received >> 16) : current_framerate;
+
+            if (m_dec_hfr_fps)
+                refresh_rate = m_dec_hfr_fps;
+
             DEBUG_PRINT_LOW("frc set refresh_rate %f, frame %d", refresh_rate, proc_frms);
             OMX_U32 buf_index = buffer - omx_base_address;
             setMetaData((private_handle_t *)native_buffer[buf_index].privatehandle,
                          UPDATE_REFRESH_RATE, (void*)&refresh_rate);
-            m_fps_prev = refresh_rate;
         }
 
         if (il_buffer) {
