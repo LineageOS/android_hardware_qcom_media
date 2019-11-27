@@ -314,7 +314,7 @@ boolean H264_Utils::extract_rbsp(OMX_IN   OMX_U8  *buffer,
     ALOGE("ERROR: In %s() - line %d", __func__, __LINE__);
     return false;
   }
-  if (nal_unit->forbidden_zero_bit = (buffer[pos] & 0x80))
+  if ((nal_unit->forbidden_zero_bit = (buffer[pos] & 0x80)) != 0)
   {
     ALOGE("ERROR: In %s() - line %d", __func__, __LINE__);
   }
@@ -1090,14 +1090,18 @@ void h264_stream_parser::parse_sps()
     uev(); //bit_depth_chroma_minus8
     extract_bits(1); //qpprime_y_zero_transform_bypass_flag
     if (extract_bits(1)) //seq_scaling_matrix_present_flag
+    {
       for (int i = 0; i < scaling_matrix_limit && more_bits(); i++)
       {
         if (extract_bits(1)) ////seq_scaling_list_present_flag[ i ]
+        {
           if (i < 6)
             scaling_list(16);
           else
             scaling_list(64);
+        }
       }
+    }
   }
   uev(); //log2_max_frame_num_minus4
   value = uev(); //pic_order_cnt_type
@@ -1456,6 +1460,7 @@ void h264_stream_parser::fill_pan_scan_data(OMX_QCOM_PANSCAN *dest_pan_scan, OMX
   h264_pan_scan *pan_scan_param = &panscan_param;
 #endif
   if (pan_scan_param)
+  {
     if (!(pan_scan_param->rect_id & NO_PAN_SCAN_BIT))
     {
       PRINT_PANSCAN_PARAM(*pan_scan_param);
@@ -1478,6 +1483,7 @@ void h264_stream_parser::fill_pan_scan_data(OMX_QCOM_PANSCAN *dest_pan_scan, OMX
     }
     else
       pan_scan_param->rect_repetition_period = 0;
+  }
 }
 
 OMX_S64 h264_stream_parser::process_ts_with_sei_vui(OMX_S64 timestamp)
@@ -1613,11 +1619,13 @@ h264_pan_scan *panscan_handler::get_populated(OMX_S64 frame_ts)
     }
   }
   if (data)
+  {
     if (data->rect_repetition_period == 0)
       panscan_free.add_last(panscan_used.remove_first());
     else if (data->rect_repetition_period > 1)
       data->rect_repetition_period -= 2;
   PRINT_PANSCAN_DATA(panscan_node);
+  }
   return data;
 }
 

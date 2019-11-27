@@ -219,11 +219,11 @@ bool venc_dev::venc_open(OMX_U32 codec)
   struct venc_ioctl_msg ioctl_msg = {NULL,NULL};
   int r;
   unsigned int   alignment = 0,buffer_size = 0, temp =0;
-  OMX_STRING device_name = "/dev/msm_vidc_enc";
+  OMX_STRING device_name = (OMX_STRING)"/dev/msm_vidc_enc";
   DEBUG_PRINT_ERROR("\n Is component secure %d",
                   venc_encoder->is_secure_session());
   if(venc_encoder->is_secure_session())
-    device_name = "/dev/msm_vidc_enc_sec";
+    device_name = (OMX_STRING)"/dev/msm_vidc_enc_sec";
   m_nDriver_fd = open (device_name,O_RDWR|O_NONBLOCK);
   if(m_nDriver_fd == 0)
   {
@@ -1670,8 +1670,8 @@ bool venc_dev::venc_use_buf(void *buf_addr, unsigned port,unsigned)
 {
   struct venc_ioctl_msg ioctl_msg = {NULL,NULL};
   struct pmem *pmem_tmp;
-  struct venc_bufferpayload dev_buffer = {0};
-  struct venc_allocatorproperty buff_alloc_property = {0};
+  struct venc_bufferpayload dev_buffer;
+  struct venc_allocatorproperty buff_alloc_property;
 
   pmem_tmp = (struct pmem *)buf_addr;
 
@@ -1769,7 +1769,7 @@ bool venc_dev::venc_free_buf(void *buf_addr, unsigned port)
 {
   struct venc_ioctl_msg ioctl_msg = {NULL,NULL};
   struct pmem *pmem_tmp;
-  struct venc_bufferpayload dev_buffer = {0};
+  struct venc_bufferpayload dev_buffer;
 
   pmem_tmp = (struct pmem *)buf_addr;
 

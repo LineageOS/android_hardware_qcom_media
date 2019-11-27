@@ -227,36 +227,37 @@ PARAMETERS
 RETURN VALUE
   None.
 ========================================================================== */
-omx_video::omx_video(): m_state(OMX_StateInvalid),
-                        m_app_data(NULL),
-                        m_inp_mem_ptr(NULL),
-                        m_out_mem_ptr(NULL),
+omx_video::omx_video():
+                        c2d_opened(false),
+                        psource_frame(NULL),
+                        pdest_frame(NULL),
+                        secure_session(false),
                         m_pInput_pmem(NULL),
                         m_pOutput_pmem(NULL),
 #ifdef USE_ION
                         m_pInput_ion(NULL),
                         m_pOutput_ion(NULL),
 #endif
+                        m_error_propogated(false),
+                        m_state(OMX_StateInvalid),
+                        m_app_data(NULL),
+                        m_use_input_pmem(OMX_FALSE),
+                        m_use_output_pmem(OMX_FALSE),
+                        m_input_msg_id(OMX_COMPONENT_GENERATE_ETB),
+                        m_inp_mem_ptr(NULL),
+                        m_out_mem_ptr(NULL),
+                        input_flush_progress (false),
+                        output_flush_progress (false),
+                        input_use_buffer (false),
+                        output_use_buffer (false),
                         pending_input_buffers(0),
                         pending_output_buffers(0),
                         m_out_bm_count(0),
                         m_inp_bm_count(0),
                         m_flags(0),
-                        m_event_port_settings_sent(false),
-                        output_flush_progress (false),
-                        input_flush_progress (false),
-                        input_use_buffer (false),
-                        output_use_buffer (false),
-                        m_use_input_pmem(OMX_FALSE),
-                        m_use_output_pmem(OMX_FALSE),
                         m_etb_count(0),
                         m_fbd_count(0),
-                        m_error_propogated(false),
-                        m_input_msg_id(OMX_COMPONENT_GENERATE_ETB),
-                        psource_frame(NULL),
-                        pdest_frame(NULL),
-                        c2d_opened(false),
-                        secure_session(false)
+                        m_event_port_settings_sent(false)
 {
   DEBUG_PRINT_HIGH("\n omx_video(): Inside Constructor()");
   memset(&m_cmp,0,sizeof(m_cmp));
@@ -421,7 +422,7 @@ void omx_video::process_event_cb(void *ctxt, unsigned char id)
             else
             {
               pThis->m_pCallbacks.EventHandler(&pThis->m_cmp, pThis->m_app_data,
-                                               OMX_EventError, p2, NULL, NULL );
+                                               OMX_EventError, p2, 0, 0 );
 
             }
             break;
@@ -697,7 +698,7 @@ void omx_video::process_event_cb(void *ctxt, unsigned char id)
           DEBUG_PRINT_ERROR("Sending QOMX_ErrorLTRUseFailed, p2 = 0x%x", p2);
           pThis->m_pCallbacks.EventHandler(&pThis->m_cmp, pThis->m_app_data,
                                            OMX_EventError, QOMX_ErrorLTRUseFailed,
-                                           NULL, NULL);
+                                           0, 0);
         }
         break;
       case OMX_COMPONENT_GENERATE_HARDWARE_ERROR:
@@ -1091,7 +1092,7 @@ OMX_ERRORTYPE  omx_video::send_command_proxy(OMX_IN OMX_HANDLETYPE hComp,
         {
           m_flags = BITMASK_SET_U32(m_flags,OMX_COMPONENT_EXECUTE_PENDING);
           DEBUG_PRINT_LOW("OMXCORE-SM: Pause-->Executing\n");
-          post_event (NULL, NULL, OMX_COMPONENT_GENERATE_RESUME_DONE);
+          post_event (0, 0, OMX_COMPONENT_GENERATE_RESUME_DONE);
           bFlag = 0;
         }
       }
@@ -1201,9 +1202,12 @@ OMX_ERRORTYPE  omx_video::send_command_proxy(OMX_IN OMX_HANDLETYPE hComp,
   else if(m_state == OMX_StateInvalid)
   {
     /* State Transition from Inavlid to any state */
-    if(eState == (OMX_StateLoaded || OMX_StateWaitForResources
-                  || OMX_StateIdle || OMX_StateExecuting
-                  || OMX_StatePause || OMX_StateInvalid))
+    if ((eState == OMX_StateLoaded) ||
+        (eState == OMX_StateWaitForResources) ||
+        (eState == OMX_StateIdle) ||
+        (eState == OMX_StateExecuting) ||
+        (eState == OMX_StatePause) ||
+        (eState == OMX_StateInvalid))
     {
       DEBUG_PRINT_ERROR("ERROR: OMXCORE-SM: Invalid -->Loaded\n");
       post_event(OMX_EventError,OMX_ErrorInvalidState,\
@@ -1555,7 +1559,7 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
     DEBUG_PRINT_ERROR("ERROR: Get Param in Invalid paramData \n");
     return OMX_ErrorBadParameter;
   }
-  switch(paramIndex)
+  switch((int)paramIndex)
   {
   case OMX_IndexParamPortDefinition:
     {
@@ -1630,7 +1634,7 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
 
       if(portFmt->nPortIndex == (OMX_U32) PORT_INDEX_IN)
       {
-          int index = portFmt->nIndex;
+          unsigned index = portFmt->nIndex;
           //we support following formats
           //index 0 - YUV420SP32m
           //index 1 - opaque which internally maps to YUV420SP.
@@ -2007,7 +2011,7 @@ OMX_ERRORTYPE  omx_video::get_config(OMX_IN OMX_HANDLETYPE      hComp,
   }
 
   //@todo need to validate params
-  switch(configIndex)
+  switch((int)configIndex)
   {
   case OMX_IndexConfigVideoBitrate:
     {
@@ -2067,34 +2071,31 @@ OMX_ERRORTYPE  omx_video::get_extension_index(OMX_IN OMX_HANDLETYPE      hComp,
                                               OMX_IN OMX_STRING      paramName,
                                               OMX_OUT OMX_INDEXTYPE* indexType)
 {
-  char *extns[] = {
-    "OMX.QCOM.index.param.SliceDeliveryMode",
-    "OMX.google.android.index.storeMetaDataInBuffers",
-    "OMX.google.android.index.prependSPSPPSToIDRFrames",
-    "OMX.google.android.index.setVUIStreamRestrictFlag"
-  };
-
   if(m_state == OMX_StateInvalid)
   {
     DEBUG_PRINT_ERROR("ERROR: Get Extension Index in Invalid State\n");
     return OMX_ErrorInvalidState;
   }
 #ifdef MAX_RES_1080P
-  if (!strncmp(paramName, extns[0], strlen(extns[0]))) {
+  if (!strncmp(paramName, "OMX.QCOM.index.param.SliceDeliveryMode",
+      sizeof("OMX.QCOM.index.param.SliceDeliveryMode") - 1)) {
     *indexType = (OMX_INDEXTYPE)OMX_QcomIndexEnableSliceDeliveryMode;
     return OMX_ErrorNone;
   }
 #endif
 #ifdef _ANDROID_ICS_
-  if (!strncmp(paramName, extns[1], strlen(extns[1]))) {
-        *indexType = (OMX_INDEXTYPE)OMX_QcomIndexParamVideoEncodeMetaBufferMode;
-        return OMX_ErrorNone;
-  } else if (!strncmp(paramName, extns[2], strlen(extns[2]))) {
-        *indexType = (OMX_INDEXTYPE)OMX_QcomIndexParamSequenceHeaderWithIDR;
-        return OMX_ErrorNone;
-  } else if (!strncmp(paramName, extns[3], strlen(extns[3]))) {
-        *indexType = (OMX_INDEXTYPE)OMX_QcomIndexParamEnableVUIStreamRestrictFlag;
-        return OMX_ErrorNone;
+  if (!strncmp(paramName, "OMX.google.android.index.storeMetaDataInBuffers",
+      sizeof("OMX.google.android.index.storeMetaDataInBuffers") - 1)) {
+    *indexType = (OMX_INDEXTYPE)OMX_QcomIndexParamVideoEncodeMetaBufferMode;
+    return OMX_ErrorNone;
+  } else if (!strncmp(paramName, "OMX.google.android.index.prependSPSPPSToIDRFrames",
+      sizeof("OMX.google.android.index.prependSPSPPSToIDRFrames") - 1)) {
+    *indexType = (OMX_INDEXTYPE)OMX_QcomIndexParamSequenceHeaderWithIDR;
+    return OMX_ErrorNone;
+  } else if (!strncmp(paramName, "OMX.google.android.index.setVUIStreamRestrictFlag",
+      sizeof("OMX.google.android.index.setVUIStreamRestrictFlag") - 1)) {
+    *indexType = (OMX_INDEXTYPE)OMX_QcomIndexParamEnableVUIStreamRestrictFlag;
+    return OMX_ErrorNone;
   }
 #endif
   return OMX_ErrorNotImplemented;
@@ -2485,11 +2486,11 @@ OMX_ERRORTYPE  omx_video::use_output_buffer(
       else
       {
         OMX_QCOM_PLATFORM_PRIVATE_PMEM_INFO *pParam = reinterpret_cast<OMX_QCOM_PLATFORM_PRIVATE_PMEM_INFO*>((*bufferHdr)->pAppPrivate);
-        DEBUG_PRINT_LOW("Inside qcom_ext pParam:0x%x )", pParam);
+        DEBUG_PRINT_LOW("Inside qcom_ext pParam:0x%x )", (unsigned)pParam);
 
         if(pParam)
         {
-          DEBUG_PRINT_LOW("Inside qcom_ext with luma:(fd:%d,offset:0x%x)", pParam->pmem_fd, pParam->offset);
+          DEBUG_PRINT_LOW("Inside qcom_ext with luma:(fd:%d,offset:0x%x)", pParam->pmem_fd, (int)pParam->offset);
           m_pOutput_pmem[i].fd = pParam->pmem_fd;
           m_pOutput_pmem[i].offset = pParam->offset;
           m_pOutput_pmem[i].size = m_sOutPortDef.nBufferSize;
@@ -3712,7 +3713,7 @@ OMX_ERRORTYPE  omx_video::fill_this_buffer_proxy(
 
   DEBUG_PRINT_LOW("\n FTBProxy: bufferAdd->pBuffer[%p]\n", bufferAdd->pBuffer);
 
-  if(bufferAdd == NULL || ((bufferAdd - m_out_mem_ptr) >= m_sOutPortDef.nBufferCountActual) )
+  if(bufferAdd == NULL || ((bufferAdd - m_out_mem_ptr) >= (int)m_sOutPortDef.nBufferCountActual) )
   {
     DEBUG_PRINT_ERROR("\nERROR: FTBProxy: Invalid i/p params\n");
     return OMX_ErrorBadParameter;
@@ -4150,8 +4151,8 @@ OMX_ERRORTYPE omx_video::fill_buffer_done(OMX_HANDLETYPE hComp,
 {
   int idx = buffer - m_out_mem_ptr;
   DEBUG_PRINT_LOW("fill_buffer_done: buffer->pBuffer[%p], flags=0x%x size = %d",
-     buffer->pBuffer, buffer->nFlags,buffer->nFilledLen);
-  if(buffer == NULL || ((buffer - m_out_mem_ptr) > m_sOutPortDef.nBufferCountActual))
+     buffer->pBuffer, (unsigned)buffer->nFlags,buffer->nFilledLen);
+  if(buffer == NULL || ((buffer - m_out_mem_ptr) > (int)m_sOutPortDef.nBufferCountActual))
   {
     DEBUG_PRINT_ERROR("\n ERR: buffer = %p, idx = %d, act_count = %d",
        buffer, idx, m_sOutPortDef.nBufferCountActual);
@@ -4204,8 +4205,8 @@ OMX_ERRORTYPE omx_video::empty_buffer_done(OMX_HANDLETYPE         hComp,
   buffer_index_meta = (buffer - meta_buffer_hdr);
   DEBUG_PRINT_LOW("\n empty_buffer_done: buffer[%p]", buffer);
   if(buffer == NULL ||
-     ((buffer_index > m_sInPortDef.nBufferCountActual) &&
-      (buffer_index_meta > m_sInPortDef.nBufferCountActual)))
+     ((buffer_index > (int)m_sInPortDef.nBufferCountActual) &&
+      (buffer_index_meta > (int)m_sInPortDef.nBufferCountActual)))
   {
     DEBUG_PRINT_ERROR("\n ERROR in empty_buffer_done due to index buffer");
     return OMX_ErrorBadParameter;
@@ -4213,7 +4214,7 @@ OMX_ERRORTYPE omx_video::empty_buffer_done(OMX_HANDLETYPE         hComp,
 
   pending_input_buffers--;
 
-  if(mUseProxyColorFormat && ((OMX_U32)buffer_index < m_sInPortDef.nBufferCountActual)) {
+  if(mUseProxyColorFormat && ((OMX_U32)buffer_index < (int)m_sInPortDef.nBufferCountActual)) {
     if(!pdest_frame && !input_flush_progress) {
       pdest_frame = buffer;
       DEBUG_PRINT_LOW("\n empty_buffer_done pdest_frame address is %p",pdest_frame);

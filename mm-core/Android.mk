@@ -5,7 +5,7 @@ include $(CLEAR_VARS)
 
 OMXCORE_CFLAGS += -D_ANDROID_
 OMXCORE_CFLAGS += -U_ENABLE_QC_MSG_LOG_
-OMXCORE_CFLAGS += -Wno-error
+OMXCORE_CFLAGS += -Wno-error -Wno-unused-parameter
 
 #===============================================================================
 #             Figure out the targets
