@@ -99,7 +99,7 @@ LOCAL_SRC_FILES         += ../common/src/vidc_color_converter.cpp
 
 # omx_vdec.cpp: address of array 'extra->data' will always evaluate to 'true'
 LOCAL_CLANG_CFLAGS      += -Wno-pointer-bool-conversion
-LOCAL_CFLAGS            += -Wno-error
+LOCAL_CFLAGS            += -Wno-error -Wno-unused-parameter -Wno-format
 
 include $(BUILD_SHARED_LIBRARY)
 

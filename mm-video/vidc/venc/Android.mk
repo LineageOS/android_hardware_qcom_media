@@ -81,7 +81,8 @@ endif
 
 LOCAL_SRC_FILES   += ../common/src/extra_data_handler.cpp
 
-LOCAL_CFLAGS      += -Wno-error
+LOCAL_CFLAGS      += -Wno-error -Wno-unused-parameter -Wno-format
+LOCAL_CFLAGS      += -Wno-enum-compare-switch -Wno-switch -Wno-enum-compare
 
 include $(BUILD_SHARED_LIBRARY)
 
