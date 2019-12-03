@@ -41,4 +41,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <property name="vidc_dec_sec_prefetch_size_output" value="13434880"/>
         <property name="vidc_enc_bitrate_savings_enable" value="1"/>
         <property name="vidc_enc_auto_blur_disable" value="0"/>
+        <!-- Bitmask 0: RGB565  1: YUV420P 8-bit, 2: YUV420P 10-bit, 3: YUV420p 8&10 bit -->
+        <property name="vidc_dec_thumbnail_yuv_output" value="0"/>
 </configs>

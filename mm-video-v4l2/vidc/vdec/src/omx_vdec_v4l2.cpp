@@ -139,6 +139,9 @@ metadata via gralloc handle.
 */
 #define VP9HDR10PLUS_SETMETADATA_ENABLE 1
 
+#define THUMBNAIL_YUV420P_8BIT 0x01
+#define THUMBNAIL_YUV420P_10BIT 0x02
+
 using namespace android;
 
 void* async_message_thread (void *input)
@@ -589,6 +592,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_dec_secure_prefetch_size_internal(0),
     m_dec_secure_prefetch_size_output(0),
     m_queued_codec_config_count(0),
+    m_thumbnail_yuv_output(0),
     m_prefetch_done(0),
     m_buffer_error(false)
 {
@@ -639,6 +643,9 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
         DEBUG_PRINT_HIGH("perf cotrol enabled");
         m_perf_control.load_perf_library();
     }
+
+    Platform::Config::getInt32(Platform::vidc_dec_thumbnail_yuv_output,
+            (int32_t *)&m_thumbnail_yuv_output, 0);
 
     property_value[0] = '\0';
     property_get("vendor.vidc.dec.log.in", property_value, "0");
@@ -7279,6 +7286,18 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
     portDefn->format.video.nStride = drv_ctx.video_resolution.stride;
     portDefn->format.video.nSliceHeight = drv_ctx.video_resolution.scan_lines;
 
+    /* OMX client can do tone mapping/post processing, Hence, OMX should produce
+       YUV buffers in case client needs it. */
+    if (drv_ctx.idr_only_decoding && portDefn->format.video.eColorFormat == OMX_COLOR_Format16bitRGB565 &&
+       ((dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10 && (m_thumbnail_yuv_output & THUMBNAIL_YUV420P_10BIT)) ||
+        (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_8 && (m_thumbnail_yuv_output & THUMBNAIL_YUV420P_8BIT)))) {
+        DEBUG_PRINT_LOW("Change color format to YUV420 planar for thumbnail usecase");
+        portDefn->format.video.eColorFormat = OMX_COLOR_FormatYUV420Planar;
+        if (!client_buffers.set_color_format(portDefn->format.video.eColorFormat)) {
+            DEBUG_PRINT_ERROR("Set color format failed");
+            eRet = OMX_ErrorBadParameter;
+        }
+    }
     if ((portDefn->format.video.eColorFormat == OMX_COLOR_FormatYUV420Planar) ||
        (portDefn->format.video.eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar)) {
            portDefn->format.video.nStride = ALIGN(drv_ctx.video_resolution.frame_width, 16);
