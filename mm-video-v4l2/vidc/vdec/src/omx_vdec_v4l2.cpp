@@ -2307,10 +2307,9 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
     struct v4l2_ext_controls controls;
     int conceal_color_8bit = 0, conceal_color_10bit = 0;
 
+    property_get("ro.board.platform", m_platform_name, "0");
 #ifdef _ANDROID_
-    char platform_name[PROPERTY_VALUE_MAX];
-    property_get("ro.board.platform", platform_name, "0");
-    if (!strncmp(platform_name, "msm8610", 7)) {
+    if (!strncmp(m_platform_name, "msm8610", 7)) {
         device_name = (OMX_STRING)"/dev/video/q6_dec";
         is_q6_platform = true;
         maxSmoothStreamingWidth = 1280;
@@ -11148,6 +11147,14 @@ void omx_vdec::get_preferred_color_aspects(ColorAspects& preferredColorAspects)
         m_client_color_space.sAspects : m_internal_color_space.sAspects;
     const ColorAspects &defaultColor = preferClientColor ?
         m_internal_color_space.sAspects : m_client_color_space.sAspects;
+
+    /* atoll does not support BT2020 color primaries, hence overriding with
+        BT709 to avoid tone mapping issue at display*/
+    if (!strncmp(m_platform_name, "atoll", 5) &&
+        (m_client_color_space.sAspects.mPrimaries == ColorAspects::PrimariesBT2020)) {
+        m_client_color_space.sAspects.mPrimaries = ColorAspects::PrimariesBT709_5;
+        m_client_color_space.sAspects.mMatrixCoeffs = ColorAspects::MatrixBT709_5;
+    }
 
     preferredColorAspects.mPrimaries = preferredColor.mPrimaries != ColorAspects::PrimariesUnspecified ?
         preferredColor.mPrimaries : defaultColor.mPrimaries;
