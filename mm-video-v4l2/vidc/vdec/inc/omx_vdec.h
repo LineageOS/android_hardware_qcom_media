@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010 - 2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2010 - 2020, The Linux Foundation. All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -1470,12 +1470,15 @@ class omx_vdec: public qc_omx_component
         void get_preferred_color_aspects(ColorAspects& preferredColorAspects);
         void get_preferred_hdr_info(HDRStaticInfo& preferredHDRInfo);
         bool vdec_query_cap(struct v4l2_queryctrl &cap);
-        bool store_hdr10plusinfo(DescribeHDR10PlusInfoParams *hdr10plusinfo);
+        bool store_vp9_hdr10plusinfo(DescribeHDR10PlusInfoParams *hdr10plusinfo);
+        bool store_hevc_hdr10plusinfo(uint32_t payload_size,
+            msm_vidc_stream_userdata_payload *hdr10plusdata);
         void update_hdr10plusinfo_cookie_using_timestamp(OMX_PTR cookie, OMX_TICKS timestamp);
         void convert_hdr10plusinfo_to_metadata(OMX_PTR cookie, ColorMetaData &colorData);
         void remove_hdr10plusinfo_using_cookie(OMX_PTR cookie);
         void clear_hdr10plusinfo();
         void get_hdr10plusinfo(DescribeHDR10PlusInfoParams *hdr10plusdata);
+        void print_hdr10plusinfo(DescribeHDR10PlusInfoParams *hdr10plusdata);
 public:
         bool is_down_scalar_enabled;
         bool m_is_split_mode;
