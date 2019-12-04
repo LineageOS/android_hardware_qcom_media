@@ -129,6 +129,16 @@ extern "C" {
 #define MIN(x,y) (((x) < (y)) ? (x) : (y))
 #define MAX(x,y) (((x) > (y)) ? (x) : (y))
 
+/*
+To enable sending vp9 hdr10plus metadata via private gralloc
+handle to display, define VP9_HDR10PLUS_GRALLOC_PATH_ENABLE
+as 1. This disables sending metadata via framework.
+To enable sending vp9 hdr10plus metadata via framework, define
+VP9_HDR10PLUS_GRALLOC_PATH_ENABLE as 0. This disables sending
+metadata via gralloc handle.
+*/
+#define VP9HDR10PLUS_SETMETADATA_ENABLE 1
+
 using namespace android;
 
 void* async_message_thread (void *input)
@@ -1063,11 +1073,36 @@ void omx_vdec::process_event_cb(void *ctxt)
                                         if (p2 != VDEC_S_SUCCESS) {
                                             DEBUG_PRINT_ERROR("OMX_COMPONENT_GENERATE_FBD failure");
                                             pThis->omx_report_error ();
-                                        } else if ( pThis->fill_buffer_done(&pThis->m_cmp,
+                                            break;
+                                        }
+                                        if (pThis->fill_buffer_done(&pThis->m_cmp,
                                                     (OMX_BUFFERHEADERTYPE *)(intptr_t)p1) != OMX_ErrorNone ) {
                                             DEBUG_PRINT_ERROR("fill_buffer_done failure");
                                             pThis->omx_report_error ();
+                                            break;
                                         }
+#if !VP9HDR10PLUS_SETMETADATA_ENABLE
+                                        if (pThis->output_capability != V4L2_PIX_FMT_VP9)
+                                            break;
+
+                                        if (!pThis->m_cb.EventHandler) {
+                                            DEBUG_PRINT_ERROR("fill_buffer_done: null event handler");
+                                            break;
+                                        }
+                                        bool is_list_empty;
+                                        is_list_empty = false;
+                                        pthread_mutex_lock(&pThis->m_hdr10pluslock);
+                                        is_list_empty = pThis->m_hdr10pluslist.empty();
+                                        pthread_mutex_unlock(&pThis->m_hdr10pluslock);
+                                        if (!is_list_empty) {
+                                            DEBUG_PRINT_LOW("fill_buffer_done: event config update");
+                                            pThis->m_cb.EventHandler(&pThis->m_cmp,
+                                                    pThis->m_app_data,
+                                                    OMX_EventConfigUpdate,
+                                                    OMX_CORE_OUTPUT_PORT_INDEX,
+                                                    OMX_QTIIndexConfigDescribeHDR10PlusInfo, NULL);
+                                        }
+#endif
                                         break;
 
                 case OMX_COMPONENT_GENERATE_EVENT_INPUT_FLUSH:
@@ -3081,7 +3116,8 @@ OMX_ERRORTYPE  omx_vdec::get_config(OMX_IN OMX_HANDLETYPE      hComp,
         case OMX_QTIIndexConfigDescribeHDR10PlusInfo:
         {
             VALIDATE_OMX_PARAM_DATA(configData, DescribeHDR10PlusInfoParams);
-            //TODO
+            DescribeHDR10PlusInfoParams *params = (DescribeHDR10PlusInfoParams *)configData;
+            get_hdr10plusinfo(params);
             break;
         }
         case OMX_IndexConfigAndroidVendorExtension:
@@ -3216,7 +3252,7 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
         control.value = rate->nU32;
 
         if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
-            ret = errno == -EBUSY ? OMX_ErrorInsufficientResources :
+            ret = errno == EBUSY ? OMX_ErrorInsufficientResources :
                     OMX_ErrorUnsupportedSetting;
             DEBUG_PRINT_ERROR("Failed to set operating rate %u fps (%s)",
                     rate->nU32 >> 16, errno == -EBUSY ? "HW Overload" : strerror(errno));
@@ -7118,6 +7154,7 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
 {
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
     struct v4l2_format fmt;
+    struct v4l2_control control;
     if (!portDefn) {
         DEBUG_PRINT_ERROR("update_portdef: invalid params");
         return OMX_ErrorBadParameter;
@@ -7136,6 +7173,16 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
             return OMX_ErrorHardware;
         }
         drv_ctx.ip_buf.buffer_size = fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
+
+        control.id = V4L2_CID_MIN_BUFFERS_FOR_OUTPUT;
+        ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_G_CTRL, &control);
+        if (ret) {
+            DEBUG_PRINT_ERROR("Get input buffer count failed");
+            return OMX_ErrorHardware;
+        }
+        drv_ctx.ip_buf.mincount = control.value;
+        drv_ctx.ip_buf.actualcount = control.value;
+
         portDefn->eDir =  OMX_DirInput;
         portDefn->nBufferCountActual = drv_ctx.ip_buf.actualcount;
         portDefn->nBufferCountMin    = drv_ctx.ip_buf.mincount;
@@ -7474,7 +7521,7 @@ void omx_vdec::set_frame_rate(OMX_S64 act_timestamp)
 {
     OMX_U32 new_frame_interval = 0;
     if (VALID_TS(act_timestamp) && VALID_TS(prev_ts) && act_timestamp != prev_ts
-            && llabs(act_timestamp - prev_ts) > 2000) {
+            && (llabs(act_timestamp - prev_ts) > 2000 || frm_int == 0)) {
         new_frame_interval = client_set_fps ? frm_int : (act_timestamp - prev_ts) > 0 ?
             llabs(act_timestamp - prev_ts) : llabs(act_timestamp - prev_ts_actual);
         if (new_frame_interval != frm_int || frm_int == 0) {
@@ -8156,8 +8203,10 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                 get_preferred_hdr_info(final_hdr_info);
                 convert_color_aspects_to_metadata(final_color_aspects, color_mdata);
                 convert_hdr_info_to_metadata(final_hdr_info, color_mdata);
+#if VP9HDR10PLUS_SETMETADATA_ENABLE
                 convert_hdr10plusinfo_to_metadata(p_buf_hdr->pMarkData, color_mdata);
                 remove_hdr10plusinfo_using_cookie(p_buf_hdr->pMarkData);
+#endif
                 print_debug_hdr_color_info_mdata(&color_mdata);
                 print_debug_hdr10plus_metadata(color_mdata);
                 setMetaData(private_handle, COLOR_METADATA, (void*)&color_mdata);
@@ -8613,8 +8662,13 @@ OMX_BUFFERHEADERTYPE* omx_vdec::allocate_color_convert_buf::get_il_buf_hdr
 {
     bool status = true;
     pthread_mutex_lock(&omx->c_lock);
+     /* Whenever port mode is set to kPortModeDynamicANWBuffer, Video Frameworks
+        always uses VideoNativeMetadata and OMX recives buffer type as
+        grallocsource via storeMetaDataInBuffers_l API. The buffer_size
+        will be communicated to frameworks via IndexParamPortdefinition. */
     if (!enabled)
-        buffer_size = omx->drv_ctx.op_buf.buffer_size;
+        buffer_size = omx->dynamic_buf_mode ? sizeof(struct VideoNativeMetadata) :
+                      omx->drv_ctx.op_buf.buffer_size;
     else {
         buffer_size = c2dcc.getBuffSize(C2D_OUTPUT);
     }
@@ -8625,8 +8679,8 @@ OMX_BUFFERHEADERTYPE* omx_vdec::allocate_color_convert_buf::get_il_buf_hdr
 OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::set_buffer_req(
         OMX_U32 buffer_size, OMX_U32 actual_count)
 {
-    OMX_U32 expectedSize = enabled ? buffer_size_req : omx->drv_ctx.op_buf.buffer_size;
-
+    OMX_U32 expectedSize = enabled ? buffer_size_req : omx->dynamic_buf_mode ?
+            sizeof(struct VideoDecoderOutputMetaData) : omx->drv_ctx.op_buf.buffer_size;
     if (buffer_size < expectedSize) {
         DEBUG_PRINT_ERROR("OP Requirements: Client size(%u) insufficient v/s requested(%u)",
                 buffer_size, expectedSize);
@@ -9034,15 +9088,19 @@ void omx_vdec::update_hdr10plusinfo_cookie_using_timestamp(OMX_PTR markdata, OMX
     std::list<hdr10plusInfo>::reverse_iterator iter;
     unsigned int found = 0;
     unsigned int cookie = (unsigned int)(unsigned long)markdata;
+    bool is_list_empty = false;
 
     if (output_capability != V4L2_PIX_FMT_VP9)
         return;
 
-    if (m_hdr10pluslist.empty()) {
+    pthread_mutex_lock(&m_hdr10pluslock);
+    is_list_empty = m_hdr10pluslist.empty();
+    pthread_mutex_unlock(&m_hdr10pluslock);
+
+    if (is_list_empty) {
         DEBUG_PRINT_HIGH("update_hdr10plusinfo_cookie_using_timestamp: hdr10plusinfo list is empty!");
         return;
     }
-
     /*
      * look for the hdr10plus data which has timestamp nearest and
      * lower than the etb timestamp, we should not take the
@@ -9072,12 +9130,17 @@ void omx_vdec::convert_hdr10plusinfo_to_metadata(OMX_PTR markdata, ColorMetaData
 {
     std::list<hdr10plusInfo>::iterator iter;
     unsigned int cookie = (unsigned int)(unsigned long)markdata;
+    bool is_list_empty = false;
 
     if (output_capability != V4L2_PIX_FMT_VP9)
         return;
 
-    if (m_hdr10pluslist.empty()) {
-        DEBUG_PRINT_HIGH("convert_hdr10plusinfo_to_metadata: hdr10plus list is empty!");
+    pthread_mutex_lock(&m_hdr10pluslock);
+    is_list_empty = m_hdr10pluslist.empty();
+    pthread_mutex_unlock(&m_hdr10pluslock);
+
+    if (is_list_empty) {
+        DEBUG_PRINT_HIGH("convert_hdr10plusinfo_to_metadata: hdr10plusinfo list is empty!");
         return;
     }
 
@@ -9102,12 +9165,17 @@ void omx_vdec::remove_hdr10plusinfo_using_cookie(OMX_PTR markdata)
 {
     std::list<hdr10plusInfo>::iterator iter;
     unsigned int cookie = (unsigned int)(unsigned long)markdata;
+    bool is_list_empty = false;
 
     if (output_capability != V4L2_PIX_FMT_VP9)
         return;
 
-    if (m_hdr10pluslist.empty()) {
-        DEBUG_PRINT_HIGH("remove_hdr10plusinfo_using_cookie: hdr10plus list is empty!");
+    pthread_mutex_lock(&m_hdr10pluslock);
+    is_list_empty = m_hdr10pluslist.empty();
+    pthread_mutex_unlock(&m_hdr10pluslock);
+
+    if (is_list_empty) {
+        DEBUG_PRINT_HIGH("remove_hdr10plusinfo_using_cookie: hdr10plusinfo list is empty!");
         return;
     }
 
@@ -9126,11 +9194,56 @@ void omx_vdec::remove_hdr10plusinfo_using_cookie(OMX_PTR markdata)
 
 void omx_vdec::clear_hdr10plusinfo()
 {
-    if (m_hdr10pluslist.empty() || output_capability != V4L2_PIX_FMT_VP9)
+    bool is_list_empty = false;
+
+    if (output_capability != V4L2_PIX_FMT_VP9)
         return;
 
     pthread_mutex_lock(&m_hdr10pluslock);
+    is_list_empty = m_hdr10pluslist.empty();
+    pthread_mutex_unlock(&m_hdr10pluslock);
+
+    if (is_list_empty) {
+        DEBUG_PRINT_HIGH("clear_hdr10plusinfo: hdr10plusinfo list is empty!");
+        return;
+    }
+
+    pthread_mutex_lock(&m_hdr10pluslock);
     m_hdr10pluslist.clear();
+    pthread_mutex_unlock(&m_hdr10pluslock);
+}
+
+void omx_vdec::get_hdr10plusinfo(DescribeHDR10PlusInfoParams *hdr10plusdata)
+{
+    std::list<hdr10plusInfo>::iterator iter;
+    bool is_list_empty = false;
+
+    if (output_capability != V4L2_PIX_FMT_VP9)
+        return;
+
+    pthread_mutex_lock(&m_hdr10pluslock);
+    is_list_empty = m_hdr10pluslist.empty();
+    pthread_mutex_unlock(&m_hdr10pluslock);
+
+    if (is_list_empty) {
+        DEBUG_PRINT_HIGH("get_hdr10plusinfo: hdr10plusinfo list is empty!");
+        return;
+    }
+
+    pthread_mutex_lock(&m_hdr10pluslock);
+    iter = m_hdr10pluslist.begin();
+    while (iter != m_hdr10pluslist.end()) {
+        if (!iter->is_new) {
+            hdr10plusdata->nParamSizeUsed = iter->nParamSizeUsed;
+            memcpy(hdr10plusdata->nValue, iter->payload,
+                iter->nParamSizeUsed);
+            DEBUG_PRINT_LOW("found hdr10plus metadata with timestamp %lld, size %u",
+                iter->timestamp, iter->nParamSizeUsed);
+            iter = m_hdr10pluslist.erase(iter);
+            break;
+        }
+        iter++;
+    }
     pthread_mutex_unlock(&m_hdr10pluslock);
 }
 

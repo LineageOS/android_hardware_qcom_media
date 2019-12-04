@@ -651,7 +651,7 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
 
                                            if (ret) {
                                                DEBUG_PRINT_ERROR("Set Resolution failed");
-                                               eRet = OMX_ErrorUnsupportedSetting;
+                                               eRet = errno == EBUSY ? OMX_ErrorInsufficientResources : OMX_ErrorUnsupportedSetting;
                                            } else {
                                                eRet = get_buffer_req(&drv_ctx.op_buf);
                                            }
@@ -732,8 +732,13 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                                portFmt->eColorFormat == OMX_COLOR_FormatYUV420Planar ||
                                                portFmt->eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar ||
                                                portFmt->eColorFormat == OMX_COLOR_Format16bitRGB565) {
-                                        op_format = (enum vdec_output_format)VDEC_YUV_FORMAT_NV12_UBWC;
-                                        fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12_UBWC;
+                                        if (!m_disable_ubwc_mode) {
+                                            op_format = (enum vdec_output_format)VDEC_YUV_FORMAT_NV12_UBWC;
+                                            fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12_UBWC;
+                                        } else {
+                                            op_format = (enum vdec_output_format)VDEC_YUV_FORMAT_NV12;
+                                            fmt.fmt.pix_mp.pixelformat = capture_capability = V4L2_PIX_FMT_NV12;
+                                        }
                                         //check if the required color format is a supported flexible format
                                         is_flexible_format = check_supported_flexible_formats(portFmt->eColorFormat);
                                     } else {

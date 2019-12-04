@@ -33,6 +33,10 @@ endif
 
 libmm-venc-def += -D_UBWC_
 
+ifeq ($(TARGET_BOARD_PLATFORM),bengal)
+libmm-venc-def += -U_UBWC_
+endif
+
 ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_USE_FLAG_MSM8226)),true)
 libmm-venc-def += -D_MSM8226_
 endif

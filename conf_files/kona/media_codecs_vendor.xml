@@ -269,12 +269,7 @@ Only the three quirks included above are recognized at this point:
             <Limit name="quality" range="0-100" default="80" />
             <Feature name="bitrate-modes" value="CQ" />
             <Limit name="performance-point-16384x8192" value="3" />
-            <Limit name="performance-point-8192x4320" value="3" />
-            <Limit name="performance-point-4096x2304" value="3" />
             <Limit name="performance-point-1920x1080" value="6" />
-            <Limit name="performance-point-1920x1080" value="6" />
-            <Limit name="performance-point-1280x720" value="6" />
-            <Limit name="performance-point-1280x720" value="6" />
         </MediaCodec>
         <!-- Video Software -->
         <MediaCodec name="OMX.qcom.video.encoder.h263sw" type="video/3gpp" >
@@ -400,7 +395,7 @@ Only the three quirks included above are recognized at this point:
             <Limit name="block-size" value="16x16" />
             <Limit name="block-count" range="64-138240" />
             <Limit name="blocks-per-second" min="64" max="7776000" />
-            <Limit name="bitrate" range="1-160000000" />
+            <Limit name="bitrate" range="1-100000000" />
             <Limit name="frame-rate" range="1-960" />
             <Feature name="adaptive-playback" />
             <Limit name="concurrent-instances" max="6" />

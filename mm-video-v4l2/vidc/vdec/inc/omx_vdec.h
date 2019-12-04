@@ -150,7 +150,7 @@ extern "C" {
         (unsigned)((OMX_BUFFERHEADERTYPE *)bufHdr)->nTimeStamp)
 
 #define DEFAULT_FPS 30
-#define MAX_SUPPORTED_FPS 240
+#define MAX_SUPPORTED_FPS 960
 #define DEFAULT_WIDTH_ALIGNMENT 128
 #define DEFAULT_HEIGHT_ALIGNMENT 32
 
@@ -1309,6 +1309,7 @@ class omx_vdec: public qc_omx_component
         void convert_hdr10plusinfo_to_metadata(OMX_PTR cookie, ColorMetaData &colorData);
         void remove_hdr10plusinfo_using_cookie(OMX_PTR cookie);
         void clear_hdr10plusinfo();
+        void get_hdr10plusinfo(DescribeHDR10PlusInfoParams *hdr10plusdata);
 public:
         bool m_buffer_error;
         OMX_VIDEO_PARAM_PROFILELEVELTYPE get_clientSet_profile_level() {
