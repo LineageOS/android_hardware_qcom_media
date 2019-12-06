@@ -532,7 +532,7 @@ class venc_dev
         bool venc_set_iframesize_type(QOMX_VIDEO_IFRAMESIZE_TYPE type);
         unsigned long venc_get_color_format(OMX_COLOR_FORMATTYPE eColorFormat);
         unsigned long venc_get_codectype(OMX_VIDEO_CODINGTYPE eCompressionFormat);
-        bool venc_set_tile_dimension(OMX_U32 nTileDimension);
+        bool venc_set_grid_enable();
         bool venc_set_nal_size (OMX_VIDEO_CONFIG_NALSIZE *nalSizeInfo);
 
         OMX_U32 pmem_free();
@@ -595,7 +595,6 @@ class venc_dev
         bool mUseAVTimerTimestamps;
         bool venc_set_hdr_info(const MasteringDisplay&, const ContentLightLevel&);
         bool mIsGridset;
-        OMX_U32 mTileDimension;
 };
 
 enum instance_state {

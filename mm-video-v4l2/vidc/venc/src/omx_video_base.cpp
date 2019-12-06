@@ -1732,6 +1732,17 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 OMX_VIDEO_PARAM_ANDROID_IMAGEGRIDTYPE* pParam =
                         (OMX_VIDEO_PARAM_ANDROID_IMAGEGRIDTYPE*)paramData;
                 DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoAndroidImageGrid");
+                m_sParamAndroidImageGrid.bEnabled = OMX_TRUE;
+                m_sParamAndroidImageGrid.nTileWidth = DEFAULT_TILE_DIMENSION;
+                m_sParamAndroidImageGrid.nTileHeight = DEFAULT_TILE_DIMENSION;
+                m_sParamAndroidImageGrid.nGridRows =
+                    m_sInPortDef.format.video.nFrameHeight > 0 ?
+                    ((m_sInPortDef.format.video.nFrameHeight - 1) / DEFAULT_TILE_DIMENSION + 1) :
+                    DEFAULT_TILE_ROWS;
+                    m_sParamAndroidImageGrid.nGridCols =
+                    m_sInPortDef.format.video.nFrameWidth > 0 ?
+                    ((m_sInPortDef.format.video.nFrameWidth - 1) / DEFAULT_TILE_DIMENSION + 1) :
+                    DEFAULT_TILE_COLS;
                 memcpy(pParam, &m_sParamAndroidImageGrid, sizeof(m_sParamAndroidImageGrid));
                 break;
             }
