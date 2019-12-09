@@ -2307,10 +2307,9 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
     struct v4l2_ext_controls controls;
     int conceal_color_8bit = 0, conceal_color_10bit = 0;
 
+    property_get("ro.board.platform", m_platform_name, "0");
 #ifdef _ANDROID_
-    char platform_name[PROPERTY_VALUE_MAX];
-    property_get("ro.board.platform", platform_name, "0");
-    if (!strncmp(platform_name, "msm8610", 7)) {
+    if (!strncmp(m_platform_name, "msm8610", 7)) {
         device_name = (OMX_STRING)"/dev/video/q6_dec";
         is_q6_platform = true;
         maxSmoothStreamingWidth = 1280;
@@ -7378,6 +7377,16 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
         buffer->pBuffer = (OMX_U8*)drv_ctx.ptr_inputbuffer[nBufferIndex].bufferaddr;
     }
 
+    /* Check if the input timestamp in seconds is greater than LONG_MAX
+       or lesser than LONG_MIN. */
+    if (buffer->nTimeStamp / 1000000 > LONG_MAX ||
+       buffer->nTimeStamp / 1000000 < LONG_MIN) {
+        /* This timestamp cannot be contained in driver timestamp field */
+        DEBUG_PRINT_ERROR("[ETB] BHdr(%p) pBuf(%p) nTS(%lld) nFL(%u) >> Invalid timestamp",
+            buffer, buffer->pBuffer, buffer->nTimeStamp, (unsigned int)buffer->nFilledLen);
+        return OMX_ErrorBadParameter;
+    }
+
     DEBUG_PRINT_LOW("[ETB] BHdr(%p) pBuf(%p) nTS(%lld) nFL(%u)",
             buffer, buffer->pBuffer, buffer->nTimeStamp, (unsigned int)buffer->nFilledLen);
     if (arbitrary_bytes) {
@@ -8546,11 +8555,6 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
             time_stamp_dts.get_next_timestamp(buffer,
                     is_interlaced && is_duplicate_ts_valid && !is_mbaff);
         }
-    }
-
-    if (buffer->nTimeStamp < 0) {
-        DEBUG_PRINT_ERROR("[FBD] Invalid buffer timestamp %lld", (long long)buffer->nTimeStamp);
-        return OMX_ErrorBadParameter;
     }
 
     VIDC_TRACE_INT_LOW("FBD-TS", buffer->nTimeStamp / 1000);
@@ -9854,14 +9858,18 @@ bool omx_vdec::alloc_map_ion_memory(OMX_U32 buffer_size, vdec_ion *ion_info, int
     }
 
 #ifdef HYPERVISOR
-    flag = 0;
+    flag &= ~ION_FLAG_CACHED;
 #endif
     ion_info->alloc_data.flags = flag;
     ion_info->alloc_data.len = buffer_size;
 
     ion_info->alloc_data.heap_id_mask = ION_HEAP(ION_SYSTEM_HEAP_ID);
     if (secure_mode && (ion_info->alloc_data.flags & ION_FLAG_SECURE)) {
+#ifdef HYPERVISOR
+        ion_info->alloc_data.heap_id_mask = ION_HEAP(ION_SECURE_DISPLAY_HEAP_ID);
+#else
         ion_info->alloc_data.heap_id_mask = ION_HEAP(MEM_HEAP_ID);
+#endif
     }
 
     /* Use secure display cma heap for obvious reasons. */
@@ -11139,6 +11147,14 @@ void omx_vdec::get_preferred_color_aspects(ColorAspects& preferredColorAspects)
         m_client_color_space.sAspects : m_internal_color_space.sAspects;
     const ColorAspects &defaultColor = preferClientColor ?
         m_internal_color_space.sAspects : m_client_color_space.sAspects;
+
+    /* atoll does not support BT2020 color primaries, hence overriding with
+        BT709 to avoid tone mapping issue at display*/
+    if (!strncmp(m_platform_name, "atoll", 5) &&
+        (m_client_color_space.sAspects.mPrimaries == ColorAspects::PrimariesBT2020)) {
+        m_client_color_space.sAspects.mPrimaries = ColorAspects::PrimariesBT709_5;
+        m_client_color_space.sAspects.mMatrixCoeffs = ColorAspects::MatrixBT709_5;
+    }
 
     preferredColorAspects.mPrimaries = preferredColor.mPrimaries != ColorAspects::PrimariesUnspecified ?
         preferredColor.mPrimaries : defaultColor.mPrimaries;

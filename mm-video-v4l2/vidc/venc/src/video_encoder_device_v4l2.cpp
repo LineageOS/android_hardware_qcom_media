@@ -4162,7 +4162,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
     struct v4l2_buffer buf;
     struct v4l2_requestbuffers bufreq;
     struct v4l2_plane plane[VIDEO_MAX_PLANES];
-    int rc = 0, extra_idx;
+    int rc = 0, extra_idx, c2d_enabled = 0;
     bool interlace_flag = false;
     struct OMX_BUFFERHEADERTYPE *bufhdr;
     LEGACY_CAM_METADATA_TYPE * meta_buf = NULL;
@@ -4538,6 +4538,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                 // color_format == 1 ==> RGBA to YUV Color-converted buffer
                 // Buffers color-converted via C2D have 601-Limited color
                 if (!streaming[OUTPUT_PORT]) {
+                    c2d_enabled = 1;
                     DEBUG_PRINT_HIGH("Setting colorspace 601-L for Color-converted buffer");
                     venc_set_colorspace(MSM_VIDC_BT601_6_625, 0 /*range-limited*/,
                             MSM_VIDC_TRANSFER_601_6_525, MSM_VIDC_MATRIX_601_6_525);
@@ -4559,9 +4560,9 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
         }
     }
 
-    if (!streaming[OUTPUT_PORT] &&
+    if (!streaming[OUTPUT_PORT] && (c2d_enabled ||
         (m_sVenc_cfg.inputformat != V4L2_PIX_FMT_NV12_TP10_UBWC &&
-         m_sVenc_cfg.inputformat != V4L2_PIX_FMT_NV12_UBWC)) {
+         m_sVenc_cfg.inputformat != V4L2_PIX_FMT_NV12_UBWC))) {
         if (bframe_implicitly_enabled) {
             DEBUG_PRINT_HIGH("Disabling implicitly enabled B-frames");
             intra_period.num_pframes = nPframes_cache;
