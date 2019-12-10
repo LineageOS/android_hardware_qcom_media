@@ -73,6 +73,7 @@ typedef enum {
     vidc_enc_linear_color_format,
     vidc_enc_bitrate_savings_enable,
     vidc_enc_auto_blur_disable,
+    vidc_dec_thumbnail_yuv_output,
 } Config_t;
 
 struct configStr {
@@ -95,6 +96,7 @@ static const struct configStr configStrMap[] = {
     {vidc_enc_linear_color_format, "vidc_enc_linear_color_format"},
     {vidc_enc_bitrate_savings_enable, "vidc_enc_bitrate_savings_enable"},
     {vidc_enc_auto_blur_disable, "vidc_enc_auto_blur_disable"},
+    {vidc_dec_thumbnail_yuv_output, "vidc_dec_thumbnail_yuv_output"},
 };
 
 class Config {

@@ -37,6 +37,10 @@ endif
 
 libmm-vdec-def += -D_UBWC_
 
+ifeq ($(TARGET_BOARD_PLATFORM),bengal)
+libmm-vdec-def += -U_UBWC_
+endif
+
 ifeq ($(TARGET_USES_ION),true)
 libmm-vdec-def += -DUSE_ION
 endif

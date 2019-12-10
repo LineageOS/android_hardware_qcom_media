@@ -263,7 +263,7 @@ struct extradata_buffer_info {
 };
 
 struct statistics {
-    struct timeval prev_tv;
+    struct timespec prev_tv;
     OMX_U32 prev_fbd;
     OMX_U32 bytes_generated;
 };
