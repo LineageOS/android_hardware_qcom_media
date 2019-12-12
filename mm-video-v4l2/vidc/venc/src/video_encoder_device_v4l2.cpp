@@ -3472,6 +3472,7 @@ bool venc_dev::venc_set_target_bitrate(OMX_U32 nTargetBitrate)
         return false;
     }
 
+    bitrate.target_bitrate = control.value;
     DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
 
     return true;
