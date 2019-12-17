@@ -1091,7 +1091,6 @@ class omx_vdec: public qc_omx_component
         };
         meta_buffer meta_buff;
         OMX_PARAM_PORTDEFINITIONTYPE m_port_def;
-        omx_time_stamp_reorder time_stamp_dts;
         desc_buffer_hdr *m_desc_buffer_ptr;
         bool secure_mode;
         bool allocate_native_handle;
