@@ -292,6 +292,7 @@ omx_video::omx_video():
             {HAL_PIXEL_FORMAT_RGBA_8888, RGBA8888},
             {HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC, NV12_UBWC},
             {HAL_PIXEL_FORMAT_NV12_ENCODEABLE, NV12_128m},
+            {HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS, NV12_128m},
                 });
 
     pthread_mutex_init(&m_lock, NULL);
