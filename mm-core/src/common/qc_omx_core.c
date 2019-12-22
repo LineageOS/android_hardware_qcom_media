@@ -49,7 +49,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "omx_core_cmp.h"
 #include <cutils/properties.h>
 
+#ifdef ENABLE_CONFIGSTORE
 #include "ConfigStore.h"
+#endif
 
 extern omx_core_cb_type core[];
 extern const unsigned int SIZE_OF_CORE;
@@ -435,15 +437,19 @@ OMX_GetHandle(OMX_OUT OMX_HANDLETYPE*     handle,
       if (!strncmp(core[cmp_index].so_lib_name, hwDecLib, strlen(hwDecLib)) ||
           !strncmp(core[cmp_index].so_lib_name, swDecLib, strlen(swDecLib))) {
         bool isVppEnabled = false;
+#ifdef ENABLE_CONFIGSTORE
         if (isConfigStoreEnabled()) {
           getConfigStoreBool("vpp", "enable", &isVppEnabled, false);
         } else {
+#endif
           char value[PROPERTY_VALUE_MAX];
           if ((property_get("vendor.media.vpp.enable", value, NULL))
                && (!strcmp("1", value) || !strcmp("true", value))) {
             isVppEnabled = true;
           }
+#ifdef ENABLE_CONFIGSTORE
         }
+#endif
         if (isVppEnabled) {
           DEBUG_PRINT("VPP property is enabled");
           vpp_cmp_index = get_cmp_index("OMX.qti.vdec.vpp");
