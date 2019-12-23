@@ -22,8 +22,5 @@
         <MediaCodec name="OMX.qti.audio.decoder.flac" type="audio/flac" rank="0">
             <Limit name="concurrent-instances" max="10" />
         </MediaCodec>
-        <MediaCodec name="OMX.qti.audio.decoder.mpegh" type="audio/mhas" rank="0">
-            <Limit name="concurrent-instances" max="1" />
-        </MediaCodec>
     </Decoders>
 </Included>
