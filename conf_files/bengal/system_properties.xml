@@ -34,6 +34,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <property name="vidc_enc_log_in" value="0"/>
         <property name="vidc_enc_log_out" value="0"/>
         <property name="vidc_enc_csc_custom_matrix" value="0"/>
+        <property name="vidc_c2d_rotation" value="1"/>
         <!-- Bitmask for arb mode: 1: AVC, 2: HEVC, 4: MPEG2 -->
         <property name="vidc_dec_arb_mode_override" value="7"/>
 </configs>

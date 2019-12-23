@@ -74,6 +74,7 @@ typedef enum {
     vidc_enc_bitrate_savings_enable,
     vidc_enc_auto_blur_disable,
     vidc_dec_thumbnail_yuv_output,
+    vidc_c2d_rotation,
 } Config_t;
 
 struct configStr {
@@ -97,6 +98,7 @@ static const struct configStr configStrMap[] = {
     {vidc_enc_bitrate_savings_enable, "vidc_enc_bitrate_savings_enable"},
     {vidc_enc_auto_blur_disable, "vidc_enc_auto_blur_disable"},
     {vidc_dec_thumbnail_yuv_output, "vidc_dec_thumbnail_yuv_output"},
+    {vidc_c2d_rotation, "vidc_c2d_rotation"},
 };
 
 class Config {

@@ -123,6 +123,7 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     m_cvp_meta_enabled = false;
     m_cvp_first_metadata = false;
     low_latency_mode = false;
+    m_bDimensionsNeedFlip = false;
     pthread_mutex_init(&m_roilock, NULL);
     pthread_mutex_init(&m_configlock, NULL);
     pthread_mutex_init(&pause_resume_mlock, NULL);
@@ -3471,6 +3472,7 @@ bool venc_dev::venc_set_target_bitrate(OMX_U32 nTargetBitrate)
         return false;
     }
 
+    bitrate.target_bitrate = control.value;
     DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
 
     return true;
@@ -3766,6 +3768,72 @@ bool venc_dev::venc_set_vpe_rotation(OMX_S32 rotation_angle)
         return false;
     }
     DEBUG_PRINT_LOW("Success IOCTL set control for id=%x, value=%d", control.id, control.value);
+
+    /* successfully set rotation_angle, save it */
+    m_rotation.rotation = rotation_angle;
+
+    return true;
+}
+
+bool venc_dev::venc_prepare_c2d_rotation(OMX_S32 rotation_angle)
+{
+   int rc;
+   struct v4l2_format fmt;
+   struct v4l2_requestbuffers bufreq;
+   OMX_PARAM_PORTDEFINITIONTYPE *portDefn;
+
+    DEBUG_PRINT_HIGH("venc_prepare_c2d_rotation angle = %d", (int)rotation_angle);
+    if ((OMX_S32)m_rotation.rotation == rotation_angle) {
+        DEBUG_PRINT_HIGH("venc_prepare_c2d_rotation: rotation (%d) not changed", rotation_angle);
+        return true;
+    }
+
+    if (rotation_angle == 90 || rotation_angle == 270) {
+        m_bDimensionsNeedFlip = true;
+        portDefn = &venc_handle->m_sInPortDef;
+        m_sVenc_cfg.input_height = portDefn->format.video.nFrameWidth;
+        m_sVenc_cfg.input_width =  portDefn->format.video.nFrameHeight;
+
+        memset(&fmt, 0, sizeof(fmt));
+
+        fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
+        if (ioctl(m_nDriver_fd, VIDIOC_G_FMT, &fmt)) {
+            DEBUG_PRINT_ERROR("Failed to get format on OUTPUT_MPLANE");
+            return false;
+        }
+
+        fmt.fmt.pix_mp.height = m_sVenc_cfg.input_height;
+        fmt.fmt.pix_mp.width = m_sVenc_cfg.input_width;
+        if (ioctl(m_nDriver_fd, VIDIOC_S_FMT, &fmt)) {
+            DEBUG_PRINT_ERROR("set format failed, type %d, wxh %dx%d",
+                fmt.type, fmt.fmt.pix_mp.width, fmt.fmt.pix_mp.height);
+                hw_overload = errno == EBUSY;
+                return false;
+        }
+        m_sInput_buff_property.datasize=fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
+
+        portDefn = &venc_handle->m_sOutPortDef;
+        m_sVenc_cfg.dvs_width  = portDefn->format.video.nFrameHeight;
+        m_sVenc_cfg.dvs_height = portDefn->format.video.nFrameWidth;
+
+        memset(&fmt, 0, sizeof(fmt));
+
+        fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+        if (ioctl(m_nDriver_fd, VIDIOC_G_FMT, &fmt)) {
+            DEBUG_PRINT_ERROR("Failed to get format on CAPTURE_MPLANE");
+            return false;
+        }
+
+        fmt.fmt.pix_mp.height = m_sVenc_cfg.dvs_height;
+        fmt.fmt.pix_mp.width = m_sVenc_cfg.dvs_width;
+        if (ioctl(m_nDriver_fd, VIDIOC_S_FMT, &fmt)) {
+            DEBUG_PRINT_ERROR("VIDIOC_S_FMT CAPTURE_MPLANE Failed");
+            hw_overload = errno == EBUSY;
+            return false;
+        }
+
+        m_sOutput_buff_property.datasize = fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
+    }
 
     /* successfully set rotation_angle, save it */
     m_rotation.rotation = rotation_angle;
