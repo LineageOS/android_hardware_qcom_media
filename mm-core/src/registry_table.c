@@ -46,8 +46,6 @@ omx_core_cb_type core[] =
     OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.hevc", "libOmxVdec.so", "video_decoder.hevc"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.vp9", "libOmxVdec.so", "video_decoder.vp9"),
     OMX_REGISTRY_ENTRY("OMX.qti.video.decoder.mpeg4sw", "libOmxSwVdec.so", "video_decoder.mpeg4"),
-    OMX_REGISTRY_ENTRY("OMX.qti.video.decoder.divxsw", "libOmxSwVdec.so", "video_decoder.divx"),
-    OMX_REGISTRY_ENTRY("OMX.qti.video.decoder.divx4sw", "libOmxSwVdec.so", DIVX4_MIME),
     OMX_REGISTRY_ENTRY("OMX.qti.video.decoder.h263sw", "libOmxSwVdec.so", "video_decoder.h263"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.mpeg4sw", "libOmxSwVencMpeg4.so", "video_encoder.mpeg4"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.h263sw", "libOmxSwVencMpeg4.so", "video_encoder.h263"),

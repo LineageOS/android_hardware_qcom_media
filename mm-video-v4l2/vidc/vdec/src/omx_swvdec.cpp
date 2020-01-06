@@ -192,28 +192,6 @@ OMX_ERRORTYPE omx_swvdec::component_init(OMX_STRING cmp_name)
         m_omx_video_codingtype = OMX_VIDEO_CodingH263;
     }
     else if (((!strncmp(cmp_name,
-                        "OMX.qti.video.decoder.divxsw",
-                        OMX_MAX_STRINGNAME_SIZE))) ||
-             ((!strncmp(cmp_name,
-                        "OMX.qti.video.decoder.divx4sw",
-                        OMX_MAX_STRINGNAME_SIZE))))
-    {
-        OMX_SWVDEC_LOG_LOW("video_decoder.divx");
-
-        strlcpy(m_cmp_name,              cmp_name, OMX_MAX_STRINGNAME_SIZE);
-#ifndef _ANDROID_O_MR1_DIVX_CHANGES
-        strlcpy(m_role_name, "video_decoder.divx", OMX_MAX_STRINGNAME_SIZE);
-#else
-        if(!strncmp(cmp_name,"OMX.qti.video.decoder.divx4sw", OMX_MAX_STRINGNAME_SIZE))
-            strlcpy(m_role_name, "video_decoder.divx4", OMX_MAX_STRINGNAME_SIZE);
-        else
-            strlcpy(m_role_name, "video_decoder.divx", OMX_MAX_STRINGNAME_SIZE);
-#endif
-
-        m_swvdec_codec         = SWVDEC_CODEC_MPEG4;
-        m_omx_video_codingtype = ((OMX_VIDEO_CODINGTYPE) QOMX_VIDEO_CodingDivx);
-    }
-    else if (((!strncmp(cmp_name,
                       "OMX.qti.video.decoder.vc1sw",
                       OMX_MAX_STRINGNAME_SIZE)))||
               ((!strncmp(cmp_name,
