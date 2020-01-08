@@ -7377,16 +7377,6 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
         buffer->pBuffer = (OMX_U8*)drv_ctx.ptr_inputbuffer[nBufferIndex].bufferaddr;
     }
 
-    /* Check if the input timestamp in seconds is greater than LONG_MAX
-       or lesser than LONG_MIN. */
-    if (buffer->nTimeStamp / 1000000 > LONG_MAX ||
-       buffer->nTimeStamp / 1000000 < LONG_MIN) {
-        /* This timestamp cannot be contained in driver timestamp field */
-        DEBUG_PRINT_ERROR("[ETB] BHdr(%p) pBuf(%p) nTS(%lld) nFL(%u) >> Invalid timestamp",
-            buffer, buffer->pBuffer, buffer->nTimeStamp, (unsigned int)buffer->nFilledLen);
-        return OMX_ErrorBadParameter;
-    }
-
     DEBUG_PRINT_LOW("[ETB] BHdr(%p) pBuf(%p) nTS(%lld) nFL(%u)",
             buffer, buffer->pBuffer, buffer->nTimeStamp, (unsigned int)buffer->nFilledLen);
     if (arbitrary_bytes) {
