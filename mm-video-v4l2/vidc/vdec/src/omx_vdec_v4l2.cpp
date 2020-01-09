@@ -569,8 +569,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_disp_hor_size(0),
     m_disp_vert_size(0),
     prev_ts(LLONG_MAX),
-    prev_ts_actual(LLONG_MAX),
-    rst_prev_ts(true),
     frm_int(0),
     m_fps_received(0),
     in_reconfig(false),
@@ -1400,7 +1398,6 @@ void omx_vdec::process_event_cb(void *ctxt)
                                             DEBUG_PRINT_ERROR("ERROR: %s()::EventHandler is NULL", __func__);
                                         }
                                         pThis->prev_ts = LLONG_MAX;
-                                        pThis->rst_prev_ts = true;
                                         break;
 
                 case OMX_COMPONENT_GENERATE_HARDWARE_ERROR:
@@ -2733,7 +2730,6 @@ bool omx_vdec::execute_input_flush()
     pthread_mutex_unlock(&m_lock);
     input_flush_progress = false;
     prev_ts = LLONG_MAX;
-    rst_prev_ts = true;
 
     DEBUG_PRINT_HIGH("OMX flush i/p Port complete PenBuf(%d)", pending_input_buffers);
     return bRet;
@@ -6117,7 +6113,6 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
         }
         if (buffer->nFlags & OMX_BUFFERFLAG_EOS) {
             prev_ts = LLONG_MAX;
-            rst_prev_ts = true;
             proc_frms = 0;
         }
 
@@ -7480,8 +7475,7 @@ void omx_vdec::set_frame_rate(OMX_S64 act_timestamp)
     OMX_U32 new_frame_interval = 0;
     if (VALID_TS(act_timestamp) && VALID_TS(prev_ts) && act_timestamp != prev_ts
             && (llabs(act_timestamp - prev_ts) > 2000 || frm_int == 0)) {
-        new_frame_interval = client_set_fps ? frm_int : (act_timestamp - prev_ts) > 0 ?
-            llabs(act_timestamp - prev_ts) : llabs(act_timestamp - prev_ts_actual);
+        new_frame_interval = client_set_fps ? frm_int : llabs(act_timestamp - prev_ts);
         if (new_frame_interval != frm_int || frm_int == 0) {
             frm_int = new_frame_interval;
             if (frm_int) {
