@@ -7876,6 +7876,11 @@ void omx_vdec::get_preferred_color_aspects(ColorAspects& preferredColorAspects)
     const ColorAspects &defaultColor = preferClientColor ?
         m_internal_color_space.sAspects : m_client_color_space.sAspects;
 
+    if ((m_client_color_space.sAspects.mPrimaries == ColorAspects::PrimariesBT2020) && (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_8)) {
+        m_client_color_space.sAspects.mPrimaries = ColorAspects::PrimariesBT709_5;
+        m_client_color_space.sAspects.mMatrixCoeffs = ColorAspects::MatrixBT709_5;
+    }
+
     preferredColorAspects.mPrimaries = preferredColor.mPrimaries != ColorAspects::PrimariesUnspecified ?
         preferredColor.mPrimaries : defaultColor.mPrimaries;
     preferredColorAspects.mTransfer = preferredColor.mTransfer != ColorAspects::TransferUnspecified ?
