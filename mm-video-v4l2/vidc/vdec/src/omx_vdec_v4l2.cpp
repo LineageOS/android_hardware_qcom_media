@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010 - 2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2010 - 2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -1044,11 +1044,21 @@ void omx_vdec::process_event_cb(void *ctxt)
                     break;
 
                 case OMX_COMPONENT_GENERATE_EBD:
-
                     if (p2 != VDEC_S_SUCCESS && p2 != VDEC_S_INPUT_BITSTREAM_ERR) {
                         DEBUG_PRINT_ERROR("OMX_COMPONENT_GENERATE_EBD failure");
                         pThis->omx_report_error ();
                     } else {
+                        if (p2 == VDEC_S_INPUT_BITSTREAM_ERR && p1) {
+                            OMX_BUFFERHEADERTYPE* buffer =
+                                    ((OMX_BUFFERHEADERTYPE *)(intptr_t)p1);
+                            if (!buffer->pMarkData && !buffer->hMarkTargetComponent) {
+                                pThis->time_stamp_dts.remove_time_stamp(
+                                        buffer->nTimeStamp,
+                                        (pThis->drv_ctx.interlace != VDEC_InterlaceFrameProgressive)
+                                        ?true:false);
+                            }
+                        }
+
                         if ( pThis->empty_buffer_done(&pThis->m_cmp,
                                     (OMX_BUFFERHEADERTYPE *)(intptr_t)p1) != OMX_ErrorNone) {
                             DEBUG_PRINT_ERROR("empty_buffer_done failure");
@@ -2726,6 +2736,7 @@ bool omx_vdec::execute_input_flush()
             empty_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p1);
         }
     }
+    time_stamp_dts.flush_timestamp();
     /*Check if Heap Buffers are to be flushed*/
     pthread_mutex_unlock(&m_lock);
     input_flush_progress = false;
@@ -4994,6 +5005,7 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
     buffer->pMarkData = (OMX_PTR)(unsigned long)m_etb_count;
     post_event ((unsigned long)hComp,(unsigned long)buffer,OMX_COMPONENT_GENERATE_ETB);
 
+    time_stamp_dts.insert_timestamp(buffer);
     return OMX_ErrorNone;
 }
 
@@ -6086,6 +6098,20 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
     }
 #endif
 
+    /* For use buffer we need to copy the data */
+    if (!output_flush_progress) {
+        /* This is the error check for non-recoverable errros */
+        bool is_duplicate_ts_valid = true;
+        bool is_interlaced = (drv_ctx.interlace != VDEC_InterlaceFrameProgressive);
+
+        if (output_capability == V4L2_PIX_FMT_MPEG4 ||
+                output_capability == V4L2_PIX_FMT_MPEG2)
+            is_duplicate_ts_valid = false;
+
+        time_stamp_dts.get_next_timestamp(buffer,
+                is_interlaced && is_duplicate_ts_valid && !is_mbaff);
+
+    }
     VIDC_TRACE_INT_LOW("FBD-TS", buffer->nTimeStamp / 1000);
 
     if (m_cb.FillBufferDone) {
