@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -1590,6 +1590,22 @@ unsigned long venc_dev::venc_get_codectype(OMX_VIDEO_CODINGTYPE eCompressionForm
     return codectype;
 }
 
+bool venc_dev::venc_set_bitrate_savings_mode(bool bitrateSavingEnable)
+{
+    struct v4l2_control control;
+    int rc = 0;
+
+    DEBUG_PRINT_LOW("Set bitrate savings %d", bitrateSavingEnable);
+    control.id = V4L2_CID_MPEG_VIDC_VENC_BITRATE_SAVINGS;
+    control.value = bitrateSavingEnable;
+    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
+    if (rc) {
+        DEBUG_PRINT_HIGH("Non-Fatal: Request to set bitrate savings failed");
+    }
+
+    return true;
+}
+
 bool venc_dev::venc_set_ratectrl_cfg(OMX_VIDEO_CONTROLRATETYPE eControlRate)
 {
     bool status = true;
@@ -1651,13 +1667,7 @@ bool venc_dev::venc_set_ratectrl_cfg(OMX_VIDEO_CONTROLRATETYPE eControlRate)
         rate_ctrl.rcmode = control.value;
     }
 
-    DEBUG_PRINT_LOW("Set bitrate savings %d", mBitrateSavingsEnable);
-    control.id = V4L2_CID_MPEG_VIDC_VENC_BITRATE_SAVINGS;
-    control.value = mBitrateSavingsEnable;
-    rc = ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control);
-    if (rc) {
-        DEBUG_PRINT_HIGH("Non-Fatal: Request to set bitrate savings failed");
-    }
+    venc_set_bitrate_savings_mode(mBitrateSavingsEnable);
 
     return status;
 }
