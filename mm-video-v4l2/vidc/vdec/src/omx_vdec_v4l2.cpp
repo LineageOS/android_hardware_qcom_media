@@ -569,8 +569,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_disp_hor_size(0),
     m_disp_vert_size(0),
     prev_ts(LLONG_MAX),
-    prev_ts_actual(LLONG_MAX),
-    rst_prev_ts(true),
     frm_int(0),
     m_fps_received(0),
     in_reconfig(false),
@@ -1051,13 +1049,6 @@ void omx_vdec::process_event_cb(void *ctxt)
                         DEBUG_PRINT_ERROR("OMX_COMPONENT_GENERATE_EBD failure");
                         pThis->omx_report_error ();
                     } else {
-                        if (p2 == VDEC_S_INPUT_BITSTREAM_ERR && p1) {
-                            pThis->time_stamp_dts.remove_time_stamp(
-                                    ((OMX_BUFFERHEADERTYPE *)(intptr_t)p1)->nTimeStamp,
-                                    (pThis->drv_ctx.interlace != VDEC_InterlaceFrameProgressive)
-                                    ?true:false);
-                        }
-
                         if ( pThis->empty_buffer_done(&pThis->m_cmp,
                                     (OMX_BUFFERHEADERTYPE *)(intptr_t)p1) != OMX_ErrorNone) {
                             DEBUG_PRINT_ERROR("empty_buffer_done failure");
@@ -1065,16 +1056,6 @@ void omx_vdec::process_event_cb(void *ctxt)
                         }
                     }
                     break;
-                case OMX_COMPONENT_GENERATE_INFO_FIELD_DROPPED: {
-                                            int64_t *timestamp = (int64_t *)(intptr_t)p1;
-                                            if (p1) {
-                                                pThis->time_stamp_dts.remove_time_stamp(*timestamp,
-                                                        (pThis->drv_ctx.interlace != VDEC_InterlaceFrameProgressive)
-                                                        ?true:false);
-                                                free(timestamp);
-                                            }
-                                        }
-                                        break;
                 case OMX_COMPONENT_GENERATE_FBD:
                                         if (p2 != VDEC_S_SUCCESS) {
                                             DEBUG_PRINT_ERROR("OMX_COMPONENT_GENERATE_FBD failure");
@@ -1417,7 +1398,6 @@ void omx_vdec::process_event_cb(void *ctxt)
                                             DEBUG_PRINT_ERROR("ERROR: %s()::EventHandler is NULL", __func__);
                                         }
                                         pThis->prev_ts = LLONG_MAX;
-                                        pThis->rst_prev_ts = true;
                                         break;
 
                 case OMX_COMPONENT_GENERATE_HARDWARE_ERROR:
@@ -2746,12 +2726,10 @@ bool omx_vdec::execute_input_flush()
             empty_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p1);
         }
     }
-    time_stamp_dts.flush_timestamp();
     /*Check if Heap Buffers are to be flushed*/
     pthread_mutex_unlock(&m_lock);
     input_flush_progress = false;
     prev_ts = LLONG_MAX;
-    rst_prev_ts = true;
 
     DEBUG_PRINT_HIGH("OMX flush i/p Port complete PenBuf(%d)", pending_input_buffers);
     return bRet;
@@ -5016,7 +4994,6 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
     buffer->pMarkData = (OMX_PTR)(unsigned long)m_etb_count;
     post_event ((unsigned long)hComp,(unsigned long)buffer,OMX_COMPONENT_GENERATE_ETB);
 
-    time_stamp_dts.insert_timestamp(buffer);
     return OMX_ErrorNone;
 }
 
@@ -6109,21 +6086,6 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
     }
 #endif
 
-    /* For use buffer we need to copy the data */
-    if (!output_flush_progress) {
-        /* This is the error check for non-recoverable errros */
-        bool is_duplicate_ts_valid = true;
-        bool is_interlaced = (drv_ctx.interlace != VDEC_InterlaceFrameProgressive);
-
-        if (output_capability == V4L2_PIX_FMT_MPEG4 ||
-                output_capability == V4L2_PIX_FMT_MPEG2)
-            is_duplicate_ts_valid = false;
-
-        if (buffer->nFilledLen > 0) {
-            time_stamp_dts.get_next_timestamp(buffer,
-                    is_interlaced && is_duplicate_ts_valid && !is_mbaff);
-        }
-    }
     VIDC_TRACE_INT_LOW("FBD-TS", buffer->nTimeStamp / 1000);
 
     if (m_cb.FillBufferDone) {
@@ -6151,7 +6113,6 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
         }
         if (buffer->nFlags & OMX_BUFFERFLAG_EOS) {
             prev_ts = LLONG_MAX;
-            rst_prev_ts = true;
             proc_frms = 0;
         }
 
@@ -6380,17 +6341,6 @@ int omx_vdec::async_message_process (void *context, void* message)
             }
             omx->post_event ((unsigned long)omxhdr,vdec_msg->status_code,
                     OMX_COMPONENT_GENERATE_EBD);
-            break;
-        case VDEC_MSG_EVT_INFO_FIELD_DROPPED:
-            int64_t *timestamp;
-            timestamp = (int64_t *) malloc(sizeof(int64_t));
-            if (timestamp) {
-                *timestamp = vdec_msg->msgdata.output_frame.time_stamp;
-                omx->post_event ((unsigned long)timestamp, vdec_msg->status_code,
-                        OMX_COMPONENT_GENERATE_INFO_FIELD_DROPPED);
-                DEBUG_PRINT_HIGH("Field dropped time stamp is %lld",
-                        (long long)vdec_msg->msgdata.output_frame.time_stamp);
-            }
             break;
         case VDEC_MSG_RESP_OUTPUT_FLUSHED:
         case VDEC_MSG_RESP_OUTPUT_BUFFER_DONE: {
@@ -7525,8 +7475,7 @@ void omx_vdec::set_frame_rate(OMX_S64 act_timestamp)
     OMX_U32 new_frame_interval = 0;
     if (VALID_TS(act_timestamp) && VALID_TS(prev_ts) && act_timestamp != prev_ts
             && (llabs(act_timestamp - prev_ts) > 2000 || frm_int == 0)) {
-        new_frame_interval = client_set_fps ? frm_int : (act_timestamp - prev_ts) > 0 ?
-            llabs(act_timestamp - prev_ts) : llabs(act_timestamp - prev_ts_actual);
+        new_frame_interval = client_set_fps ? frm_int : llabs(act_timestamp - prev_ts);
         if (new_frame_interval != frm_int || frm_int == 0) {
             frm_int = new_frame_interval;
             if (frm_int) {

@@ -1061,8 +1061,6 @@ class omx_vdec: public qc_omx_component
         OMX_U32 m_disp_hor_size;
         OMX_U32 m_disp_vert_size;
         OMX_S64 prev_ts;
-        OMX_S64 prev_ts_actual;
-        bool rst_prev_ts;
         OMX_U32 frm_int;
         OMX_U32 m_fps_received;
 
@@ -1091,7 +1089,6 @@ class omx_vdec: public qc_omx_component
         };
         meta_buffer meta_buff;
         OMX_PARAM_PORTDEFINITIONTYPE m_port_def;
-        omx_time_stamp_reorder time_stamp_dts;
         desc_buffer_hdr *m_desc_buffer_ptr;
         bool secure_mode;
         bool allocate_native_handle;

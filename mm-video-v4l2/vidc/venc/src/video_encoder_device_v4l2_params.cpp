@@ -71,7 +71,7 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
 
     if (is_streamon_done(PORT_INDEX_IN)) {
         if (venc_store_dynamic_config(index, configData)) {
-            DEBUG_PRINT_ERROR("dynamic config %#X successfully stored.", index);
+            DEBUG_PRINT_HIGH("dynamic config %#X successfully stored.", index);
             return true;
         }
 
