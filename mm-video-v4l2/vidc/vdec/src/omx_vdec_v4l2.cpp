@@ -76,8 +76,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define strlcpy g_strlcpy
 #endif
 
+#ifndef USE_GBM
 #include <qdMetaData.h>
 #include <gralloc_priv.h>
+#endif
 
 #ifdef ANDROID_JELLYBEAN_MR2
 #include "QComOMXMetadata.h"
@@ -112,13 +114,23 @@ extern "C" {
 #ifdef SLAVE_SIDE_CP
 #define MEM_HEAP_ID ION_CP_MM_HEAP_ID
 #define SECURE_ALIGN SZ_1M
+#ifdef USE_GBM
+#define SECURE_FLAGS_INPUT_BUFFER GBM_BO_USAGE_PROTECTED_QTI
+#define SECURE_FLAGS_OUTPUT_BUFFER GBM_BO_USAGE_PROTECTED_QTI
+#elif defined(USE_ION)
 #define SECURE_FLAGS_INPUT_BUFFER ION_FLAG_SECURE
 #define SECURE_FLAGS_OUTPUT_BUFFER ION_FLAG_SECURE
+#endif
 #else //MASTER_SIDE_CP
 #define MEM_HEAP_ID ION_SECURE_HEAP_ID
 #define SECURE_ALIGN SZ_4K
+#ifdef USE_GBM
+#define SECURE_FLAGS_INPUT_BUFFER GBM_BO_USAGE_PROTECTED_QTI //| GBM_BO_ALLOC_SECURE_BITSTREAM_QTI
+#define SECURE_FLAGS_OUTPUT_BUFFER GBM_BO_USAGE_PROTECTED_QTI | GBM_BO_ALLOC_SECURE_HEAP_QTI
+#elif defined(USE_ION)
 #define SECURE_FLAGS_INPUT_BUFFER (ION_FLAG_SECURE | ION_FLAG_CP_BITSTREAM)
 #define SECURE_FLAGS_OUTPUT_BUFFER (ION_FLAG_SECURE | ION_FLAG_CP_PIXEL)
+#endif
 #endif
 
 #define LUMINANCE_DIV_FACTOR 10000.0
@@ -763,7 +775,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     clientSet_profile_level.eProfile = 0;
     clientSet_profile_level.eLevel = 0;
 #ifdef USE_GBM
-     drv_ctx.gbm_device_fd = -1;
+    drv_ctx.gbm_card_fd = -1;
 #endif
 }
 
@@ -886,6 +898,9 @@ omx_vdec::~omx_vdec()
     }
     DEBUG_PRINT_INFO("Exit OMX vdec Destructor: fd=%d",drv_ctx.video_driver_fd);
     m_perf_control.perf_lock_release();
+#ifdef USE_GBM
+    close(drv_ctx.gbm_card_fd);
+#endif
 }
 
 bool omx_vdec::check_supported_flexible_formats(OMX_COLOR_FORMATTYPE required_format)
@@ -3033,7 +3048,7 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
     return eRet;
 }
 
-#if defined (_ANDROID_HONEYCOMB_) || defined (_ANDROID_ICS_)
+#if (defined (_ANDROID_HONEYCOMB_) || defined (_ANDROID_ICS_)) && !defined(USE_GBM)
 OMX_ERRORTYPE omx_vdec::use_android_native_buffer(OMX_IN OMX_HANDLETYPE hComp, OMX_PTR data)
 {
     DEBUG_PRINT_LOW("Inside use_android_native_buffer");
@@ -3581,7 +3596,11 @@ OMX_ERRORTYPE  omx_vdec::use_output_buffer(
     OMX_BUFFERHEADERTYPE       *bufHdr= NULL; // buffer header
     unsigned                         i= 0; // Temporary counter
     OMX_PTR privateAppData = NULL;
+#ifdef USE_GBM
+    struct gbm_bo *handle = NULL;
+#else
     private_handle_t *handle = NULL;
+#endif
     OMX_U8 *buff = buffer;
     bool intermediate = client_buffers.is_color_conversion_enabled();
     (void) hComp;
@@ -3648,6 +3667,9 @@ OMX_ERRORTYPE  omx_vdec::use_output_buffer(
     if (eRet == OMX_ErrorNone) {
 #if defined(_ANDROID_HONEYCOMB_) || defined(_ANDROID_ICS_)
         if (m_enable_android_native_buffers) {
+#ifdef USE_GBM
+            handle = (struct gbm_bo*)buff;
+#else
             if (m_use_android_native_buffers) {
                 UseAndroidNativeBufferParams *params = (UseAndroidNativeBufferParams *)appData;
                 sp<android_native_buffer_t> nBuf = params->nativeBuffer;
@@ -3657,6 +3679,7 @@ OMX_ERRORTYPE  omx_vdec::use_output_buffer(
                 handle = (private_handle_t *)buff;
                 privateAppData = appData;
             }
+#endif
             if (!handle) {
                 DEBUG_PRINT_ERROR("handle is invalid");
                 return OMX_ErrorBadParameter;
@@ -3678,11 +3701,19 @@ OMX_ERRORTYPE  omx_vdec::use_output_buffer(
 
             if (!m_use_android_native_buffers) {
                 if (!secure_mode) {
+#ifdef USE_GBM
+                    buff = (OMX_U8*)ion_map(handle->ion_fd, handle->size);
+                    if (buff == MAP_FAILED) {
+                        DEBUG_PRINT_ERROR("Failed to mmap pmem with fd = %d, size = %d", handle->ion_fd, handle->size);
+                        return OMX_ErrorInsufficientResources;
+                    }
+#else
                     buff = (OMX_U8*)ion_map(handle->fd, handle->size);
                     if (buff == MAP_FAILED) {
                         DEBUG_PRINT_ERROR("Failed to mmap pmem with fd = %d, size = %d", handle->fd, handle->size);
                         return OMX_ErrorInsufficientResources;
                     }
+#endif
                 }
             }
 #if defined(_ANDROID_ICS_)
@@ -3693,7 +3724,11 @@ OMX_ERRORTYPE  omx_vdec::use_output_buffer(
                 DEBUG_PRINT_ERROR("Native Buffer handle is NULL");
                 return OMX_ErrorBadParameter;
             }
+#ifdef USE_GBM
+            drv_ctx.ptr_outputbuffer[i].pmem_fd = handle->ion_fd;
+#else
             drv_ctx.ptr_outputbuffer[i].pmem_fd = handle->fd;
+#endif
             drv_ctx.ptr_outputbuffer[i].offset = 0;
             drv_ctx.ptr_outputbuffer[i].bufferaddr = buff;
             drv_ctx.ptr_outputbuffer[i].buffer_len = drv_ctx.op_buf.buffer_size;
@@ -3705,7 +3740,6 @@ OMX_ERRORTYPE  omx_vdec::use_output_buffer(
                bool status = alloc_map_gbm_memory(
                        drv_ctx.video_resolution.frame_width,
                        drv_ctx.video_resolution.frame_height,
-                       drv_ctx.gbm_device_fd,
                        &drv_ctx.op_buf_gbm_info[i],
                        secure_mode ? SECURE_FLAGS_OUTPUT_BUFFER : 0);
                 if (status == false) {
@@ -4070,9 +4104,11 @@ OMX_ERRORTYPE omx_vdec::free_input_buffer(OMX_BUFFERHEADERTYPE *bufferHdr)
             }
 
             if (allocate_native_handle){
+#ifndef USE_GBM
                 native_handle_t *nh = (native_handle_t *)bufferHdr->pBuffer;
                 native_handle_close(nh);
                 native_handle_delete(nh);
+#endif
             } else {
 #ifndef USE_ION
                 // Close fd for non-secure and secure non-native-handle case
@@ -4325,12 +4361,29 @@ OMX_ERRORTYPE  omx_vdec::allocate_input_buffer(
         input = *bufferHdr;
         BITMASK_SET(&m_inp_bm_count,i);
         if (allocate_native_handle) {
+#ifdef USE_GBM
+            struct gbm_device *gbm = gbm_create_device(drv_ctx.gbm_card_fd);
+            if (gbm == NULL) {
+                DEBUG_PRINT_ERROR("create gbm device failed");
+                return OMX_ErrorInsufficientResources;
+            }
+            gbm_import_fd_data buffer_info = {0,0,0,0};
+            buffer_info.fd = drv_ctx.ptr_inputbuffer[i].pmem_fd;
+            struct gbm_bo *bo = gbm_bo_import(gbm, GBM_BO_IMPORT_FD, &buffer_info,
+                                        secure_mode ? SECURE_FLAGS_INPUT_BUFFER : 0);
+            if (gbm == NULL) {
+                DEBUG_PRINT_ERROR("create gbm device failed");
+                return OMX_ErrorInsufficientResources;
+            }
+            struct gbm_bo *nh = bo;
+#else
             native_handle_t *nh = native_handle_create(1 /*numFds*/, 0 /*numInts*/);
             if (!nh) {
                 DEBUG_PRINT_ERROR("Native handle create failed");
                 return OMX_ErrorInsufficientResources;
             }
             nh->data[0] = drv_ctx.ptr_inputbuffer[i].pmem_fd;
+#endif
             input->pBuffer = (OMX_U8 *)nh;
         } else if (secure_mode || m_input_pass_buffer_fd) {
             /*Legacy method, pass ion fd stashed directly in pBuffer*/
@@ -4455,11 +4508,6 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
                  DEBUG_PRINT_ERROR("Failed to alloc op_buf_gbm_info");
             return OMX_ErrorInsufficientResources;
         }
-        drv_ctx.gbm_device_fd = open("/dev/dri/renderD128", O_RDWR | O_CLOEXEC);
-        if (drv_ctx.gbm_device_fd < 0) {
-           DEBUG_PRINT_ERROR("opening dri device for gbm failed with fd = %d", drv_ctx.gbm_device_fd);
-           return OMX_ErrorInsufficientResources;
-        }
 #elif defined USE_ION
         *omx_op_buf_ion_info = (struct vdec_ion *)\
                       calloc (sizeof(struct vdec_ion),
@@ -4540,11 +4588,6 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
                 *omx_ptr_respbuffer = NULL;
             }
 #ifdef USE_GBM
-      if(drv_ctx.gbm_device_fd >= 0) {
-       DEBUG_PRINT_LOW("Close gbm device");
-       close(drv_ctx.gbm_device_fd);
-       drv_ctx.gbm_device_fd = -1;
-    }
             if (*omx_op_buf_gbm_info) {
                 DEBUG_PRINT_LOW("Free o/p gbm context");
                 free(*omx_op_buf_gbm_info);
@@ -4589,7 +4632,6 @@ OMX_ERRORTYPE  omx_vdec::allocate_output_buffer(
             bool status = alloc_map_gbm_memory(
                                drv_ctx.video_resolution.frame_width,
                                drv_ctx.video_resolution.frame_height,
-                               drv_ctx.gbm_device_fd,
                                &(*omx_op_buf_gbm_info)[i],
                                (secure_mode) ? SECURE_FLAGS_OUTPUT_BUFFER : cache_flag);
             if (status == false) {
@@ -5304,7 +5346,11 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer(OMX_IN OMX_HANDLETYPE  hComp,
 
     unsigned nPortIndex = buffer - m_out_mem_ptr;
     if (dynamic_buf_mode) {
+#ifdef USE_GBM
+        struct gbm_bo *handle = NULL;
+#else
         private_handle_t *handle = NULL;
+#endif
         struct VideoDecoderOutputMetaData *meta = NULL;
 
         if (!buffer || !buffer->pBuffer) {
@@ -5313,7 +5359,11 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer(OMX_IN OMX_HANDLETYPE  hComp,
         }
 
         meta = (struct VideoDecoderOutputMetaData *)buffer->pBuffer;
+#ifdef USE_GBM
+        handle = (struct gbm_bo*)meta->pHandle;
+#else
         handle = (private_handle_t *)meta->pHandle;
+#endif
 
         if (!handle) {
             DEBUG_PRINT_ERROR("FTB: Error: IL client passed an invalid buf handle - %p", handle);
@@ -5323,7 +5373,11 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer(OMX_IN OMX_HANDLETYPE  hComp,
         //Fill outputbuffer with buffer details, this will be sent to f/w during VIDIOC_QBUF
         if (nPortIndex < drv_ctx.op_buf.actualcount &&
             nPortIndex < MAX_NUM_INPUT_OUTPUT_BUFFERS) {
+#ifdef USE_GBM
+            drv_ctx.ptr_outputbuffer[nPortIndex].pmem_fd = handle->ion_fd;
+#else
             drv_ctx.ptr_outputbuffer[nPortIndex].pmem_fd = handle->fd;
+#endif
             drv_ctx.ptr_outputbuffer[nPortIndex].bufferaddr = (OMX_U8*) buffer;
 
             //Store private handle from GraphicBuffer
@@ -6211,8 +6265,13 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
 
             DEBUG_PRINT_LOW("frc set refresh_rate %f, frame %d", refresh_rate, proc_frms);
             OMX_U32 buf_index = buffer - omx_base_address;
+#ifdef USE_GBM
+            gbm_perform(GBM_PERFORM_SET_METADATA, (struct gbm_bo*)native_buffer[buf_index].privatehandle,
+                        GBM_METADATA_SET_REFRESH_RATE, (void*)&refresh_rate);
+#else
             setMetaData((private_handle_t *)native_buffer[buf_index].privatehandle,
                          UPDATE_REFRESH_RATE, (void*)&refresh_rate);
+#endif
         }
 
         if (il_buffer) {
@@ -6579,32 +6638,65 @@ int omx_vdec::async_message_process (void *context, void* message)
 }
 
 #ifdef USE_GBM
-bool omx_vdec::alloc_map_gbm_memory(OMX_U32 w,OMX_U32 h,int dev_fd,
+OMX_U32 omx_vdec::get_gbm_color_format(vdec_output_format eColorFormat)
+{
+    OMX_U32 format = GBM_FORMAT_NV12;
+    switch (eColorFormat) {
+    case VDEC_YUV_FORMAT_NV12:
+        format = GBM_FORMAT_NV12;
+        break;
+    case VDEC_YUV_FORMAT_NV12_UBWC:
+        format = GBM_FORMAT_YCbCr_420_SP_VENUS_UBWC;
+        break;
+    case VDEC_YUV_FORMAT_NV12_TP10_UBWC:
+        format = GBM_FORMAT_YCbCr_420_TP10_UBWC;
+        break;
+    case VDEC_YUV_FORMAT_P010_VENUS:
+        format = GBM_FORMAT_YCbCr_420_P010_UBWC;
+        break;
+    default:
+        DEBUG_PRINT_INFO("WARN: Unsupported eColorFormat %#x", eColorFormat);
+        format = GBM_FORMAT_NV12;
+        break;
+    }
+
+    return format;
+}
+bool omx_vdec::alloc_map_gbm_memory(OMX_U32 w,OMX_U32 h,
                  struct vdec_gbm *op_buf_gbm_info, int flag)
 {
-
-    uint32 flags = GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING;
     struct gbm_device *gbm = NULL;
     struct gbm_bo *bo = NULL;
     int bo_fd = -1, meta_fd = -1;
-    if (!op_buf_gbm_info || dev_fd < 0 ) {
-        DEBUG_PRINT_ERROR("Invalid arguments to alloc_map_ion_memory");
+    if (!op_buf_gbm_info) {
+        DEBUG_PRINT_ERROR("Invalid arguments to alloc_map_gbm_memory");
         return FALSE;
     }
 
-    gbm = gbm_create_device(dev_fd);
+    if (drv_ctx.gbm_card_fd < 0) {
+        char gbm_drm_name[50] = {0};
+        gbm_perform(GBM_PERFORM_GET_DRM_DEVICE_NAME, gbm_drm_name, sizeof(gbm_drm_name));
+        int drm_fd = open(gbm_drm_name, O_RDWR | O_CLOEXEC);
+        if (drm_fd < 0 ) {
+            DEBUG_PRINT_ERROR("open drm device %s failed", gbm_drm_name);
+            return false;
+        }
+        drv_ctx.gbm_card_fd = drm_fd;
+        DEBUG_PRINT_LOW( "opened drm devices %s with fd %d", gbm_drm_name, drv_ctx.gbm_card_fd);
+    }
+
+    gbm = gbm_create_device(drv_ctx.gbm_card_fd);
     if (gbm == NULL) {
        DEBUG_PRINT_ERROR("create gbm device failed");
        return FALSE;
-    } else {
-       DEBUG_PRINT_LOW( "Successfully created gbm device");
     }
+
+    OMX_U32 format = get_gbm_color_format(drv_ctx.output_format);
     if (drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_UBWC)
-       flags |= GBM_BO_USAGE_UBWC_ALIGNED_QTI;
+       flag |= GBM_BO_USAGE_UBWC_ALIGNED_QTI | GBM_BO_USAGE_HW_RENDERING_QTI;
 
     DEBUG_PRINT_LOW("create NV12 gbm_bo with width=%d, height=%d", w, h);
-    bo = gbm_bo_create(gbm, w, h,GBM_FORMAT_NV12,
-              flags);
+    bo = gbm_bo_create(gbm, w, h, GBM_FORMAT_NV12, flag);
 
     if (bo == NULL) {
       DEBUG_PRINT_ERROR("Create bo failed");
@@ -6794,11 +6886,6 @@ void omx_vdec::free_output_buffer_header(bool intermediate)
         DEBUG_PRINT_LOW("Free o/p gbm context");
         free(*omx_op_buf_gbm_info);
         *omx_op_buf_gbm_info = NULL;
-    }
-    if (drv_ctx.gbm_device_fd >= 0) {
-       DEBUG_PRINT_LOW("Close gbm device");
-       close(drv_ctx.gbm_device_fd);
-       drv_ctx.gbm_device_fd = -1;
     }
 
 #elif defined USE_ION
@@ -7945,8 +8032,13 @@ void omx_vdec::get_preferred_hdr_info(HDRStaticInfo& finalHDRInfo)
         preferredHDRInfo.sType1.mMaxFrameAverageLightLevel : defaultHDRInfo.sType1.mMaxFrameAverageLightLevel;
 }
 
-void omx_vdec::set_histogram_metadata(private_handle_t *private_handle)
+void omx_vdec::set_histogram_metadata(void *handle)
 {
+#ifdef USE_GBM
+    struct gbm_bo *private_handle = (struct gbm_bo*) handle;
+#else
+    private_handle_t *private_handle = (private_handle_t*) handle;
+#endif
     if (m_hist_metadata.stat_len != VIDEO_HISTOGRAM_STATS_SIZE || !private_handle)
         return;
 
@@ -7955,7 +8047,11 @@ void omx_vdec::set_histogram_metadata(private_handle_t *private_handle)
     m_hist_metadata.decode_width = m_extradata_misr.output_width;
     m_hist_metadata.decode_height = m_extradata_misr.output_height;
 
+#ifdef USE_GBM
+    if (gbm_perform(GBM_PERFORM_SET_METADATA, private_handle, GBM_METADATA_SET_VIDEO_HIST_STAT, (void*)&m_hist_metadata))
+#else
     if (setMetaData(private_handle, SET_VIDEO_HISTOGRAM_STATS, (void*)&m_hist_metadata))
+#endif
         DEBUG_PRINT_HIGH("failed to set histogram video stats");
 
     m_hist_metadata.stat_len = 0;
@@ -7973,7 +8069,6 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
     char *p_extradata = NULL;
     OMX_OTHER_EXTRADATATYPE *data = NULL;
     ColorMetaData color_mdata;
-    private_handle_t *private_handle = NULL;
 
     OMX_BUFFERHEADERTYPE  *omx_base_address =
         client_buffers.is_color_conversion_enabled()?
@@ -7986,8 +8081,17 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                 buf_index, drv_ctx.extradata_info.count);
         return reconfig_event_sent;
     }
+#ifdef USE_GBM
+    struct gbm_bo *private_handle = NULL;
+#else
+    private_handle_t *private_handle = NULL;
+#endif
     if (m_enable_android_native_buffers)
+#ifdef USE_GBM
+        private_handle = (struct gbm_bo*)native_buffer[buf_index].privatehandle;
+#else
         private_handle = (private_handle_t *)native_buffer[buf_index].privatehandle;
+#endif
 
     if (!drv_ctx.extradata_info.ion[buf_index].uaddr) {
         DEBUG_PRINT_HIGH("NULL drv_ctx.extradata_info.ion[buf_index].uaddr");
@@ -8050,8 +8154,12 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                     if (m_enable_android_native_buffers) {
                         DEBUG_PRINT_LOW("setMetaData INTERLACED format:%d enable:%d",
                                         payload->format, enable);
-
+#ifdef USE_GBM
+                        gbm_perform(GBM_PERFORM_SET_METADATA, private_handle,
+                                    GBM_METADATA_SET_INTERLACED, (void*)&enable);
+#else
                         setMetaData(private_handle, PP_PARAM_INTERLACED, (void*)&enable);
+#endif
                     }
                     break;
                 case MSM_VIDC_EXTRADATA_TIMESTAMP:
@@ -8193,10 +8301,14 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
 #endif
                 print_debug_hdr_color_info_mdata(&color_mdata);
                 print_debug_hdr10plus_metadata(color_mdata);
+#ifdef USE_GBM
+                gbm_perform(GBM_PERFORM_SET_METADATA, private_handle,
+                            GBM_METADATA_SET_COLOR_METADATA, (void*)&color_mdata);
+#else
                 setMetaData(private_handle, COLOR_METADATA, (void*)&color_mdata);
+#endif
                 set_histogram_metadata(private_handle);
         }
-
     }
 
     return reconfig_event_sent;

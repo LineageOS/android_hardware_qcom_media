@@ -49,7 +49,12 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstddef>
 #include <dlfcn.h>
 #include <cutils/atomic.h>
+#ifdef USE_GBM
+#include <gbm.h>
+#include <gbm_priv.h>
+#else
 #include <qdMetaData.h>
+#endif
 #include <color_metadata.h>
 #define STRINGIFY_ENUMS
 #include "media/hardware/VideoAPI.h"
@@ -85,11 +90,6 @@ extern "C" {
 //#else
 #endif
 
-#ifdef USE_GBM
-#include "gbm.h"
-#include "gbm_priv.h"
-#endif
-
 #ifndef NATIVE_BASE_DISABLE
 #include <nativebase/nativebase.h>
 #endif
@@ -107,7 +107,9 @@ extern "C" {
 #include <unistd.h>
 
 #if defined (_ANDROID_ICS_)
+#ifndef USE_GBM
 #include <gralloc_priv.h>
+#endif
 #endif
 
 #include <pthread.h>
@@ -414,7 +416,7 @@ struct video_driver_context {
     struct vdec_ion meta_buffer_iommu;
 #endif
 #ifdef USE_GBM
-    int gbm_device_fd;
+    int gbm_card_fd;
     struct vdec_gbm *op_buf_gbm_info;
     struct vdec_gbm *op_intermediate_buf_gbm_info;
 #endif
@@ -877,7 +879,7 @@ class omx_vdec: public qc_omx_component
         void extract_demux_addr_offsets(OMX_BUFFERHEADERTYPE *buf_hdr);
         OMX_ERRORTYPE handle_demux_data(OMX_BUFFERHEADERTYPE *buf_hdr);
         OMX_U32 count_MB_in_extradata(OMX_OTHER_EXTRADATATYPE *extra);
-        void set_histogram_metadata(private_handle_t *private_handle);
+        void set_histogram_metadata(void *handle);
         struct VideoHistogramMetadata m_hist_metadata;
 
         bool align_pmem_buffers(int pmem_fd, OMX_U32 buffer_size,
@@ -888,7 +890,8 @@ class omx_vdec: public qc_omx_component
 #endif
 
 #ifdef USE_GBM
-        bool alloc_map_gbm_memory(OMX_U32 w,OMX_U32 h,int gbm_device_fd,
+        OMX_U32 get_gbm_color_format(vdec_output_format eColorFormat);
+        bool alloc_map_gbm_memory(OMX_U32 w,OMX_U32 h,
               struct vdec_gbm *gbm_info, int flag);
         void free_gbm_memory(struct vdec_gbm *buf_gbm_info);
 #endif
@@ -946,13 +949,18 @@ class omx_vdec: public qc_omx_component
             }
         }
 
-#if defined (_ANDROID_HONEYCOMB_) || defined (_ANDROID_ICS_)
+#if (defined (_ANDROID_HONEYCOMB_) || defined (_ANDROID_ICS_)) && !defined(USE_GBM)
         OMX_ERRORTYPE use_android_native_buffer(OMX_IN OMX_HANDLETYPE hComp, OMX_PTR data);
 #endif
 #if defined (_ANDROID_ICS_)
         struct nativebuffer {
+#ifdef USE_GBM
+            struct gbm_bo *nativehandle;
+            struct gbm_bo *privatehandle;
+#else
             native_handle_t *nativehandle;
             private_handle_t *privatehandle;
+#endif
             int inuse;
         };
         nativebuffer native_buffer[MAX_NUM_INPUT_OUTPUT_BUFFERS];

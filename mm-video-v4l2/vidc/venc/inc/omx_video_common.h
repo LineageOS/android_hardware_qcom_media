@@ -112,6 +112,15 @@ struct venc_debug_cap {
     FILE *outfile;
     FILE *extradatafile;
 };
+#ifdef USE_GBM
+struct venc_gbm {
+    struct gbm_device *gbm;
+    struct gbm_bo *bo;
+    unsigned long bo_fd;
+    unsigned long meta_fd;
+    OMX_U8 *uaddr;
+};
+#endif
 #ifdef USE_ION
 struct venc_ion {
     int dev_fd;
@@ -119,8 +128,8 @@ struct venc_ion {
     char *uaddr;
     struct ion_allocation_data alloc_data;
 };
-
 #endif
+
 #endif // __OMX_VIDEO_COMMON_H__
 
 

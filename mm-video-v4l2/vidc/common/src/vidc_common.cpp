@@ -316,26 +316,44 @@ bool profile_level_converter::convert_omx_level_to_v4l2(int codec, int omx_level
     return find_item(*level_map, omx_level, v4l2_level);
 }
 
-void get_gralloc_format_as_string(char * buf, int buf_len, int format) {
+void get_video_format_as_string(char * buf, int buf_len, int format) {
     switch (format) {
+#ifdef USE_GBM
+        case GBM_FORMAT_NV12_ENCODEABLE:
+            snprintf(buf, buf_len, "GBM_FORMAT_NV12_ENCODEABLE");
+            break;
+        case GBM_FORMAT_YCbCr_420_SP_VENUS_UBWC:
+            snprintf(buf, buf_len, "GBM_FORMAT_YCbCr_420_SP_VENUS_UBWC");
+            break;
+#else
         case HAL_PIXEL_FORMAT_NV12_ENCODEABLE:
             snprintf(buf, buf_len, "HAL_PIXEL_FORMAT_NV12_ENCODEABLE");
             break;
         case HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC:
             snprintf(buf, buf_len, "HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC");
             break;
+#endif
         case HAL_PIXEL_FORMAT_RGBA_8888:
             snprintf(buf, buf_len, "HAL_PIXEL_FORMAT_RGBA_8888");
             break;
         case QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m:
             snprintf(buf, buf_len, "QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m");
             break;
+#ifdef USE_GBM
+        case GBM_FORMAT_YCbCr_420_TP10_UBWC:
+            snprintf(buf, buf_len, "GBM_FORMAT_YCbCr_420_TP10_UBWC");
+            break;
+        case GBM_FORMAT_P010:
+            snprintf(buf, buf_len, "GBM_FORMAT_P010");
+            break;
+#else
         case HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC:
             snprintf(buf, buf_len, "HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC");
             break;
         case HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS:
             snprintf(buf, buf_len, "HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS");
             break;
+#endif
         case QOMX_COLOR_FormatYVU420SemiPlanar:
             snprintf(buf, buf_len, "QOMX_COLOR_FormatYVU420SemiPlanar");
             break;

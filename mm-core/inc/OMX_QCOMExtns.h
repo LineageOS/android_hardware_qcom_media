@@ -48,6 +48,9 @@ extern "C" {
 #include "string.h"
 #include "OMX_VideoExt.h"
 
+#ifdef USE_GBM
+#include <gbm_priv.h>
+#endif
 #define OMX_VIDEO_MAX_HP_LAYERS 6
 
 /**
@@ -2325,6 +2328,39 @@ struct MetaBufferUtil {
     static int getNumIntsForBatch(int batchSize) {
         return batchSize * INT_TOTAL;
     }
+#ifdef USE_GBM
+    static int getBatchSize(const struct gbm_bo *hnd) {
+        return MetaBufferUtil::isHandleSane(hnd) ? 1 : -1;
+    }
+
+    static int getFdAt(const struct gbm_bo *hnd, int index) {
+        return (MetaBufferUtil::isHandleSane(hnd) && (index < 1)) ? hnd->ion_fd : -1;
+    }
+
+    static int getIntAt(const struct gbm_bo *hnd, int index, int type) {
+        int idx = MetaBufferUtil::getIntIndex(hnd, index, type);
+        return idx < 0 ? -1 : hnd->ion_fd;
+    }
+
+    static int setFdAt(struct gbm_bo *hnd, int index, int fd) {
+        return (MetaBufferUtil::isHandleSane(hnd) && (index < 1)) ? hnd->ion_fd = fd, 0 : -1;
+    }
+
+    static int setIntAt(struct gbm_bo *hnd, int index, int type, int value) {
+        int idx = MetaBufferUtil::getIntIndex(hnd, index, type);
+        return idx < 0 ? -1 : hnd->ion_fd = value, 0;
+    }
+
+    private:
+    static bool isHandleSane(const struct gbm_bo *hnd) {
+        return !!hnd;
+    }
+
+    static int getIntIndex(const struct gbm_bo *hnd, int index, int type) {
+        int idx = index + type * MetaBufferUtil::getBatchSize(hnd);
+        return (MetaBufferUtil::isHandleSane(hnd) && (idx < 1)) ? idx : -1;
+    }
+#else
     static int getBatchSize(const native_handle_t *hnd) {
         return MetaBufferUtil::isHandleSane(hnd) ? hnd->numFds : -1;
     }
@@ -2360,6 +2396,7 @@ private:
         int idx = index + type * MetaBufferUtil::getBatchSize(hnd);
         return (MetaBufferUtil::isHandleSane(hnd) && (idx < (hnd->numInts + hnd->numFds))) ? idx : -1;
     }
+#endif
 };
 
 #endif // __cplusplus

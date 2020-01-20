@@ -66,10 +66,25 @@ AC_ARG_ENABLE([target-uses-ion],
                 [Enable conditional compile for target target-uses-ion [default=no]]),
         [target_uses_ion="${enableval}"])
 
-AC_ARG_ENABLE([target-uses-gbm],
-        AC_HELP_STRING([--enable-target-uses-gbm],
-                [Enable conditional compile for target target-uses-gbm [default=no]]),
+AC_ARG_ENABLE([targets-use-libgbm],
+        AC_HELP_STRING([--enable-target-use-libgbm],
+                [Enable conditional compile for target target-uses-libgbm [default=no]]),
         [target_uses_gbm="${enableval}"])
+if [ test "x${target_uses_gbm}" = "xyes" ]; then
+    PKG_CHECK_MODULES(GBM, [gbm],
+      [
+       HAVE_GBM=yes
+       AC_SUBST(GBM_CFLAGS)
+       AC_SUBST(GBM_LIBS)
+      ],
+      [
+       HAVE_GBM=no
+       if [ test "x${target_uses_gbm}" = "xyes" ]; then
+            AC_MSG_ERROR([could not find libgbm])
+       fi
+      ])
+fi
+
 
 AC_ARG_ENABLE([targets-that-use-flag-msm8226],
         AC_HELP_STRING([--enable-targets-that-use-flag-msm8226],
@@ -96,10 +111,15 @@ AC_ARG_ENABLE([use-glib],
                 [Enable conditional compile for use glib [default=no]]),
         [use_glib="${enableval}"])
 
-AC_ARG_ENABLE([build-mm-video],
-        AC_HELP_STRING([--enable-build-mm-video],
-                [Enable conditional compile for build mm video [default=no]]),
-        [build_mm_video="${enableval}"])
+AC_ARG_ENABLE([venc],
+      AC_HELP_STRING([--enable-venc], [Build video encoder modules]), [venc="${enableval}"], [venc="no"])
+
+AM_CONDITIONAL([WITH_VENC], [ test "x$venc" = "xyes"])
+
+AC_ARG_ENABLE([vdec],
+      AC_HELP_STRING([--enable-vdec], [Build video decoder modules]), [vdec="${enableval}"], [vdec="no"])
+
+AM_CONDITIONAL([WITH_VDEC], [ test "x$vdec" = "xyes"])
 
 AC_ARG_WITH([sanitized-headers],
         [AS_HELP_STRING([--with-sanitized-headers=DIR],[location of the sanitized Linux kernel headers])],
@@ -159,6 +179,10 @@ AC_ARG_WITH([qdutils-headers],
 
 AC_ARG_WITH([glib-lib-dir],
         [AS_HELP_STRING([--with-binder-inc=DIR],[location of common headers])],
+        [CPPFLAGS="$CPPFLAGS -I$withval"])
+
+AC_ARG_WITH([ion-headers],
+        [AS_HELP_STRING([--with-ion-headers=DIR],[location of common headers])],
         [CPPFLAGS="$CPPFLAGS -I$withval"])
 
 AM_CONDITIONAL(TARGET_MSM8953, [test "x$target_msm8953" = "xyes"])

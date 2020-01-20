@@ -2,10 +2,8 @@
 #
 ACLOCAL_AMFLAGS = -I m4
 
-BUILD_COMPONENTS := mm-core libc2dcolorconvert libplatformconfig
+BUILD_COMPONENTS := libplatformconfig mm-core libc2dcolorconvert
 
-if BUILD_MM_VIDEO
 BUILD_COMPONENTS += mm-video-v4l2
-endif
 
 SUBDIRS := $(BUILD_COMPONENTS)

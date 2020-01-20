@@ -18,10 +18,18 @@
 #ifndef QCOM_OMX_METADATA_H_
 #define QCOM_OMX_METADATA_H_
 
+#ifdef USE_GBM
+#include <gbm_priv.h>
+#else
 #include "cutils/native_handle.h"
+#endif
 #include <media/hardware/MetadataBufferType.h>
 
+#ifdef USE_GBM
+typedef const gbm_bo* buffer_handle_t;
+#else
 typedef const native_handle_t* buffer_handle_t;
+#endif
 namespace android {
 
 #ifdef USE_NATIVE_HANDLE_SOURCE

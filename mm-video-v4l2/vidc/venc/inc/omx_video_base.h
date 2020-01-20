@@ -52,6 +52,10 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif // _ANDROID_
 #include <pthread.h>
 #include <semaphore.h>
+#ifdef USE_GBM
+#include <gbm.h>
+#include <gbm_priv.h>
+#endif
 #include <media/hardware/HardwareAPI.h>
 #include "vidc_common.h"
 #include "OMX_Core.h"
@@ -144,7 +148,7 @@ static const char* MEM_DEVICE = "/dev/ion";
 class omx_video;
 void post_message(omx_video *omx, unsigned char id);
 void* message_thread_enc(void *);
-bool is_ubwc_interlaced(private_handle_t *handle);
+bool is_ubwc_interlaced(void *hdl);
 
 enum omx_venc_extradata_types {
     VENC_EXTRADATA_SLICEINFO = 0x100,
@@ -157,7 +161,11 @@ enum omx_venc_extradata_types {
 
 struct output_metabuffer {
     OMX_U32 type;
+#ifdef USE_GBM
+    struct gbm_bo *nh;
+#else
     native_handle_t *nh;
+#endif
 };
 
 struct venc_buffer{
@@ -406,6 +414,10 @@ class omx_video: public qc_omx_component
         //int *output_pmem_fd;
         struct pmem *m_pInput_pmem;
         struct pmem *m_pOutput_pmem;
+#ifdef USE_GBM
+        struct venc_gbm *m_pInput_gbm;
+        int gbm_card_fd;
+#endif
 #ifdef USE_ION
         struct venc_ion *m_pInput_ion;
         struct venc_ion *m_pOutput_ion;
@@ -623,7 +635,7 @@ class omx_video: public qc_omx_component
         client_extradata_info m_client_in_extradata_info;
 
         void complete_pending_buffer_done_cbs();
-        bool is_conv_needed(private_handle_t *handle);
+        bool is_conv_needed(void *hdl);
         void print_debug_color_aspects(ColorAspects *aspects, const char *prefix);
 
         OMX_ERRORTYPE get_vendor_extension_config(
@@ -637,6 +649,12 @@ class omx_video: public qc_omx_component
 
         char *ion_map(int fd, int len);
         OMX_ERRORTYPE ion_unmap(int fd, void *bufaddr, int len);
+#ifdef USE_GBM
+        OMX_U32 get_gbm_color_format(OMX_COLOR_FORMATTYPE eColorFormat);
+        bool alloc_map_gbm_memory(OMX_U32 w, OMX_U32 h,
+                                 struct venc_gbm *op_buf_gbm_info, int flag);
+        void free_gbm_memory(struct venc_gbm *buf_gbm_info);
+#endif
 #ifdef USE_ION
         bool alloc_map_ion_memory(int size, venc_ion *ion_info,
                                  int flag);
