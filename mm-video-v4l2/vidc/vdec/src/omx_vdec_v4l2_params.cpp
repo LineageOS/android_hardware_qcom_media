@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010 - 2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2010 - 2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -923,6 +923,7 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                          pic_order = V4L2_MPEG_MSM_VIDC_DISABLE;
                                      } else if (pictureOrder->eOutputPictureOrder == QOMX_VIDEO_DECODE_ORDER) {
                                          pic_order = V4L2_MPEG_MSM_VIDC_ENABLE;
+                                         time_stamp_dts.set_timestamp_reorder_mode(false);
                                      } else
                                          eRet = OMX_ErrorBadParameter;
                                      if (eRet == OMX_ErrorNone) {
@@ -1044,9 +1045,22 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
 #endif //ALLOCATE_OUTPUT_NATIVEHANDLE
 #endif
         case OMX_QcomIndexParamEnableTimeStampReorder: {
-            DEBUG_PRINT_HIGH("timestamp reorder not supported anymore, arbitrary bytes mode has been moved to parser.");
-            break;
-        }
+                                       VALIDATE_OMX_PARAM_DATA(paramData, QOMX_INDEXTIMESTAMPREORDER);
+                                       QOMX_INDEXTIMESTAMPREORDER *reorder = (QOMX_INDEXTIMESTAMPREORDER *)paramData;
+                                       if (drv_ctx.picture_order == (vdec_output_order)QOMX_VIDEO_DISPLAY_ORDER) {
+                                           if (reorder->bEnable == OMX_TRUE) {
+                                               frm_int =0;
+                                               time_stamp_dts.set_timestamp_reorder_mode(true);
+                                           } else
+                                               time_stamp_dts.set_timestamp_reorder_mode(false);
+                                       } else {
+                                           time_stamp_dts.set_timestamp_reorder_mode(false);
+                                           if (reorder->bEnable == OMX_TRUE) {
+                                               eRet = OMX_ErrorUnsupportedSetting;
+                                           }
+                                       }
+                                   }
+                                   break;
         case OMX_IndexParamVideoProfileLevelCurrent: {
             VALIDATE_OMX_PARAM_DATA(paramData, OMX_VIDEO_PARAM_PROFILELEVELTYPE);
             OMX_VIDEO_PARAM_PROFILELEVELTYPE *pParam = (OMX_VIDEO_PARAM_PROFILELEVELTYPE*)paramData;
