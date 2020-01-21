@@ -6995,6 +6995,13 @@ OMX_ERRORTYPE  omx_vdec::allocate_input_buffer(
         if (rc) {
             DEBUG_PRINT_ERROR("Failed to prepare bufs");
             /*TODO: How to handle this case */
+#ifdef USE_ION
+            if(drv_ctx.ip_buf_ion_info[i].ion_device_fd){
+              munmap (drv_ctx.ptr_inputbuffer [i].bufferaddr,drv_ctx.ptr_inputbuffer [i].mmaped_size);
+              close(pmem_fd);
+              free_ion_memory(&drv_ctx.ip_buf_ion_info[i]);
+            }
+#endif
             return OMX_ErrorInsufficientResources;
         }
 
