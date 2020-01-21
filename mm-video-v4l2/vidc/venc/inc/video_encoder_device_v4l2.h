@@ -425,7 +425,7 @@ class venc_dev
         bool set_nP_frames(unsigned long nPframes);
         bool venc_set_target_bitrate(OMX_U32 nTargetBitrate);
         bool venc_set_ratectrl_cfg(OMX_VIDEO_CONTROLRATETYPE eControlRate);
-        bool venc_set_bitrate_savings_mode(bool bitrateSavingEnable);
+        bool venc_set_bitrate_savings_mode(OMX_U32 bitrateSavingEnable);
         bool venc_set_session_qp_range(OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE *qp_range);
         bool venc_set_encode_framerate(OMX_U32 encode_framerate);
         bool venc_set_intra_vop_refresh(OMX_BOOL intra_vop_refresh);
@@ -530,7 +530,7 @@ class venc_dev
         bool venc_set_hdr_info(const MasteringDisplay&, const ContentLightLevel&);
         bool mIsGridset;
         OMX_U32 mUseLinearColorFormat;
-        bool mBitrateSavingsEnable;
+        OMX_U32 mBitrateSavingsEnable;
         bool mQualityBoostRequested;
         bool mQualityBoostEligible;
 

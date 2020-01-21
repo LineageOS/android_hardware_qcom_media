@@ -1590,7 +1590,7 @@ unsigned long venc_dev::venc_get_codectype(OMX_VIDEO_CODINGTYPE eCompressionForm
     return codectype;
 }
 
-bool venc_dev::venc_set_bitrate_savings_mode(bool bitrateSavingEnable)
+bool venc_dev::venc_set_bitrate_savings_mode(OMX_U32 bitrateSavingEnable)
 {
     struct v4l2_control control;
     int rc = 0;

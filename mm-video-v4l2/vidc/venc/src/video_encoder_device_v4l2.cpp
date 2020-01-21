@@ -209,7 +209,7 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     Platform::Config::getInt32(Platform::vidc_enc_linear_color_format,
             (int32_t *)&mUseLinearColorFormat, 0);
     Platform::Config::getInt32(Platform::vidc_enc_bitrate_savings_enable,
-            (int32_t *)&mBitrateSavingsEnable, 1);
+            (int32_t *)&mBitrateSavingsEnable, 3);
     Platform::Config::getInt32(Platform::vidc_enc_quality_boost_enable,
             (int32_t *)&mQualityBoostRequested, 0);
     mQualityBoostEligible = false;
