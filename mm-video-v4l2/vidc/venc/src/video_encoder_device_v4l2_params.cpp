@@ -451,6 +451,14 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
             }
             break;
         }
+        case OMX_QTIIndexConfigContentAdaptiveCoding:
+           {
+                if(!venc_set_bitrate_savings_mode(*(OMX_U32*) configData)) {
+                    DEBUG_PRINT_LOW("Failed to set Bitrate Savings Mode");
+                    return false;
+                }
+                break;
+           }
         default:
             DEBUG_PRINT_ERROR("Unsupported config index = %u", index);
             break;
@@ -1602,6 +1610,7 @@ bool venc_dev::venc_set_bitrate_savings_mode(OMX_U32 bitrateSavingEnable)
     if (rc) {
         DEBUG_PRINT_HIGH("Non-Fatal: Request to set bitrate savings failed");
     }
+    mBitrateSavingsEnable = bitrateSavingEnable;
 
     return true;
 }
