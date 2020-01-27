@@ -77,6 +77,7 @@ typedef enum {
     vidc_c2d_rotation,
     vidc_disable_hdr,
     vidc_enc_quality_boost_enable,
+    vidc_dec_output_rate,
 } Config_t;
 
 struct configStr {
@@ -103,6 +104,7 @@ static const struct configStr configStrMap[] = {
     {vidc_c2d_rotation, "vidc_c2d_rotation"},
     {vidc_disable_hdr, "vidc_disable_hdr"},
     {vidc_enc_quality_boost_enable, "vidc_enc_quality_boost_enable"},
+    {vidc_dec_output_rate, "vidc_dec_output_rate"},
 };
 
 class Config {
