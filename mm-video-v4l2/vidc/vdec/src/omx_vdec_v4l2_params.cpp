@@ -1078,6 +1078,9 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             QOMX_VIDEO_OUTPUT_FRAME_RATE *pParam = (QOMX_VIDEO_OUTPUT_FRAME_RATE*)paramData;
             DEBUG_PRINT_LOW("set_parameter: decoder output-frame-rate %d", pParam->fps);
             m_dec_hfr_fps=pParam->fps;
+            if (m_dec_hfr_fps > m_dec_output_rate)
+                m_dec_hfr_fps = m_dec_output_rate;
+
             DEBUG_PRINT_HIGH("output-frame-rate value = %d", m_dec_hfr_fps);
             if (m_dec_hfr_fps) {
                 m_last_rendered_TS = 0;

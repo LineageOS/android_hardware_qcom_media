@@ -45,4 +45,5 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <!-- Bitmask 0: RGB565  1: YUV420P 8-bit, 2: YUV420P 10-bit, 3: YUV420p 8&10 bit -->
         <property name="vidc_dec_thumbnail_yuv_output" value="0"/>
         <property name="vidc_enc_quality_boost_enable" value="1"/>
+        <property name="vidc_dec_output_rate" value="120"/>
 </configs>

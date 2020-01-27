@@ -648,6 +648,9 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     Platform::Config::getInt32(Platform::vidc_disable_hdr,
             (int32_t *)&m_disable_hdr, 0);
 
+    Platform::Config::getInt32(Platform::vidc_dec_output_rate,
+            (int32_t *)&m_dec_output_rate, 60);
+
     property_value[0] = '\0';
     property_get("vendor.vidc.dec.log.in", property_value, "0");
     m_debug.in_buffer_log |= atoi(property_value);
