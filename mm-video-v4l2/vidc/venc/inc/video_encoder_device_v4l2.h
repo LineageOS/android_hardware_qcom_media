@@ -377,6 +377,7 @@ class venc_dev
         bool is_auto_blur_disabled;
         bool csc_enable;
         bool m_bDimensionsNeedFlip;
+        int32_t m_disable_hdr;
         unsigned long get_media_colorformat(unsigned long);
 
     private:

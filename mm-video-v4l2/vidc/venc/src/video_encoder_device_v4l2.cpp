@@ -81,6 +81,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define HEVC_MAIN10_START (HEVC_MAIN_START + 13)
 #define POLL_TIMEOUT 1000
 #define MAX_SUPPORTED_SLICES_PER_FRAME 28 /* Max supported slices with 32 output buffers */
+#define ENC_HDR_DISABLE_FLAG 0x2
 
 #define SZ_4K 0x1000
 #define SZ_1M 0x100000
@@ -171,6 +172,8 @@ venc_dev::venc_dev(class omx_venc *venc_class)
             (int32_t *)&is_csc_custom_matrix_enabled, 0);
     Platform::Config::getInt32(Platform::vidc_enc_auto_blur_disable,
             (int32_t *)&is_auto_blur_disabled, 0);
+    Platform::Config::getInt32(Platform::vidc_disable_hdr,
+            (int32_t *)&m_disable_hdr, 0);
 
     char property_value[PROPERTY_VALUE_MAX] = {0};
 
