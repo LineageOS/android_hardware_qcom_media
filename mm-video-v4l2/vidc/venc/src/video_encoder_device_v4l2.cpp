@@ -1557,6 +1557,13 @@ bool venc_dev::venc_open(OMX_U32 codec)
         m_sInput_buff_property.alignment  = SZ_4K;
     }
 
+    if (m_codec == OMX_VIDEO_CodingImageHEIC) {
+        if (!venc_set_grid_enable()) {
+            DEBUG_PRINT_ERROR("Failed to enable grid");
+            return false;
+        }
+    }
+
     memset(&fmt, 0, sizeof(fmt));
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     fmt.fmt.pix_mp.height = m_sVenc_cfg.dvs_height;
@@ -1583,13 +1590,6 @@ bool venc_dev::venc_open(OMX_U32 codec)
 
     ret = ioctl(m_nDriver_fd, VIDIOC_S_FMT, &fmt);
     m_sInput_buff_property.datasize=fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
-
-    if (m_codec == OMX_VIDEO_CodingImageHEIC) {
-        if (!venc_set_grid_enable()) {
-            DEBUG_PRINT_ERROR("Failed to enable grid");
-            return false;
-        }
-    }
 
     bufreq.memory = V4L2_MEMORY_USERPTR;
     bufreq.count = 2;
