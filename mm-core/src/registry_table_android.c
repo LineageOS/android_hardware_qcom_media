@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -43,11 +43,8 @@ omx_core_cb_type core[] =
     //------------- Video HW components -----------------------------------------------------------
     OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.avc", "libOmxVdec.so", "video_decoder.avc"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.avc.secure", "libOmxVdec.so", "video_decoder.avc"),
-    OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.mpeg2", "libOmxVdec.so", "video_decoder.mpeg2"),
-    OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.mpeg2.secure", "libOmxVdec.so", "video_decoder.mpeg2"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.hevc", "libOmxVdec.so", "video_decoder.hevc"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.hevc.secure", "libOmxVdec.so", "video_decoder.hevc"),
-    OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.vp8", "libOmxVdec.so", "video_decoder.vp8"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.vp9", "libOmxVdec.so", "video_decoder.vp9"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.vp9.secure", "libOmxVdec.so", "video_decoder.vp9"),
     OMX_REGISTRY_ENTRY("OMX.qti.video.decoder.mpeg4sw", "libOmxSwVdec.so", "video_decoder.mpeg4"),
@@ -58,12 +55,10 @@ omx_core_cb_type core[] =
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.h263sw", "libOmxSwVencMpeg4.so", "video_encoder.h263"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.avc", "libOmxVenc.so", "video_encoder.avc"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.avc.secure", "libOmxVenc.so", "video_encoder.avc"),
-    OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.vp8", "libOmxVenc.so", "video_encoder.vp8"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.hevc", "libOmxVenc.so", "video_encoder.hevc"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.hevc.cq", "libOmxVenc.so", "video_encoder.hevc"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.hevc.secure", "libOmxVenc.so", "video_encoder.hevc"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.heic", "libOmxVenc.so", "image_encoder.heic"),
-    OMX_REGISTRY_ENTRY("OMX.qti.vdec.vpp", "libOmxVpp.so", "iv_processor.yuv"),
 #endif // VIDC_STUB_HAL
 
     //------------- Audio HW components -----------------------------------------------------------
@@ -89,6 +84,14 @@ omx_core_cb_type core[] =
     OMX_REGISTRY_ENTRY("OMX.qti.audio.decoder.mpegh", "libOmxMpeghDecSw.so", "audio_decoder.mpegh"),
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.encoder.mpegh", "libOmxMpeghEncSw.so", "audio_encoder.mpegh"),
 #endif //_KONA_
+
+#ifndef _BENGAL_
+    OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.mpeg2", "libOmxVdec.so", "video_decoder.mpeg2"),
+    OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.mpeg2.secure", "libOmxVdec.so", "video_decoder.mpeg2"),
+    OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.vp8", "libOmxVdec.so", "video_decoder.vp8"),
+    OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.vp8", "libOmxVenc.so", "video_encoder.vp8"),
+    OMX_REGISTRY_ENTRY("OMX.qti.vdec.vpp", "libOmxVpp.so", "iv_processor.yuv"),
+#endif
 
     // HACK: Hidden components marker
     OMX_REGISTRY_ENTRY("OMX.QCOM.CUST.COMP.START", NULL, NULL),
