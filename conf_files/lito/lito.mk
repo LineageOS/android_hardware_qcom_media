@@ -37,3 +37,8 @@ else
   PRODUCT_COPY_FILES += \
     $(CONFIG_PATH)/media_profiles.xml:$(TARGET_COPY_OUT_ODM)/etc/media_profiles_V1_0.xml
 endif
+
+# Produce packages addition
+PRODUCT_PACKAGES += \
+    libcodec2_vndk.vendor \
+    libcodec2_hidl@1.0.vendor
