@@ -51,6 +51,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <qdMetaData.h>
 #include <color_metadata.h>
 #define STRINGIFY_ENUMS
+#include "media/hardware/VideoAPI.h"
+#include "media/hardware/HardwareAPI.h"
 #include <media/msm_media_info.h>
 #include <unordered_map>
 

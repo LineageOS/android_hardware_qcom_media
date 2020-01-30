@@ -41,8 +41,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //////////////////////////////////////////////////////////////////////////////
 //                             Include Files
 //////////////////////////////////////////////////////////////////////////////
-
-//#define LOG_TAG "OMX-VENC"
+#undef LOG_TAG
+#define LOG_TAG "OMX-VENC"
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/mman.h>
