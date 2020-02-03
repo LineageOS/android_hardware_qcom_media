@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2017, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2017, 2020 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -55,6 +55,7 @@ class omx_venc: public omx_video
         bool is_secure_session();
         //OMX strucutres
         OMX_U32 m_nVenc_format;
+        char m_platform_name[PROPERTY_VALUE_MAX] = {0};
         class venc_dev *handle;
         int dev_handle_output_extradata(void *, int);
         int dev_set_format(int);

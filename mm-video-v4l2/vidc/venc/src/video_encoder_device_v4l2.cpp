@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2020, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2020 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -1436,11 +1436,8 @@ bool venc_dev::venc_open(OMX_U32 codec)
     struct v4l2_control control;
     OMX_STRING device_name = (OMX_STRING)"/dev/video33";
     char property_value[PROPERTY_VALUE_MAX] = {0};
-    char platform_name[PROPERTY_VALUE_MAX] = {0};
     FILE *soc_file = NULL;
     char buffer[10];
-
-    property_get("ro.board.platform", platform_name, "0");
 
     m_nDriver_fd = open (device_name, O_RDWR);
     if ((int)m_nDriver_fd < 0) {
