@@ -1788,10 +1788,9 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
     struct v4l2_control ctrl[2];
     int conceal_color_8bit = 0, conceal_color_10bit = 0;
 
+    property_get("ro.board.platform", m_platform_name, "0");
 #ifdef _ANDROID_
-    char platform_name[PROPERTY_VALUE_MAX];
-    property_get("ro.board.platform", platform_name, "0");
-    if (!strncmp(platform_name, "msm8610", 7)) {
+    if (!strncmp(m_platform_name, "msm8610", 7)) {
         device_name = (OMX_STRING)"/dev/video/q6_dec";
     }
 #endif
@@ -1869,6 +1868,15 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         eCompressionFormat = (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingHevc;
     } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.vp8",    \
                 OMX_MAX_STRINGNAME_SIZE)) {
+        char version[PROP_VALUE_MAX] = {0};
+        if (!strncmp(m_platform_name, "lito", 4))
+            if (property_get("vendor.media.target.version", version, "0") &&
+                    ((atoi(version) == 2) || (atoi(version) == 3))) {
+                //sku version, VP8 is disabled on lagoon
+                DEBUG_PRINT_ERROR("VP8 unsupported on lagoon");
+                eRet = OMX_ErrorInvalidComponentName;
+                return eRet;
+            }
         strlcpy((char *)m_cRole, "video_decoder.vp8",OMX_MAX_STRINGNAME_SIZE);
         drv_ctx.decoder_format = VDEC_CODECTYPE_VP8;
         output_capability = V4L2_PIX_FMT_VP8;
