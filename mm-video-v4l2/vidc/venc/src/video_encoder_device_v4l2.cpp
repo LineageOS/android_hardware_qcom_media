@@ -3884,6 +3884,9 @@ bool venc_dev::venc_set_operatingrate(OMX_U32 rate) {
     control.id = V4L2_CID_MPEG_VIDC_VIDEO_OPERATING_RATE;
     control.value = rate;
 
+    if (rate > INT_MAX)
+        control.value = INT_MAX;
+
     DEBUG_PRINT_LOW("venc_set_operating_rate: %u fps", rate >> 16);
     DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%u", control.id, control.value);
 

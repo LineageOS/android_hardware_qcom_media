@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010 - 2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2010 - 2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -1044,11 +1044,21 @@ void omx_vdec::process_event_cb(void *ctxt)
                     break;
 
                 case OMX_COMPONENT_GENERATE_EBD:
-
                     if (p2 != VDEC_S_SUCCESS && p2 != VDEC_S_INPUT_BITSTREAM_ERR) {
                         DEBUG_PRINT_ERROR("OMX_COMPONENT_GENERATE_EBD failure");
                         pThis->omx_report_error ();
                     } else {
+                        if (p2 == VDEC_S_INPUT_BITSTREAM_ERR && p1) {
+                            OMX_BUFFERHEADERTYPE* buffer =
+                                    ((OMX_BUFFERHEADERTYPE *)(intptr_t)p1);
+                            if (!buffer->pMarkData && !buffer->hMarkTargetComponent) {
+                                pThis->time_stamp_dts.remove_time_stamp(
+                                        buffer->nTimeStamp,
+                                        (pThis->drv_ctx.interlace != VDEC_InterlaceFrameProgressive)
+                                        ?true:false);
+                            }
+                        }
+
                         if ( pThis->empty_buffer_done(&pThis->m_cmp,
                                     (OMX_BUFFERHEADERTYPE *)(intptr_t)p1) != OMX_ErrorNone) {
                             DEBUG_PRINT_ERROR("empty_buffer_done failure");
@@ -2726,6 +2736,7 @@ bool omx_vdec::execute_input_flush()
             empty_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p1);
         }
     }
+    time_stamp_dts.flush_timestamp();
     /*Check if Heap Buffers are to be flushed*/
     pthread_mutex_unlock(&m_lock);
     input_flush_progress = false;
@@ -3234,6 +3245,9 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
 
         control.id = V4L2_CID_MPEG_VIDC_VIDEO_OPERATING_RATE;
         control.value = rate->nU32;
+
+        if (rate->nU32 > INT_MAX)
+            control.value = INT_MAX;
 
         if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
             ret = errno == EBUSY ? OMX_ErrorInsufficientResources :
@@ -4994,6 +5008,7 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
     buffer->pMarkData = (OMX_PTR)(unsigned long)m_etb_count;
     post_event ((unsigned long)hComp,(unsigned long)buffer,OMX_COMPONENT_GENERATE_ETB);
 
+    time_stamp_dts.insert_timestamp(buffer);
     return OMX_ErrorNone;
 }
 
@@ -6086,6 +6101,20 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
     }
 #endif
 
+    /* For use buffer we need to copy the data */
+    if (!output_flush_progress) {
+        /* This is the error check for non-recoverable errros */
+        bool is_duplicate_ts_valid = true;
+        bool is_interlaced = (drv_ctx.interlace != VDEC_InterlaceFrameProgressive);
+
+        if (output_capability == V4L2_PIX_FMT_MPEG4 ||
+                output_capability == V4L2_PIX_FMT_MPEG2)
+            is_duplicate_ts_valid = false;
+
+        time_stamp_dts.get_next_timestamp(buffer,
+                is_interlaced && is_duplicate_ts_valid && !is_mbaff);
+
+    }
     VIDC_TRACE_INT_LOW("FBD-TS", buffer->nTimeStamp / 1000);
 
     if (m_cb.FillBufferDone) {
@@ -7876,6 +7905,11 @@ void omx_vdec::get_preferred_color_aspects(ColorAspects& preferredColorAspects)
     const ColorAspects &defaultColor = preferClientColor ?
         m_internal_color_space.sAspects : m_client_color_space.sAspects;
 
+    if ((m_client_color_space.sAspects.mPrimaries == ColorAspects::PrimariesBT2020) && (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_8)) {
+        m_client_color_space.sAspects.mPrimaries = ColorAspects::PrimariesBT709_5;
+        m_client_color_space.sAspects.mMatrixCoeffs = ColorAspects::MatrixBT709_5;
+    }
+
     preferredColorAspects.mPrimaries = preferredColor.mPrimaries != ColorAspects::PrimariesUnspecified ?
         preferredColor.mPrimaries : defaultColor.mPrimaries;
     preferredColorAspects.mTransfer = preferredColor.mTransfer != ColorAspects::TransferUnspecified ?
@@ -8396,6 +8430,7 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
     unsigned int src_size = 0, destination_size = 0;
     unsigned int height, width;
     struct v4l2_format fmt;
+    bool is_interlaced = false;
     OMX_COLOR_FORMATTYPE drv_color_format;
 
     if (!omx) {
@@ -8428,7 +8463,8 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
 
     bool resolution_upgrade = (height > m_c2d_height ||
             width > m_c2d_width);
-    bool is_interlaced = omx->m_progressive != MSM_VIDC_PIC_STRUCT_PROGRESSIVE;
+    if (omx->drv_ctx.output_format != VDEC_YUV_FORMAT_NV12)
+        is_interlaced = omx->m_progressive != MSM_VIDC_PIC_STRUCT_PROGRESSIVE;
     if (resolution_upgrade) {
         // resolution upgraded ? ensure we are yet to allocate;
         // failing which, c2d buffers will never be reallocated and bad things will happen
