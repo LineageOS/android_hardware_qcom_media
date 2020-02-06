@@ -16,8 +16,10 @@ endif
 #             Figure out the targets
 #===============================================================================
 
-ifeq ($(filter $(TARGET_BOARD_PLATFORM), kona lito bengal),$(TARGET_BOARD_PLATFORM))
+ifeq ($(filter $(TARGET_BOARD_PLATFORM), kona lito),$(TARGET_BOARD_PLATFORM))
 OMXCORE_CFLAGS += -D_KONA_
+else ifeq ($(filter $(TARGET_BOARD_PLATFORM), bengal),$(TARGET_BOARD_PLATFORM))
+OMXCORE_CFLAGS += -D_BENGAL_
 else ifeq ($(filter $(TARGET_BOARD_PLATFORM), $(MSMSTEPPE)),$(TARGET_BOARD_PLATFORM))
 OMXCORE_CFLAGS += -D_STEPPE_
 else
