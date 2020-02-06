@@ -696,6 +696,9 @@ enum OMX_QCOM_EXTN_INDEXTYPE
 
     /*"OMX.google.android.index.describeHDR10PlusInfo"*/
     OMX_QTIIndexConfigDescribeHDR10PlusInfo = 0x7F100008,
+
+    /* Configure Bitrate Savings (CAC) */
+    OMX_QTIIndexConfigContentAdaptiveCoding = 0x7F100009,
 };
 
 /**

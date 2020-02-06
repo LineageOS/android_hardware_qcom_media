@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -209,7 +209,10 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     Platform::Config::getInt32(Platform::vidc_enc_linear_color_format,
             (int32_t *)&mUseLinearColorFormat, 0);
     Platform::Config::getInt32(Platform::vidc_enc_bitrate_savings_enable,
-            (int32_t *)&mBitrateSavingsEnable, 1);
+            (int32_t *)&mBitrateSavingsEnable, 3);
+    Platform::Config::getInt32(Platform::vidc_enc_quality_boost_enable,
+            (int32_t *)&mQualityBoostRequested, 0);
+    mQualityBoostEligible = false;
 
     profile_level_converter::init();
 }
@@ -2886,6 +2889,8 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
             }
         }
 
+        venc_set_quality_boost((OMX_BOOL)c2d_enabled);
+
         if (!downscalar_enabled) {
             OMX_U32 inp_width = 0, inp_height = 0, out_width = 0, out_height = 0;
 
@@ -4413,8 +4418,13 @@ bool venc_dev::venc_get_cvp_metadata(private_handle_t *handle, struct v4l2_buffe
 
 bool venc_dev::venc_config_bitrate(OMX_VIDEO_CONFIG_BITRATETYPE *bit_rate)
 {
+    OMX_U32 bitrate = bit_rate->nEncodeBitrate;
     if (bit_rate->nPortIndex == (OMX_U32)PORT_INDEX_OUT) {
-        if (venc_set_target_bitrate(bit_rate->nEncodeBitrate) == false) {
+        // If quality boost is eligible, also increase bitrate by 15% in dynamic change case
+        if (mQualityBoostEligible && bitrate < VENC_QUALITY_BOOST_BITRATE_THRESHOLD) {
+            bitrate += bitrate * 15 / 100;
+        }
+        if (venc_set_target_bitrate(bitrate) == false) {
             DEBUG_PRINT_ERROR("ERROR: Setting Target Bit rate failed");
             return false;
         }
@@ -4842,3 +4852,53 @@ OMX_U32 venc_dev::append_extradata_roi_region_qp_info(OMX_OTHER_EXTRADATATYPE *d
     return data->nSize;
 }
 
+void venc_dev::venc_set_quality_boost(OMX_BOOL c2d_enable)
+{
+    OMX_U32 initial_qp;
+    OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE qp_range;
+    OMX_QTI_VIDEO_CONFIG_BLURINFO blurinfo;
+
+    // Conditions to enable encoder quality boost,
+    // 1. Codec is AVC
+    // 2. RCMode is VBR
+    // 3. Input is RGBA/RGBA_UBWC (C2D enabled)
+    // 4. width <= 960 and height <= 960
+    // 5. FPS <= 30
+    // 6. bitrate < 2Mbps
+
+    if (mQualityBoostRequested && c2d_enable &&
+        m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264 &&
+        rate_ctrl.rcmode == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR &&
+        m_sVenc_cfg.dvs_width <= 960 && m_sVenc_cfg.dvs_height <= 960 &&
+        (m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) <= 30 &&
+        bitrate.target_bitrate < VENC_QUALITY_BOOST_BITRATE_THRESHOLD) {
+        mQualityBoostEligible = true;
+        DEBUG_PRINT_HIGH("Quality boost eligible encoder session");
+    } else {
+        return;
+    }
+
+    if (bitrate.target_bitrate <= 64000)
+        venc_set_level(OMX_VIDEO_AVCLevel1);
+
+    // Set below configurations to boost quality
+    // 1. Increase bitrate by 15%
+    bitrate.target_bitrate += bitrate.target_bitrate * 15 / 100;
+    venc_set_target_bitrate(bitrate.target_bitrate);
+
+    // 2. Set initial QP=30
+    initial_qp = 30;
+    venc_set_qp(initial_qp, initial_qp, initial_qp, 7);
+
+    // 3. Set QP range [10,40]
+    qp_range.minIQP = qp_range.minPQP = qp_range.minBQP = 10;
+    qp_range.maxIQP = qp_range.maxPQP = qp_range.maxBQP = 40;
+    venc_set_session_qp_range(&qp_range);
+
+    // 4. Disable blur (both external and internal)
+    blurinfo.nBlurInfo = 2;
+    venc_set_blur_resolution(&blurinfo);
+
+    // 5. Disable bitrate savings (CAC)
+    venc_set_bitrate_savings_mode(0);
+}

@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -73,6 +73,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define REQUEST_LINEAR_COLOR_8_BIT   0x1
 #define REQUEST_LINEAR_COLOR_10_BIT  0x2
 #define REQUEST_LINEAR_COLOR_ALL     (REQUEST_LINEAR_COLOR_8_BIT | REQUEST_LINEAR_COLOR_10_BIT)
+
+#define VENC_QUALITY_BOOST_BITRATE_THRESHOLD 2000000
 
 enum hier_type {
     HIER_NONE = 0x0,
@@ -423,6 +425,7 @@ class venc_dev
         bool set_nP_frames(unsigned long nPframes);
         bool venc_set_target_bitrate(OMX_U32 nTargetBitrate);
         bool venc_set_ratectrl_cfg(OMX_VIDEO_CONTROLRATETYPE eControlRate);
+        bool venc_set_bitrate_savings_mode(OMX_U32 bitrateSavingEnable);
         bool venc_set_session_qp_range(OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE *qp_range);
         bool venc_set_encode_framerate(OMX_U32 encode_framerate);
         bool venc_set_intra_vop_refresh(OMX_BOOL intra_vop_refresh);
@@ -470,6 +473,7 @@ class venc_dev
         bool venc_get_cvp_metadata(private_handle_t *handle, struct v4l2_buffer *buf);
         bool venc_set_cvp_skipratio_controls();
         bool venc_superframe_enable(private_handle_t *handle);
+        void venc_set_quality_boost(OMX_BOOL c2d_enable);
 
         OMX_U32 pmem_free();
         OMX_U32 pmem_allocate(OMX_U32 size, OMX_U32 alignment, OMX_U32 count);
@@ -526,7 +530,9 @@ class venc_dev
         bool venc_set_hdr_info(const MasteringDisplay&, const ContentLightLevel&);
         bool mIsGridset;
         OMX_U32 mUseLinearColorFormat;
-        bool mBitrateSavingsEnable;
+        OMX_U32 mBitrateSavingsEnable;
+        bool mQualityBoostRequested;
+        bool mQualityBoostEligible;
 
         union dynamicConfigData {
             OMX_VIDEO_CONFIG_BITRATETYPE bitrate;
