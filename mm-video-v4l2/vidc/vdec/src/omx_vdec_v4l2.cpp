@@ -7903,7 +7903,7 @@ void omx_vdec::convert_hdr_info_to_metadata(HDRStaticInfo& hdr_info, ColorMetaDa
         mastering_display.primaries.rgbPrimaries[2][1] = hdr_info.sType1.mB.y;
         mastering_display.primaries.whitePoint[0] = hdr_info.sType1.mW.x;
         mastering_display.primaries.whitePoint[1] = hdr_info.sType1.mW.y;
-        mastering_display.maxDisplayLuminance = hdr_info.sType1.mMaxDisplayLuminance * LUMINANCE_DIV_FACTOR;
+        mastering_display.maxDisplayLuminance = hdr_info.sType1.mMaxDisplayLuminance;
         mastering_display.minDisplayLuminance = hdr_info.sType1.mMinDisplayLuminance;
         content_light.lightLevelSEIEnabled = true;
         content_light.maxContentLightLevel = hdr_info.sType1.mMaxContentLightLevel;
