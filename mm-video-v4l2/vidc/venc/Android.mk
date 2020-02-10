@@ -97,7 +97,7 @@ endif
 libmm-venc-def += -DUSE_CAMERA_METABUFFER_UTILS
 
 # Hypervisor
-ifneq (,$(filter $(MACHINE), "8x96autogvmquin" "8x96autogvmred"))
+ifeq ($(ENABLE_HYP),true)
 libmm-venc-def += -D_HYPERVISOR_
 endif
 
