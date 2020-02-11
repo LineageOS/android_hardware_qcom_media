@@ -675,9 +675,7 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
     }
 
     DEBUG_PRINT_HIGH("Processing Extradata for Buffer = %lld", nTimeStamp); // Useful for debugging
-#ifdef USE_ION
-    venc_handle->do_cache_operations(input_extradata_info.ion[index].data_fd);
-#endif
+    sync_start_rw(input_extradata_info.ion[index].data_fd);
 
     p_extradata = input_extradata_info.ion[index].uaddr;
     data = (struct OMX_OTHER_EXTRADATATYPE *)p_extradata;
@@ -840,9 +838,7 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
     data->data[0] = 0;
 
 bailout:
-#ifdef USE_ION
-    venc_handle->do_cache_operations(input_extradata_info.ion[index].data_fd);
-#endif
+    sync_end_rw(input_extradata_info.ion[index].data_fd);
     return status;
 }
 
@@ -1278,9 +1274,7 @@ int venc_dev::venc_extradata_log_buffers(char *buffer_addr, int index, bool inpu
     else
         fd = output_extradata_info.ion[index].data_fd;
 
-#ifdef USE_ION
-    venc_handle->do_cache_operations(fd);
-#endif
+    sync_start_read(fd);
     if (!m_debug.extradatafile && m_debug.extradata_log) {
         int size = 0;
 
@@ -1300,9 +1294,7 @@ int venc_dev::venc_extradata_log_buffers(char *buffer_addr, int index, bool inpu
             DEBUG_PRINT_ERROR("Failed to open extradata file: %s for logging errno:%d",
                                m_debug.extradatafile_name, errno);
             m_debug.extradatafile_name[0] = '\0';
-#ifdef USE_ION
-            venc_handle->do_cache_operations(fd);
-#endif
+            sync_end_read(fd);
             return -1;
         }
     }
@@ -1315,9 +1307,7 @@ int venc_dev::venc_extradata_log_buffers(char *buffer_addr, int index, bool inpu
             fwrite(p_extra, p_extra->nSize, 1, m_debug.extradatafile);
         } while (p_extra->eType != OMX_ExtraDataNone);
     }
-#ifdef USE_ION
-    venc_handle->do_cache_operations(fd);
-#endif
+    sync_end_read(fd);
     return 0;
 }
 
@@ -1329,9 +1319,7 @@ int venc_dev::venc_input_log_buffers(OMX_BUFFERHEADERTYPE *pbuffer, int fd, int 
         return -1;
     }
 
-#ifdef USE_ION
-    venc_handle->do_cache_operations(fd);
-#endif
+    sync_start_read(fd);
     if (!m_debug.infile) {
         int size = snprintf(m_debug.infile_name, PROPERTY_VALUE_MAX, "%s/input_enc_%lu_%lu_%p.yuv",
                             m_debug.log_loc, m_sVenc_cfg.input_width, m_sVenc_cfg.input_height, this);
@@ -1423,9 +1411,7 @@ int venc_dev::venc_input_log_buffers(OMX_BUFFERHEADERTYPE *pbuffer, int fd, int 
         }
     }
 bailout:
-#ifdef USE_ION
-    venc_handle->do_cache_operations(fd);
-#endif
+    sync_end_read(fd);
     return status;
 }
 

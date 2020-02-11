@@ -4737,10 +4737,10 @@ OMX_ERRORTYPE omx_video::fill_buffer_done(OMX_HANDLETYPE hComp,
             m_fbd_count++;
 
             if (dev_get_output_log_flag()) {
-                do_cache_operations(m_pOutput_ion[index].data_fd);
+                sync_start_read(m_pOutput_ion[index].data_fd);
                 dev_output_log_buffers((const char*)buffer->pBuffer + buffer->nOffset, buffer->nFilledLen,
                                         buffer->nTimeStamp);
-                do_cache_operations(m_pOutput_ion[index].data_fd);
+                sync_end_read(m_pOutput_ion[index].data_fd);
 
             }
         }
@@ -4857,50 +4857,18 @@ void omx_video::complete_pending_buffer_done_cbs()
     }
 }
 
-void omx_video::do_cache_operations(int fd)
-{
-#ifdef USE_ION
-    struct dma_buf_sync buf_sync;
-
-    if (fd < 0)
-        return;
-
-    struct dma_buf_sync dma_buf_sync_data[2];
-    dma_buf_sync_data[0].flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_RW;
-    dma_buf_sync_data[1].flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_RW;
-
-    for(unsigned int i=0; i<2; i++) {
-        int rc = ioctl(fd, DMA_BUF_IOCTL_SYNC, &dma_buf_sync_data[i]);
-        if (rc < 0) {
-            DEBUG_PRINT_ERROR("Failed DMA_BUF_IOCTL_SYNC %s fd : %d", i==0?"start":"end", fd);
-            return;
-        }
-    }
-#else
-    (void)fd;
-    return;
-#endif
-}
-
 char *omx_video::ion_map(int fd, int len)
 {
     char *bufaddr = (char*)mmap(NULL, len, PROT_READ|PROT_WRITE,
                                 MAP_SHARED, fd, 0);
-#ifdef USE_ION
-    if (bufaddr != MAP_FAILED) {
-        do_cache_operations(fd);
-    }
-#endif
+    if (bufaddr != MAP_FAILED)
+        cache_clean_invalidate(fd);
     return bufaddr;
 }
 
 OMX_ERRORTYPE omx_video::ion_unmap(int fd, void *bufaddr, int len)
 {
-#ifdef USE_ION
-    do_cache_operations(fd);
-#else
-    (void)fd;
-#endif
+    cache_clean_invalidate(fd);
     if (-1 == munmap(bufaddr, len)) {
         DEBUG_PRINT_ERROR("munmap failed.");
         return OMX_ErrorInsufficientResources;
