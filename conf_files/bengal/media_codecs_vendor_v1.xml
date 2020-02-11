@@ -90,7 +90,6 @@ Only the three quirks included above are recognized at this point:
  | hevc        | 1920    1080    30      60     244800   |
  | vp9         | 1920    1088    30      60     244800   |
  | mpeg4-sw    | 1920    1088    30      40     244800   |
- | div4/5/6-sw | 1920    1088    30      10     244800   |
  | h263-sw     | 864     480     30      16      48600   |
  |_____________|_________________________________________|
 
@@ -303,28 +302,6 @@ Only the three quirks included above are recognized at this point:
              <Limit name="bitrate" range="1-40000000" />
              <Limit name="frame-rate" range="1-30" />
              <Limit name="concurrent-instances" max="4" />
-        </MediaCodec>
-        <MediaCodec name="OMX.qti.video.decoder.divxsw" type="video/divx" >
-            <Quirk name="requires-allocate-on-input-ports" />
-            <Quirk name="requires-allocate-on-output-ports" />
-            <Limit name="size" min="96x96" max="1920x1088" />
-            <Limit name="alignment" value="2x2" />
-            <Limit name="block-size" value="16x16" />
-            <Limit name="blocks-per-second" min="36" max="244800" />
-            <Limit name="frame-rate" range="1-30" />
-            <Limit name="bitrate" range="1-10000000" />
-            <Limit name="concurrent-instances" max="16" />
-        </MediaCodec>
-        <MediaCodec name="OMX.qti.video.decoder.divx4sw" type="video/divx4" >
-            <Quirk name="requires-allocate-on-input-ports" />
-            <Quirk name="requires-allocate-on-output-ports" />
-            <Limit name="size" min="96x96" max="1920x1088" />
-            <Limit name="alignment" value="2x2" />
-            <Limit name="block-size" value="16x16" />
-            <Limit name="blocks-per-second" min="36" max="244800" />
-            <Limit name="frame-rate" range="1-30" />
-            <Limit name="bitrate" range="1-10000000" />
-            <Limit name="concurrent-instances" max="16" />
         </MediaCodec>
     </Decoders>
     <Include href="media_codecs_google_video.xml" />
