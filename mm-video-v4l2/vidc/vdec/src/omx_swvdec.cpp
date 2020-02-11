@@ -4842,9 +4842,17 @@ void omx_swvdec::swvdec_empty_buffer_done(SWVDEC_BUFFER *p_buffer_ip)
 {
     unsigned long index = (unsigned long) p_buffer_ip->p_client_data;
 
-    m_buffer_array_ip[index].buffer_header.nFilledLen =
-        p_buffer_ip->filled_length;
-
+    if (m_arbitrary_bytes_mode)
+    {
+        if (!m_buffer_array_ip[index].split_count)
+        {
+            m_buffer_array_ip[index].buffer_header.nFilledLen =
+                p_buffer_ip->filled_length;
+        }
+    }
+    else
+        m_buffer_array_ip[index].buffer_header.nFilledLen =
+            p_buffer_ip->filled_length;
     async_post_event(OMX_SWVDEC_EVENT_EBD,
                      (unsigned long) &m_buffer_array_ip[index].buffer_header,
                      index);
