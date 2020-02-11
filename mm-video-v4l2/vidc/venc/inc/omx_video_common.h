@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2018, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2019, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -99,13 +99,16 @@ struct pmem {
 
 struct venc_debug_cap {
     bool in_buffer_log;
+    bool in_buffer_rotated_log;
     bool out_buffer_log;
     bool extradata_log;
     char infile_name[PROPERTY_VALUE_MAX];
+    char inrotatedfile_name[PROPERTY_VALUE_MAX];
     char outfile_name[PROPERTY_VALUE_MAX];
     char extradatafile_name[PROPERTY_VALUE_MAX];
     char log_loc[PROPERTY_VALUE_MAX];
     FILE *infile;
+    FILE *inrotatedfile;
     FILE *outfile;
     FILE *extradatafile;
 };

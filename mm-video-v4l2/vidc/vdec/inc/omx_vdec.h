@@ -1108,6 +1108,7 @@ class omx_vdec: public qc_omx_component
         ts_arr_list           m_timestamp_list;
 #endif
 
+        char m_platform_name[PROPERTY_VALUE_MAX] = {0};
         bool input_flush_progress;
         bool output_flush_progress;
         bool input_use_buffer;

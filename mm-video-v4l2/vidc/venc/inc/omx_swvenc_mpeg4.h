@@ -199,6 +199,7 @@ class omx_venc: public omx_video
            OMX_U32 port
         );
         int swvenc_input_log_buffers(const char *buffer, int bufferlen);
+        int swvenc_input_log_rotated_buffers(const char *buffer, int bufferlen);
         bool dev_get_hevc_profile(OMX_U32*) { return false; }
         bool dev_handle_client_input_extradata(void*) { return false; }
         void dev_get_color_format_as_string(char *, int, unsigned) {};
