@@ -5022,8 +5022,6 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
     if (!m_etb_count)
         m_etb_count++;
     m_etb_timestamp = buffer->nTimeStamp;
-    DEBUG_PRINT_LOW("[ETB] nCnt(%u) BHdr(%p) pBuf(%p) nTS(%lld) nFL(%u)",
-            m_etb_count, buffer, buffer->pBuffer, buffer->nTimeStamp, (unsigned int)buffer->nFilledLen);
     buffer->pMarkData = (OMX_PTR)(unsigned long)m_etb_count;
     post_event ((unsigned long)hComp,(unsigned long)buffer,OMX_COMPONENT_GENERATE_ETB);
 
@@ -5313,10 +5311,6 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer(OMX_IN OMX_HANDLETYPE  hComp,
         meta = (struct VideoDecoderOutputMetaData *)buffer->pBuffer;
         handle = (private_handle_t *)meta->pHandle;
 
-        //get the buffer type and fd info
-        DEBUG_PRINT_LOW("FTB: metabuf: %p buftype: %d bufhndl: %p ",
-                        meta, meta->eType, meta->pHandle);
-
         if (!handle) {
             DEBUG_PRINT_ERROR("FTB: Error: IL client passed an invalid buf handle - %p", handle);
             return OMX_ErrorBadParameter;
@@ -5337,8 +5331,6 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer(OMX_IN OMX_HANDLETYPE  hComp,
         }
 
         buffer->nAllocLen = handle->size;
-        DEBUG_PRINT_LOW("%s: buffer size = d-%d:b-%d",
-                        __func__, (int)drv_ctx.op_buf.buffer_size, (int)handle->size);
 
         if (!client_buffers.is_color_conversion_enabled()) {
             drv_ctx.op_buf.buffer_size = handle->size;
@@ -6740,8 +6732,9 @@ void omx_vdec::free_ion_memory(struct vdec_ion *buf_ion_info)
         DEBUG_PRINT_ERROR("ION: free called with invalid fd/allocdata");
         return;
     }
-    DEBUG_PRINT_HIGH("Free ion memory: mmap fd %d ion_dev fd %d len %d flags %#x mask %#x",
-        buf_ion_info->data_fd, buf_ion_info->dev_fd,
+
+    DEBUG_PRINT_HIGH("Free ion memory: fd (dev:%d data:%d) len %d flags %#x mask %#x",
+        buf_ion_info->dev_fd, buf_ion_info->data_fd,
         (unsigned int)buf_ion_info->alloc_data.len,
         (unsigned int)buf_ion_info->alloc_data.flags,
         (unsigned int)buf_ion_info->alloc_data.heap_id_mask);
