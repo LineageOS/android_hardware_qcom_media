@@ -2487,7 +2487,6 @@ int omx_venc::async_message_process (void *context, void* message)
                     omxhdr->nFilledLen = m_sVenc_msg->buf.len;
                     omxhdr->nOffset = m_sVenc_msg->buf.offset;
                     omxhdr->nTimeStamp = m_sVenc_msg->buf.timestamp;
-                    DEBUG_PRINT_LOW("o/p TS = %u", (unsigned int)m_sVenc_msg->buf.timestamp);
                     omxhdr->nFlags = m_sVenc_msg->buf.flags;
 
                     /*Use buffer case*/
