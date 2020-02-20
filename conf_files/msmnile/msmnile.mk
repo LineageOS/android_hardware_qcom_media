@@ -19,9 +19,23 @@ PRODUCT_COPY_FILES += \
 PRODUCT_PACKAGES += \
     libcodec2_vndk.vendor \
     libcodec2_hidl@1.0.vendor
+
 # Enable Codec2.0 HAL for pure AOSP variants.
 ifeq ($(GENERIC_ODM_IMAGE),true)
-DEVICE_MANIFEST_FILE += hardware/qcom/media/conf_files/msmnile/c2_manifest_vendor.xml
+    $(warning "Forcing codec2.0 HW for generic odm build variant")
+    DEVICE_MANIFEST_FILE += hardware/qcom/media/conf_files/msmnile/c2_manifest_vendor.xml
+    #Set default ranks and rank Codec 2.0 over OMX codecs
+    PRODUCT_ODM_PROPERTIES += debug.stagefright.ccodec=4
+    PRODUCT_ODM_PROPERTIES += debug.stagefright.omx_default_rank=1000
+    PRODUCT_COPY_FILES += \
+      device/qcom/common/media/media_profiles.xml:$(TARGET_COPY_OUT_ODM)/etc/media_profiles_V1_0.xml
 else
-DEVICE_MANIFEST_FILE += hardware/qcom/media/conf_files/msmnile/c2_manifest.xml
+    $(warning "Enabling codec2.0 SW only for non-generic odm build variant")
+    DEVICE_MANIFEST_FILE += hardware/qcom/media/conf_files/msmnile/c2_manifest.xml
+    #Rank OMX SW codecs lower than OMX HW codecs
+    PRODUCT_PROPERTY_OVERRIDES += debug.stagefright.omx_default_rank.sw-audio=1
+    PRODUCT_PROPERTY_OVERRIDES += debug.stagefright.omx_default_rank=0
+    PRODUCT_PROPERTY_OVERRIDES += media.settings.xml=/vendor/etc/media_profiles_vendor.xml
+    PRODUCT_COPY_FILES += \
+      $(CONFIG_PATH)/media_profiles.xml:$(TARGET_COPY_OUT_ODM)/etc/media_profiles_V1_0.xml
 endif
