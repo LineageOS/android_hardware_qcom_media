@@ -410,3 +410,15 @@ IvfFrameHeader:: IvfFrameHeader(uint32_t filledLen, uint64_t timeStamp) :
     filledLen(filledLen),
     timeStamp(timeStamp) {
 }
+
+void do_sync_ioctl(int fd, struct dma_buf_sync* sync) {
+#ifdef USE_ION
+    int rc = ioctl(fd, DMA_BUF_IOCTL_SYNC, sync);
+    if (rc < 0) {
+        DEBUG_PRINT_ERROR("Failed DMA_BUF_IOCTL_SYNC");
+        return;
+    }
+#else
+    (void)fd, (void)sync;
+#endif
+}

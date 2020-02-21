@@ -173,6 +173,7 @@ LOCAL_C_INCLUDES              += $(libmm-vdec-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES := $(libmm-vdec-add-dep)
 
 LOCAL_PRELINK_MODULE          := false
+LOCAL_STATIC_LIBRARIES        := libOmxVidcCommon
 LOCAL_SHARED_LIBRARIES        := liblog libcutils libc2dcolorconvert libion
 LOCAL_SHARED_LIBRARIES        += libswvdec
 
