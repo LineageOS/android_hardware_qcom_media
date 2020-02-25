@@ -1660,7 +1660,7 @@ void venc_dev::venc_close()
     if ((int)m_nDriver_fd >= 0) {
         DEBUG_PRINT_HIGH("venc_close E");
 
-        if(eventfd_write(m_poll_efd, 1)) {
+        if(eventfd_write(dup(m_poll_efd), 1)) {
             DEBUG_PRINT_ERROR("eventfd_write failed for fd: %d, errno = %d, force stop async_thread", m_poll_efd, errno);
             async_thread_force_stop = true;
         }
