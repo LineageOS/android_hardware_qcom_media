@@ -248,8 +248,25 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
         codec_type = OMX_VIDEO_CodingHEVC;
     } else if (!strncmp((char *)m_nkind, "OMX.qcom.video.encoder.heic",    \
                 OMX_MAX_STRINGNAME_SIZE)) {
-        strlcpy((char *)m_cRole, "video_encoder.hevc", OMX_MAX_STRINGNAME_SIZE);
-        codec_type = OMX_VIDEO_CodingImageHEIC;
+        char platform_name[PROP_VALUE_MAX] = {0};
+        char version[PROP_VALUE_MAX] = {0};
+        property_get("ro.board.platform", platform_name, "0");  //HW ID
+        if (!strcmp(platform_name, "sm6150"))
+        {
+            if (property_get("vendor.media.target.version", version, "0") &&
+                    (atoi(version) == 0))
+            {
+                //Sku version, HEIC is disabled on this target
+                DEBUG_PRINT_ERROR("heic encoder not supported on this target");
+                eRet = OMX_ErrorInvalidComponentName;
+            } else {
+                strlcpy((char *)m_cRole, "video_encoder.hevc", OMX_MAX_STRINGNAME_SIZE);
+                codec_type = OMX_VIDEO_CodingImageHEIC;
+            }
+        } else {
+            strlcpy((char *)m_cRole, "video_encoder.hevc", OMX_MAX_STRINGNAME_SIZE);
+            codec_type = OMX_VIDEO_CodingImageHEIC;
+        }
     } else if (!strncmp((char *)m_nkind, "OMX.qcom.video.encoder.hevc.secure",    \
                 OMX_MAX_STRINGNAME_SIZE)) {
         strlcpy((char *)m_cRole, "video_encoder.hevc", OMX_MAX_STRINGNAME_SIZE);
@@ -272,6 +289,11 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
                 DEBUG_PRINT_LOW("TME is not supported");
                 eRet = OMX_ErrorInvalidComponentName;
             }
+        }
+        else if (!strcmp(platform_name, "atoll")) {
+            //TME is enabled on ATOLL
+            strlcpy((char *)m_cRole, "video_encoder.tme", OMX_MAX_STRINGNAME_SIZE);
+            codec_type = (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingTME;
         }
         else {
             DEBUG_PRINT_LOW("TME is not supported");
@@ -479,6 +501,7 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
                 &m_sOutPortDef.nBufferSize,
                 m_sOutPortDef.nPortIndex) != true) {
         eRet = OMX_ErrorUndefined;
+        goto init_error;
     }
 
     // Initialize the video color format for input port
