@@ -1,7 +1,7 @@
 /**
  * @copyright
  *
- *   Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ *   Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
  *
  *   Redistribution and use in source and binary forms, with or without
  *   modification, are permitted provided that the following conditions are met:
@@ -3543,8 +3543,9 @@ OMX_ERRORTYPE omx_swvdec::get_buffer_requirements_swvdec(
 
         m_port_ip.def.nBufferSize        = p_buffer_req->size;
         m_port_ip.def.nBufferCountMin    = p_buffer_req->mincount;
-        m_port_ip.def.nBufferCountActual = MAX(p_buffer_req->mincount,
-                                               OMX_SWVDEC_IP_BUFFER_COUNT_MIN);
+        m_port_ip.def.nBufferCountActual = MAX((MAX(p_buffer_req->mincount,
+                                               OMX_SWVDEC_IP_BUFFER_COUNT_MIN)),
+                                               m_port_ip.def.nBufferCountActual);
         m_port_ip.def.nBufferAlignment   = p_buffer_req->alignment;
 
         OMX_SWVDEC_LOG_HIGH("ip port: %d bytes x %d, %d-byte aligned",
@@ -4809,7 +4810,6 @@ void omx_swvdec::ion_memory_free(struct vdec_ion *p_ion_buf_info)
         (unsigned int)p_ion_buf_info->alloc_data.heap_id_mask);
 
     if (p_ion_buf_info->data_fd >= 0) {
-        close(p_ion_buf_info->data_fd);
         p_ion_buf_info->data_fd = -1;
     }
 
