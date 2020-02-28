@@ -2872,6 +2872,7 @@ bool inline omx_vdec::vdec_query_cap(struct v4l2_queryctrl &cap)
 OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVELTYPE *profileLevelType)
 {
     OMX_ERRORTYPE eRet = OMX_ErrorNone;
+    bool hdr_supported = true;
     struct v4l2_queryctrl profile_cap, level_cap, tier_cap;
     int v4l2_profile;
     int avc_profiles[5] = { QOMX_VIDEO_AVCProfileConstrainedBaseline,
@@ -3011,9 +3012,17 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
         eRet = OMX_ErrorNoMore;
     }
     if (m_disable_hdr & DEC_HDR_DISABLE_FLAG) {
-        if (profileLevelType->eProfile == OMX_VIDEO_VP9Profile2HDR || profileLevelType->eProfile == OMX_VIDEO_VP9Profile2HDR10Plus
-            || profileLevelType->eProfile == OMX_VIDEO_HEVCProfileMain10 || profileLevelType->eProfile == OMX_VIDEO_HEVCProfileMain10HDR10
+        if (output_capability == V4L2_PIX_FMT_VP9) {
+            if (profileLevelType->eProfile == OMX_VIDEO_VP9Profile2HDR || profileLevelType->eProfile == OMX_VIDEO_VP9Profile2HDR10Plus)
+                hdr_supported = false;
+        }
+        if (output_capability == V4L2_PIX_FMT_HEVC) {
+            if (profileLevelType->eProfile == OMX_VIDEO_HEVCProfileMain10 || profileLevelType->eProfile == OMX_VIDEO_HEVCProfileMain10HDR10
             || profileLevelType->eProfile == OMX_VIDEO_HEVCProfileMain10HDR10Plus) {
+                hdr_supported = false;
+            }
+        }
+        if (!hdr_supported) {
             DEBUG_PRINT_LOW("%s: HDR profile unsupported", __FUNCTION__);
             return OMX_ErrorHardware;
         }
