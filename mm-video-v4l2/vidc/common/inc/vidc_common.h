@@ -33,6 +33,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <unordered_map>
 
 #include "OMX_QCOMExtns.h"
+#include <linux/dma-buf.h>
 #ifdef _ANDROID_
 #include <gralloc_priv.h>
 #endif
@@ -101,4 +102,56 @@ class profile_level_converter {
 void get_gralloc_format_as_string(char * buf, int buf_len, int format);
 void get_v4l2_color_format_as_string(char * buf, int buf_len, unsigned long v4l2Pixformat);
 
+void do_sync_ioctl(int fd, struct dma_buf_sync* sync);
+
+static inline void sync_start_write(int fd) {
+    struct dma_buf_sync sync = {0};
+    sync.flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_WRITE;
+    do_sync_ioctl(fd, &sync);
+}
+
+static inline void sync_end_write(int fd) {
+    struct dma_buf_sync sync = {0};
+    sync.flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_WRITE;
+    do_sync_ioctl(fd, &sync);
+}
+
+static inline void sync_start_read(int fd) {
+    struct dma_buf_sync sync = {0};
+    sync.flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_READ;
+    do_sync_ioctl(fd, &sync);
+}
+
+static inline void sync_end_read(int fd) {
+    struct dma_buf_sync sync = {0};
+    sync.flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_READ;
+    do_sync_ioctl(fd, &sync);
+}
+
+static inline void sync_start_rw(int fd) {
+    struct dma_buf_sync sync = {0};
+    sync.flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_RW;
+    do_sync_ioctl(fd, &sync);
+}
+
+static inline void sync_end_rw(int fd) {
+    struct dma_buf_sync sync = {0};
+    sync.flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_RW;
+    do_sync_ioctl(fd, &sync);
+}
+
+static inline void cache_clean(int fd) {
+    sync_start_write(fd);
+    sync_end_write(fd);
+}
+
+static inline void cache_invalidate(int fd) {
+    sync_start_write(fd);
+    sync_end_read(fd);
+}
+
+static inline void cache_clean_invalidate(int fd) {
+    sync_start_rw(fd);
+    sync_end_rw(fd);
+}
 #endif // __VIDC_COMMON_H__

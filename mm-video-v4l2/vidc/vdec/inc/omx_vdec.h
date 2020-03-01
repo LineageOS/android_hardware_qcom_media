@@ -885,7 +885,6 @@ class omx_vdec: public qc_omx_component
 #ifdef USE_ION
         bool alloc_map_ion_memory(OMX_U32 buffer_size, vdec_ion *ion_info, int flag);
         void free_ion_memory(struct vdec_ion *buf_ion_info);
-        void do_cache_operations(int fd);
 #endif
 
 #ifdef USE_GBM
@@ -1002,6 +1001,7 @@ class omx_vdec: public qc_omx_component
         ts_arr_list           m_timestamp_list;
 #endif
 
+        char m_platform_name[PROPERTY_VALUE_MAX] = {0};
         bool input_flush_progress;
         bool output_flush_progress;
         bool input_use_buffer;

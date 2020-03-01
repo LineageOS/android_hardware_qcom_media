@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2020, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2020 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -675,9 +675,7 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
     }
 
     DEBUG_PRINT_HIGH("Processing Extradata for Buffer = %lld", nTimeStamp); // Useful for debugging
-#ifdef USE_ION
-    venc_handle->do_cache_operations(input_extradata_info.ion[index].data_fd);
-#endif
+    sync_start_rw(input_extradata_info.ion[index].data_fd);
 
     p_extradata = input_extradata_info.ion[index].uaddr;
     data = (struct OMX_OTHER_EXTRADATATYPE *)p_extradata;
@@ -840,9 +838,7 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
     data->data[0] = 0;
 
 bailout:
-#ifdef USE_ION
-    venc_handle->do_cache_operations(input_extradata_info.ion[index].data_fd);
-#endif
+    sync_end_rw(input_extradata_info.ion[index].data_fd);
     return status;
 }
 
@@ -1278,9 +1274,7 @@ int venc_dev::venc_extradata_log_buffers(char *buffer_addr, int index, bool inpu
     else
         fd = output_extradata_info.ion[index].data_fd;
 
-#ifdef USE_ION
-    venc_handle->do_cache_operations(fd);
-#endif
+    sync_start_read(fd);
     if (!m_debug.extradatafile && m_debug.extradata_log) {
         int size = 0;
 
@@ -1300,9 +1294,7 @@ int venc_dev::venc_extradata_log_buffers(char *buffer_addr, int index, bool inpu
             DEBUG_PRINT_ERROR("Failed to open extradata file: %s for logging errno:%d",
                                m_debug.extradatafile_name, errno);
             m_debug.extradatafile_name[0] = '\0';
-#ifdef USE_ION
-            venc_handle->do_cache_operations(fd);
-#endif
+            sync_end_read(fd);
             return -1;
         }
     }
@@ -1315,9 +1307,7 @@ int venc_dev::venc_extradata_log_buffers(char *buffer_addr, int index, bool inpu
             fwrite(p_extra, p_extra->nSize, 1, m_debug.extradatafile);
         } while (p_extra->eType != OMX_ExtraDataNone);
     }
-#ifdef USE_ION
-    venc_handle->do_cache_operations(fd);
-#endif
+    sync_end_read(fd);
     return 0;
 }
 
@@ -1329,9 +1319,7 @@ int venc_dev::venc_input_log_buffers(OMX_BUFFERHEADERTYPE *pbuffer, int fd, int 
         return -1;
     }
 
-#ifdef USE_ION
-    venc_handle->do_cache_operations(fd);
-#endif
+    sync_start_read(fd);
     if (!m_debug.infile) {
         int size = snprintf(m_debug.infile_name, PROPERTY_VALUE_MAX, "%s/input_enc_%lu_%lu_%p.yuv",
                             m_debug.log_loc, m_sVenc_cfg.input_width, m_sVenc_cfg.input_height, this);
@@ -1423,9 +1411,7 @@ int venc_dev::venc_input_log_buffers(OMX_BUFFERHEADERTYPE *pbuffer, int fd, int 
         }
     }
 bailout:
-#ifdef USE_ION
-    venc_handle->do_cache_operations(fd);
-#endif
+    sync_end_read(fd);
     return status;
 }
 
@@ -1436,11 +1422,8 @@ bool venc_dev::venc_open(OMX_U32 codec)
     struct v4l2_control control;
     OMX_STRING device_name = (OMX_STRING)"/dev/video33";
     char property_value[PROPERTY_VALUE_MAX] = {0};
-    char platform_name[PROPERTY_VALUE_MAX] = {0};
     FILE *soc_file = NULL;
     char buffer[10];
-
-    property_get("ro.board.platform", platform_name, "0");
 
     m_nDriver_fd = open (device_name, O_RDWR);
     if ((int)m_nDriver_fd < 0) {
@@ -1560,6 +1543,13 @@ bool venc_dev::venc_open(OMX_U32 codec)
         m_sInput_buff_property.alignment  = SZ_4K;
     }
 
+    if (m_codec == OMX_VIDEO_CodingImageHEIC) {
+        if (!venc_set_grid_enable()) {
+            DEBUG_PRINT_ERROR("Failed to enable grid");
+            return false;
+        }
+    }
+
     memset(&fmt, 0, sizeof(fmt));
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     fmt.fmt.pix_mp.height = m_sVenc_cfg.dvs_height;
@@ -1586,13 +1576,6 @@ bool venc_dev::venc_open(OMX_U32 codec)
 
     ret = ioctl(m_nDriver_fd, VIDIOC_S_FMT, &fmt);
     m_sInput_buff_property.datasize=fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
-
-    if (m_codec == OMX_VIDEO_CodingImageHEIC) {
-        if (!venc_set_grid_enable()) {
-            DEBUG_PRINT_ERROR("Failed to enable grid");
-            return false;
-        }
-    }
 
     bufreq.memory = V4L2_MEMORY_USERPTR;
     bufreq.count = 2;

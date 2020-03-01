@@ -641,7 +641,6 @@ class omx_video: public qc_omx_component
         bool alloc_map_ion_memory(int size, venc_ion *ion_info,
                                  int flag);
         void free_ion_memory(struct venc_ion *buf_ion_info);
-        void do_cache_operations(int fd);
 #endif
 
         //*************************************************************

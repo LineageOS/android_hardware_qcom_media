@@ -50,6 +50,7 @@
 #include "omx_swvdec.h"
 
 #include "swvdec_api.h"
+#include "vidc_common.h"
 
 static unsigned int split_buffer_mpeg4(unsigned int         *offset_array,
                                        OMX_BUFFERHEADERTYPE *p_buffer_hdr);
@@ -4796,33 +4797,10 @@ ion_memory_free_exit:
 void omx_swvdec::ion_flush_op(unsigned int index)
 {
     if (index < m_port_op.def.nBufferCountActual)
-    {
-#ifdef USE_ION
-        struct dma_buf_sync dma_buf_sync_data[2];
-        dma_buf_sync_data[0].flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_WRITE;
-        dma_buf_sync_data[1].flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_WRITE;
-
-        for (unsigned int i=0; i<2; i++)
-        {
-            int ret = ioctl(m_buffer_array_op[index].buffer_swvdec.fd,
-                      DMA_BUF_IOCTL_SYNC, &dma_buf_sync_data[i]);
-            if (ret < 0)
-            {
-                OMX_SWVDEC_LOG_ERROR("Cache %s failed for fd %d : %s\n",
-                                  (i==0) ? "START" : "END",
-                                  m_buffer_array_op[index].buffer_swvdec.fd,
-                                  strerror(errno));
-                goto ion_flush_op_exit;
-            }
-       }
-#endif
-    }
+        cache_clean_invalidate(m_buffer_array_op[index].buffer_swvdec.fd);
     else
-    {
         OMX_SWVDEC_LOG_ERROR("buffer index '%d' invalid", index);
-    }
 
-ion_flush_op_exit:
     return;
 }
 
@@ -4842,9 +4820,17 @@ void omx_swvdec::swvdec_empty_buffer_done(SWVDEC_BUFFER *p_buffer_ip)
 {
     unsigned long index = (unsigned long) p_buffer_ip->p_client_data;
 
-    m_buffer_array_ip[index].buffer_header.nFilledLen =
-        p_buffer_ip->filled_length;
-
+    if (m_arbitrary_bytes_mode)
+    {
+        if (!m_buffer_array_ip[index].split_count)
+        {
+            m_buffer_array_ip[index].buffer_header.nFilledLen =
+                p_buffer_ip->filled_length;
+        }
+    }
+    else
+        m_buffer_array_ip[index].buffer_header.nFilledLen =
+            p_buffer_ip->filled_length;
     async_post_event(OMX_SWVDEC_EVENT_EBD,
                      (unsigned long) &m_buffer_array_ip[index].buffer_header,
                      index);
@@ -6523,7 +6509,7 @@ OMX_ERRORTYPE omx_swvdec::async_process_event_dimensions_updated()
 
 /**
  * @brief Map the memory and run the ioctl SYNC operations
- *.on ION fd with DMA_BUF_IOCTL_SYNC
+ *.on ION fd
  *.@param[in] fd: ION header.
  * @param[in] len:Lenth of the memory.
  * @retval mapped memory pointer
@@ -6532,16 +6518,8 @@ unsigned char *omx_swvdec::ion_map(int fd, int len)
 {
     unsigned char *bufaddr = (unsigned char*)mmap(NULL, len, PROT_READ|PROT_WRITE,
                                 MAP_SHARED, fd, 0);
-    if (bufaddr != MAP_FAILED) {
-#ifdef USE_ION
-        struct dma_buf_sync buf_sync;
-        buf_sync.flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_RW;
-        int rc = ioctl(fd, DMA_BUF_IOCTL_SYNC, &buf_sync);
-        if (rc) {
-            OMX_SWVDEC_LOG_ERROR("Failed DMA_BUF_IOCTL_SYNC");
-        }
-#endif
-    }
+    if (bufaddr != MAP_FAILED)
+        cache_clean_invalidate(fd);
     return bufaddr;
 }
 
@@ -6554,14 +6532,7 @@ unsigned char *omx_swvdec::ion_map(int fd, int len)
  */
 OMX_ERRORTYPE omx_swvdec::ion_unmap(int fd, void *bufaddr, int len)
 {
-#ifdef USE_ION
-    struct dma_buf_sync buf_sync;
-    buf_sync.flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_RW;
-    int rc = ioctl(fd, DMA_BUF_IOCTL_SYNC, &buf_sync);
-    if (rc) {
-        OMX_SWVDEC_LOG_ERROR("Failed DMA_BUF_IOCTL_SYNC");
-    }
-#endif
+    cache_clean_invalidate(fd);
     if (-1 == munmap(bufaddr, len)) {
         OMX_SWVDEC_LOG_ERROR("munmap failed.");
         return OMX_ErrorInsufficientResources;

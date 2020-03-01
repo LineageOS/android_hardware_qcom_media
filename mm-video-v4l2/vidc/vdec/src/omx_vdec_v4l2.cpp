@@ -1483,11 +1483,7 @@ int omx_vdec::log_input_buffers(const char *buffer_addr, int buffer_len, uint64_
     if (!m_debug.in_buffer_log)
         return 0;
 
-#ifdef USE_ION
-    do_cache_operations(fd);
-#else
-    (void)fd;
-#endif
+    sync_start_read(fd);
     if (m_debug.in_buffer_log && !m_debug.infile) {
         if(!strncmp(drv_ctx.kind,"OMX.qcom.video.decoder.mpeg2", OMX_MAX_STRINGNAME_SIZE)) {
                 snprintf(m_debug.infile_name, OMX_MAX_STRINGNAME_SIZE, "%s/input_dec_%d_%d_%p_%" PRId64 ".mpg", m_debug.log_loc,
@@ -1513,9 +1509,7 @@ int omx_vdec::log_input_buffers(const char *buffer_addr, int buffer_len, uint64_
             DEBUG_PRINT_HIGH("Failed to open input file: %s for logging (%d:%s)",
                              m_debug.infile_name, errno, strerror(errno));
             m_debug.infile_name[0] = '\0';
-#ifdef USE_ION
-            do_cache_operations(fd);
-#endif
+            sync_end_read(fd);
             return -1;
         }
         if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.vp8", OMX_MAX_STRINGNAME_SIZE) ||
@@ -1537,18 +1531,21 @@ int omx_vdec::log_input_buffers(const char *buffer_addr, int buffer_len, uint64_
         }
         fwrite(buffer_addr, buffer_len, 1, m_debug.infile);
     }
-#ifdef USE_ION
-    do_cache_operations(fd);
-#endif
+    sync_end_read(fd);
     return 0;
 }
 
 int omx_vdec::log_cc_output_buffers(OMX_BUFFERHEADERTYPE *buffer)
 {
+    vdec_bufferpayload *vdec_buf = NULL;
+    int index = 0;
     if (client_buffers.client_buffers_invalid() ||
         !m_debug.out_cc_buffer_log || !buffer || !buffer->nFilledLen)
         return 0;
 
+    index = buffer - m_out_mem_ptr;
+    vdec_buf = &drv_ctx.ptr_outputbuffer[index];
+    sync_start_read(vdec_buf->pmem_fd);
     if (m_debug.out_cc_buffer_log && !m_debug.ccoutfile) {
         snprintf(m_debug.ccoutfile_name, OMX_MAX_STRINGNAME_SIZE, "%s/output_cc_%d_%d_%p_%" PRId64 "_%d.yuv",
                 m_debug.log_loc, drv_ctx.video_resolution.frame_width, drv_ctx.video_resolution.frame_height, this,
@@ -1563,6 +1560,7 @@ int omx_vdec::log_cc_output_buffers(OMX_BUFFERHEADERTYPE *buffer)
     }
 
     fwrite(buffer->pBuffer, buffer->nFilledLen, 1, m_debug.ccoutfile);
+    sync_end_read(vdec_buf->pmem_fd);
     return 0;
 }
 
@@ -1788,10 +1786,9 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
     struct v4l2_control ctrl[2];
     int conceal_color_8bit = 0, conceal_color_10bit = 0;
 
+    property_get("ro.board.platform", m_platform_name, "0");
 #ifdef _ANDROID_
-    char platform_name[PROPERTY_VALUE_MAX];
-    property_get("ro.board.platform", platform_name, "0");
-    if (!strncmp(platform_name, "msm8610", 7)) {
+    if (!strncmp(m_platform_name, "msm8610", 7)) {
         device_name = (OMX_STRING)"/dev/video/q6_dec";
     }
 #endif
@@ -1869,6 +1866,15 @@ OMX_ERRORTYPE omx_vdec::component_init(OMX_STRING role)
         eCompressionFormat = (OMX_VIDEO_CODINGTYPE)QOMX_VIDEO_CodingHevc;
     } else if (!strncmp(drv_ctx.kind, "OMX.qcom.video.decoder.vp8",    \
                 OMX_MAX_STRINGNAME_SIZE)) {
+        char version[PROP_VALUE_MAX] = {0};
+        if (!strncmp(m_platform_name, "lito", 4))
+            if (property_get("vendor.media.target.version", version, "0") &&
+                    ((atoi(version) == 2) || (atoi(version) == 3))) {
+                //sku version, VP8 is disabled on lagoon
+                DEBUG_PRINT_ERROR("VP8 unsupported on lagoon");
+                eRet = OMX_ErrorInvalidComponentName;
+                return eRet;
+            }
         strlcpy((char *)m_cRole, "video_decoder.vp8",OMX_MAX_STRINGNAME_SIZE);
         drv_ctx.decoder_format = VDEC_CODECTYPE_VP8;
         output_capability = V4L2_PIX_FMT_VP8;
@@ -3448,7 +3454,7 @@ OMX_ERRORTYPE  omx_vdec::component_tunnel_request(OMX_IN OMX_HANDLETYPE  hComp,
 
    DESCRIPTION
    Map the memory and run the ioctl SYNC operations
-   on ION fd with DMA_BUF_IOCTL_SYNC
+   on ION fd
 
    PARAMETERS
    fd    : ION fd
@@ -3462,11 +3468,8 @@ char *omx_vdec::ion_map(int fd, int len)
 {
     char *bufaddr = (char*)mmap(NULL, len, PROT_READ|PROT_WRITE,
                                 MAP_SHARED, fd, 0);
-    if (bufaddr != MAP_FAILED) {
-#ifdef USE_ION
-    do_cache_operations(fd);
-#endif
-    }
+    if (bufaddr != MAP_FAILED)
+        cache_clean_invalidate(fd);
     return bufaddr;
 }
 
@@ -3488,11 +3491,7 @@ char *omx_vdec::ion_map(int fd, int len)
    ========================================================================== */
 OMX_ERRORTYPE omx_vdec::ion_unmap(int fd, void *bufaddr, int len)
 {
-#ifdef USE_ION
-    do_cache_operations(fd);
-#else
-    (void)fd;
-#endif
+    cache_clean_invalidate(fd);
     if (-1 == munmap(bufaddr, len)) {
         DEBUG_PRINT_ERROR("munmap failed.");
         return OMX_ErrorInsufficientResources;
@@ -6750,24 +6749,6 @@ void omx_vdec::free_ion_memory(struct vdec_ion *buf_ion_info)
     }
 }
 
-void omx_vdec::do_cache_operations(int fd)
-{
-    if (fd < 0)
-        return;
-
-    struct dma_buf_sync dma_buf_sync_data[2];
-    dma_buf_sync_data[0].flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_RW;
-    dma_buf_sync_data[1].flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_RW;
-
-    for(unsigned int i=0; i<2; i++) {
-        int rc = ioctl(fd, DMA_BUF_IOCTL_SYNC, &dma_buf_sync_data[i]);
-        if (rc < 0) {
-            DEBUG_PRINT_ERROR("Failed DMA_BUF_IOCTL_SYNC %s fd : %d", i==0?"start":"end", fd);
-            return;
-        }
-    }
-}
-
 #endif
 void omx_vdec::free_output_buffer_header(bool intermediate)
 {
@@ -8627,16 +8608,15 @@ OMX_BUFFERHEADERTYPE* omx_vdec::allocate_color_convert_buf::get_il_buf_hdr
         bool status = false;
         if (!omx->in_reconfig && !omx->output_flush_progress && bufadd->nFilledLen) {
             pthread_mutex_lock(&omx->c_lock);
-            omx->do_cache_operations(omx->drv_ctx.op_intermediate_buf_ion_info[index].data_fd);
 
             DEBUG_PRINT_INFO("C2D: Start color convertion");
+            cache_invalidate(omx->drv_ctx.ptr_outputbuffer[index].pmem_fd);
             status = c2dcc.convertC2D(
                              omx->drv_ctx.ptr_intermediate_outputbuffer[index].pmem_fd,
                              bufadd->pBuffer, bufadd->pBuffer,
                              omx->drv_ctx.ptr_outputbuffer[index].pmem_fd,
                              omx->m_out_mem_ptr[index].pBuffer,
                              omx->m_out_mem_ptr[index].pBuffer);
-            omx->do_cache_operations(omx->drv_ctx.op_intermediate_buf_ion_info[index].data_fd);
             if (!status) {
                 DEBUG_PRINT_ERROR("Failed color conversion %d", status);
                 m_out_mem_ptr_client[index].nFilledLen = 0;
