@@ -705,6 +705,8 @@ enum OMX_QCOM_EXTN_INDEXTYPE
     OMX_QTIIndexParamNativeRecorder = 0x7F100008,
 
     OMX_QTIIndexParamVideoDecoderOutputFrameRate = 0x7F100009,
+    /*"OMX.google.android.index.describeHDR10PlusInfo"*/
+    OMX_QTIIndexConfigDescribeHDR10PlusInfo = 0x7F10000a,
 };
 
 /**
