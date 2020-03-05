@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -71,11 +71,10 @@ omx_core_cb_type core[] =
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.aac", "libOmxAacDec.so", "audio_decoder.aac"),
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.multiaac", "libOmxAacDec.so", "audio_decoder.aac"),
     OMX_REGISTRY_ENTRY("OMX.qti.vdec.vpp", "libOmxVpp.so", "video_decoder.vpp"),
-#ifdef _KONA_
-    //Entries specific to kona
+#ifdef _EN_ADDTNL_CDCS_
     OMX_REGISTRY_ENTRY("OMX.qti.audio.decoder.mpegh", "libOmxMpeghDecSw.so", "audio_decoder.mpegh"),
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.encoder.mpegh", "libOmxMpeghEncSw.so", "audio_encoder.mpegh"),
-#endif //_KONA_
+#endif //_EN_ADDTNL_CDCS_
 
 #ifdef _STEPPE_
     //Entries specific to msmsteppe
