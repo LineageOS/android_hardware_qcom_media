@@ -66,11 +66,11 @@ omx_core_cb_type core[] =
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.encoder.amrnb", "libOmxAmrEnc.so", "audio_encoder.amrnb"),
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.aac", "libOmxAacDec.so", "audio_decoder.aac"),
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.multiaac", "libOmxAacDec.so", "audio_decoder.aac"),
-#ifdef _KONA_
-    //Entries specific to kona
+#ifdef AUDIO_MPEGH_ENABLED
+    //Entries specific to AUDIO_MPEGH_CODEC
     OMX_REGISTRY_ENTRY("OMX.qti.audio.decoder.mpegh", "libOmxMpeghDecSw.so", "audio_decoder.mpegh"),
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.encoder.mpegh", "libOmxMpeghEncSw.so", "audio_encoder.mpegh"),
-#endif //_KONA_
+#endif //AUDIO_MPEGH_ENABLED
 
 #ifdef _STEPPE_
     //Entries specific to msmsteppe
