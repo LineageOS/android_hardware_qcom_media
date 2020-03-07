@@ -7770,16 +7770,6 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
         buffer->pBuffer = (OMX_U8*)drv_ctx.ptr_inputbuffer[nBufferIndex].bufferaddr;
     }
 
-    /* Check if the input timestamp in seconds is greater than LONG_MAX
-       or lesser than LONG_MIN. */
-    if (buffer->nTimeStamp / 1000000 > LONG_MAX ||
-       buffer->nTimeStamp / 1000000 < LONG_MIN) {
-        /* This timestamp cannot be contained in driver timestamp field */
-        DEBUG_PRINT_ERROR("[ETB] BHdr(%p) pBuf(%p) nTS(%lld) nFL(%u) >> Invalid timestamp",
-            buffer, buffer->pBuffer, buffer->nTimeStamp, (unsigned int)buffer->nFilledLen);
-        return OMX_ErrorBadParameter;
-    }
-
     DEBUG_PRINT_LOW("[ETB] BHdr(%p) pBuf(%p) nTS(%lld) nFL(%u)",
             buffer, buffer->pBuffer, buffer->nTimeStamp, (unsigned int)buffer->nFilledLen);
     if (arbitrary_bytes) {
@@ -13053,8 +13043,13 @@ OMX_BUFFERHEADERTYPE* omx_vdec::allocate_color_convert_buf::get_il_buf_hdr()
 {
     bool status = true;
     pthread_mutex_lock(&omx->c_lock);
+     /* Whenever port mode is set to kPortModeDynamicANWBuffer, Video Frameworks
+        always uses VideoNativeMetadata and OMX recives buffer type as
+        grallocsource via storeMetaDataInBuffers_l API. The buffer_size
+        will be communicated to frameworks via IndexParamPortdefinition. */
     if (!enabled)
-        buffer_size = omx->drv_ctx.op_buf.buffer_size;
+        buffer_size = omx->dynamic_buf_mode ? sizeof(struct VideoNativeMetadata) :
+                      omx->drv_ctx.op_buf.buffer_size;
     else {
         if (!c2d.get_buffer_size(C2D_OUTPUT,buffer_size)) {
             DEBUG_PRINT_ERROR("Get buffer size failed");
@@ -13068,9 +13063,10 @@ fail_get_buffer_size:
 }
 
 OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::set_buffer_req(
-        OMX_U32 buffer_size, OMX_U32 actual_count) {
-    OMX_U32 expectedSize = enabled ? buffer_size_req : omx->drv_ctx.op_buf.buffer_size;
-
+        OMX_U32 buffer_size, OMX_U32 actual_count)
+{
+    OMX_U32 expectedSize = enabled ? buffer_size_req : omx->dynamic_buf_mode ?
+            sizeof(struct VideoDecoderOutputMetaData) : omx->drv_ctx.op_buf.buffer_size;
     if (buffer_size < expectedSize) {
         DEBUG_PRINT_ERROR("OP Requirements: Client size(%u) insufficient v/s requested(%u)",
                 buffer_size, expectedSize);
