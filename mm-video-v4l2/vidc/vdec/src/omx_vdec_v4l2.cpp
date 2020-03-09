@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010 - 2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2010 - 2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -130,14 +130,13 @@ extern "C" {
 #define MAX(x,y) (((x) > (y)) ? (x) : (y))
 
 /*
-To enable sending vp9 hdr10plus metadata via private gralloc
-handle to display, define VP9_HDR10PLUS_GRALLOC_PATH_ENABLE
-as 1. This disables sending metadata via framework.
-To enable sending vp9 hdr10plus metadata via framework, define
-VP9_HDR10PLUS_GRALLOC_PATH_ENABLE as 0. This disables sending
-metadata via gralloc handle.
+To enable sending vp9/hevc hdr10plus metadata via private gralloc
+handle to display, define HDR10PLUS_SETMETADATA_ENABLE as 1.This
+disables sending metadata via framework. To enable sending vp9/hevc
+hdr10plus metadata via framework, define HDR10PLUS_SETMETADATA_ENABLE
+as 0. This disables sending metadata via gralloc handle.
 */
-#define VP9HDR10PLUS_SETMETADATA_ENABLE 1
+#define HDR10_SETMETADATA_ENABLE 0
 
 using namespace android;
 
@@ -1081,9 +1080,10 @@ void omx_vdec::process_event_cb(void *ctxt)
                                             pThis->omx_report_error ();
                                             break;
                                         }
-#if !VP9HDR10PLUS_SETMETADATA_ENABLE
-                                        if (pThis->output_capability != V4L2_PIX_FMT_VP9)
-                                            break;
+#if !HDR10_SETMETADATA_ENABLE
+                                        if (pThis->output_capability != V4L2_PIX_FMT_VP9 &&
+                                            pThis->output_capability != V4L2_PIX_FMT_HEVC)
+                                            return;
 
                                         if (!pThis->m_cb.EventHandler) {
                                             DEBUG_PRINT_ERROR("fill_buffer_done: null event handler");
@@ -3098,7 +3098,7 @@ OMX_ERRORTYPE  omx_vdec::get_config(OMX_IN OMX_HANDLETYPE      hComp,
             print_debug_color_aspects(&(m_client_color_space.sAspects), "GetConfig Client");
             print_debug_color_aspects(&(m_internal_color_space.sAspects), "GetConfig Internal");
             get_preferred_color_aspects(params->sAspects);
-            print_debug_color_aspects(&(params->sAspects), "GetConfig");
+            print_debug_color_aspects(&(params->sAspects), "Frameworks path GetConfig Color Aspects");
 
             break;
         }
@@ -3109,7 +3109,7 @@ OMX_ERRORTYPE  omx_vdec::get_config(OMX_IN OMX_HANDLETYPE      hComp,
             print_debug_hdr_color_info(&(m_client_hdr_info.sInfo), "GetConfig Client HDR");
             print_debug_hdr_color_info(&(m_internal_hdr_info.sInfo), "GetConfig Internal HDR");
             get_preferred_hdr_info(params->sInfo);
-            print_debug_hdr_color_info(&(params->sInfo), "GetConfig HDR");
+            print_debug_hdr_color_info(&(params->sInfo), "Frameworks path GetConfig HDR");
 
             break;
         }
@@ -3118,6 +3118,7 @@ OMX_ERRORTYPE  omx_vdec::get_config(OMX_IN OMX_HANDLETYPE      hComp,
             VALIDATE_OMX_PARAM_DATA(configData, DescribeHDR10PlusInfoParams);
             DescribeHDR10PlusInfoParams *params = (DescribeHDR10PlusInfoParams *)configData;
             get_hdr10plusinfo(params);
+            print_hdr10plusinfo(params);
             break;
         }
         case OMX_IndexConfigAndroidVendorExtension:
@@ -3274,7 +3275,7 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
 
     } else if ((int)configIndex == (int)OMX_QTIIndexConfigDescribeHDR10PlusInfo) {
         VALIDATE_OMX_PARAM_DATA(configData, DescribeHDR10PlusInfoParams);
-        if (!store_hdr10plusinfo((DescribeHDR10PlusInfoParams *)configData)) {
+        if (!store_vp9_hdr10plusinfo((DescribeHDR10PlusInfoParams *)configData)) {
             DEBUG_PRINT_ERROR("Failed to set hdr10plus info");
         }
         return ret;
@@ -8134,10 +8135,14 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                             (payload_len > HDR_DYNAMIC_META_DATA_SZ)) {
                             DEBUG_PRINT_ERROR("Invalid User extradata size %u for HDR10+", data->nDataSize);
                         } else {
+#if HDR10_SETMETADATA_ENABLE
                             color_mdata.dynamicMetaDataValid = true;
                             color_mdata.dynamicMetaDataLen = payload_len;
                             memcpy(color_mdata.dynamicMetaDataPayload, userdata_payload->data, payload_len);
                             DEBUG_PRINT_HIGH("Copied %u bytes of HDR10+ extradata", payload_len);
+#else
+                            store_hevc_hdr10plusinfo(payload_len, userdata_payload);
+#endif
                         }
                     }
                     break;
@@ -8201,15 +8206,15 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                     final_color_aspects.mMatrixCoeffs = ColorAspects::MatrixBT601_6;
                 }
                 get_preferred_hdr_info(final_hdr_info);
-                convert_color_aspects_to_metadata(final_color_aspects, color_mdata);
+#if HDR10_SETMETADATA_ENABLE
                 convert_hdr_info_to_metadata(final_hdr_info, color_mdata);
-#if VP9HDR10PLUS_SETMETADATA_ENABLE
                 convert_hdr10plusinfo_to_metadata(p_buf_hdr->pMarkData, color_mdata);
                 remove_hdr10plusinfo_using_cookie(p_buf_hdr->pMarkData);
-#endif
+                convert_color_aspects_to_metadata(final_color_aspects, color_mdata);
                 print_debug_hdr_color_info_mdata(&color_mdata);
                 print_debug_hdr10plus_metadata(color_mdata);
                 setMetaData(private_handle, COLOR_METADATA, (void*)&color_mdata);
+#endif
                 set_histogram_metadata(private_handle);
         }
 
@@ -9034,7 +9039,7 @@ bool omx_vdec::prefetch_buffers(unsigned long prefetch_count,
     return rc;
 }
 
-bool omx_vdec::store_hdr10plusinfo(DescribeHDR10PlusInfoParams *hdr10plusdata)
+bool omx_vdec::store_vp9_hdr10plusinfo(DescribeHDR10PlusInfoParams *hdr10plusdata)
 {
     struct hdr10plusInfo metadata;
 
@@ -9083,6 +9088,44 @@ bool omx_vdec::store_hdr10plusinfo(DescribeHDR10PlusInfoParams *hdr10plusdata)
     return true;
 }
 
+bool omx_vdec::store_hevc_hdr10plusinfo(uint32_t payload_size,
+    msm_vidc_stream_userdata_payload *hdr10plusdata)
+{
+    struct hdr10plusInfo metadata;
+
+    if (!hdr10plusdata) {
+        DEBUG_PRINT_ERROR("hdr10plus info not present");
+        return false;
+    }
+
+    if (payload_size > MAX_HDR10PLUSINFO_SIZE ||
+            payload_size < 1) {
+        DEBUG_PRINT_ERROR("Invalid hdr10plus metadata size %u", payload_size);
+        return false;
+    }
+
+    if (output_capability != V4L2_PIX_FMT_HEVC) {
+        DEBUG_PRINT_ERROR("msm_vidc_stream_userdata_payload is not supported for %d codec",
+            output_capability);
+        return false;
+    }
+
+    memset(&metadata, 0, sizeof(struct hdr10plusInfo));
+    metadata.nParamSizeUsed = payload_size;
+    memcpy(metadata.payload, hdr10plusdata->data , payload_size);
+    metadata.is_new = true;
+    if (m_etb_count) {
+        metadata.timestamp = m_etb_timestamp + 1;
+    }
+
+    pthread_mutex_lock(&m_hdr10pluslock);
+    DEBUG_PRINT_LOW("add hevc hdr10plus info to the list with size %u", payload_size);
+    m_hdr10pluslist.push_back(metadata);
+    pthread_mutex_unlock(&m_hdr10pluslock);
+
+    return true;
+}
+
 void omx_vdec::update_hdr10plusinfo_cookie_using_timestamp(OMX_PTR markdata, OMX_TICKS timestamp)
 {
     std::list<hdr10plusInfo>::reverse_iterator iter;
@@ -9090,7 +9133,8 @@ void omx_vdec::update_hdr10plusinfo_cookie_using_timestamp(OMX_PTR markdata, OMX
     unsigned int cookie = (unsigned int)(unsigned long)markdata;
     bool is_list_empty = false;
 
-    if (output_capability != V4L2_PIX_FMT_VP9)
+    if (output_capability != V4L2_PIX_FMT_VP9 &&
+        output_capability != V4L2_PIX_FMT_HEVC)
         return;
 
     pthread_mutex_lock(&m_hdr10pluslock);
@@ -9132,7 +9176,8 @@ void omx_vdec::convert_hdr10plusinfo_to_metadata(OMX_PTR markdata, ColorMetaData
     unsigned int cookie = (unsigned int)(unsigned long)markdata;
     bool is_list_empty = false;
 
-    if (output_capability != V4L2_PIX_FMT_VP9)
+    if (output_capability != V4L2_PIX_FMT_VP9 &&
+        output_capability != V4L2_PIX_FMT_HEVC)
         return;
 
     pthread_mutex_lock(&m_hdr10pluslock);
@@ -9167,7 +9212,8 @@ void omx_vdec::remove_hdr10plusinfo_using_cookie(OMX_PTR markdata)
     unsigned int cookie = (unsigned int)(unsigned long)markdata;
     bool is_list_empty = false;
 
-    if (output_capability != V4L2_PIX_FMT_VP9)
+    if (output_capability != V4L2_PIX_FMT_VP9 &&
+        output_capability != V4L2_PIX_FMT_HEVC)
         return;
 
     pthread_mutex_lock(&m_hdr10pluslock);
@@ -9196,7 +9242,8 @@ void omx_vdec::clear_hdr10plusinfo()
 {
     bool is_list_empty = false;
 
-    if (output_capability != V4L2_PIX_FMT_VP9)
+    if (output_capability != V4L2_PIX_FMT_VP9 &&
+        output_capability != V4L2_PIX_FMT_HEVC)
         return;
 
     pthread_mutex_lock(&m_hdr10pluslock);
@@ -9218,7 +9265,8 @@ void omx_vdec::get_hdr10plusinfo(DescribeHDR10PlusInfoParams *hdr10plusdata)
     std::list<hdr10plusInfo>::iterator iter;
     bool is_list_empty = false;
 
-    if (output_capability != V4L2_PIX_FMT_VP9)
+    if (output_capability != V4L2_PIX_FMT_VP9 &&
+        output_capability != V4L2_PIX_FMT_HEVC)
         return;
 
     pthread_mutex_lock(&m_hdr10pluslock);
@@ -9245,6 +9293,17 @@ void omx_vdec::get_hdr10plusinfo(DescribeHDR10PlusInfoParams *hdr10plusdata)
         iter++;
     }
     pthread_mutex_unlock(&m_hdr10pluslock);
+}
+
+void omx_vdec::print_hdr10plusinfo(DescribeHDR10PlusInfoParams *hdr10plusdata)
+{
+         DEBUG_PRINT_LOW("HDR10+ frameworks path valid data length: %d", hdr10plusdata->nParamSizeUsed);
+        for (uint32_t i = 0 ; i < hdr10plusdata->nParamSizeUsed && i+3 < 1024; i=i+4) {
+            DEBUG_PRINT_LOW("HDR10+ mdata: %02X %02X %02X %02X", hdr10plusdata->nValue[i],
+            hdr10plusdata->nValue[i+1],
+            hdr10plusdata->nValue[i+2],
+            hdr10plusdata->nValue[i+3]);
+    }
 }
 
 void perf_metrics::start()
