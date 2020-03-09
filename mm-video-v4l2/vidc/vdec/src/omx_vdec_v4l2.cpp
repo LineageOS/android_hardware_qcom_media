@@ -1083,7 +1083,7 @@ void omx_vdec::process_event_cb(void *ctxt)
 #if !HDR10_SETMETADATA_ENABLE
                                         if (pThis->output_capability != V4L2_PIX_FMT_VP9 &&
                                             pThis->output_capability != V4L2_PIX_FMT_HEVC)
-                                            return;
+                                            break;
 
                                         if (!pThis->m_cb.EventHandler) {
                                             DEBUG_PRINT_ERROR("fill_buffer_done: null event handler");
