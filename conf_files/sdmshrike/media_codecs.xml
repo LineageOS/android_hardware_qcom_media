@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Copyright (C) 2012-2019 The Linux Foundation. All rights reserved.
-
      Not a contribution.
-
      Copyright (C) 2012-2013 The Android Open Source Project
 
      Licensed under the Apache License, Version 2.0 (the "License");
@@ -83,56 +81,91 @@ Only the three quirks included above are recognized at this point:
 -->
 
 <!--
- sdmmagpie Non-Secure decoder capabilities
- _________________________________________________________
- | Codec       | W       H       fps     Mbps    MB/s    |
- |_____________|_________________________________________|
- | h264        | 4096    2160    60      120     2073600 |
- |             | (4096)  (2304)  (30)    (120)           |
- | hevc        | 4096    2160    60      120     2073600 |
- |             | (4096)  (2304)  (30)    (120)           |
- | mpeg4-sw    | 1920    1088    30      40      244800  |
- | vp8         | 4096    2160    30      120     1036800 |
- |             | (4096)  (2304)  (24)    (120)           |
- | vp9         | 4096    2160    60      120     2073600 |
- |             | (4096)  (2304)  (30)    (120)           |
- | vc1         | 1920    1088    30      20      244800  |
- | div4/5/6-sw | 1920    1088    30      10      244800  |
- | h263-sw     | 864     480     30      16       48600   |
- | mpeg2       | 1920    1088    30      40      244800  |
- |_____________|_________________________________________|
+ Non-Secure decoder capabilities
+ (MB is defined as 16x16)
+ _____________________________________________________________________
+ | Codec       | W       H       fps     Mbps    MB/s        Max MB/s|
+ |_____________|_____________________________________________________|
+ | h264        | 1920    1088    480     220     3916800     3916800 |
+ |             | 3820    2160    120     220     3888000             |
+ |             | 4096    2160    96      220     3317760             |
+ |             | 4096    2304    60      220     2211840             |
+ |             | 7680    4320    30      220     3888000             |
+ |             | 8192    4320    24      220     3317760             |
+ | hevc        | 1920    1088    480     220     3916800     3916800 |
+ |             | 3820    2160    120     220     3888000             |
+ |             | 4096    2160    96      220     3317760             |
+ |             | 4096    2304    60      220     2211840             |
+ |             | 7680    4320    30      220     3888000             |
+ |             | 8192    4320    24      220     3317760             |
+ | mpeg4-sw    | 1920    1088    30      40      244800      244800  |
+ | vp8         | 1280    720     240     100     864000      1036800 |
+ |             | 1920    1088    120     100     979200              |
+ |             | 3840    2160    30      100     972000              |
+ |             | 4096    2160    30      100     1036800             |
+ |             | 4096    2304    24      100     884736              |
+ | vp9         | 1920    1088    480     220     3916800     3916800 |
+ |             | 3820    2160    120     220     3888000             |
+ |             | 4096    2160    96      220     3317760             |
+ |             | 4096    2304    60      220     2211840             |
+ |             | 7680    4320    30      220     3888000             |
+ |             | 8192    4320    24      220     3317760             |
+ | vc1         | 1920    1088    30      20      244800      244800  |
+ | div4/5/6-sw | 1920    1088    30      10      244800      244800  |
+ | h263-sw     | 864     480     30      16       48600       48600  |
+ | mpeg2       | 1920    1088    30      40      244800      244800  |
+ |_____________|_____________________________________________________|
 
- sdmmagpie Secure decoder capabilities
- ______________________________________________________
- | Codec    | W       H       fps     Mbps    MB/s    |
- |__________|_________________________________________|
- | h264     | 4096    2160    60      40      2073600 |
- |          | (4096)  (2304)  (30)    (40)            |
- | vp9      | 4096    2160    60      40      2073600 |
- |          | (4096)  (2304)  (30)    (40)            |
- | hevc     | 4096    2160    60      40      2073600 |
- |          | (4096)  (2304)  (30)    (40)            |
- | mpeg2    | 1920    1088    30      40      244800  |
- |__________|_________________________________________|
+ Secure decoder capabilities
+ (MB is defined as 16x16)
+ __________________________________________________________________
+ | Codec    | W       H       fps     Mbps    MB/s        Max MB/s|
+ |__________|_____________________________________________________|
+ | h264     | 1280    720     60      40      216000      2073600 |
+ |          | 1920    1088    60      40      489600              |
+ |          | 3840    2160    60      40      1944000             |
+ |          | 4096    2160    60      40      2073600             |
+ |          | 4096    2304    30      40      1105920             |
+ | hevc     | 1280    720     60      40      216000      2073600 |
+ |          | 1920    1088    60      40      489600              |
+ |          | 3840    2160    60      40      1944000             |
+ |          | 4096    2160    60      40      2073600             |
+ |          | 4096    2304    30      40      1105920             |
+ | vp9      | 1280    720     60      40      216000      2073600 |
+ |          | 1920    1088    60      40      489600              |
+ |          | 3840    2160    60      40      1944000             |
+ |          | 4096    2160    60      40      2073600             |
+ |          | 4096    2304    30      40      1105920             |
+ | mpeg2    | 1920    1088    30      40      244800      244800  |
+ |__________|_____________________________________________________|
 
- sdmmagpie Non-Secure encoder capabilities (Secure not supported)
- ______________________________________________________
- | Codec    | W       H       fps     Mbps    MB/s    |
- |__________|_________________________________________|
- | h264     | 4096    2160    60      120     2073600 |
- |          | (4096)  (2304)  (30)    (120)           |
- | hevc     | 4096    2160    60      120     2073600 |
- |          | (4096)  (2304)  (30)    (120)           |
- | mpeg4-sw | 1280     720    30      4       108000  |
- | vp8      | 4096    2160    30      120     1036800 |
- |          | (4096)  (2304)  (24)    (120)           |
- | h263-sw  | 864     480     30      2       48600   |
- |__________|_________________________________________|
+ Non-Secure encoder capabilities (Secure not supported)
+ (MB is defined as 16x16)
+ __________________________________________________________________
+ | Codec    | W       H       fps     Mbps    MB/s        Max MB/s|
+ |__________|_____________________________________________________|
+ | h264     | 1280    720     480     160     1728000     1958400 |
+ |          | 1920    1088    240     160     1958400             |
+ |          | 3840    2160    60      160     1944000             |
+ |          | 4096    2160    48      160     1658880             |
+ |          | 4096    2304    30      160     1105920             |
+ | hevc     | 1280    720     480     160     1728000     1958400 |
+ |          | 1920    1088    240     160     1958400             |
+ |          | 3840    2160    60      160     1944000             |
+ |          | 4096    2160    48      160     1658880             |
+ |          | 4096    2304    30      160     1105920             |
+ | mpeg4-sw | 1280    720     30       4      108000      108000  |
+ | vp8      | 1280    720     240     40      864000      1036800 |
+ |          | 1920    1088    120     40      979200              |
+ |          | 3840    2160    30      40      972000              |
+ |          | 4096    2160    30      40      1036800             |
+ |          | 4096    2304    24      40      884736              |
+ | h263-sw  | 864     480     30      2       48600       48600   |
+ |__________|_____________________________________________________|
 -->
 
 <MediaCodecs>
     <Include href="media_codecs_google_audio.xml" />
-    <Include href="media_codecs_vendor_audio.xml" />
     <Include href="media_codecs_google_telephony.xml" />
     <Settings>
         <Setting name="max-video-encoder-input-buffers" value="11" />
@@ -146,14 +179,15 @@ Only the three quirks included above are recognized at this point:
             <Limit name="size" min="96x96" max="4096x2304" />
             <Limit name="alignment" value="2x2" />
             <Limit name="block-size" value="16x16" />
-            <Limit name="blocks-per-second" min="24" max="2073600" />
-            <Limit name="bitrate" range="1-120000000" />
+            <Limit name="blocks-per-second" min="36" max="1958400" />
+            <Limit name="bitrate" range="1-160000000" />
             <Limit name="frame-rate" range="1-480" />
             <Limit name="concurrent-instances" max="16" />
-            <Limit name="performance-point-4096x2160" value="24" />
-            <Limit name="performance-point-3840x2160" value="30" />
-            <Limit name="performance-point-1920x1080" value="120" />
-            <Limit name="performance-point-1280x720" value="240" />
+            <Limit name="performance-point-4096x2304" value="56" />
+            <Limit name="performance-point-4096x2160" value="60" />
+            <Limit name="performance-point-3840x2160" value="60" />
+            <Limit name="performance-point-1920x1080" value="240" />
+            <Limit name="performance-point-1280x720" value="480" />
         </MediaCodec>
         <MediaCodec name="OMX.qcom.video.encoder.vp8" type="video/x-vnd.on2.vp8" >
             <Quirk name="requires-allocate-on-input-ports" />
@@ -162,12 +196,15 @@ Only the three quirks included above are recognized at this point:
             <Limit name="size" min="96x96" max="4096x2304" />
             <Limit name="alignment" value="2x2" />
             <Limit name="block-size" value="16x16" />
-            <Limit name="blocks-per-second" min="24" max="1036800" />
-            <Limit name="bitrate" range="1-120000000" />
+            <Limit name="blocks-per-second" min="36" max="1036800" />
+            <Limit name="bitrate" range="1-40000000" />
             <Limit name="frame-rate" range="1-240" />
             <Limit name="concurrent-instances" max="16" />
-            <Limit name="performance-point-1920x1080" value="60" />
-            <Limit name="performance-point-1280x720" value="120" />
+            <Limit name="performance-point-4096x2304" value="24" />
+            <Limit name="performance-point-4096x2160" value="30" />
+            <Limit name="performance-point-3840x2160" value="30" />
+            <Limit name="performance-point-1920x1080" value="120" />
+            <Limit name="performance-point-1280x720" value="240" />
         </MediaCodec>
         <MediaCodec name="OMX.qcom.video.encoder.hevc" type="video/hevc" >
             <Quirk name="requires-allocate-on-input-ports" />
@@ -176,43 +213,27 @@ Only the three quirks included above are recognized at this point:
             <Limit name="size" min="96x96" max="4096x2304" />
             <Limit name="alignment" value="2x2" />
             <Limit name="block-size" value="16x16" />
-            <Limit name="blocks-per-second" min="24" max="2073600" />
-            <Limit name="bitrate" range="1-120000000" />
+            <Limit name="blocks-per-second" min="36" max="1958400" />
+            <Limit name="bitrate" range="1-160000000" />
             <Limit name="frame-rate" range="1-480" />
             <Limit name="concurrent-instances" max="16" />
-            <Limit name="performance-point-4096x2160" value="24" />
-            <Limit name="performance-point-3840x2160" value="30" />
-            <Limit name="performance-point-1920x1080" value="120" />
-            <Limit name="performance-point-1280x720" value="240" />
             <Limit name="quality" range="0-100" default="80" />
+            <Limit name="performance-point-4096x2304" value="56" />
+            <Limit name="performance-point-4096x2160" value="60" />
+            <Limit name="performance-point-3840x2160" value="60" />
+            <Limit name="performance-point-1920x1080" value="240" />
+            <Limit name="performance-point-1280x720" value="480" />
             <Feature name="bitrate-modes" value="VBR,CBR" />
         </MediaCodec>
         <MediaCodec name="OMX.qcom.video.encoder.hevc.cq" type="video/hevc" >
             <Quirk name="requires-allocate-on-input-ports" />
-            <Quirk name="requires-allocate-on-input-ports" />
             <Quirk name="requires-allocate-on-output-ports" />
             <Quirk name="requires-loaded-to-idle-after-allocation" />
-            <Limit name="size" min="512x512" max="512x512" />
+            <Limit name="size" min="96x96" max="512x512" />
             <Limit name="frame-rate" range="1-20" />
             <Limit name="concurrent-instances" max="16" />
             <Limit name="quality" range="0-100" default="80" />
             <Limit name="performance-point-512x512" value="480" />
-            <Feature name="bitrate-modes" value="CQ" />
-        </MediaCodec>
-        <MediaCodec name="OMX.qcom.video.encoder.heic" type="image/vnd.android.heic" >
-            <Quirk name="requires-allocate-on-input-ports" />
-            <Quirk name="requires-allocate-on-input-ports" />
-            <Quirk name="requires-allocate-on-output-ports" />
-            <Quirk name="requires-loaded-to-idle-after-allocation" />
-            <Limit name="size" min="512x512" max="8192x8192" />
-            <Limit name="frame-rate" range="1-20" />
-            <Limit name="concurrent-instances" max="6" />
-            <Limit name="quality" range="0-100" default="80" />
-            <Limit name="performance-point-4096x2160" value="12" />
-            <Limit name="performance-point-1920x1080" value="40" />
-            <Limit name="performance-point-1920x1080" value="30" />
-            <Limit name="performance-point-1280x720" value="80" />
-            <Limit name="performance-point-1280x720" value="60" />
             <Feature name="bitrate-modes" value="CQ" />
         </MediaCodec>
         <!-- Video Software -->
@@ -220,10 +241,10 @@ Only the three quirks included above are recognized at this point:
             <Quirk name="requires-allocate-on-input-ports" />
             <Quirk name="requires-allocate-on-output-ports" />
             <Quirk name="requires-loaded-to-idle-after-allocation" />
-            <Limit name="size" min="32x32" max="864x480" />
+            <Limit name="size" min="96x96" max="864x480" />
             <Limit name="alignment" value="4x4" />
             <Limit name="block-size" value="16x16" />
-            <Limit name="blocks-per-second" min="1" max="48600" />
+            <Limit name="blocks-per-second" min="36" max="48600" />
             <Limit name="bitrate" range="1-2000000" />
             <Limit name="frame-rate" range="1-30" />
             <Limit name="concurrent-instances" max="16" />
@@ -233,10 +254,10 @@ Only the three quirks included above are recognized at this point:
              <Quirk name="requires-allocate-on-input-ports" />
              <Quirk name="requires-allocate-on-output-ports" />
              <Quirk name="requires-loaded-to-idle-after-allocation" />
-             <Limit name="size" min="32x32" max="1280x720" />
+             <Limit name="size" min="96x96" max="1280x720" />
              <Limit name="alignment" value="2x2" />
              <Limit name="block-size" value="16x16" />
-             <Limit name="blocks-per-second" min="1" max="108000" />
+             <Limit name="blocks-per-second" min="36" max="108000" />
              <Limit name="bitrate" range="1-4000000" />
              <Limit name="frame-rate" range="1-30" />
              <Limit name="concurrent-instances" max="16" />
@@ -248,18 +269,20 @@ Only the three quirks included above are recognized at this point:
         <MediaCodec name="OMX.qcom.video.decoder.avc" type="video/avc" >
             <Quirk name="requires-allocate-on-input-ports" />
             <Quirk name="requires-allocate-on-output-ports" />
-            <Limit name="size" min="96x96" max="4096x2304" />
+            <Limit name="size" min="96x96" max="8192x4320" />
             <Limit name="alignment" value="2x2" />
             <Limit name="block-size" value="16x16" />
-            <Limit name="blocks-per-second" min="24" max="2073600" />
-            <Limit name="bitrate" range="1-120000000" />
+            <Limit name="blocks-per-second" min="36" max="3916800" />
+            <Limit name="bitrate" range="1-220000000" />
             <Limit name="frame-rate" range="1-480" />
             <Feature name="adaptive-playback" />
             <Limit name="concurrent-instances" max="16" />
-            <Limit name="performance-point-4096x2160" value="24" />
-            <Limit name="performance-point-3840x2160" value="30" />
-            <Limit name="performance-point-1920x1088" range="120" />
-            <Limit name="performance-point-1280x720" value="240" />
+            <Limit name="performance-point-4096x2304" value="60" />
+            <Limit name="performance-point-4096x2160" value="96" />
+            <Limit name="performance-point-3840x2160" value="120" />
+            <Limit name="performance-point-1920x1088" range="480" />
+            <Limit name="performance-point-1920x1088" range="240" />
+            <Limit name="performance-point-1280x720" value="480" />
         </MediaCodec>
         <MediaCodec name="OMX.qcom.video.decoder.avc.secure" type="video/avc" >
             <Quirk name="requires-allocate-on-input-ports" />
@@ -267,15 +290,15 @@ Only the three quirks included above are recognized at this point:
             <Limit name="size" min="96x96" max="4096x2304" />
             <Limit name="alignment" value="2x2" />
             <Limit name="block-size" value="16x16" />
-            <Limit name="blocks-per-second" min="24" max="2073600" />
+            <Limit name="blocks-per-second" min="36" max="2073600" />
             <Limit name="bitrate" range="1-40000000" />
             <Limit name="frame-rate" range="1-60" />
             <Feature name="adaptive-playback" />
             <Feature name="secure-playback" required="true" />
             <Limit name="concurrent-instances" max="3" />
-            <Limit name="performance-point-4096x2160" value="24" />
-            <Limit name="performance-point-3840x2160" value="30" />
-            <Limit name="performance-point-1920x1088" value="60" />
+            <Limit name="performance-point-4096x2304" value="30" />
+            <Limit name="performance-point-4096x2160" value="60" />
+            <Limit name="performance-point-3840x2160" value="60" />
         </MediaCodec>
         <MediaCodec name="OMX.qcom.video.decoder.mpeg2" type="video/mpeg2" >
             <Quirk name="requires-allocate-on-input-ports" />
@@ -283,7 +306,7 @@ Only the three quirks included above are recognized at this point:
             <Limit name="size" min="96x96" max="1920x1088" />
             <Limit name="alignment" value="2x2" />
             <Limit name="block-size" value="16x16" />
-            <Limit name="blocks-per-second" min="24" max="244800" />
+            <Limit name="blocks-per-second" min="36" max="244800" />
             <Limit name="bitrate" range="1-40000000" />
             <Limit name="frame-rate" range="1-30" />
             <Feature name="adaptive-playback" />
@@ -296,7 +319,7 @@ Only the three quirks included above are recognized at this point:
             <Limit name="size" min="96x96" max="1920x1088" />
             <Limit name="alignment" value="2x2" />
             <Limit name="block-size" value="16x16" />
-            <Limit name="blocks-per-second" min="24" max="244800" />
+            <Limit name="blocks-per-second" min="36" max="244800" />
             <Limit name="bitrate" range="1-40000000" />
             <Limit name="frame-rate" range="1-30" />
             <Feature name="adaptive-playback" />
@@ -310,29 +333,34 @@ Only the three quirks included above are recognized at this point:
             <Limit name="size" min="96x96" max="4096x2304" />
             <Limit name="alignment" value="2x2" />
             <Limit name="block-size" value="16x16" />
-            <Limit name="blocks-per-second" min="24" max="1036800" />
-            <Limit name="bitrate" range="1-120000000" />
+            <Limit name="blocks-per-second" min="36" max="1036800" />
+            <Limit name="bitrate" range="1-100000000" />
             <Limit name="frame-rate" range="1-240" />
             <Feature name="adaptive-playback" />
             <Limit name="concurrent-instances" max="16" />
-            <Limit name="performance-point-1920x1080" value="60" />
-            <Limit name="performance-point-1280x720" value="120" />
+            <Limit name="performance-point-4096x2304" value="24" />
+            <Limit name="performance-point-4096x2160" value="30" />
+            <Limit name="performance-point-3840x2160" value="30" />
+            <Limit name="performance-point-1920x1080" value="120" />
+            <Limit name="performance-point-1280x720" value="240" />
         </MediaCodec>
         <MediaCodec name="OMX.qcom.video.decoder.vp9" type="video/x-vnd.on2.vp9" >
             <Quirk name="requires-allocate-on-input-ports" />
             <Quirk name="requires-allocate-on-output-ports" />
-            <Limit name="size" min="96x96" max="4096x2304" />
+            <Limit name="size" min="96x96" max="8192x4320" />
             <Limit name="alignment" value="2x2" />
             <Limit name="block-size" value="16x16" />
-            <Limit name="blocks-per-second" min="24" max="2073600" />
-            <Limit name="bitrate" range="1-120000000" />
+            <Limit name="blocks-per-second" min="36" max="3916800" />
+            <Limit name="bitrate" range="1-220000000" />
             <Limit name="frame-rate" range="1-480" />
             <Feature name="adaptive-playback" />
             <Limit name="concurrent-instances" max="6" />
-            <Limit name="performance-point-4096x2160" value="24" />
-            <Limit name="performance-point-3840x2160" value="30" />
-            <Limit name="performance-point-1920x1088" range="120" />
-            <Limit name="performance-point-1280x720" value="240" />
+            <Limit name="performance-point-4096x2304" value="60" />
+            <Limit name="performance-point-4096x2160" value="96" />
+            <Limit name="performance-point-3840x2160" value="120" />
+            <Limit name="performance-point-1920x1088" range="480" />
+            <Limit name="performance-point-1920x1088" range="240" />
+            <Limit name="performance-point-1280x720" value="480" />
         </MediaCodec>
         <MediaCodec name="OMX.qcom.video.decoder.vp9.secure" type="video/x-vnd.on2.vp9" >
             <Quirk name="requires-allocate-on-input-ports" />
@@ -340,31 +368,33 @@ Only the three quirks included above are recognized at this point:
             <Limit name="size" min="96x96" max="4096x2304" />
             <Limit name="alignment" value="2x2" />
             <Limit name="block-size" value="16x16" />
-            <Limit name="blocks-per-second" min="24" max="2073600" />
+            <Limit name="blocks-per-second" min="36" max="2073600" />
             <Limit name="bitrate" range="1-40000000" />
             <Limit name="frame-rate" range="1-60" />
             <Feature name="adaptive-playback" />
             <Feature name="secure-playback" required="true" />
             <Limit name="concurrent-instances" max="3" />
-            <Limit name="performance-point-4096x2160" value="24" />
-            <Limit name="performance-point-3840x2160" value="30" />
-            <Limit name="performance-point-1920x1088" value="60" />
+            <Limit name="performance-point-4096x2304" value="30" />
+            <Limit name="performance-point-4096x2160" value="60" />
+            <Limit name="performance-point-3840x2160" value="60" />
         </MediaCodec>
         <MediaCodec name="OMX.qcom.video.decoder.hevc" type="video/hevc" >
             <Quirk name="requires-allocate-on-input-ports" />
             <Quirk name="requires-allocate-on-output-ports" />
-            <Limit name="size" min="96x96" max="4096x2304" />
+            <Limit name="size" min="96x96" max="8192x4320" />
             <Limit name="alignment" value="2x2" />
             <Limit name="block-size" value="16x16" />
-            <Limit name="blocks-per-second" min="24" max="2073600" />
-            <Limit name="bitrate" range="1-120000000" />
+            <Limit name="blocks-per-second" min="36" max="3916800" />
+            <Limit name="bitrate" range="1-220000000" />
             <Limit name="frame-rate" range="1-480" />
             <Feature name="adaptive-playback" />
             <Limit name="concurrent-instances" max="16" />
-            <Limit name="performance-point-4096x2160" value="24" />
-            <Limit name="performance-point-3840x2160" value="30" />
-            <Limit name="performance-point-1920x1088" range="120" />
-            <Limit name="performance-point-1280x720" value="240" />
+            <Limit name="performance-point-4096x2304" value="60" />
+            <Limit name="performance-point-4096x2160" value="96" />
+            <Limit name="performance-point-3840x2160" value="120" />
+            <Limit name="performance-point-1920x1088" range="480" />
+            <Limit name="performance-point-1920x1088" range="240" />
+            <Limit name="performance-point-1280x720" value="480" />
         </MediaCodec>
         <MediaCodec name="OMX.qcom.video.decoder.hevc.secure" type="video/hevc" >
             <Quirk name="requires-allocate-on-input-ports" />
@@ -372,61 +402,49 @@ Only the three quirks included above are recognized at this point:
             <Limit name="size" min="96x96" max="4096x2304" />
             <Limit name="alignment" value="2x2" />
             <Limit name="block-size" value="16x16" />
-            <Limit name="blocks-per-second" min="24" max="2073600" />
+            <Limit name="blocks-per-second" min="36" max="2073600" />
             <Limit name="bitrate" range="1-40000000" />
             <Limit name="frame-rate" range="1-60" />
             <Feature name="adaptive-playback" />
             <Feature name="secure-playback" required="true" />
             <Limit name="concurrent-instances" max="3" />
-            <Limit name="performance-point-4096x2160" value="24" />
-            <Limit name="performance-point-3840x2160" value="30" />
-            <Limit name="performance-point-1920x1088" value="60" />
+            <Limit name="performance-point-4096x2304" value="30" />
+            <Limit name="performance-point-4096x2160" value="60" />
+            <Limit name="performance-point-3840x2160" value="60" />
         </MediaCodec>
         <!-- Video Software -->
         <MediaCodec name="OMX.qti.video.decoder.h263sw" type="video/3gpp" >
              <Quirk name="requires-allocate-on-input-ports" />
              <Quirk name="requires-allocate-on-output-ports" />
-             <Limit name="size" min="16x16" max="864x480" />
+             <Limit name="size" min="96x96" max="864x480" />
              <Limit name="alignment" value="4x4" />
              <Limit name="block-size" value="16x16" />
-             <Limit name="blocks-per-second" min="1" max="48600" />
+             <Limit name="blocks-per-second" min="36" max="48600" />
              <Limit name="bitrate" range="1-16000000" />
              <Limit name="frame-rate" range="1-30" />
              <Feature name="adaptive-playback" />
              <Limit name="concurrent-instances" max="16" />
              <Limit name="performance-point-720x480" value="30" />
         </MediaCodec>
-        <MediaCodec name="OMX.qti.video.decoder.mpeg4sw">
+        <MediaCodec name="OMX.qti.video.decoder.mpeg4sw" type="video/mp4v-es">
              <Quirk name="requires-allocate-on-input-ports" />
              <Quirk name="requires-allocate-on-output-ports" />
-             <Type name="video/mp4v-es">
-                <Limit name="size" min="16x16" max="1920x1088" />
-                <Limit name="alignment" value="2x2" />
-                <Limit name="block-size" value="16x16" />
-                <Limit name="blocks-per-second" min="1" max="244800" />
-                <Limit name="bitrate" range="1-40000000" />
-                <Limit name="frame-rate" range="1-30" />
-                <Limit name="concurrent-instances" max="16" />
-                <Limit name="performance-point-1920x1080" value="30" />
-             </Type>
-             <Type name="video/mp4v-esdp">
-                <Limit name="size" min="16x16" max="1920x1088" />
-                <Limit name="alignment" value="2x2" />
-                <Limit name="block-size" value="16x16" />
-                <Limit name="blocks-per-second" min="1" max="244800" />
-                <Limit name="bitrate" range="1-40000000" />
-                <Limit name="frame-rate" range="1-30" />
-                <Limit name="concurrent-instances" max="16" />
-                <Limit name="performance-point-1920x1080" value="30" />
-             </Type>
+             <Limit name="size" min="96x96" max="1920x1088" />
+             <Limit name="alignment" value="2x2" />
+             <Limit name="block-size" value="16x16" />
+             <Limit name="blocks-per-second" min="36" max="244800" />
+             <Limit name="bitrate" range="1-40000000" />
+             <Limit name="frame-rate" range="1-30" />
+             <Limit name="concurrent-instances" max="16" />
+             <Limit name="performance-point-1920x1080" value="30" />
         </MediaCodec>
         <MediaCodec name="OMX.qti.video.decoder.divxsw" type="video/divx" >
             <Quirk name="requires-allocate-on-input-ports" />
             <Quirk name="requires-allocate-on-output-ports" />
-            <Limit name="size" min="16x16" max="1920x1088" />
+            <Limit name="size" min="96x96" max="1920x1088" />
             <Limit name="alignment" value="2x2" />
             <Limit name="block-size" value="16x16" />
-            <Limit name="blocks-per-second" min="1" max="244800" />
+            <Limit name="blocks-per-second" min="36" max="244800" />
             <Limit name="frame-rate" range="1-30" />
             <Limit name="bitrate" range="1-10000000" />
             <Limit name="concurrent-instances" max="16" />
@@ -435,10 +453,10 @@ Only the three quirks included above are recognized at this point:
         <MediaCodec name="OMX.qti.video.decoder.divx4sw" type="video/divx4" >
             <Quirk name="requires-allocate-on-input-ports" />
             <Quirk name="requires-allocate-on-output-ports" />
-            <Limit name="size" min="16x16" max="1920x1088" />
+            <Limit name="size" min="96x96" max="1920x1088" />
             <Limit name="alignment" value="2x2" />
             <Limit name="block-size" value="16x16" />
-            <Limit name="blocks-per-second" min="1" max="244800" />
+            <Limit name="blocks-per-second" min="36" max="244800" />
             <Limit name="frame-rate" range="1-30" />
             <Limit name="bitrate" range="1-10000000" />
             <Limit name="concurrent-instances" max="16" />
@@ -447,17 +465,17 @@ Only the three quirks included above are recognized at this point:
         <MediaCodec name="OMX.qti.video.decoder.vc1sw" type="video/x-ms-wmv" >
             <Quirk name="requires-allocate-on-input-ports" />
             <Quirk name="requires-allocate-on-output-ports" />
-            <Limit name="size" min="64x64" max="1920x1088" />
+            <Limit name="size" min="96x96" max="1920x1088" />
             <Limit name="alignment" value="2x2" />
             <Limit name="block-size" value="16x16" />
-            <Limit name="blocks-per-second" min="1" max="244800" />
+            <Limit name="blocks-per-second" min="36" max="244800" />
             <Limit name="bitrate" range="1-20000000" />
             <Limit name="frame-rate" range="1-30" />
             <Feature name="adaptive-playback" />
             <Limit name="concurrent-instances" max="16" />
             <Limit name="performance-point-1920x1080" value="30" />
         </MediaCodec>
-        <!-- Audio Software  -->
+        <MediaCodec name="OMX.google.opus.decoder" type="audio/opus" update="true" rank="100"/>
     </Decoders>
     <Include href="media_codecs_google_video.xml" />
 </MediaCodecs>
