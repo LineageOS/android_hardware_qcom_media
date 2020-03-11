@@ -78,6 +78,7 @@ pl_map profile_level_converter::profile_mpeg2_v4l2_to_omx ({});
 pl_map profile_level_converter::profile_vp9_omx_to_v4l2 ({
             {OMX_VIDEO_VP9Profile0, V4L2_MPEG_VIDC_VIDEO_VP9_PROFILE_P0},
             {OMX_VIDEO_VP9Profile2HDR, V4L2_MPEG_VIDC_VIDEO_VP9_PROFILE_P2_10},
+            {OMX_VIDEO_VP9Profile2HDR10Plus, V4L2_MPEG_VIDC_VIDEO_VP9_PROFILE_P2_10},
         });
 
 pl_map profile_level_converter::profile_vp9_v4l2_to_omx ({});
