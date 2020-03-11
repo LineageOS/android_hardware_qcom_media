@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -65,7 +65,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <linux/videodev2.h>
 #include <dlfcn.h>
 #include "C2DColorConverter.h"
-#include "vidc_debug.h"
 #include <vector>
 #include "vidc_vendor_extensions.h"
 
@@ -79,6 +78,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #undef LOG_TAG
 #define LOG_TAG "OMX-VENC"
+#include "vidc_debug.h"
 
 #ifdef _ANDROID_
 using namespace android;
