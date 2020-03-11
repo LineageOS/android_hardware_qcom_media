@@ -474,6 +474,7 @@ class venc_dev
         bool venc_set_cvp_skipratio_controls();
         bool venc_superframe_enable(private_handle_t *handle);
         void venc_set_quality_boost(OMX_BOOL c2d_enable);
+        bool reconfigure_avc_param(OMX_VIDEO_PARAM_AVCTYPE *param);
 
         OMX_U32 pmem_free();
         OMX_U32 pmem_allocate(OMX_U32 size, OMX_U32 alignment, OMX_U32 count);

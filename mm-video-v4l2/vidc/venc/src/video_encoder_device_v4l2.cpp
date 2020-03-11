@@ -3868,6 +3868,41 @@ bool venc_dev::venc_set_priority(OMX_U32 priority) {
     return true;
 }
 
+bool venc_dev::reconfigure_avc_param(OMX_VIDEO_PARAM_AVCTYPE *param) {
+    param->eProfile = (OMX_VIDEO_AVCPROFILETYPE)QOMX_VIDEO_AVCProfileMain;
+
+    DEBUG_PRINT_LOW("reconfigure_avc_param");
+
+    if (!venc_set_profile (param->eProfile)) {
+        DEBUG_PRINT_ERROR("ERROR: Unsuccessful in updating Profile %d",
+            param->eProfile);
+        return false;
+    }
+    if (set_nP_frames(param->nPFrames) == false ||
+        (param->nBFrames && set_nB_frames(param->nBFrames) == false)) {
+            DEBUG_PRINT_ERROR("ERROR: Request for setting intra period failed");
+            return false;
+    }
+    if (!venc_set_entropy_config (param->bEntropyCodingCABAC, param->nCabacInitIdc)) {
+        DEBUG_PRINT_ERROR("ERROR: Request for setting Entropy failed");
+        return false;
+    }
+    if (!venc_set_inloop_filter (param->eLoopFilterMode)) {
+        DEBUG_PRINT_ERROR("ERROR: Request for setting Inloop filter failed");
+        return false;
+    }
+    if (!venc_set_multislice_cfg(V4L2_MPEG_VIDEO_MULTI_SICE_MODE_MAX_MB, param->nSliceHeaderSpacing)) {
+        DEBUG_PRINT_ERROR("WARNING: Unsuccessful in updating slice_config");
+        return false;
+    }
+    if (!venc_h264_transform_8x8(param->bDirect8x8Inference)) {
+        DEBUG_PRINT_ERROR("WARNING: Request for setting Transform8x8 failed");
+        return false;
+    }
+
+    return true;
+}
+
 bool venc_dev::venc_set_operatingrate(OMX_U32 rate) {
     struct v4l2_control control;
 
@@ -3879,6 +3914,16 @@ bool venc_dev::venc_set_operatingrate(OMX_U32 rate) {
 
     DEBUG_PRINT_LOW("venc_set_operating_rate: %u fps", rate >> 16);
     DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%u", control.id, control.value);
+
+    if (!strncmp(venc_handle->m_platform, "bengal", 6) &&
+        (rate >> 16) > 30 && m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264 &&
+        venc_handle->m_sParamAVC.eProfile ==
+            (OMX_VIDEO_AVCPROFILETYPE)QOMX_VIDEO_AVCProfileHigh &&
+        (m_sVenc_cfg.input_width * m_sVenc_cfg.input_height >= 1920 * 1080)) {
+        if (!reconfigure_avc_param(&venc_handle->m_sParamAVC)) {
+            DEBUG_PRINT_ERROR("reconfigure avc param fails");
+        }
+    }
 
     if(ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
         hw_overload = errno == EBUSY;
