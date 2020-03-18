@@ -1,3 +1,4 @@
+
 CONFIG_PATH := hardware/qcom/media/conf_files/kona
 #Bring all FEATURE FLAG (Compilation) here
 
@@ -32,7 +33,7 @@ else
   PRODUCT_PROPERTY_OVERRIDES += debug.stagefright.omx_default_rank.sw-audio=1
   PRODUCT_PROPERTY_OVERRIDES += debug.stagefright.omx_default_rank=0
   PRODUCT_COPY_FILES += \
-    $(CONFIG_PATH)/media_profiles.xml:$(TARGET_COPY_OUT_ODM)/etc/media_profiles_V1_0.xml
+    device/qcom/common/media/media_profiles.xml:$(TARGET_COPY_OUT_ODM)/etc/media_profiles_V1_0.xml
 endif
 
 # Produce packages addition
