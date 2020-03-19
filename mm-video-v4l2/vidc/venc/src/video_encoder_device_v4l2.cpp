@@ -5849,7 +5849,7 @@ bool venc_dev::venc_set_intra_refresh(OMX_VIDEO_INTRAREFRESHTYPE ir_mode, OMX_U3
         control_mode.value = V4L2_CID_MPEG_VIDC_VIDEO_INTRA_REFRESH_CYCLIC_ADAPTIVE;
     } else if ((ir_mode == OMX_VIDEO_IntraRefreshRandom) &&
             (irMBs < ((m_sVenc_cfg.dvs_width * m_sVenc_cfg.dvs_height)>>8))) {
-        control_mode.value = V4L2_CID_MPEG_VIDC_VIDEO_INTRA_REFRESH_RANDOM;
+        control_mode.value = V4L2_CID_MPEG_VIDC_VIDEO_INTRA_REFRESH_RANDOMMODE;
         control_mbs.id = V4L2_CID_MPEG_VIDC_VIDEO_AIR_MBS;
         control_mbs.value = irMBs;
     } else {
