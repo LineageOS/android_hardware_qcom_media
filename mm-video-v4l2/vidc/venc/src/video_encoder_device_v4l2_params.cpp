@@ -387,6 +387,12 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                     case ColorAspects::TransferSRGB:
                         transfer_chars = MSM_VIDC_TRANSFER_SRGB;
                         break;
+                    case ColorAspects::TransferST2084:
+                        transfer_chars = MSM_VIDC_TRANSFER_SMPTE_ST2084;
+                        break;
+                    case ColorAspects::TransferHLG:
+                        transfer_chars = MSM_VIDC_TRANSFER_HLG;
+                        break;
                     default:
                         //params->sAspects.mTransfer = ColorAspects::TransferSMPTE170M;
                         transfer_chars = MSM_VIDC_TRANSFER_601_6_625;
