@@ -44,7 +44,9 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "media/msm_vidc_utils.h"
 #include <poll.h>
 #include <list>
+#ifndef USE_GBM
 #include <qdMetaData.h>
+#endif
 #include "color_metadata.h"
 
 #define TIMEOUT 5*60*1000
@@ -469,10 +471,10 @@ class venc_dev
         bool venc_set_grid_enable();
         bool venc_set_extradata_hdr10metadata(OMX_U32 omx_profile);
         bool venc_store_dynamic_config(OMX_INDEXTYPE type, OMX_PTR config);
-        bool venc_cvp_enable(private_handle_t *handle);
-        bool venc_get_cvp_metadata(private_handle_t *handle, struct v4l2_buffer *buf);
+        bool venc_cvp_enable(void *hdl);
+        bool venc_get_cvp_metadata(void *hdl, struct v4l2_buffer *buf);
         bool venc_set_cvp_skipratio_controls();
-        bool venc_superframe_enable(private_handle_t *handle);
+        bool venc_superframe_enable(void *handle);
         void venc_set_quality_boost(OMX_BOOL c2d_enable);
         bool reconfigure_avc_param(OMX_VIDEO_PARAM_AVCTYPE *param);
 

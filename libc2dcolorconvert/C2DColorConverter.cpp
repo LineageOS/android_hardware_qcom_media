@@ -161,8 +161,13 @@ bool C2DColorConverter::isPropChanged(size_t srcWidth, size_t srcHeight, size_t 
             mSrcFormat != srcFormat  ||
             mDstFormat != dstFormat  ||
             mSrcStride != srcStride  ||
+#ifdef USE_GBM
+            (mFlags & GBM_BO_USAGE_UBWC_ALIGNED_QTI)  !=
+                      (flags  & GBM_BO_USAGE_UBWC_ALIGNED_QTI));
+#else
             (mFlags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED)  !=
                       (flags  & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED));
+#endif
 }
 
 bool C2DColorConverter::setResolution(size_t srcWidth, size_t srcHeight,
@@ -411,7 +416,11 @@ int32_t C2DColorConverter::getDummySurfaceDef(ColorConvertFormat format,
         (*surfaceYUVDef)->phys2 = NULL;
         (*surfaceYUVDef)->plane2 = NULL;
 
+#ifdef USE_GBM
+        if (mFlags & GBM_METADATA_COLOR_SPACE_ITU_R_601_FR) {
+#else
         if (mFlags & private_handle_t::PRIV_FLAGS_ITU_R_601_FR) {
+#endif
             (*surfaceYUVDef)->format |= C2D_FORMAT_BT601_FULLRANGE;
         }
 
@@ -440,8 +449,12 @@ int32_t C2DColorConverter::getDummySurfaceDef(ColorConvertFormat format,
         }
         (*surfaceRGBDef)->format = getC2DFormat(format, isSource);
 
+#ifdef USE_GBM
+        if (mFlags & GBM_BO_USAGE_UBWC_ALIGNED_QTI)
+#else
         if (mFlags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED ||
             mFlags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED_PI)
+#endif
             (*surfaceRGBDef)->format |= C2D_FORMAT_UBWC_COMPRESSED;
         (*surfaceRGBDef)->width = width;
         (*surfaceRGBDef)->height = height;

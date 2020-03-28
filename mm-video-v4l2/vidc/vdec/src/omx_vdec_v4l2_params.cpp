@@ -39,6 +39,9 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //                             Include Files
 //////////////////////////////////////////////////////////////////////////////
 
+#ifdef _USE_GLIB_
+#include <glib.h>
+#endif
 #include "omx_vdec.h"
 
 #define BUFFER_LOG_LOC "/data/vendor/media"
@@ -274,10 +277,18 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                         if (nativeBuffersUsage->nPortIndex == OMX_CORE_OUTPUT_PORT_INDEX) {
 
                                             if (secure_mode) {
+#ifdef USE_GBM
+                                                nativeBuffersUsage->nUsage = (GBM_BO_ALLOC_SECURE_HEAP_QTI | GBM_BO_USAGE_PROTECTED_QTI |                                                                                                                                                                           GBM_BO_USAGE_UNCACHED_QTI);
+#else
                                                 nativeBuffersUsage->nUsage = (GRALLOC_USAGE_PRIVATE_MM_HEAP | GRALLOC_USAGE_PROTECTED |
                                                         GRALLOC_USAGE_PRIVATE_UNCACHED);
+#endif
                                             } else {
+#ifdef USE_GBM
+                                                nativeBuffersUsage->nUsage = GBM_BO_USAGE_UNCACHED_QTI;
+#else
                                                 nativeBuffersUsage->nUsage = GRALLOC_USAGE_PRIVATE_UNCACHED;
+#endif
                                             }
                                         } else {
                                             DEBUG_PRINT_HIGH("get_parameter: OMX_GoogleAndroidIndexGetAndroidNativeBufferUsage failed!");
@@ -1016,11 +1027,13 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
 #endif
                                        }
                                        break;
+#if (defined (_ANDROID_HONEYCOMB_) || defined (_ANDROID_ICS_)) && !defined(USE_GBM)
         case OMX_GoogleAndroidIndexUseAndroidNativeBuffer: {
                                        VALIDATE_OMX_PARAM_DATA(paramData, UseAndroidNativeBufferParams);
                                        eRet = use_android_native_buffer(hComp, paramData);
                                    }
                                    break;
+#endif
 #if ALLOCATE_OUTPUT_NATIVEHANDLE
         case OMX_GoogleAndroidIndexAllocateNativeHandle: {
 

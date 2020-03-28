@@ -41,7 +41,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define __STDC_FORMAT_MACROS //enables the format specifiers in inttypes.h
 #include <inttypes.h>
 #include <string.h>
+#ifndef USE_GBM
 #include <qdMetaData.h>
+#endif
 #include "omx_video_base.h"
 #include <stdlib.h>
 #include <errno.h>
@@ -51,8 +53,14 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sys/ioctl.h>
 #ifdef _ANDROID_ICS_
 #include <media/hardware/HardwareAPI.h>
+#ifdef USE_GBM
+#include <gbm.h>
+#include <gbm_priv.h>
+#else
 #include <gralloc_priv.h>
 #endif
+#endif
+
 #ifdef _USE_GLIB_
 #include <glib.h>
 #define strlcpy g_strlcpy
@@ -95,13 +103,23 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifdef SLAVE_SIDE_CP
 #define MEM_HEAP_ID ION_CP_MM_HEAP_ID
 #define SECURE_ALIGN SZ_1M
+#ifdef USE_GBM
+#define SECURE_FLAGS_INPUT_BUFFER GBM_BO_USAGE_PROTECTED_QTI
+#define SECURE_FLAGS_OUTPUT_BUFFER GBM_BO_USAGE_PROTECTED_QTI
+#elif defined(USE_ION)
 #define SECURE_FLAGS_INPUT_BUFFER ION_FLAG_SECURE
 #define SECURE_FLAGS_OUTPUT_BUFFER ION_FLAG_SECURE
+#endif
 #else //MASTER_SIDE_CP
 #define MEM_HEAP_ID ION_SECURE_HEAP_ID
 #define SECURE_ALIGN SZ_4K
+#ifdef USE_GBM
+#define SECURE_FLAGS_INPUT_BUFFER GBM_BO_USAGE_PROTECTED_QTI //| GBM_BO_ALLOC_SECURE_BITSTREAM_QTI
+#define SECURE_FLAGS_OUTPUT_BUFFER GBM_BO_USAGE_PROTECTED_QTI | GBM_BO_ALLOC_SECURE_HEAP_QTI
+#elif defined(USE_ION)
 #define SECURE_FLAGS_INPUT_BUFFER (ION_FLAG_SECURE | ION_FLAG_CP_PIXEL)
 #define SECURE_FLAGS_OUTPUT_BUFFER (ION_FLAG_SECURE | ION_FLAG_CP_BITSTREAM)
+#endif
 #endif
 
 // Gralloc flag to indicate UBWC
@@ -290,9 +308,15 @@ omx_video::omx_video():
 
     mMapPixelFormat2Converter.insert({
             {HAL_PIXEL_FORMAT_RGBA_8888, RGBA8888},
+#ifdef USE_GBM
+            {GBM_FORMAT_YCbCr_420_SP_VENUS_UBWC, NV12_UBWC},
+            {GBM_FORMAT_NV12_ENCODEABLE, NV12_128m},
+            {GBM_FORMAT_YCbCr_420_SP_VENUS, NV12_128m},
+#else
             {HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC, NV12_UBWC},
             {HAL_PIXEL_FORMAT_NV12_ENCODEABLE, NV12_128m},
             {HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS, NV12_128m},
+#endif
                 });
 
     pthread_mutex_init(&m_lock, NULL);
@@ -311,6 +335,9 @@ omx_video::omx_video():
     profile_mode = !!atoi(property_value);
 #endif
 
+#ifdef USE_GBM
+    gbm_card_fd = -1;
+#endif
     pthread_mutex_init(&m_buf_lock, NULL);
 }
 
@@ -344,6 +371,11 @@ omx_video::~omx_video()
         DEBUG_PRINT_HIGH("Input frame rate = %f",
             ((profile_frame_count - 1) * 1e6) / (profile_last_time - profile_start_time));
     }
+#ifdef USE_GBM
+    if (gbm_card_fd >= 0 ) {
+        close(gbm_card_fd);
+    }
+#endif
     DEBUG_PRINT_HIGH("omx_video: Destructor exit");
     DEBUG_PRINT_HIGH("Exiting OMX Video Encoder ...");
 }
@@ -1541,8 +1573,12 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     }
 
                     if (secure_session || allocate_native_handle) {
+#ifdef USE_GBM
+                        portDefn->nBufferSize = sizeof(struct gbm_bo);
+#else
                         portDefn->nBufferSize =
                                 sizeof(native_handle_t) + (sizeof(int) * (1/*numFds*/ + 3/*numInts*/));
+#endif
                     }
                 } else if (portDefn->nPortIndex == (OMX_U32) PORT_INDEX_EXTRADATA_OUT) {
                     portDefn->nBufferSize = m_client_out_extradata_info.getSize();
@@ -2541,7 +2577,13 @@ OMX_ERRORTYPE  omx_video::use_input_buffer(
             DEBUG_PRINT_ERROR("ERROR: calloc() Failed for m_pInput_pmem");
             return OMX_ErrorInsufficientResources;
         }
-#ifdef USE_ION
+#ifdef USE_GBM
+        m_pInput_gbm = (struct venc_gbm *) calloc(sizeof (struct venc_gbm), m_sInPortDef.nBufferCountActual);
+        if (m_pInput_gbm == NULL) {
+            DEBUG_PRINT_ERROR("ERROR: calloc() Failed for m_pInput_gbm");
+            return OMX_ErrorInsufficientResources;
+        }
+#elif USE_ION
         m_pInput_ion = (struct venc_ion *) calloc(sizeof (struct venc_ion), m_sInPortDef.nBufferCountActual);
         if (m_pInput_ion == NULL) {
             DEBUG_PRINT_ERROR("ERROR: calloc() Failed for m_pInput_ion");
@@ -2551,7 +2593,10 @@ OMX_ERRORTYPE  omx_video::use_input_buffer(
 
         for (i=0; i< m_sInPortDef.nBufferCountActual; i++) {
             m_pInput_pmem[i].fd = -1;
-#ifdef USE_ION
+#ifdef USE_GBM
+            m_pInput_gbm[i].bo_fd = -1;
+            m_pInput_gbm[i].meta_fd = -1;
+#elif defined(USE_ION)
             m_pInput_ion[i].data_fd =-1;
             m_pInput_ion[i].dev_fd =-1;
 #endif
@@ -2579,7 +2624,17 @@ OMX_ERRORTYPE  omx_video::use_input_buffer(
         (*bufferHdr)->nInputPortIndex   = PORT_INDEX_IN;
 
         if (!m_use_input_pmem) {
-#ifdef USE_ION
+#ifdef USE_GBM
+            bool status = alloc_map_gbm_memory(m_sInPortDef.format.video.nFrameWidth,
+                                               m_sInPortDef.format.video.nFrameHeight,
+                                               &m_pInput_gbm[i],
+                                               secure_session ? SECURE_FLAGS_INPUT_BUFFER : 0);
+            if (status == false) {
+                DEBUG_PRINT_ERROR("ERROR:alloc_map_gbm_memory Failed");
+                return OMX_ErrorInsufficientResources;
+            }
+            m_pInput_pmem[i].fd = m_pInput_gbm[i].bo_fd;
+#elif defined(USE_ION)
             bool status = alloc_map_ion_memory(m_sInPortDef.nBufferSize,
                     &m_pInput_ion[i],
                     secure_session ? SECURE_FLAGS_INPUT_BUFFER : 0);
@@ -2600,7 +2655,9 @@ OMX_ERRORTYPE  omx_video::use_input_buffer(
                 if (m_pInput_pmem[i].buffer == MAP_FAILED) {
                     DEBUG_PRINT_ERROR("ERROR: mmap() Failed");
                     m_pInput_pmem[i].buffer = NULL;
-#ifdef USE_ION
+#ifdef USE_GBM
+                    free_gbm_memory(&m_pInput_gbm[i]);
+#elif defined(USE_ION)
                     free_ion_memory(&m_pInput_ion[i]);
 #endif
                     return OMX_ErrorInsufficientResources;
@@ -3100,14 +3157,16 @@ OMX_ERRORTYPE omx_video::free_input_buffer(OMX_BUFFERHEADERTYPE *bufferHdr)
         if (m_pInput_pmem[index].fd > 0 && input_use_buffer == false) {
             DEBUG_PRINT_LOW("FreeBuffer:: i/p AllocateBuffer case");
             if(!secure_session) {
-                ion_unmap(m_pInput_ion[index].data_fd,
+                ion_unmap(m_pInput_pmem[index].fd,
                           m_pInput_pmem[index].buffer,
                           m_pInput_pmem[index].size);
             } else {
                 free(m_pInput_pmem[index].buffer);
             }
             m_pInput_pmem[index].buffer = NULL;
-#ifdef USE_ION
+#ifdef USE_GBM
+            free_gbm_memory(&m_pInput_gbm[index]);
+#elif defined(USE_ION)
             free_ion_memory(&m_pInput_ion[index]);
 #endif
             m_pInput_pmem[index].fd = -1;
@@ -3123,7 +3182,9 @@ OMX_ERRORTYPE omx_video::free_input_buffer(OMX_BUFFERHEADERTYPE *bufferHdr)
                           m_pInput_pmem[index].size);
                 m_pInput_pmem[index].buffer = NULL;
             }
-#ifdef USE_ION
+#ifdef USE_GBM
+            free_gbm_memory(&m_pInput_gbm[index]);
+#elif defined(USE_ION)
             free_ion_memory(&m_pInput_ion[index]);
 #endif
             m_pInput_pmem[index].fd = -1;
@@ -3161,15 +3222,25 @@ OMX_ERRORTYPE omx_video::free_output_buffer(OMX_BUFFERHEADERTYPE *bufferHdr)
                           m_pOutput_pmem[index].buffer,
                           m_pOutput_pmem[index].size);
             } else if (m_pOutput_pmem[index].buffer) {
+#ifdef USE_GBM
+                struct gbm_bo *handle;
+#else
                 native_handle_t *handle;
+#endif
                 if (allocate_native_handle) {
+#ifdef USE_GBM
+                    handle = (struct gbm_bo*)m_pOutput_pmem[index].buffer;
+#else
                     handle = (native_handle_t *)m_pOutput_pmem[index].buffer;
+#endif
                 } else {
                     handle = ((output_metabuffer *)m_pOutput_pmem[index].buffer)->nh;
                     free(m_pOutput_pmem[index].buffer);
                 }
+#ifndef USE_GBM
                 native_handle_close(handle);
                 native_handle_delete(handle);
+#endif
             }
 #ifdef USE_ION
             free_ion_memory(&m_pOutput_ion[index]);
@@ -3304,7 +3375,13 @@ OMX_ERRORTYPE  omx_video::allocate_input_buffer(
             DEBUG_PRINT_ERROR("ERROR: calloc() Failed for m_pInput_pmem");
             return OMX_ErrorInsufficientResources;
         }
-#ifdef USE_ION
+#ifdef USE_GBM
+        m_pInput_gbm = (struct venc_gbm *) calloc(sizeof (struct venc_gbm), m_sInPortDef.nBufferCountActual);
+        if (m_pInput_gbm == NULL) {
+            DEBUG_PRINT_ERROR("ERROR: calloc() Failed for m_pInput_gbm");
+            return OMX_ErrorInsufficientResources;
+        }
+#elif defined(USE_ION)
         m_pInput_ion = (struct venc_ion *) calloc(sizeof (struct venc_ion), m_sInPortDef.nBufferCountActual);
         if (m_pInput_ion == NULL) {
             DEBUG_PRINT_ERROR("ERROR: calloc() Failed for m_pInput_ion");
@@ -3313,7 +3390,10 @@ OMX_ERRORTYPE  omx_video::allocate_input_buffer(
 #endif
         for (i=0; i< m_sInPortDef.nBufferCountActual; i++) {
             m_pInput_pmem[i].fd = -1;
-#ifdef USE_ION
+#ifdef USE_GBM
+            m_pInput_gbm[i].bo_fd = -1;
+            m_pInput_gbm[i].meta_fd = -1;
+#elif defined(USE_ION)
             m_pInput_ion[i].data_fd = -1;
             m_pInput_ion[i].dev_fd = -1;
 #endif
@@ -3336,7 +3416,17 @@ OMX_ERRORTYPE  omx_video::allocate_input_buffer(
         // make fd available to app layer, help with testing
         (*bufferHdr)->pInputPortPrivate = (OMX_PTR)&m_pInput_pmem[i];
 
-#ifdef USE_ION
+#ifdef USE_GBM
+            bool status = alloc_map_gbm_memory(m_sInPortDef.format.video.nFrameWidth,
+                                               m_sInPortDef.format.video.nFrameHeight,
+                                               &m_pInput_gbm[i],
+                                               secure_session ? SECURE_FLAGS_INPUT_BUFFER : 0);
+            if (status == false) {
+                DEBUG_PRINT_ERROR("ERROR:alloc_map_gbm_memory Failed");
+                return OMX_ErrorInsufficientResources;
+            }
+            m_pInput_pmem[i].fd = m_pInput_gbm[i].bo_fd;
+#elif defined(USE_ION)
         // No use case where caching encoder makes sense
         bool status = alloc_map_ion_memory(m_sInPortDef.nBufferSize,
                 &m_pInput_ion[i],
@@ -3357,7 +3447,9 @@ OMX_ERRORTYPE  omx_video::allocate_input_buffer(
             if (m_pInput_pmem[i].buffer == MAP_FAILED) {
                 DEBUG_PRINT_ERROR("ERROR: mmap FAILED= %d", errno);
                 m_pInput_pmem[i].buffer = NULL;
-#ifdef USE_ION
+#ifdef USE_GBM
+                free_gbm_memory(&m_pInput_gbm[i]);
+#elif defined(USE_ION)
                 free_ion_memory(&m_pInput_ion[i]);
 #endif
                 return OMX_ErrorInsufficientResources;
@@ -3365,12 +3457,12 @@ OMX_ERRORTYPE  omx_video::allocate_input_buffer(
         } else {
             //This should only be used for passing reference to source type and
             //secure handle fd struct native_handle_t*
-            m_pInput_pmem[i].buffer = malloc(sizeof(OMX_U32) + sizeof(native_handle_t*));
+            m_pInput_pmem[i].buffer = malloc(sizeof(OMX_U32) + sizeof(buffer_handle_t));
             if (m_pInput_pmem[i].buffer == NULL) {
                 DEBUG_PRINT_ERROR("%s: failed to allocate native-handle", __func__);
                 return OMX_ErrorInsufficientResources;
             }
-            (*bufferHdr)->nAllocLen = sizeof(OMX_U32) + sizeof(native_handle_t*);
+            (*bufferHdr)->nAllocLen = sizeof(OMX_U32) + sizeof(buffer_handle_t);
         }
 
         (*bufferHdr)->pBuffer           = (OMX_U8 *)m_pInput_pmem[i].buffer;
@@ -3517,6 +3609,22 @@ OMX_ERRORTYPE  omx_video::allocate_output_buffer(
                 //This should only be used for passing reference to source type and
                 //secure handle fd struct native_handle_t*
                 if (allocate_native_handle) {
+#ifdef USE_GBM
+                    struct gbm_device *gbm = gbm_create_device(gbm_card_fd);
+                    if (gbm == NULL) {
+                        DEBUG_PRINT_ERROR("create gbm device failed");
+                        return OMX_ErrorInsufficientResources;
+                    }
+                    gbm_import_fd_data buffer_info = {0,0,0,0};
+                    buffer_info.fd = m_pOutput_pmem[i].fd;
+                    struct gbm_bo *bo = gbm_bo_import(gbm, GBM_BO_IMPORT_FD, &buffer_info,
+                            secure_session ? SECURE_FLAGS_INPUT_BUFFER : 0);
+                    if (gbm == NULL) {
+                        DEBUG_PRINT_ERROR("create gbm device failed");
+                        return OMX_ErrorInsufficientResources;
+                    }
+                    struct gbm_bo *nh = bo;
+#else
                     native_handle_t *nh = native_handle_create(1 /*numFds*/, 3 /*numInts*/);
                     if (!nh) {
                         DEBUG_PRINT_ERROR("Native handle create failed");
@@ -3526,8 +3634,34 @@ OMX_ERRORTYPE  omx_video::allocate_output_buffer(
                     nh->data[1] = 0;
                     nh->data[2] = 0;
                     nh->data[3] = ALIGN(m_sOutPortDef.nBufferSize, 4096);
+#endif
                     m_pOutput_pmem[i].buffer = (OMX_U8 *)nh;
                 } else {
+#ifdef USE_GBM
+                    struct gbm_device *gbm = gbm_create_device(gbm_card_fd);
+                    if (gbm == NULL) {
+                        DEBUG_PRINT_ERROR("create gbm device failed");
+                        return OMX_ErrorInsufficientResources;
+                    }
+                    gbm_import_fd_data buffer_info = {0,0,0,0};
+                    buffer_info.fd = m_pOutput_pmem[i].fd;
+                    struct gbm_bo *bo = gbm_bo_import(gbm, GBM_BO_IMPORT_FD, &buffer_info,
+                            secure_session ? SECURE_FLAGS_INPUT_BUFFER : 0);
+                    if (gbm == NULL) {
+                        DEBUG_PRINT_ERROR("create gbm device failed");
+                        return OMX_ErrorInsufficientResources;
+                    }
+
+                    m_pOutput_pmem[i].buffer = malloc(sizeof(output_metabuffer));
+                    if (m_pOutput_pmem[i].buffer == NULL) {
+                        DEBUG_PRINT_ERROR("%s: Failed to allocate meta buffer", __func__);
+                        return OMX_ErrorInsufficientResources;
+                    }
+                    (*bufferHdr)->nAllocLen = sizeof(output_metabuffer);
+                    output_metabuffer *buffer = (output_metabuffer*) m_pOutput_pmem[i].buffer;
+                    buffer->type = 1;
+                    buffer->nh = bo;
+#else
                     native_handle_t *handle = native_handle_create(1, 3); //fd, offset, size, alloc length
                     if (!handle) {
                         DEBUG_PRINT_ERROR("ERROR: native handle creation failed");
@@ -3546,6 +3680,7 @@ OMX_ERRORTYPE  omx_video::allocate_output_buffer(
                     output_metabuffer *buffer = (output_metabuffer*) m_pOutput_pmem[i].buffer;
                     buffer->type = 1;
                     buffer->nh = handle;
+#endif
                 }
             }
 
@@ -3727,7 +3862,13 @@ OMX_ERRORTYPE  omx_video::free_buffer(OMX_IN OMX_HANDLETYPE         hComp,
                     free(m_pInput_pmem);
                     m_pInput_pmem = NULL;
                 }
-#ifdef USE_ION
+#ifdef USE_GBM
+                if (m_pInput_gbm) {
+                    DEBUG_PRINT_LOW("Freeing m_pInput_gbm");
+                    free(m_pInput_gbm);
+                    m_pInput_gbm = NULL;
+                }
+#elif defined(USE_ION)
                 if (m_pInput_ion) {
                     DEBUG_PRINT_LOW("Freeing m_pInput_ion");
                     free(m_pInput_ion);
@@ -4010,6 +4151,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
                         DEBUG_PRINT_ERROR("Buffer type is LEGACY_CAM_SOURCE but handle is null");
                         met_error = true;
                     }
+#ifndef USE_GBM
                     else {
                         // TBD: revisit this check !
                         int nFds = media_buffer->meta_handle->numFds,
@@ -4021,6 +4163,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
                                     nFds, nInt);
                         }
                     }
+#endif
                 }
             }
         } else {
@@ -4085,9 +4228,15 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
                     Input_pmem_info.size);
         } else {
             VideoGrallocMetadata *media_buffer = (VideoGrallocMetadata *)meta_buffer_hdr[nBufIndex].pBuffer;
+#ifdef USE_GBM
+            struct gbm_bo *handle = (struct gbm_bo *)media_buffer->pHandle;
+            Input_pmem_info.buffer = media_buffer;
+            Input_pmem_info.fd = handle->ion_fd;
+#else
             private_handle_t *handle = (private_handle_t *)media_buffer->pHandle;
             Input_pmem_info.buffer = media_buffer;
             Input_pmem_info.fd = handle->fd;
+#endif
             fd = Input_pmem_info.fd;
             Input_pmem_info.offset = 0;
             Input_pmem_info.size = handle->size;
@@ -4096,10 +4245,17 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
                     Input_pmem_info.size);
             // if input buffer dimensions is different from what is configured,
             // reject the buffer
+#ifdef USE_GBM
+            if (ALIGN((int)m_sInPortDef.format.video.nFrameWidth,32) != ALIGN(handle->width,32) ||
+                    ALIGN((int)m_sInPortDef.format.video.nFrameHeight,32) != ALIGN(handle->height,32)) {
+                ALOGE("Graphic buf size(%dx%d) does not match configured size(%ux%u)",
+                        handle->width, handle->height,
+#else
             if (ALIGN((int)m_sInPortDef.format.video.nFrameWidth,32) != ALIGN(handle->unaligned_width,32) ||
                     ALIGN((int)m_sInPortDef.format.video.nFrameHeight,32) != ALIGN(handle->unaligned_height,32)) {
                 ALOGE("Graphic buf size(%dx%d) does not match configured size(%ux%u)",
                         handle->unaligned_width, handle->unaligned_height,
+#endif
                         m_sInPortDef.format.video.nFrameWidth, m_sInPortDef.format.video.nFrameHeight);
                 post_event ((unsigned long)buffer, 0, OMX_COMPONENT_GENERATE_EBD);
                 return OMX_ErrorNone;
@@ -4874,6 +5030,132 @@ OMX_ERRORTYPE omx_video::ion_unmap(int fd, void *bufaddr, int len)
     return OMX_ErrorNone;
 }
 
+#ifdef USE_GBM
+#ifdef _UBWC_
+#define GBM_DEFAULT_COLOR_FMT   GBM_FORMAT_YCbCr_420_SP_VENUS_UBWC
+#else
+#define GBM_DEFAULT_COLOR_FMT   GBM_FORMAT_NV12
+#endif
+OMX_U32 omx_video::get_gbm_color_format(OMX_COLOR_FORMATTYPE eColorFormat)
+{
+    OMX_U32 format = GBM_DEFAULT_COLOR_FMT;
+
+    switch ((int)eColorFormat) {
+    case OMX_COLOR_FormatYUV420SemiPlanar:
+    case QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m:
+        format = GBM_FORMAT_NV12;
+        break;
+    case QOMX_COLOR_FormatYVU420SemiPlanar:
+        format = GBM_FORMAT_NV21;
+        break;
+    case QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed:
+        format = GBM_FORMAT_YCbCr_420_SP_VENUS_UBWC;
+        break;
+    case QOMX_COLOR_Format32bitRGBA8888:
+        format = GBM_FORMAT_BGRA8888;
+        break;
+    case QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m10bitCompressed:
+        format = GBM_FORMAT_YCbCr_420_TP10_UBWC;
+        break;
+    case QOMX_COLOR_FORMATYUV420SemiPlanarP010Venus:
+        format = GBM_FORMAT_YCbCr_420_P010_UBWC;
+        break;
+    default:
+        DEBUG_PRINT_INFO("WARN: Unsupported eColorFormat %#x", eColorFormat);
+        format = GBM_DEFAULT_COLOR_FMT;
+        break;
+    }
+
+    if (m_sOutPortFormat.eCompressionFormat == OMX_VIDEO_CodingImageHEIC)
+        format = GBM_FORMAT_NV21;
+
+    return format;
+}
+
+bool omx_video::alloc_map_gbm_memory(OMX_U32 w,OMX_U32 h,
+                 struct venc_gbm *op_buf_gbm_info, int flag)
+{
+    struct gbm_device *gbm = NULL;
+    struct gbm_bo *bo = NULL;
+    int bo_fd = -1, meta_fd = -1;
+    if (!op_buf_gbm_info) {
+        DEBUG_PRINT_ERROR("Invalid arguments to alloc_map_ion_memory");
+        return false;
+    }
+
+    if (gbm_card_fd < 0) {
+        char gbm_drm_name[50] = {0};
+        gbm_perform(GBM_PERFORM_GET_DRM_DEVICE_NAME, gbm_drm_name, sizeof(gbm_drm_name));
+        int drm_fd = open(gbm_drm_name, O_RDWR | O_CLOEXEC);
+        if (drm_fd < 0 ) {
+            DEBUG_PRINT_ERROR("open drm device %s failed", gbm_drm_name);
+            return false;
+        }
+        gbm_card_fd = drm_fd;
+        DEBUG_PRINT_LOW( "opened drm devices %s with fd %d", gbm_drm_name, gbm_card_fd);
+    }
+
+    gbm = gbm_create_device(gbm_card_fd);
+    if (gbm == NULL) {
+       DEBUG_PRINT_ERROR("create gbm device failed");
+       return false;
+    }
+
+    OMX_U32 format = get_gbm_color_format(m_sInPortDef.format.video.eColorFormat);
+
+    DEBUG_PRINT_LOW("create NV12 gbm_bo with width=%d, height=%d format %0#x", w, h, format);
+    bo = gbm_bo_create(gbm, w, h, format, flag);
+    if (bo == NULL) {
+      DEBUG_PRINT_ERROR("Create bo failed");
+      gbm_device_destroy(gbm);
+      return false;
+    }
+
+    bo_fd = gbm_bo_get_fd(bo);
+    if (bo_fd < 0) {
+      DEBUG_PRINT_ERROR("Get bo fd failed");
+      gbm_bo_destroy(bo);
+      gbm_device_destroy(gbm);
+      return false;
+    }
+
+    gbm_perform(GBM_PERFORM_GET_METADATA_ION_FD, bo, &meta_fd);
+    if (meta_fd < 0) {
+      DEBUG_PRINT_ERROR("Get bo meta fd failed");
+      gbm_bo_destroy(bo);
+      gbm_device_destroy(gbm);
+      return false;
+    }
+    op_buf_gbm_info->gbm = gbm;
+    op_buf_gbm_info->bo = bo;
+    op_buf_gbm_info->bo_fd = bo_fd;
+    op_buf_gbm_info->meta_fd = meta_fd;
+
+    DEBUG_PRINT_LOW("allocate gbm bo fd meta fd  %p %d %d",bo,bo_fd,meta_fd);
+    return true;
+}
+
+void omx_video::free_gbm_memory(struct venc_gbm *buf_gbm_info)
+{
+    if(!buf_gbm_info) {
+      DEBUG_PRINT_ERROR(" GBM: free called with invalid fd/allocdata");
+      return;
+    }
+    DEBUG_PRINT_LOW("free gbm bo fd meta fd  %p %d %d",
+           buf_gbm_info->bo,buf_gbm_info->bo_fd,buf_gbm_info->meta_fd);
+
+    if (buf_gbm_info->bo)
+       gbm_bo_destroy(buf_gbm_info->bo);
+    buf_gbm_info->bo = NULL;
+
+    if (buf_gbm_info->gbm)
+       gbm_device_destroy(buf_gbm_info->gbm);
+    buf_gbm_info->gbm = NULL;
+
+    buf_gbm_info->bo_fd = -1;
+    buf_gbm_info->meta_fd = -1;
+}
+#endif
 #ifdef USE_ION
 bool omx_video::alloc_map_ion_memory(int size, venc_ion *ion_info, int flag)
 {
@@ -4995,9 +5277,15 @@ void omx_video::omx_release_meta_buffer(OMX_BUFFERHEADERTYPE *buffer)
                             Input_pmem.size);
                 } else if (media_ptr->buffer_type == kMetadataBufferTypeGrallocSource) {
                     VideoGrallocMetadata *media_ptr = (VideoGrallocMetadata *)buffer->pBuffer;
+#ifdef USE_GBM
+                    struct gbm_bo *handle = (struct gbm_bo *)media_ptr->pHandle;
+                    Input_pmem.buffer = media_ptr;
+                    Input_pmem.fd = handle->ion_fd;
+#else
                     private_handle_t *handle = (private_handle_t *)media_ptr->pHandle;
                     Input_pmem.buffer = media_ptr;
                     Input_pmem.fd = handle->fd;
+#endif
                     Input_pmem.offset = 0;
                     Input_pmem.size = handle->size;
                 }
@@ -5007,8 +5295,19 @@ void omx_video::omx_release_meta_buffer(OMX_BUFFERHEADERTYPE *buffer)
 }
 #endif
 
-bool is_ubwc_interlaced(private_handle_t *handle) {
+bool is_ubwc_interlaced(void *hdl) {
     int interlace_flag = 0;
+#ifdef USE_GBM
+    struct gbm_bo *handle = (struct gbm_bo*) hdl;
+
+    if (gbm_perform(GBM_PERFORM_GET_METADATA, handle, GBM_METADATA_GET_INTERLACED, \
+                &interlace_flag) == GBM_ERROR_NONE) {
+        interlace_flag = 0;
+    }
+    return (handle->format == GBM_FORMAT_YCbCr_420_SP_VENUS_UBWC) &&
+                !!interlace_flag;
+#else
+    private_handle_t *handle = (private_handle_t*) hdl;
 
     if (getMetaData(const_cast<private_handle_t *>(handle),
                   GET_PP_PARAM_INTERLACED, &interlace_flag)) {
@@ -5016,17 +5315,27 @@ bool is_ubwc_interlaced(private_handle_t *handle) {
     }
     return (handle->format == HAL_PIXEL_FORMAT_YCbCr_420_SP_VENUS_UBWC) &&
                 !!interlace_flag;
+#endif
 }
 
-bool omx_video::is_conv_needed(private_handle_t *handle)
+bool omx_video::is_conv_needed(void *hdl)
 {
     bool bRet = false;
+#ifdef USE_GBM
+    struct gbm_bo *handle = (struct gbm_bo*) hdl;
+#else
+    private_handle_t *handle = (private_handle_t*) hdl;
+#endif
     bool interlaced = is_ubwc_interlaced(handle);
 
     if (!strncmp(m_platform, "msm8996", 7)) {
         bRet = handle->format == HAL_PIXEL_FORMAT_RGBA_8888 &&
+#ifdef USE_GBM
+            !(handle->usage_flags & GBM_BO_USAGE_UBWC_ALIGNED_QTI);
+#else
             !(handle->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED ||
               handle->flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED_PI);
+#endif
     } else {
         bRet = handle->format == HAL_PIXEL_FORMAT_RGBA_8888;
     }
@@ -5042,7 +5351,11 @@ bool omx_video::is_conv_needed(private_handle_t *handle)
     }
     DEBUG_PRINT_LOW("RGBA conversion %s. Format %d Flag %d interlace_flag = %d",
                                 bRet ? "Needed":"Not-Needed", handle->format,
+#ifdef USE_GBM
+                                handle->usage_flags, interlaced);
+#else
                                 handle->flags, interlaced);
+#endif
     return bRet;
 }
 
@@ -5058,7 +5371,11 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
     unsigned nBufIndex = 0;
     OMX_ERRORTYPE ret = OMX_ErrorNone;
     VideoGrallocMetadata *media_buffer; // This method primarily assumes gralloc-metadata
+#ifdef USE_GBM
+    struct gbm_bo *handle = NULL;
+#else
     private_handle_t *handle = NULL;
+#endif
     DEBUG_PRINT_LOW("ETBProxyOpaque: buffer[%p]", buffer);
 
     if (buffer == NULL) {
@@ -5106,7 +5423,11 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
         m_pCallbacks.EmptyBufferDone(hComp, m_app_data, buffer);
         return OMX_ErrorBadParameter;
     } else if (media_buffer) {
+#ifdef USE_GBM
+        handle = (struct gbm_bo *)media_buffer->pHandle;
+#else
         handle = (private_handle_t *)media_buffer->pHandle;
+#endif
     }
 
     /*Enable following code once private handle color format is
@@ -5131,7 +5452,11 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
         mUsesColorConversion = is_conv_needed(handle);
         bool interlaced = is_ubwc_interlaced(handle);
         int  full_range_flag = m_sConfigColorAspects.sAspects.mRange == ColorAspects::RangeFull ?
+#ifdef USE_GBM
+                               GBM_METADATA_COLOR_SPACE_ITU_R_601_FR : 0;
+#else
                                private_handle_t::PRIV_FLAGS_ITU_R_601_FR : 0;
+#endif
 
         if (m_sOutPortDef.format.video.eCompressionFormat == OMX_VIDEO_CodingImageHEIC)
             c2dDestFmt = NV12_128m;
@@ -5143,7 +5468,11 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
                                 m_sInPortDef.format.video.nFrameWidth,
                                 m_sInPortDef.format.video.nFrameHeight,
                                 c2dSrcFmt, c2dDestFmt,
+#ifdef USE_GBM
+                                handle->usage_flags, handle->width)) {
+#else
                                 handle->flags, handle->width)) {
+#endif
             DEBUG_PRINT_HIGH("C2D setRotation - %u", m_sConfigFrameRotation.nRotation);
             if (m_c2d_rotation && (m_sConfigFrameRotation.nRotation == 90 ||
                 m_sConfigFrameRotation.nRotation == 180 ||
@@ -5161,7 +5490,11 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
                                      m_sInPortDef.format.video.nFrameWidth,
                                      m_sInPortDef.format.video.nFrameHeight,
                                      c2dSrcFmt, c2dDestFmt,
+#ifdef USE_GBM
+                                     handle->usage_flags | full_range_flag, handle->width)) {
+#else
                                      handle->flags | full_range_flag, handle->width)) {
+#endif
                 m_pCallbacks.EmptyBufferDone(hComp,m_app_data,buffer);
                 DEBUG_PRINT_ERROR("SetResolution failed");
                 return OMX_ErrorBadParameter;
@@ -5367,10 +5700,16 @@ OMX_ERRORTYPE omx_video::push_input_buffer(OMX_HANDLETYPE hComp)
             ret = queue_meta_buffer(hComp);
         } else {
             VideoGrallocMetadata *media_buffer = (VideoGrallocMetadata *)psource_frame->pBuffer;
+#ifdef USE_GBM
+            struct gbm_bo *handle = (struct gbm_bo *)media_buffer->pHandle;
+            Input_pmem_info.buffer = media_buffer;
+            Input_pmem_info.fd = handle->ion_fd;
+#else
             private_handle_t *handle = (private_handle_t *)media_buffer->pHandle;
 
             Input_pmem_info.buffer = media_buffer;
             Input_pmem_info.fd = handle->fd;
+#endif
             Input_pmem_info.offset = 0;
             Input_pmem_info.size = handle->size;
             m_graphicbuffer_size = Input_pmem_info.size;

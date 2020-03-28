@@ -35,7 +35,12 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OMX_QCOMExtns.h"
 #include <linux/dma-buf.h>
 #ifdef _ANDROID_
+#ifdef USE_GBM
+#include <gbm.h>
+#include <gbm_priv.h>
+#else
 #include <gralloc_priv.h>
+#endif
 #endif
 #ifdef _ANDROID_
 #include <cutils/properties.h>
@@ -99,7 +104,7 @@ class profile_level_converter {
     static bool convert_omx_level_to_v4l2(int codec, int omx_level, int *v4l2_level);
 };
 
-void get_gralloc_format_as_string(char * buf, int buf_len, int format);
+void get_video_format_as_string(char * buf, int buf_len, int format);
 void get_v4l2_color_format_as_string(char * buf, int buf_len, unsigned long v4l2Pixformat);
 
 void do_sync_ioctl(int fd, struct dma_buf_sync* sync);

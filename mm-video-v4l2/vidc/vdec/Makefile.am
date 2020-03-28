@@ -60,19 +60,19 @@ AM_CPPFLAGS += -I$(top_srcdir)/mm-core/inc/
 AM_CPPFLAGS += -I$(top_srcdir)/mm-core/src/common/
 
 AM_CPPFLAGS += -I$(WORKSPACE)/graphics/libdrm/freedreno/kgsl/
-AM_CPPFLAGS += -I$(WORKSPACE)/display/display-hal/gralloc/
-AM_CPPFLAGS += -I$(WORKSPACE)/display/display-hal/libqdutils/
 AM_CPPFLAGS += -I$(WORKSPACE)/hardware/libhardware/include/
 AM_CPPFLAGS += -I${WORKSPACE}/frameworks/native/include/
-c_sources = src/ts_parser.cpp
-c_sources += src/omx_vdec_v4l2.cpp
+c_sources  = src/omx_vdec_v4l2.cpp
+c_sources += src/omx_vdec_v4l2_params.cpp
+c_sources += src/ts_parser.cpp
 c_sources += $(top_srcdir)/mm-video-v4l2/vidc/common/src/vidc_common.cpp
 c_sources += $(top_srcdir)/mm-video-v4l2/vidc/common/src/vidc_vendor_extensions.cpp
+c_sources += $(top_srcdir)/mm-video-v4l2/vidc/common/src/vidc_debug.cpp
 
 lib_LTLIBRARIES = libOmxVdec.la
 libOmxVdec_la_SOURCES = $(c_sources)
-libOmxVdec_la_CFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) -fPIC
+libOmxVdec_la_CFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS) -fPIC $(GBM_CFLAGS)
 libOmxVdec_la_LDFLAGS = -module -shared -avoid-version
-libOmxVdec_la_LDFLAGS += -llog  -lcutils -lglib-2.0 -lion -lqdMetaData
+libOmxVdec_la_LDFLAGS += -llog  -lcutils -lglib-2.0 -lion $(GBM_LIBS)
 libOmxVdec_la_LDFLAGS += -L$(top_builddir)/libc2dcolorconvert  -L$(top_builddir)/libplatformconfig
 libOmxVdec_la_LDFLAGS += -lc2dcolorconvert -lplatformconfig
