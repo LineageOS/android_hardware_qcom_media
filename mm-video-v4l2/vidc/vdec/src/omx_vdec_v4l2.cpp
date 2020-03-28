@@ -6520,6 +6520,9 @@ int omx_vdec::async_message_process (void *context, void* message)
                        omxhdr->nFlags |= QOMX_VIDEO_BUFFERFLAG_BFRAME;
                    }
 
+                   if (v4l2_buf_ptr->flags & V4L2_BUF_FLAG_CODECCONFIG)
+                       omxhdr->nFlags |= OMX_BUFFERFLAG_CODECCONFIG;
+
                    if (vdec_msg->msgdata.output_frame.len) {
                        DEBUG_PRINT_LOW("Processing extradata");
                        reconfig_event_sent = omx->handle_extradata(omxhdr);
