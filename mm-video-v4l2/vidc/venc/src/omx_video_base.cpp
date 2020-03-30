@@ -5318,6 +5318,19 @@ bool is_ubwc_interlaced(void *hdl) {
 #endif
 }
 
+bool omx_video::is_rotation_enabled()
+{
+    bool bRet = false;
+
+    if (m_sConfigFrameRotation.nRotation == 90 ||
+        m_sConfigFrameRotation.nRotation == 180 ||
+        m_sConfigFrameRotation.nRotation == 270) {
+        bRet = true;
+    }
+
+    return bRet;
+}
+
 bool omx_video::is_conv_needed(void *hdl)
 {
     bool bRet = false;
@@ -5344,9 +5357,7 @@ bool omx_video::is_conv_needed(void *hdl)
     bRet = false;
 #endif
     bRet |= interlaced;
-    if (m_c2d_rotation && (m_sConfigFrameRotation.nRotation == 90 ||
-        m_sConfigFrameRotation.nRotation == 180 ||
-        m_sConfigFrameRotation.nRotation == 270)) {
+    if (m_c2d_rotation && is_rotation_enabled()) {
         bRet = true;
     }
     DEBUG_PRINT_LOW("RGBA conversion %s. Format %d Flag %d interlace_flag = %d",
@@ -5474,9 +5485,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
                                 handle->flags, handle->width)) {
 #endif
             DEBUG_PRINT_HIGH("C2D setRotation - %u", m_sConfigFrameRotation.nRotation);
-            if (m_c2d_rotation && (m_sConfigFrameRotation.nRotation == 90 ||
-                m_sConfigFrameRotation.nRotation == 180 ||
-                m_sConfigFrameRotation.nRotation == 270)) {
+            if (m_c2d_rotation && is_rotation_enabled()) {
                 c2dcc.setRotation(m_sConfigFrameRotation.nRotation);
             }
             DEBUG_PRINT_HIGH("C2D setResolution (0x%X -> 0x%x) HxW (%dx%d) Stride (%d)",
@@ -5579,6 +5588,7 @@ OMX_ERRORTYPE omx_video::convert_queue_buffer(OMX_HANDLETYPE hComp,
     unsigned char *uva;
     OMX_ERRORTYPE ret = OMX_ErrorNone;
     unsigned long address = 0,p2,id;
+    LEGACY_CAM_METADATA_TYPE * meta_buf = NULL;
 
     DEBUG_PRINT_LOW("In Convert and queue Meta Buffer");
     if (!psource_frame || !pdest_frame) {
@@ -5618,6 +5628,28 @@ OMX_ERRORTYPE omx_video::convert_queue_buffer(OMX_HANDLETYPE hComp,
                 DEBUG_PRINT_ERROR("Color Conversion failed");
                 ret = OMX_ErrorBadParameter;
             } else {
+                if (dev_is_avtimer_needed() && dev_is_meta_mode()) {
+                    meta_buf = (LEGACY_CAM_METADATA_TYPE *)psource_frame->pBuffer;
+
+                    if (meta_buf && m_c2d_rotation && is_rotation_enabled() &&
+                        meta_buf->buffer_type == kMetadataBufferTypeGrallocSource) {
+                        VideoGrallocMetadata *meta_buf = (VideoGrallocMetadata *)psource_frame->pBuffer;
+                        private_handle_t *handle = (private_handle_t *)meta_buf->pHandle;
+
+                        if (!handle) {
+                            DEBUG_PRINT_ERROR("%s : handle is null!", __FUNCTION__);
+                            ret = OMX_ErrorUndefined;
+                            return ret;
+                        }
+
+                        uint64_t avTimerTimestampNs = psource_frame->nTimeStamp * 1000;
+                        if (getMetaData(handle, GET_VT_TIMESTAMP, &avTimerTimestampNs) == 0
+                                && avTimerTimestampNs > 0) {
+                            psource_frame->nTimeStamp = avTimerTimestampNs / 1000;
+                            DEBUG_PRINT_LOW("C2d AVTimer TS : %llu us", (unsigned long long)psource_frame->nTimeStamp);
+                        }
+                    }
+                }
                 unsigned int buf_size = 0;
                 buf_size = c2dcc.getBuffSize(C2D_OUTPUT);
                 pdest_frame->nOffset = 0;
