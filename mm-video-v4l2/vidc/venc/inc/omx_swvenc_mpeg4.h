@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -81,6 +81,8 @@ class omx_venc: public omx_video
         int dev_handle_input_extradata(void *, int, int);
         bool dev_buffer_ready_to_queue(OMX_BUFFERHEADERTYPE *buffer);
         bool dev_get_dimensions(OMX_U32 ,OMX_U32 *,OMX_U32 *);
+        bool dev_is_meta_mode();
+        bool dev_is_avtimer_needed();
         void dev_set_extradata_cookie(void *);
         int dev_set_format(int);
 
