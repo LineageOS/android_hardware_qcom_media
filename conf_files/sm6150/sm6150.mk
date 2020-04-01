@@ -50,8 +50,3 @@ else
   PRODUCT_COPY_FILES += \
       device/qcom/common/media/media_profiles.xml:$(TARGET_COPY_OUT_ODM)/etc/media_profiles_V1_0.xml
 endif
-
-# Enable Codec2.0 HAL for pure AOSP variants.
-ifeq ($(GENERIC_ODM_IMAGE),true)
-DEVICE_MANIFEST_FILE += hardware/qcom/media/conf_files/$(MSMSTEPPE)/c2_manifest.xml
-endif
