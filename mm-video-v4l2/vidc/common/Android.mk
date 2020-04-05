@@ -1,6 +1,6 @@
 ROOT_DIR := $(call my-dir)
-
 include $(CLEAR_VARS)
+include $(LIBION_HEADER_PATH_WRAPPER)
 LOCAL_PATH:= $(ROOT_DIR)
 
 # ---------------------------------------------------------------------------------
@@ -28,7 +28,8 @@ libmm-vidc-inc      += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 libmm-vidc-inc      += $(TOP)/hardware/libhardware/include
 libmm-vidc-inc      += $(TOP)/frameworks/native/headers/media_plugin
 libmm-vidc-inc      += $(TARGET_OUT_HEADERS)/qcom/display
-libmm-vidc-inc      += $(TOP)/system/core/libion/include
+libmm-vidc-inc      += $(LIBION_HEADER_PATHS)
+
 
 
 LOCAL_MODULE                    := libOmxVidcCommon
