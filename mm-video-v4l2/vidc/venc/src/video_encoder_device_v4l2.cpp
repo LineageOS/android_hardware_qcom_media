@@ -2827,7 +2827,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         if (encodePerfMode == OMX_TRUE)
                             buf.flags |= V4L2_BUF_FLAG_PERF_MODE;
                         // Clear SET_VIDEO_PERF_MODE in buffer handle
-                        clearMetaData(handle,SET_VIDEO_PERF_MODE);
+                        setMetaData(handle, SET_VIDEO_PERF_MODE, 0);
                     }
                     fd = handle->fd;
                     plane[0].data_offset = 0;
@@ -4341,7 +4341,7 @@ bool venc_dev::venc_cvp_enable(private_handle_t *handle)
                 return false;
         } else {
             DEBUG_PRINT_ERROR("ERROR: External CVP mode disabled for this session and continue!");
-            clearMetaData(handle, SET_CVP_METADATA);
+            setMetaData(handle, SET_CVP_METADATA, 0);
         }
     } else {
         DEBUG_PRINT_INFO("venc_cvp_enable: cvp metadata not available");
@@ -4386,7 +4386,7 @@ bool venc_dev::venc_get_cvp_metadata(private_handle_t *handle, struct v4l2_buffe
     buf->flags &= ~V4L2_BUF_FLAG_CVPMETADATA_SKIP;
     cvpMetadata.size = 0;
     if (getMetaData(handle, GET_CVP_METADATA, &cvpMetadata) == 0) {
-        clearMetaData(handle, SET_CVP_METADATA);
+        setMetaData(handle, SET_CVP_METADATA, 0);
         if (cvpMetadata.size != CVP_METADATA_SIZE) {
             DEBUG_PRINT_ERROR("ERROR: Invalid CVP metadata size %d",
                 cvpMetadata.size);
