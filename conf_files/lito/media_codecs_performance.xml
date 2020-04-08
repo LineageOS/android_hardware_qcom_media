@@ -104,8 +104,8 @@ limitations under the License.
             <Limit name="measured-frame-rate-3840x2160" range="65-75" />
         </MediaCodec>
         <MediaCodec name="OMX.qti.video.decoder.h263sw" type="video/3gpp" update="true">
-            <Limit name="measured-frame-rate-176x144" range="356-356" />
-            <Limit name="measured-frame-rate-352x288" range="292-292" />
+            <Limit name="measured-frame-rate-176x144" range="358-837" />
+            <Limit name="measured-frame-rate-352x288" range="321-456" />
         </MediaCodec>
         <MediaCodec name="OMX.qti.video.decoder.mpeg4sw" type="video/mp4v-es" update="true">
             <Limit name="measured-frame-rate-176x144" range="374-542" />
