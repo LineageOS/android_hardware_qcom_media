@@ -568,8 +568,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_disp_hor_size(0),
     m_disp_vert_size(0),
     prev_ts(LLONG_MAX),
-    prev_ts_actual(LLONG_MAX),
-    rst_prev_ts(true),
     frm_int(0),
     m_fps_received(0),
     in_reconfig(false),
@@ -1045,11 +1043,21 @@ void omx_vdec::process_event_cb(void *ctxt)
                     break;
 
                 case OMX_COMPONENT_GENERATE_EBD:
-
                     if (p2 != VDEC_S_SUCCESS && p2 != VDEC_S_INPUT_BITSTREAM_ERR) {
                         DEBUG_PRINT_ERROR("OMX_COMPONENT_GENERATE_EBD failure");
                         pThis->omx_report_error ();
                     } else {
+                        if (p2 == VDEC_S_INPUT_BITSTREAM_ERR && p1) {
+                            OMX_BUFFERHEADERTYPE* buffer =
+                                    ((OMX_BUFFERHEADERTYPE *)(intptr_t)p1);
+                            if (!buffer->pMarkData && !buffer->hMarkTargetComponent) {
+                                pThis->time_stamp_dts.remove_time_stamp(
+                                        buffer->nTimeStamp,
+                                        (pThis->drv_ctx.interlace != VDEC_InterlaceFrameProgressive)
+                                        ?true:false);
+                            }
+                        }
+
                         if ( pThis->empty_buffer_done(&pThis->m_cmp,
                                     (OMX_BUFFERHEADERTYPE *)(intptr_t)p1) != OMX_ErrorNone) {
                             DEBUG_PRINT_ERROR("empty_buffer_done failure");
@@ -1400,7 +1408,6 @@ void omx_vdec::process_event_cb(void *ctxt)
                                             DEBUG_PRINT_ERROR("ERROR: %s()::EventHandler is NULL", __func__);
                                         }
                                         pThis->prev_ts = LLONG_MAX;
-                                        pThis->rst_prev_ts = true;
                                         break;
 
                 case OMX_COMPONENT_GENERATE_HARDWARE_ERROR:
@@ -2729,11 +2736,11 @@ bool omx_vdec::execute_input_flush()
             empty_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p1);
         }
     }
+    time_stamp_dts.flush_timestamp();
     /*Check if Heap Buffers are to be flushed*/
     pthread_mutex_unlock(&m_lock);
     input_flush_progress = false;
     prev_ts = LLONG_MAX;
-    rst_prev_ts = true;
 
     DEBUG_PRINT_HIGH("OMX flush i/p Port complete PenBuf(%d)", pending_input_buffers);
     return bRet;
@@ -3239,6 +3246,9 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
 
         control.id = V4L2_CID_MPEG_VIDC_VIDEO_OPERATING_RATE;
         control.value = rate->nU32;
+
+        if (rate->nU32 > INT_MAX)
+            control.value = INT_MAX;
 
         if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
             ret = errno == EBUSY ? OMX_ErrorInsufficientResources :
@@ -4999,6 +5009,7 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
     buffer->pMarkData = (OMX_PTR)(unsigned long)m_etb_count;
     post_event ((unsigned long)hComp,(unsigned long)buffer,OMX_COMPONENT_GENERATE_ETB);
 
+    time_stamp_dts.insert_timestamp(buffer);
     return OMX_ErrorNone;
 }
 
@@ -6091,6 +6102,20 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
     }
 #endif
 
+    /* For use buffer we need to copy the data */
+    if (!output_flush_progress) {
+        /* This is the error check for non-recoverable errros */
+        bool is_duplicate_ts_valid = true;
+        bool is_interlaced = (drv_ctx.interlace != VDEC_InterlaceFrameProgressive);
+
+        if (output_capability == V4L2_PIX_FMT_MPEG4 ||
+                output_capability == V4L2_PIX_FMT_MPEG2)
+            is_duplicate_ts_valid = false;
+
+        time_stamp_dts.get_next_timestamp(buffer,
+                is_interlaced && is_duplicate_ts_valid && !is_mbaff);
+
+    }
     VIDC_TRACE_INT_LOW("FBD-TS", buffer->nTimeStamp / 1000);
 
     if (m_cb.FillBufferDone) {
@@ -6118,7 +6143,6 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
         }
         if (buffer->nFlags & OMX_BUFFERFLAG_EOS) {
             prev_ts = LLONG_MAX;
-            rst_prev_ts = true;
             proc_frms = 0;
         }
 
@@ -7481,8 +7505,7 @@ void omx_vdec::set_frame_rate(OMX_S64 act_timestamp)
     OMX_U32 new_frame_interval = 0;
     if (VALID_TS(act_timestamp) && VALID_TS(prev_ts) && act_timestamp != prev_ts
             && (llabs(act_timestamp - prev_ts) > 2000 || frm_int == 0)) {
-        new_frame_interval = client_set_fps ? frm_int : (act_timestamp - prev_ts) > 0 ?
-            llabs(act_timestamp - prev_ts) : llabs(act_timestamp - prev_ts_actual);
+        new_frame_interval = client_set_fps ? frm_int : llabs(act_timestamp - prev_ts);
         if (new_frame_interval != frm_int || frm_int == 0) {
             frm_int = new_frame_interval;
             if (frm_int) {
@@ -7882,6 +7905,11 @@ void omx_vdec::get_preferred_color_aspects(ColorAspects& preferredColorAspects)
         m_client_color_space.sAspects : m_internal_color_space.sAspects;
     const ColorAspects &defaultColor = preferClientColor ?
         m_internal_color_space.sAspects : m_client_color_space.sAspects;
+
+    if ((m_client_color_space.sAspects.mPrimaries == ColorAspects::PrimariesBT2020) && (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_8)) {
+        m_client_color_space.sAspects.mPrimaries = ColorAspects::PrimariesBT709_5;
+        m_client_color_space.sAspects.mMatrixCoeffs = ColorAspects::MatrixBT709_5;
+    }
 
     preferredColorAspects.mPrimaries = preferredColor.mPrimaries != ColorAspects::PrimariesUnspecified ?
         preferredColor.mPrimaries : defaultColor.mPrimaries;
@@ -8407,6 +8435,7 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
     unsigned int src_size = 0, destination_size = 0;
     unsigned int height, width;
     struct v4l2_format fmt;
+    bool is_interlaced = false;
     OMX_COLOR_FORMATTYPE drv_color_format;
 
     if (!omx) {
@@ -8439,7 +8468,8 @@ bool omx_vdec::allocate_color_convert_buf::update_buffer_req()
 
     bool resolution_upgrade = (height > m_c2d_height ||
             width > m_c2d_width);
-    bool is_interlaced = omx->m_progressive != MSM_VIDC_PIC_STRUCT_PROGRESSIVE;
+    if (omx->drv_ctx.output_format != VDEC_YUV_FORMAT_NV12)
+        is_interlaced = omx->m_progressive != MSM_VIDC_PIC_STRUCT_PROGRESSIVE;
     if (resolution_upgrade) {
         // resolution upgraded ? ensure we are yet to allocate;
         // failing which, c2d buffers will never be reallocated and bad things will happen
