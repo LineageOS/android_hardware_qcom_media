@@ -13,12 +13,14 @@ AM_CPPFLAGS += "-Dstrlcat=g_strlcat"
 AM_CPPFLAGS += -Wextra
 AM_CPPFLAGS += -Wno-missing-field-initializers
 AM_CPPFLAGS += -fexceptions
+AM_CPPFLAGS += -include stdint.h
 
 
 AM_CPPFLAGS += -I$(top_srcdir)/mm-core/inc/
 AM_CPPFLAGS += -I$(top_srcdir)/mm-video-v4l2/vidc/common/inc/
 c_sources         := PlatformConfig.cpp
 c_sources         += ConfigParser.cpp
+c_sources         += ConfigStore.cpp
 
 lib_LTLIBRARIES = libplatformconfig.la
 libplatformconfig_la_SOURCES = $(c_sources)

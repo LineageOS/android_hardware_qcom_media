@@ -40,7 +40,12 @@
 #include <string.h>
 #include <errno.h>
 #include <media/msm_media_info.h>
+#ifdef USE_GBM
+#include <gbm.h>
+#include <gbm_priv.h>
+#else
 #include <gralloc_priv.h>
+#endif
 #include <unordered_map>
 
 #include <c2d2.h>

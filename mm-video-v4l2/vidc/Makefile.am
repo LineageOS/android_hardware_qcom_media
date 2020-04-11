@@ -2,4 +2,12 @@
 #
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = vdec venc
+SUBDIRS :=
+
+if WITH_VENC
+SUBDIRS += venc
+endif
+
+if WITH_VDEC
+SUBDIRS += vdec
+endif

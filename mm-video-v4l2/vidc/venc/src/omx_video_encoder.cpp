@@ -2404,7 +2404,6 @@ int omx_venc::async_message_process (void *context, void* message)
     struct venc_msg *m_sVenc_msg = NULL;
     OMX_BUFFERHEADERTYPE* omxhdr = NULL;
     struct venc_buffer *temp_buff = NULL;
-    native_handle_t *nh = NULL;
 
     if (context == NULL || message == NULL) {
         DEBUG_PRINT_ERROR("ERROR: omx_venc::async_message_process invalid i/p params");
@@ -2499,17 +2498,27 @@ int omx_venc::async_message_process (void *context, void* message)
                     }
                 } else if (omx->is_secure_session()) {
                     if (omx->allocate_native_handle) {
+#ifdef USE_GBM
+                        struct gbm_bo *gb = (struct gbm_bo *)(omxhdr->pBuffer);
+                        gb->size = m_sVenc_msg->buf.len;
+#else
                         native_handle_t *nh = (native_handle_t *)(omxhdr->pBuffer);
                         nh->data[1] = m_sVenc_msg->buf.offset;
                         nh->data[2] = m_sVenc_msg->buf.len;
+#endif
                         omxhdr->nFilledLen = m_sVenc_msg->buf.len;
                         omxhdr->nTimeStamp = m_sVenc_msg->buf.timestamp;
                         omxhdr->nFlags = m_sVenc_msg->buf.flags;
                     } else {
                         output_metabuffer *meta_buf = (output_metabuffer *)(omxhdr->pBuffer);
+#ifdef USE_GBM
+                        struct gbm_bo *gb = (struct gbm_bo *)(omxhdr->pBuffer);
+                        gb->size = m_sVenc_msg->buf.len;
+#else
                         native_handle_t *nh = meta_buf->nh;
                         nh->data[1] = m_sVenc_msg->buf.offset;
                         nh->data[2] = m_sVenc_msg->buf.len;
+#endif
                         omxhdr->nFilledLen = sizeof(output_metabuffer);
                         omxhdr->nTimeStamp = m_sVenc_msg->buf.timestamp;
                         omxhdr->nFlags = m_sVenc_msg->buf.flags;

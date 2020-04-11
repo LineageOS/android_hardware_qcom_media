@@ -44,7 +44,11 @@ void venc_dev::venc_get_consumer_usage(OMX_U32* usage)
 
     /* Configure UBWC as default if target supports */
 #ifdef _UBWC_
+#ifdef USE_GBM
+    *usage |= GBM_BO_USAGE_UBWC_ALIGNED_QTI;
+#else
     *usage |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
+#endif
 #endif
 
     if (hevc &&
@@ -54,12 +58,20 @@ void venc_dev::venc_get_consumer_usage(OMX_U32* usage)
         DEBUG_PRINT_INFO("Setting 10-bit consumer usage bits");
         *usage |= GRALLOC_USAGE_PRIVATE_10BIT_VIDEO;
         if (mUseLinearColorFormat & REQUEST_LINEAR_COLOR_10_BIT) {
+#ifdef USE_GBM
+            *usage &= ~GBM_BO_USAGE_UBWC_ALIGNED_QTI;
+#else
             *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
+#endif
             DEBUG_PRINT_INFO("Clear UBWC consumer usage bits as 10-bit linear color requested");
         }
     } else if (mUseLinearColorFormat & REQUEST_LINEAR_COLOR_8_BIT ||
             m_codec == OMX_VIDEO_CodingImageHEIC) {
+#ifdef USE_GBM
+        *usage &= ~GBM_BO_USAGE_UBWC_ALIGNED_QTI;
+#else
         *usage &= ~GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
+#endif
         DEBUG_PRINT_INFO("Clear UBWC consumer usage bits as 8-bit linear color requested");
     }
 
@@ -386,6 +398,12 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                         break;
                     case ColorAspects::TransferSRGB:
                         transfer_chars = MSM_VIDC_TRANSFER_SRGB;
+                        break;
+                    case ColorAspects::TransferST2084:
+                        transfer_chars = MSM_VIDC_TRANSFER_SMPTE_ST2084;
+                        break;
+                    case ColorAspects::TransferHLG:
+                        transfer_chars = MSM_VIDC_TRANSFER_HLG;
                         break;
                     default:
                         //params->sAspects.mTransfer = ColorAspects::TransferSMPTE170M;
