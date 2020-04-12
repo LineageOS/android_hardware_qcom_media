@@ -1206,6 +1206,7 @@ class omx_vdec: public qc_omx_component
         int32_t m_dec_secure_prefetch_size_internal;
         int32_t m_dec_secure_prefetch_size_output;
         int32_t m_arb_mode_override;
+        int32_t m_disable_hdr;
         volatile int32_t m_queued_codec_config_count;
         OMX_U32 current_perf_level;
         int32_t m_thumbnail_yuv_output;

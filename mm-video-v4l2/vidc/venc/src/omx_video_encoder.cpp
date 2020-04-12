@@ -2031,6 +2031,15 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                 break;
 
             }
+        case OMX_QTIIndexConfigContentAdaptiveCoding:
+           {
+                OMX_U32* bitrateSavingsMode = (OMX_U32*) configData;
+                if (!handle->venc_set_config(bitrateSavingsMode, (OMX_INDEXTYPE)OMX_QTIIndexConfigContentAdaptiveCoding)) {
+                    DEBUG_PRINT_ERROR("Failed to set OMX_QTIIndexConfigContentAdaptiveCoding");
+                    return OMX_ErrorUnsupportedSetting;
+                }
+                break;
+           }
         default:
             DEBUG_PRINT_ERROR("ERROR: unsupported index %d", (int) configIndex);
             break;
