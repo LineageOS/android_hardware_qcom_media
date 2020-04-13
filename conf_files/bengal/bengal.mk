@@ -11,7 +11,7 @@ PRODUCT_COPY_FILES += \
     $(CONFIG_PATH)/mediacodec-seccomp.policy:$(TARGET_COPY_OUT_VENDOR)/etc/seccomp_policy/mediacodec.policy \
     $(CONFIG_PATH)/system_properties.xml:$(TARGET_COPY_OUT_VENDOR)/etc/system_properties.xml
 
-ifeq ($(filter $(TARGET_BOARD_SUFFIX), _32 _32go),$(TARGET_BOARD_SUFFIX))
+ifneq ($(strip $(TARGET_BOARD_SUFFIX)),)
 	PRODUCT_COPY_FILES += \
 		$(CONFIG_PATH)/media_codecs_vendor_32.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_vendor.xml \
 		$(CONFIG_PATH)/media_codecs_vendor_v1_32.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_vendor_v1.xml \
