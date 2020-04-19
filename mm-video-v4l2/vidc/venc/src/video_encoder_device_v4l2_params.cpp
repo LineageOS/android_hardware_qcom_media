@@ -71,7 +71,7 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
 
     if (is_streamon_done(PORT_INDEX_IN)) {
         if (venc_store_dynamic_config(index, configData)) {
-            DEBUG_PRINT_ERROR("dynamic config %#X successfully stored.", index);
+            DEBUG_PRINT_HIGH("dynamic config %#X successfully stored.", index);
             return true;
         }
 
@@ -143,9 +143,17 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                 if (!config_rotation) {
                    return false;
                 }
-                if (venc_set_vpe_rotation(config_rotation->nRotation) == false) {
-                    DEBUG_PRINT_ERROR("ERROR: Dimension Change for Rotation failed");
-                    return false;
+
+                if (venc_handle->m_c2d_rotation) {
+                    if (venc_prepare_c2d_rotation(config_rotation->nRotation) == false) {
+                        DEBUG_PRINT_ERROR("ERROR: venc_prepare_c2d_rotation failed");
+                        return false;
+                    }
+                } else {
+                    if (venc_set_vpe_rotation(config_rotation->nRotation) == false) {
+                        DEBUG_PRINT_ERROR("ERROR: Dimension Change for Rotation failed");
+                        return false;
+                    }
                 }
 
                 break;
@@ -524,10 +532,14 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
 
                     unsigned long inputformat = venc_get_color_format(portDefn->format.video.eColorFormat);
 
-                    if (m_sVenc_cfg.input_height != portDefn->format.video.nFrameHeight ||
-                            m_sVenc_cfg.input_width != portDefn->format.video.nFrameWidth ||
-                            m_sInput_buff_property.actualcount != portDefn->nBufferCountActual ||
-                            m_sVenc_cfg.inputformat != inputformat) {
+                    unsigned long width  = m_bDimensionsNeedFlip ? portDefn->format.video.nFrameHeight :
+                                                                   portDefn->format.video.nFrameWidth;
+                    unsigned long height = m_bDimensionsNeedFlip ? portDefn->format.video.nFrameWidth :
+                                                                   portDefn->format.video.nFrameHeight;
+
+                    if (m_sVenc_cfg.input_height != height || m_sVenc_cfg.input_width != width ||
+                        m_sInput_buff_property.actualcount != portDefn->nBufferCountActual ||
+                        m_sVenc_cfg.inputformat != inputformat) {
 
                         DEBUG_PRINT_LOW("venc_set_param: OMX_IndexParamPortDefinition: port: %u, WxH %lux%lu --> %ux%u, count %lu --> %u, format %#lx --> %#lx",
                             portDefn->nPortIndex, m_sVenc_cfg.input_width, m_sVenc_cfg.input_height,
@@ -541,8 +553,8 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                             return false;
                         }
 
-                        m_sVenc_cfg.input_height = portDefn->format.video.nFrameHeight;
-                        m_sVenc_cfg.input_width = portDefn->format.video.nFrameWidth;
+                        m_sVenc_cfg.input_height = height;
+                        m_sVenc_cfg.input_width = width;
                         m_sVenc_cfg.inputformat = inputformat;
                         m_sInput_buff_property.actualcount = portDefn->nBufferCountActual;
 
@@ -575,8 +587,8 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                         }
 
                         if (!downscalar_enabled) {
-                            m_sVenc_cfg.dvs_height = portDefn->format.video.nFrameHeight;
-                            m_sVenc_cfg.dvs_width = portDefn->format.video.nFrameWidth;
+                            m_sVenc_cfg.dvs_height = height;
+                            m_sVenc_cfg.dvs_width = width;
                         }
                         memset(&fmt, 0, sizeof(fmt));
                         fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
@@ -589,7 +601,6 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                             hw_overload = errno == EBUSY;
                             return false;
                         }
-
                         m_sOutput_buff_property.datasize = fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
 
                     } else {
@@ -600,11 +611,15 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
 
                     unsigned long codectype = venc_get_codectype(portDefn->format.video.eCompressionFormat);
 
+                    unsigned long width  = m_bDimensionsNeedFlip ? portDefn->format.video.nFrameHeight :
+                                                                   portDefn->format.video.nFrameWidth;
+                    unsigned long height = m_bDimensionsNeedFlip ? portDefn->format.video.nFrameWidth :
+                                                                   portDefn->format.video.nFrameHeight;
+
                     //Don't worry about width/height if downscalar is enabled.
-                    if (((m_sVenc_cfg.dvs_height != portDefn->format.video.nFrameHeight ||
-                            m_sVenc_cfg.dvs_width != portDefn->format.video.nFrameWidth) && !downscalar_enabled) ||
-                            m_sOutput_buff_property.actualcount != portDefn->nBufferCountActual ||
-                            m_sVenc_cfg.codectype != codectype) {
+                    if (m_sVenc_cfg.dvs_height != height || m_sVenc_cfg.dvs_width != width ||
+                        m_sOutput_buff_property.actualcount != portDefn->nBufferCountActual ||
+                        m_sVenc_cfg.codectype != codectype) {
 
                         if (portDefn->nBufferCountActual < m_sOutput_buff_property.mincount) {
                             DEBUG_PRINT_LOW("Actual count %u is less than driver mincount %lu on port %u",
@@ -619,8 +634,8 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                                             portDefn->format.video.nFrameWidth, portDefn->format.video.nFrameHeight,
                                             m_sOutput_buff_property.actualcount, portDefn->nBufferCountActual,
                                             m_sVenc_cfg.codectype, codectype);
-                            m_sVenc_cfg.dvs_height = portDefn->format.video.nFrameHeight;
-                            m_sVenc_cfg.dvs_width = portDefn->format.video.nFrameWidth;
+                            m_sVenc_cfg.dvs_height = height;
+                            m_sVenc_cfg.dvs_width = width;
                         }
 
                         m_sVenc_cfg.codectype = codectype;

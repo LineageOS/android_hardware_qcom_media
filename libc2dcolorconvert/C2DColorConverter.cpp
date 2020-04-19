@@ -29,6 +29,13 @@
 
 #include <C2DColorConverter.h>
 
+void swap(size_t &x, size_t &y)
+{
+    x = x ^ y;
+    y = x ^ y;
+    x = x ^ y;
+}
+
 C2DColorConverter::C2DColorConverter()
     : mC2DLibHandle(NULL),
       mAdrenoUtilsHandle(NULL)
@@ -43,6 +50,7 @@ C2DColorConverter::C2DColorConverter()
     mSrcStride = 0;
     mDstWidth = 0;
     mDstHeight = 0;
+    mRotation = C2D_TARGET_ROTATE_0;
     mSrcFormat = NO_COLOR_FORMAT;
     mDstFormat = NO_COLOR_FORMAT;
     mSrcSurfaceDef = NULL;
@@ -166,6 +174,9 @@ bool C2DColorConverter::setResolution(size_t srcWidth, size_t srcHeight,
     int32_t retval = -1;
     if (enabled) {
         pthread_mutex_lock(&mLock);
+
+        ClearSurfaces();
+
         mSrcWidth = srcWidth;
         mSrcHeight = srcHeight;
         mSrcStride = srcStride;
@@ -173,15 +184,19 @@ bool C2DColorConverter::setResolution(size_t srcWidth, size_t srcHeight,
         mDstHeight = dstHeight;
         mSrcFormat = srcFormat;
         mDstFormat = dstFormat;
-        mSrcSize = calcSize(srcFormat, srcWidth, srcHeight);
-        mDstSize = calcSize(dstFormat, dstWidth, dstHeight);
-        mSrcYSize = calcYSize(srcFormat, srcWidth, srcHeight);
-        mDstYSize = calcYSize(dstFormat, dstWidth, dstHeight);
 
-        mFlags = flags; // can be used for rotation
+        if (mRotation == C2D_TARGET_ROTATE_90 ||
+            mRotation == C2D_TARGET_ROTATE_270) {
+                swap(mDstWidth, mDstHeight);
+        }
+        mSrcSize = calcSize(srcFormat, mSrcWidth, mSrcHeight);
+        mDstSize = calcSize(dstFormat, mDstWidth, mDstHeight);
+        mSrcYSize = calcYSize(srcFormat, mSrcWidth, mSrcHeight);
+        mDstYSize = calcYSize(dstFormat, mDstWidth, mDstHeight);
+        mFlags = flags;
 
-        retval = getDummySurfaceDef(srcFormat, srcWidth, srcHeight, true);
-        retval |= getDummySurfaceDef(dstFormat, dstWidth, dstHeight, false);
+        retval = getDummySurfaceDef(srcFormat, mSrcWidth, mSrcHeight, true);
+        retval |= getDummySurfaceDef(dstFormat, mDstWidth, mDstHeight, false);
 
         if (retval == 0) {
             memset((void*)&mBlit,0,sizeof(C2D_OBJECT));
@@ -206,7 +221,24 @@ bool C2DColorConverter::setResolution(size_t srcWidth, size_t srcHeight,
     return retval == 0? true:false;
 }
 
-
+void C2DColorConverter::setRotation(int32_t rotation) {
+    // C2D does rotation in anticlock wise, where as VPE rotates in clockwise
+    // Hence swapping the 90 and 270 angles to rotate in clockwise
+    switch (rotation) {
+        case 90:
+            mRotation  = C2D_TARGET_ROTATE_270;
+            break;
+        case 180:
+            mRotation  = C2D_TARGET_ROTATE_180;
+            break;
+        case 270:
+            mRotation  = C2D_TARGET_ROTATE_90;
+            break;
+        default:
+            mRotation = C2D_TARGET_ROTATE_0;
+            break;
+    }
+}
 bool C2DColorConverter::convertC2D(int srcFd, void *srcBase, void * srcData,
                                    int dstFd, void *dstBase, void * dstData)
 {
@@ -255,7 +287,7 @@ bool C2DColorConverter::convertC2D(int srcFd, void *srcBase, void * srcData,
         if (ret == C2D_STATUS_OK) {
 
           mBlit.surface_id = mSrcSurface;
-          ret = mC2DDraw(mDstSurface, C2D_TARGET_ROTATE_0, 0, 0, 0, &mBlit, 1);
+          ret = mC2DDraw(mDstSurface, mRotation, 0, 0, 0, &mBlit, 1);
           mC2DFinish(mDstSurface);
 
           if (ret == C2D_STATUS_OK) {
@@ -314,6 +346,37 @@ bool C2DColorConverter::isYUVSurface(ColorConvertFormat format)
     }
 }
 
+void C2DColorConverter::ClearSurfaces()
+{
+        if (mSrcSurface) {
+            mC2DDestroySurface(mSrcSurface);
+            mSrcSurface = 0;
+        }
+
+         if (mSrcSurfaceDef) {
+            if (isYUVSurface(mSrcFormat)) {
+                delete ((C2D_YUV_SURFACE_DEF *)mSrcSurfaceDef);
+            } else {
+                delete ((C2D_RGB_SURFACE_DEF *)mSrcSurfaceDef);
+            }
+            mSrcSurfaceDef = NULL;
+        }
+
+        if (mDstSurface) {
+            mC2DDestroySurface(mDstSurface);
+            mDstSurface = 0;
+        }
+
+        if (mDstSurfaceDef) {
+            if (isYUVSurface(mDstFormat)) {
+                delete ((C2D_YUV_SURFACE_DEF *)mDstSurfaceDef);
+            } else {
+                delete ((C2D_RGB_SURFACE_DEF *)mDstSurfaceDef);
+            }
+            mDstSurfaceDef = NULL;
+        }
+}
+
 int32_t C2DColorConverter::getDummySurfaceDef(ColorConvertFormat format,
                                             size_t width, size_t height,
                                             bool isSource)
@@ -321,16 +384,6 @@ int32_t C2DColorConverter::getDummySurfaceDef(ColorConvertFormat format,
     void *surfaceDef = NULL;
     C2D_SURFACE_TYPE hostSurfaceType;
     C2D_STATUS ret;
-
-    if (isSource){
-        if (mSrcSurface) {
-            mC2DDestroySurface(mSrcSurface);
-            mSrcSurface = 0;
-        }
-    } else if (mDstSurface) {
-        mC2DDestroySurface(mDstSurface);
-        mDstSurface = 0;
-    }
 
     if (isYUVSurface(format)) {
         C2D_YUV_SURFACE_DEF **surfaceYUVDef = (C2D_YUV_SURFACE_DEF **)

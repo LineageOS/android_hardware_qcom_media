@@ -138,6 +138,9 @@ as 0. This disables sending metadata via gralloc handle.
 */
 #define HDR10_SETMETADATA_ENABLE 0
 
+#define THUMBNAIL_YUV420P_8BIT 0x01
+#define THUMBNAIL_YUV420P_10BIT 0x02
+
 using namespace android;
 
 void* async_message_thread (void *input)
@@ -569,7 +572,6 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     rst_prev_ts(true),
     frm_int(0),
     m_fps_received(0),
-    m_fps_prev(0),
     in_reconfig(false),
     c2d_enable_pending(false),
     m_display_id(NULL),
@@ -588,6 +590,7 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     m_dec_secure_prefetch_size_internal(0),
     m_dec_secure_prefetch_size_output(0),
     m_queued_codec_config_count(0),
+    m_thumbnail_yuv_output(0),
     m_prefetch_done(0),
     m_buffer_error(false)
 {
@@ -638,6 +641,9 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
         DEBUG_PRINT_HIGH("perf cotrol enabled");
         m_perf_control.load_perf_library();
     }
+
+    Platform::Config::getInt32(Platform::vidc_dec_thumbnail_yuv_output,
+            (int32_t *)&m_thumbnail_yuv_output, 0);
 
     property_value[0] = '\0';
     property_get("vendor.vidc.dec.log.in", property_value, "0");
@@ -1044,13 +1050,6 @@ void omx_vdec::process_event_cb(void *ctxt)
                         DEBUG_PRINT_ERROR("OMX_COMPONENT_GENERATE_EBD failure");
                         pThis->omx_report_error ();
                     } else {
-                        if (p2 == VDEC_S_INPUT_BITSTREAM_ERR && p1) {
-                            pThis->time_stamp_dts.remove_time_stamp(
-                                    ((OMX_BUFFERHEADERTYPE *)(intptr_t)p1)->nTimeStamp,
-                                    (pThis->drv_ctx.interlace != VDEC_InterlaceFrameProgressive)
-                                    ?true:false);
-                        }
-
                         if ( pThis->empty_buffer_done(&pThis->m_cmp,
                                     (OMX_BUFFERHEADERTYPE *)(intptr_t)p1) != OMX_ErrorNone) {
                             DEBUG_PRINT_ERROR("empty_buffer_done failure");
@@ -1058,16 +1057,6 @@ void omx_vdec::process_event_cb(void *ctxt)
                         }
                     }
                     break;
-                case OMX_COMPONENT_GENERATE_INFO_FIELD_DROPPED: {
-                                            int64_t *timestamp = (int64_t *)(intptr_t)p1;
-                                            if (p1) {
-                                                pThis->time_stamp_dts.remove_time_stamp(*timestamp,
-                                                        (pThis->drv_ctx.interlace != VDEC_InterlaceFrameProgressive)
-                                                        ?true:false);
-                                                free(timestamp);
-                                            }
-                                        }
-                                        break;
                 case OMX_COMPONENT_GENERATE_FBD:
                                         if (p2 != VDEC_S_SUCCESS) {
                                             DEBUG_PRINT_ERROR("OMX_COMPONENT_GENERATE_FBD failure");
@@ -2740,7 +2729,6 @@ bool omx_vdec::execute_input_flush()
             empty_buffer_done(&m_cmp,(OMX_BUFFERHEADERTYPE *)p1);
         }
     }
-    time_stamp_dts.flush_timestamp();
     /*Check if Heap Buffers are to be flushed*/
     pthread_mutex_unlock(&m_lock);
     input_flush_progress = false;
@@ -5011,7 +4999,6 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
     buffer->pMarkData = (OMX_PTR)(unsigned long)m_etb_count;
     post_event ((unsigned long)hComp,(unsigned long)buffer,OMX_COMPONENT_GENERATE_ETB);
 
-    time_stamp_dts.insert_timestamp(buffer);
     return OMX_ErrorNone;
 }
 
@@ -6104,21 +6091,6 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
     }
 #endif
 
-    /* For use buffer we need to copy the data */
-    if (!output_flush_progress) {
-        /* This is the error check for non-recoverable errros */
-        bool is_duplicate_ts_valid = true;
-        bool is_interlaced = (drv_ctx.interlace != VDEC_InterlaceFrameProgressive);
-
-        if (output_capability == V4L2_PIX_FMT_MPEG4 ||
-                output_capability == V4L2_PIX_FMT_MPEG2)
-            is_duplicate_ts_valid = false;
-
-        if (buffer->nFilledLen > 0) {
-            time_stamp_dts.get_next_timestamp(buffer,
-                    is_interlaced && is_duplicate_ts_valid && !is_mbaff);
-        }
-    }
     VIDC_TRACE_INT_LOW("FBD-TS", buffer->nTimeStamp / 1000);
 
     if (m_cb.FillBufferDone) {
@@ -6192,32 +6164,17 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
 
         // add current framerate to gralloc meta data
         if ((buffer->nFilledLen > 0) && m_enable_android_native_buffers && omx_base_address) {
-            // If valid fps was received, directly send it to display for the 1st fbd.
+            // If valid fps was received, consider the same if less than dec hfr rate
             // Otherwise, calculate fps using fbd timestamps
-            float refresh_rate = m_fps_prev;
-            if (m_fps_received) {
-                if (1 == proc_frms) {
-                    refresh_rate = m_fps_received / (float)(1<<16);
-                }
-            } else {
-                // calculate and set refresh rate for every frame from second frame onwards
-                // display will assume the default refresh rate for first frame (which is 60 fps)
-                if (m_fps_prev) {
-                    if (drv_ctx.frame_rate.fps_denominator) {
-                        refresh_rate = drv_ctx.frame_rate.fps_numerator /
-                            (float) drv_ctx.frame_rate.fps_denominator;
-                    }
-                }
-            }
-            OMX_U32 fps_limit = m_dec_hfr_fps ? (OMX_U32)m_dec_hfr_fps : 60;
-            if (refresh_rate > fps_limit) {
-                refresh_rate = fps_limit;
-            }
+            float refresh_rate = (m_fps_received >> 16) ? (m_fps_received >> 16) : current_framerate;
+
+            if (m_dec_hfr_fps)
+                refresh_rate = m_dec_hfr_fps;
+
             DEBUG_PRINT_LOW("frc set refresh_rate %f, frame %d", refresh_rate, proc_frms);
             OMX_U32 buf_index = buffer - omx_base_address;
             setMetaData((private_handle_t *)native_buffer[buf_index].privatehandle,
                          UPDATE_REFRESH_RATE, (void*)&refresh_rate);
-            m_fps_prev = refresh_rate;
         }
 
         if (il_buffer) {
@@ -6390,17 +6347,6 @@ int omx_vdec::async_message_process (void *context, void* message)
             }
             omx->post_event ((unsigned long)omxhdr,vdec_msg->status_code,
                     OMX_COMPONENT_GENERATE_EBD);
-            break;
-        case VDEC_MSG_EVT_INFO_FIELD_DROPPED:
-            int64_t *timestamp;
-            timestamp = (int64_t *) malloc(sizeof(int64_t));
-            if (timestamp) {
-                *timestamp = vdec_msg->msgdata.output_frame.time_stamp;
-                omx->post_event ((unsigned long)timestamp, vdec_msg->status_code,
-                        OMX_COMPONENT_GENERATE_INFO_FIELD_DROPPED);
-                DEBUG_PRINT_HIGH("Field dropped time stamp is %lld",
-                        (long long)vdec_msg->msgdata.output_frame.time_stamp);
-            }
             break;
         case VDEC_MSG_RESP_OUTPUT_FLUSHED:
         case VDEC_MSG_RESP_OUTPUT_BUFFER_DONE: {
@@ -7280,6 +7226,18 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
     portDefn->format.video.nStride = drv_ctx.video_resolution.stride;
     portDefn->format.video.nSliceHeight = drv_ctx.video_resolution.scan_lines;
 
+    /* OMX client can do tone mapping/post processing, Hence, OMX should produce
+       YUV buffers in case client needs it. */
+    if (drv_ctx.idr_only_decoding && portDefn->format.video.eColorFormat == OMX_COLOR_Format16bitRGB565 &&
+       ((dpb_bit_depth == MSM_VIDC_BIT_DEPTH_10 && (m_thumbnail_yuv_output & THUMBNAIL_YUV420P_10BIT)) ||
+        (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_8 && (m_thumbnail_yuv_output & THUMBNAIL_YUV420P_8BIT)))) {
+        DEBUG_PRINT_LOW("Change color format to YUV420 planar for thumbnail usecase");
+        portDefn->format.video.eColorFormat = OMX_COLOR_FormatYUV420Planar;
+        if (!client_buffers.set_color_format(portDefn->format.video.eColorFormat)) {
+            DEBUG_PRINT_ERROR("Set color format failed");
+            eRet = OMX_ErrorBadParameter;
+        }
+    }
     if ((portDefn->format.video.eColorFormat == OMX_COLOR_FormatYUV420Planar) ||
        (portDefn->format.video.eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar)) {
            portDefn->format.video.nStride = ALIGN(drv_ctx.video_resolution.frame_width, 16);

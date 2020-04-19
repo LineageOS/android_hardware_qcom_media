@@ -186,6 +186,9 @@ omx_venc::omx_venc()
         m_perf_control.load_perf_library();
     }
     m_perf_control.perf_lock_acquire();
+
+    Platform::Config::getInt32(Platform::vidc_c2d_rotation,
+            (int32_t *)&m_c2d_rotation, 0);
 }
 
 omx_venc::~omx_venc()
