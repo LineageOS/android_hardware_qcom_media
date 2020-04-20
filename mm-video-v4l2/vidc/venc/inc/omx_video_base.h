@@ -272,6 +272,8 @@ class omx_video: public qc_omx_component
         virtual bool dev_free_buf(void *,unsigned) = 0;
         virtual bool dev_empty_buf(void *, void *,unsigned,unsigned) = 0;
         virtual bool dev_fill_buf(void *buffer, void *,unsigned,unsigned) = 0;
+        virtual bool dev_is_meta_mode() = 0;
+        virtual bool dev_is_avtimer_needed() = 0;
         virtual bool dev_get_buf_req(OMX_U32 *,OMX_U32 *,OMX_U32 *,OMX_U32) = 0;
         virtual bool dev_get_dimensions(OMX_U32 ,OMX_U32 *,OMX_U32 *) = 0;
         virtual bool is_streamon_done(OMX_U32 port) = 0;
@@ -635,6 +637,7 @@ class omx_video: public qc_omx_component
         client_extradata_info m_client_in_extradata_info;
 
         void complete_pending_buffer_done_cbs();
+        bool is_rotation_enabled();
         bool is_conv_needed(void *hdl);
         void print_debug_color_aspects(ColorAspects *aspects, const char *prefix);
 
