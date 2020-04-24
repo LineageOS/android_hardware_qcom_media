@@ -2329,9 +2329,14 @@ OMX_ERRORTYPE  omx_venc::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                VALIDATE_OMX_PARAM_DATA(configData, DescribeColorAspectsParams);
                DescribeColorAspectsParams *params = (DescribeColorAspectsParams *)configData;
                print_debug_color_aspects(&(params->sAspects), "set_config");
-               if (!handle->venc_set_config(configData, (OMX_INDEXTYPE)OMX_QTIIndexConfigDescribeColorAspects)) {
-                   DEBUG_PRINT_ERROR("Failed to set OMX_QTIIndexConfigDescribeColorAspects");
-                   return OMX_ErrorUnsupportedSetting;
+               if ((m_state != OMX_StateExecuting) && (!BITMASK_PRESENT(&m_flags,OMX_COMPONENT_EXECUTE_PENDING))) {
+                   if (!handle->venc_set_config(configData, (OMX_INDEXTYPE)OMX_QTIIndexConfigDescribeColorAspects)) {
+                       DEBUG_PRINT_ERROR("Failed to set OMX_QTIIndexConfigDescribeColorAspects");
+                       return OMX_ErrorUnsupportedSetting;
+                   }
+               }
+               else {
+                   DEBUG_PRINT_LOW("Ignoring colorspace setting when flag set to OMX_COMPONENT_EXECUTE_PENDING or state is in execute");
                }
                memcpy(&m_sConfigColorAspects, configData, sizeof(m_sConfigColorAspects));
                break;
