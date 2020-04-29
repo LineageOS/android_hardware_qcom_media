@@ -1073,41 +1073,36 @@ void omx_vdec::process_event_cb(void *ctxt)
                     }
                     break;
                 case OMX_COMPONENT_GENERATE_FBD:
-                                        if (p2 != VDEC_S_SUCCESS) {
-                                            DEBUG_PRINT_ERROR("OMX_COMPONENT_GENERATE_FBD failure");
-                                            pThis->omx_report_error ();
-                                            break;
-                                        }
-                                        if (pThis->fill_buffer_done(&pThis->m_cmp,
-                                                    (OMX_BUFFERHEADERTYPE *)(intptr_t)p1) != OMX_ErrorNone ) {
-                                            DEBUG_PRINT_ERROR("fill_buffer_done failure");
-                                            pThis->omx_report_error ();
-                                            break;
-                                        }
+                    if (p2 != VDEC_S_SUCCESS) {
+                        DEBUG_PRINT_ERROR("OMX_COMPONENT_GENERATE_FBD failure");
+                        pThis->omx_report_error ();
+                        break;
+                    }
 #if !HDR10_SETMETADATA_ENABLE
-                                        if (pThis->output_capability != V4L2_PIX_FMT_VP9 &&
-                                            pThis->output_capability != V4L2_PIX_FMT_HEVC)
-                                            break;
-
-                                        if (!pThis->m_cb.EventHandler) {
-                                            DEBUG_PRINT_ERROR("fill_buffer_done: null event handler");
-                                            break;
-                                        }
-                                        bool is_list_empty;
-                                        is_list_empty = false;
-                                        pthread_mutex_lock(&pThis->m_hdr10pluslock);
-                                        is_list_empty = pThis->m_hdr10pluslist.empty();
-                                        pthread_mutex_unlock(&pThis->m_hdr10pluslock);
-                                        if (!is_list_empty) {
-                                            DEBUG_PRINT_LOW("fill_buffer_done: event config update");
-                                            pThis->m_cb.EventHandler(&pThis->m_cmp,
-                                                    pThis->m_app_data,
-                                                    OMX_EventConfigUpdate,
-                                                    OMX_CORE_OUTPUT_PORT_INDEX,
-                                                    OMX_QTIIndexConfigDescribeHDR10PlusInfo, NULL);
-                                        }
+                    if (pThis->m_cb.EventHandler) {
+                        OMX_BUFFERHEADERTYPE * buffer = (OMX_BUFFERHEADERTYPE *)(intptr_t)p1;
+                        if (buffer->nFilledLen && (pThis->output_capability == V4L2_PIX_FMT_HEVC ||
+                            (pThis->output_capability == V4L2_PIX_FMT_VP9 && buffer->pMarkData))) {
+                           bool is_list_empty;
+                           is_list_empty = false;
+                           pthread_mutex_lock(&pThis->m_hdr10pluslock);
+                           is_list_empty = pThis->m_hdr10pluslist.empty();
+                           pthread_mutex_unlock(&pThis->m_hdr10pluslock);
+                           if (!is_list_empty) {
+                               DEBUG_PRINT_LOW("fill_buffer_done: event config update");
+                               pThis->m_cb.EventHandler(&pThis->m_cmp, pThis->m_app_data,
+                                       OMX_EventConfigUpdate, OMX_CORE_OUTPUT_PORT_INDEX,
+                                       OMX_QTIIndexConfigDescribeHDR10PlusInfo, NULL);
+                           }
+                        }
+                    }
 #endif
-                                        break;
+                    if (pThis->fill_buffer_done(&pThis->m_cmp,
+                               (OMX_BUFFERHEADERTYPE *)(intptr_t)p1) != OMX_ErrorNone ) {
+                        DEBUG_PRINT_ERROR("fill_buffer_done failure");
+                        pThis->omx_report_error ();
+                    }
+                    break;
 
                 case OMX_COMPONENT_GENERATE_EVENT_INPUT_FLUSH:
                                         DEBUG_PRINT_HIGH("Driver flush i/p Port complete, flags %#llx",
@@ -8019,6 +8014,7 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
     m_extradata_misr.output_crop_updated = OMX_FALSE;
     data = (struct OMX_OTHER_EXTRADATATYPE *)p_extradata;
     if (data) {
+        bool is_hdr10_plus_info_found = false;
         while ((((consumed_len + sizeof(struct OMX_OTHER_EXTRADATATYPE)) <
                 drv_ctx.extradata_info.buffer_size) && ((consumed_len + data->nSize) <
                 drv_ctx.extradata_info.buffer_size))
@@ -8135,7 +8131,10 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                             memcpy(color_mdata.dynamicMetaDataPayload, userdata_payload->data, payload_len);
                             DEBUG_PRINT_HIGH("Copied %u bytes of HDR10+ extradata", payload_len);
 #else
-                            store_hevc_hdr10plusinfo(payload_len, userdata_payload);
+                            if(!is_hdr10_plus_info_found) {
+                               store_hevc_hdr10plusinfo(payload_len, userdata_payload);
+                               is_hdr10_plus_info_found = true;
+                            }
 #endif
                         }
                     }
@@ -9109,7 +9108,7 @@ bool omx_vdec::store_hevc_hdr10plusinfo(uint32_t payload_size,
     memset(&metadata, 0, sizeof(struct hdr10plusInfo));
     metadata.nParamSizeUsed = payload_size;
     memcpy(metadata.payload, hdr10plusdata->data , payload_size);
-    metadata.is_new = true;
+    metadata.is_new = false;
     if (m_etb_count) {
         metadata.timestamp = m_etb_timestamp + 1;
     }
@@ -9258,7 +9257,6 @@ void omx_vdec::clear_hdr10plusinfo()
 
 void omx_vdec::get_hdr10plusinfo(DescribeHDR10PlusInfoParams *hdr10plusdata)
 {
-    std::list<hdr10plusInfo>::iterator iter;
     bool is_list_empty = false;
 
     if (output_capability != V4L2_PIX_FMT_VP9 &&
@@ -9275,19 +9273,12 @@ void omx_vdec::get_hdr10plusinfo(DescribeHDR10PlusInfoParams *hdr10plusdata)
     }
 
     pthread_mutex_lock(&m_hdr10pluslock);
-    iter = m_hdr10pluslist.begin();
-    while (iter != m_hdr10pluslist.end()) {
-        if (!iter->is_new) {
-            hdr10plusdata->nParamSizeUsed = iter->nParamSizeUsed;
-            memcpy(hdr10plusdata->nValue, iter->payload,
-                iter->nParamSizeUsed);
-            DEBUG_PRINT_LOW("found hdr10plus metadata with timestamp %lld, size %u",
-                iter->timestamp, iter->nParamSizeUsed);
-            iter = m_hdr10pluslist.erase(iter);
-            break;
-        }
-        iter++;
-    }
+    hdr10plusInfo item = m_hdr10pluslist.front();
+    hdr10plusdata->nParamSizeUsed = item.nParamSizeUsed;
+    memcpy(hdr10plusdata->nValue, item.payload,item.nParamSizeUsed);
+    DEBUG_PRINT_LOW("found hdr10plus metadata with timestamp %lld, size %u",
+        item.timestamp, item.nParamSizeUsed);
+    m_hdr10pluslist.pop_front();
     pthread_mutex_unlock(&m_hdr10pluslock);
 }
 
