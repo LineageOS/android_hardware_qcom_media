@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <!--
-Copyright (c) 2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -39,8 +39,11 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         <!-- Buffer size : internal : 200 MB (200 X 1), output : 200 MB (12.5 X 16) -->
         <property name="vidc_dec_sec_prefetch_size_internal" value="209715200"/>
         <property name="vidc_dec_sec_prefetch_size_output" value="13434880"/>
-        <property name="vidc_enc_bitrate_savings_enable" value="1"/>
+        <!-- Enable CAC control: 0x0: disabled, 0x1:enabled for 8 bit, 0x2:enabled for 10 bit, 0x3:enabled for 8 and 10 bits both -->
+        <property name="vidc_enc_bitrate_savings_enable" value="3"/>
         <property name="vidc_enc_auto_blur_disable" value="0"/>
         <!-- Bitmask 0: RGB565  1: YUV420P 8-bit, 2: YUV420P 10-bit, 3: YUV420p 8&10 bit -->
         <property name="vidc_dec_thumbnail_yuv_output" value="0"/>
+        <property name="vidc_enc_quality_boost_enable" value="1"/>
+        <property name="vidc_dec_output_rate" value="120"/>
 </configs>

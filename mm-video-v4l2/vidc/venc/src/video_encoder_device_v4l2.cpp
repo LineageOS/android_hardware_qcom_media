@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2020 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -81,6 +81,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define HEVC_MAIN10_START (HEVC_MAIN_START + 13)
 #define POLL_TIMEOUT 1000
 #define MAX_SUPPORTED_SLICES_PER_FRAME 28 /* Max supported slices with 32 output buffers */
+#define ENC_HDR_DISABLE_FLAG 0x2
 
 #define SZ_4K 0x1000
 #define SZ_1M 0x100000
@@ -171,6 +172,8 @@ venc_dev::venc_dev(class omx_venc *venc_class)
             (int32_t *)&is_csc_custom_matrix_enabled, 0);
     Platform::Config::getInt32(Platform::vidc_enc_auto_blur_disable,
             (int32_t *)&is_auto_blur_disabled, 0);
+    Platform::Config::getInt32(Platform::vidc_disable_hdr,
+            (int32_t *)&m_disable_hdr, 0);
 
     char property_value[PROPERTY_VALUE_MAX] = {0};
 
@@ -206,7 +209,10 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     Platform::Config::getInt32(Platform::vidc_enc_linear_color_format,
             (int32_t *)&mUseLinearColorFormat, 0);
     Platform::Config::getInt32(Platform::vidc_enc_bitrate_savings_enable,
-            (int32_t *)&mBitrateSavingsEnable, 1);
+            (int32_t *)&mBitrateSavingsEnable, 3);
+    Platform::Config::getInt32(Platform::vidc_enc_quality_boost_enable,
+            (int32_t *)&mQualityBoostRequested, 0);
+    mQualityBoostEligible = false;
 
     profile_level_converter::init();
 }
@@ -669,9 +675,7 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
     }
 
     DEBUG_PRINT_HIGH("Processing Extradata for Buffer = %lld", nTimeStamp); // Useful for debugging
-#ifdef USE_ION
-    venc_handle->do_cache_operations(input_extradata_info.ion[index].data_fd);
-#endif
+    sync_start_rw(input_extradata_info.ion[index].data_fd);
 
     p_extradata = input_extradata_info.ion[index].uaddr;
     data = (struct OMX_OTHER_EXTRADATATYPE *)p_extradata;
@@ -834,9 +838,7 @@ bool venc_dev::handle_input_extradata(struct v4l2_buffer buf)
     data->data[0] = 0;
 
 bailout:
-#ifdef USE_ION
-    venc_handle->do_cache_operations(input_extradata_info.ion[index].data_fd);
-#endif
+    sync_end_rw(input_extradata_info.ion[index].data_fd);
     return status;
 }
 
@@ -1272,9 +1274,7 @@ int venc_dev::venc_extradata_log_buffers(char *buffer_addr, int index, bool inpu
     else
         fd = output_extradata_info.ion[index].data_fd;
 
-#ifdef USE_ION
-    venc_handle->do_cache_operations(fd);
-#endif
+    sync_start_read(fd);
     if (!m_debug.extradatafile && m_debug.extradata_log) {
         int size = 0;
 
@@ -1294,9 +1294,7 @@ int venc_dev::venc_extradata_log_buffers(char *buffer_addr, int index, bool inpu
             DEBUG_PRINT_ERROR("Failed to open extradata file: %s for logging errno:%d",
                                m_debug.extradatafile_name, errno);
             m_debug.extradatafile_name[0] = '\0';
-#ifdef USE_ION
-            venc_handle->do_cache_operations(fd);
-#endif
+            sync_end_read(fd);
             return -1;
         }
     }
@@ -1309,9 +1307,7 @@ int venc_dev::venc_extradata_log_buffers(char *buffer_addr, int index, bool inpu
             fwrite(p_extra, p_extra->nSize, 1, m_debug.extradatafile);
         } while (p_extra->eType != OMX_ExtraDataNone);
     }
-#ifdef USE_ION
-    venc_handle->do_cache_operations(fd);
-#endif
+    sync_end_read(fd);
     return 0;
 }
 
@@ -1323,9 +1319,7 @@ int venc_dev::venc_input_log_buffers(OMX_BUFFERHEADERTYPE *pbuffer, int fd, int 
         return -1;
     }
 
-#ifdef USE_ION
-    venc_handle->do_cache_operations(fd);
-#endif
+    sync_start_read(fd);
     if (!m_debug.infile) {
         int size = snprintf(m_debug.infile_name, PROPERTY_VALUE_MAX, "%s/input_enc_%lu_%lu_%p.yuv",
                             m_debug.log_loc, m_sVenc_cfg.input_width, m_sVenc_cfg.input_height, this);
@@ -1417,9 +1411,7 @@ int venc_dev::venc_input_log_buffers(OMX_BUFFERHEADERTYPE *pbuffer, int fd, int 
         }
     }
 bailout:
-#ifdef USE_ION
-    venc_handle->do_cache_operations(fd);
-#endif
+    sync_end_read(fd);
     return status;
 }
 
@@ -1430,11 +1422,8 @@ bool venc_dev::venc_open(OMX_U32 codec)
     struct v4l2_control control;
     OMX_STRING device_name = (OMX_STRING)"/dev/video33";
     char property_value[PROPERTY_VALUE_MAX] = {0};
-    char platform_name[PROPERTY_VALUE_MAX] = {0};
     FILE *soc_file = NULL;
     char buffer[10];
-
-    property_get("ro.board.platform", platform_name, "0");
 
     m_nDriver_fd = open (device_name, O_RDWR);
     if ((int)m_nDriver_fd < 0) {
@@ -1554,6 +1543,13 @@ bool venc_dev::venc_open(OMX_U32 codec)
         m_sInput_buff_property.alignment  = SZ_4K;
     }
 
+    if (m_codec == OMX_VIDEO_CodingImageHEIC) {
+        if (!venc_set_grid_enable()) {
+            DEBUG_PRINT_ERROR("Failed to enable grid");
+            return false;
+        }
+    }
+
     memset(&fmt, 0, sizeof(fmt));
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     fmt.fmt.pix_mp.height = m_sVenc_cfg.dvs_height;
@@ -1580,13 +1576,6 @@ bool venc_dev::venc_open(OMX_U32 codec)
 
     ret = ioctl(m_nDriver_fd, VIDIOC_S_FMT, &fmt);
     m_sInput_buff_property.datasize=fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
-
-    if (m_codec == OMX_VIDEO_CodingImageHEIC) {
-        if (!venc_set_grid_enable()) {
-            DEBUG_PRINT_ERROR("Failed to enable grid");
-            return false;
-        }
-    }
 
     bufreq.memory = V4L2_MEMORY_USERPTR;
     bufreq.count = 2;
@@ -2821,7 +2810,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         if (encodePerfMode == OMX_TRUE)
                             buf.flags |= V4L2_BUF_FLAG_PERF_MODE;
                         // Clear SET_VIDEO_PERF_MODE in buffer handle
-                        clearMetaData(handle,SET_VIDEO_PERF_MODE);
+                        setMetaData(handle, SET_VIDEO_PERF_MODE, 0);
                     }
                     fd = handle->fd;
                     plane[0].data_offset = 0;
@@ -2882,6 +2871,8 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                 return false;
             }
         }
+
+        venc_set_quality_boost((OMX_BOOL)c2d_enabled);
 
         if (!downscalar_enabled) {
             OMX_U32 inp_width = 0, inp_height = 0, out_width = 0, out_height = 0;
@@ -3878,14 +3869,62 @@ bool venc_dev::venc_set_priority(OMX_U32 priority) {
     return true;
 }
 
+bool venc_dev::reconfigure_avc_param(OMX_VIDEO_PARAM_AVCTYPE *param) {
+    param->eProfile = (OMX_VIDEO_AVCPROFILETYPE)QOMX_VIDEO_AVCProfileMain;
+
+    DEBUG_PRINT_LOW("reconfigure_avc_param");
+
+    if (!venc_set_profile (param->eProfile)) {
+        DEBUG_PRINT_ERROR("ERROR: Unsuccessful in updating Profile %d",
+            param->eProfile);
+        return false;
+    }
+    if (set_nP_frames(param->nPFrames) == false ||
+        (param->nBFrames && set_nB_frames(param->nBFrames) == false)) {
+            DEBUG_PRINT_ERROR("ERROR: Request for setting intra period failed");
+            return false;
+    }
+    if (!venc_set_entropy_config (param->bEntropyCodingCABAC, param->nCabacInitIdc)) {
+        DEBUG_PRINT_ERROR("ERROR: Request for setting Entropy failed");
+        return false;
+    }
+    if (!venc_set_inloop_filter (param->eLoopFilterMode)) {
+        DEBUG_PRINT_ERROR("ERROR: Request for setting Inloop filter failed");
+        return false;
+    }
+    if (!venc_set_multislice_cfg(V4L2_MPEG_VIDEO_MULTI_SICE_MODE_MAX_MB, param->nSliceHeaderSpacing)) {
+        DEBUG_PRINT_ERROR("WARNING: Unsuccessful in updating slice_config");
+        return false;
+    }
+    if (!venc_h264_transform_8x8(param->bDirect8x8Inference)) {
+        DEBUG_PRINT_ERROR("WARNING: Request for setting Transform8x8 failed");
+        return false;
+    }
+
+    return true;
+}
+
 bool venc_dev::venc_set_operatingrate(OMX_U32 rate) {
     struct v4l2_control control;
 
     control.id = V4L2_CID_MPEG_VIDC_VIDEO_OPERATING_RATE;
     control.value = rate;
 
+    if (rate > INT_MAX)
+        control.value = INT_MAX;
+
     DEBUG_PRINT_LOW("venc_set_operating_rate: %u fps", rate >> 16);
     DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%u", control.id, control.value);
+
+    if (!strncmp(venc_handle->m_platform, "bengal", 6) &&
+        (rate >> 16) > 30 && m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264 &&
+        venc_handle->m_sParamAVC.eProfile ==
+            (OMX_VIDEO_AVCPROFILETYPE)QOMX_VIDEO_AVCProfileHigh &&
+        (m_sVenc_cfg.input_width * m_sVenc_cfg.input_height >= 1920 * 1080)) {
+        if (!reconfigure_avc_param(&venc_handle->m_sParamAVC)) {
+            DEBUG_PRINT_ERROR("reconfigure avc param fails");
+        }
+    }
 
     if(ioctl(m_nDriver_fd, VIDIOC_S_CTRL, &control)) {
         hw_overload = errno == EBUSY;
@@ -4330,7 +4369,7 @@ bool venc_dev::venc_cvp_enable(private_handle_t *handle)
                 return false;
         } else {
             DEBUG_PRINT_ERROR("ERROR: External CVP mode disabled for this session and continue!");
-            clearMetaData(handle, SET_CVP_METADATA);
+            setMetaData(handle, SET_CVP_METADATA, 0);
         }
     } else {
         DEBUG_PRINT_INFO("venc_cvp_enable: cvp metadata not available");
@@ -4375,7 +4414,7 @@ bool venc_dev::venc_get_cvp_metadata(private_handle_t *handle, struct v4l2_buffe
     buf->flags &= ~V4L2_BUF_FLAG_CVPMETADATA_SKIP;
     cvpMetadata.size = 0;
     if (getMetaData(handle, GET_CVP_METADATA, &cvpMetadata) == 0) {
-        clearMetaData(handle, SET_CVP_METADATA);
+        setMetaData(handle, SET_CVP_METADATA, 0);
         if (cvpMetadata.size != CVP_METADATA_SIZE) {
             DEBUG_PRINT_ERROR("ERROR: Invalid CVP metadata size %d",
                 cvpMetadata.size);
@@ -4407,8 +4446,13 @@ bool venc_dev::venc_get_cvp_metadata(private_handle_t *handle, struct v4l2_buffe
 
 bool venc_dev::venc_config_bitrate(OMX_VIDEO_CONFIG_BITRATETYPE *bit_rate)
 {
+    OMX_U32 bitrate = bit_rate->nEncodeBitrate;
     if (bit_rate->nPortIndex == (OMX_U32)PORT_INDEX_OUT) {
-        if (venc_set_target_bitrate(bit_rate->nEncodeBitrate) == false) {
+        // If quality boost is eligible, also increase bitrate by 15% in dynamic change case
+        if (mQualityBoostEligible && bitrate < VENC_QUALITY_BOOST_BITRATE_THRESHOLD) {
+            bitrate += bitrate * 15 / 100;
+        }
+        if (venc_set_target_bitrate(bitrate) == false) {
             DEBUG_PRINT_ERROR("ERROR: Setting Target Bit rate failed");
             return false;
         }
@@ -4836,3 +4880,53 @@ OMX_U32 venc_dev::append_extradata_roi_region_qp_info(OMX_OTHER_EXTRADATATYPE *d
     return data->nSize;
 }
 
+void venc_dev::venc_set_quality_boost(OMX_BOOL c2d_enable)
+{
+    OMX_U32 initial_qp;
+    OMX_QCOM_VIDEO_PARAM_IPB_QPRANGETYPE qp_range;
+    OMX_QTI_VIDEO_CONFIG_BLURINFO blurinfo;
+
+    // Conditions to enable encoder quality boost,
+    // 1. Codec is AVC
+    // 2. RCMode is VBR
+    // 3. Input is RGBA/RGBA_UBWC (C2D enabled)
+    // 4. width <= 960 and height <= 960
+    // 5. FPS <= 30
+    // 6. bitrate < 2Mbps
+
+    if (mQualityBoostRequested && c2d_enable &&
+        m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264 &&
+        rate_ctrl.rcmode == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR &&
+        m_sVenc_cfg.dvs_width <= 960 && m_sVenc_cfg.dvs_height <= 960 &&
+        (m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) <= 30 &&
+        bitrate.target_bitrate < VENC_QUALITY_BOOST_BITRATE_THRESHOLD) {
+        mQualityBoostEligible = true;
+        DEBUG_PRINT_HIGH("Quality boost eligible encoder session");
+    } else {
+        return;
+    }
+
+    if (bitrate.target_bitrate <= 64000)
+        venc_set_level(OMX_VIDEO_AVCLevel1);
+
+    // Set below configurations to boost quality
+    // 1. Increase bitrate by 15%
+    bitrate.target_bitrate += bitrate.target_bitrate * 15 / 100;
+    venc_set_target_bitrate(bitrate.target_bitrate);
+
+    // 2. Set initial QP=30
+    initial_qp = 30;
+    venc_set_qp(initial_qp, initial_qp, initial_qp, 7);
+
+    // 3. Set QP range [10,40]
+    qp_range.minIQP = qp_range.minPQP = qp_range.minBQP = 10;
+    qp_range.maxIQP = qp_range.maxPQP = qp_range.maxBQP = 40;
+    venc_set_session_qp_range(&qp_range);
+
+    // 4. Disable blur (both external and internal)
+    blurinfo.nBlurInfo = 2;
+    venc_set_blur_resolution(&blurinfo);
+
+    // 5. Disable bitrate savings (CAC)
+    venc_set_bitrate_savings_mode(0);
+}

@@ -885,7 +885,6 @@ class omx_vdec: public qc_omx_component
 #ifdef USE_ION
         bool alloc_map_ion_memory(OMX_U32 buffer_size, vdec_ion *ion_info, int flag);
         void free_ion_memory(struct vdec_ion *buf_ion_info);
-        void do_cache_operations(int fd);
 #endif
 
 #ifdef USE_GBM
@@ -1002,6 +1001,7 @@ class omx_vdec: public qc_omx_component
         ts_arr_list           m_timestamp_list;
 #endif
 
+        char m_platform_name[PROPERTY_VALUE_MAX] = {0};
         bool input_flush_progress;
         bool output_flush_progress;
         bool input_use_buffer;
@@ -1061,8 +1061,6 @@ class omx_vdec: public qc_omx_component
         OMX_U32 m_disp_hor_size;
         OMX_U32 m_disp_vert_size;
         OMX_S64 prev_ts;
-        OMX_S64 prev_ts_actual;
-        bool rst_prev_ts;
         OMX_U32 frm_int;
         OMX_U32 m_fps_received;
 
@@ -1091,6 +1089,7 @@ class omx_vdec: public qc_omx_component
         };
         meta_buffer meta_buff;
         OMX_PARAM_PORTDEFINITIONTYPE m_port_def;
+        omx_time_stamp_reorder time_stamp_dts;
         desc_buffer_hdr *m_desc_buffer_ptr;
         bool secure_mode;
         bool allocate_native_handle;
@@ -1207,6 +1206,8 @@ class omx_vdec: public qc_omx_component
         int32_t m_dec_secure_prefetch_size_internal;
         int32_t m_dec_secure_prefetch_size_output;
         int32_t m_arb_mode_override;
+        int32_t m_disable_hdr;
+        int32_t m_dec_output_rate;
         volatile int32_t m_queued_codec_config_count;
         OMX_U32 current_perf_level;
         int32_t m_thumbnail_yuv_output;

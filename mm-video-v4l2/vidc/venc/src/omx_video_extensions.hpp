@@ -147,6 +147,9 @@ void omx_video::init_vendor_extensions(VendorExtensionStore &store) {
 
     ADD_EXTENSION("qti-ext-enc-roiinfo-rect-mode", OMX_QTIIndexConfigVideoRoiRectRegionInfo, OMX_DirOutput)
     ADD_PARAM_END("enable", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-enc-content-adaptive-mode", OMX_QTIIndexConfigContentAdaptiveCoding, OMX_DirInput)
+    ADD_PARAM_END("value", OMX_AndroidVendorValueInt32)
 }
 
 OMX_ERRORTYPE omx_video::get_vendor_extension_config(
@@ -332,6 +335,7 @@ OMX_ERRORTYPE omx_video::get_vendor_extension_config(
         }
         case OMX_QTIIndexParamVideoEnableBlur:
         case OMX_QTIIndexConfigVideoBlurResolution:
+        case OMX_QTIIndexConfigContentAdaptiveCoding:
         {
             break;
         }
@@ -1030,6 +1034,23 @@ OMX_ERRORTYPE omx_video::set_vendor_extension_config(
                 }
             } else {
                 DEBUG_PRINT_LOW("ROI-Ext: none valid roi region info");
+            }
+            break;
+        }
+        case OMX_QTIIndexConfigContentAdaptiveCoding:
+        {
+            OMX_U32 bitrateSavingsMode;
+            valueSet |= vExt.readParamInt32(ext, "value", (OMX_S32 *)&(bitrateSavingsMode));
+            if (!valueSet) {
+                break;
+            }
+            DEBUG_PRINT_HIGH("VENDOR-EXT: set_config: OMX_QTIIndexConfigContentAdaptiveCoding : %u",
+                             bitrateSavingsMode);
+
+            err = set_config(
+                    NULL, (OMX_INDEXTYPE)OMX_QTIIndexConfigContentAdaptiveCoding, &bitrateSavingsMode);
+            if (err != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("set_config: OMX_QTIIndexConfigContentAdaptiveCoding failed !");
             }
             break;
         }

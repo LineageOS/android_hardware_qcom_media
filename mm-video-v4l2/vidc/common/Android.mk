@@ -16,6 +16,10 @@ libmm-vidc-def += -D_ANDROID_
 libmm-vidc-def += -Werror
 libmm-vidc-def += -D_ANDROID_ICS_
 
+ifeq ($(TARGET_USES_ION),true)
+libmm-vidc-def += -DUSE_ION
+endif
+
 # ---------------------------------------------------------------------------------
 # 			Make the Shared library (libOmxVidcCommon)
 # ---------------------------------------------------------------------------------

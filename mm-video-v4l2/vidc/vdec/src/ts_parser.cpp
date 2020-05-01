@@ -266,6 +266,9 @@ bool omx_time_stamp_reorder::get_next_timestamp(OMX_BUFFERHEADERTYPE *header, bo
 
     if (!phead || !phead->entries_filled) return false;
 
+    if (header->nFlags & OMX_BUFFERFLAG_CODECCONFIG)
+        return true;
+
     for (int i=0; i < TIME_SZ; i++) {
         if (phead->input_timestamps[i].in_use) {
             status = true;
