@@ -2885,7 +2885,8 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         if (encodePerfMode == OMX_TRUE)
                             buf.flags |= V4L2_BUF_FLAG_PERF_MODE;
                         // Clear SET_VIDEO_PERF_MODE in buffer handle
-                        gbm_perform(GBM_PERFORM_SET_METADATA, handle, GBM_METADATA_SET_VIDEO_PERF_MODE, OMX_FALSE);
+                        encodePerfMode = OMX_FALSE;
+                        gbm_perform(GBM_PERFORM_SET_METADATA, handle, GBM_METADATA_SET_VIDEO_PERF_MODE, &encodePerfMode);
                     }
                     fd = handle->ion_fd;
 #else
