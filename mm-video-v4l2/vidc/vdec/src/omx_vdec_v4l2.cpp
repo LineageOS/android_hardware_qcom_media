@@ -13157,7 +13157,7 @@ OMX_ERRORTYPE omx_vdec::allocate_color_convert_buf::free_output_buffer(
         return OMX_ErrorBadParameter;
     }
     if (pmem_fd[index] >= 0) {
-        if (omx->ion_unmap(pmem_fd[index],pmem_baseaddress[index], buffer_size_req != OMX_ErrorNone)) {
+        if (omx->ion_unmap(pmem_fd[index],pmem_baseaddress[index], buffer_size_req) != OMX_ErrorNone) {
             return OMX_ErrorInsufficientResources;
         }
 #ifndef USE_ION
