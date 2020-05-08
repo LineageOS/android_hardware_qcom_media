@@ -5029,6 +5029,7 @@ void venc_dev::venc_set_quality_boost(OMX_BOOL c2d_enable)
         m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264 &&
         rate_ctrl.rcmode == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR &&
         m_sVenc_cfg.dvs_width <= 960 && m_sVenc_cfg.dvs_height <= 960 &&
+        m_sVenc_cfg.dvs_width >= 400 && m_sVenc_cfg.dvs_height >= 400 &&
         (m_sVenc_cfg.fps_num / m_sVenc_cfg.fps_den) <= 30 &&
         bitrate.target_bitrate < VENC_QUALITY_BOOST_BITRATE_THRESHOLD) {
         mQualityBoostEligible = true;
