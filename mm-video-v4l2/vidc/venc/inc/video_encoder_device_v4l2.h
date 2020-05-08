@@ -315,6 +315,8 @@ class venc_dev
         bool venc_free_buf(void*, unsigned);
         bool venc_empty_buf(void *, void *,unsigned,unsigned);
         bool venc_fill_buf(void *, void *,unsigned,unsigned);
+        bool venc_get_buffer_mode();
+        bool venc_is_avtimer_needed();
         bool venc_get_buf_req(OMX_U32 *,OMX_U32 *,
                 OMX_U32 *,OMX_U32);
         bool venc_set_buf_req(OMX_U32 *,OMX_U32 *,
