@@ -5634,8 +5634,11 @@ OMX_ERRORTYPE omx_video::convert_queue_buffer(OMX_HANDLETYPE hComp,
                     if (meta_buf && m_c2d_rotation && is_rotation_enabled() &&
                         meta_buf->buffer_type == kMetadataBufferTypeGrallocSource) {
                         VideoGrallocMetadata *meta_buf = (VideoGrallocMetadata *)psource_frame->pBuffer;
+#ifdef USE_GBM
+                        struct gbm_bo *handle = (struct gbm_bo *)meta_buf->pHandle;
+#else
                         private_handle_t *handle = (private_handle_t *)meta_buf->pHandle;
-
+#endif
                         if (!handle) {
                             DEBUG_PRINT_ERROR("%s : handle is null!", __FUNCTION__);
                             ret = OMX_ErrorUndefined;
@@ -5643,8 +5646,13 @@ OMX_ERRORTYPE omx_video::convert_queue_buffer(OMX_HANDLETYPE hComp,
                         }
 
                         uint64_t avTimerTimestampNs = psource_frame->nTimeStamp * 1000;
+#ifdef USE_GBM
+                        if (gbm_perform(GBM_PERFORM_GET_METADATA, handle, GBM_METADATA_GET_VT_TIMESTAMP, &avTimerTimestampNs) == GBM_ERROR_NONE
+                                && avTimerTimestampNs > 0) {
+#else
                         if (getMetaData(handle, GET_VT_TIMESTAMP, &avTimerTimestampNs) == 0
                                 && avTimerTimestampNs > 0) {
+#endif
                             psource_frame->nTimeStamp = avTimerTimestampNs / 1000;
                             DEBUG_PRINT_LOW("C2d AVTimer TS : %llu us", (unsigned long long)psource_frame->nTimeStamp);
                         }
