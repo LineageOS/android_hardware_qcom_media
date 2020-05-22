@@ -118,7 +118,7 @@ struct venc_gbm {
     struct gbm_bo *bo;
     unsigned long bo_fd;
     unsigned long meta_fd;
-    OMX_U8 *uaddr;
+    unsigned char *uaddr;
 };
 #endif
 #ifdef USE_ION
