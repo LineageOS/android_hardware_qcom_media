@@ -106,7 +106,6 @@ libmm-venc-inc      := $(LOCAL_PATH)/inc
 libmm-venc-inc      += $(TOP)/hardware/qcom/media/mm-video-v4l2/vidc/common/inc
 libmm-venc-inc      += hardware/qcom/media/mm-core/inc
 libmm-venc-inc      += hardware/qcom/media/libstagefrighthw
-libmm-venc-inc      += $(TARGET_OUT_HEADERS)/qcom/display
 libmm-venc-inc      += $(TARGET_OUT_HEADERS)/adreno
 libmm-venc-inc      += hardware/qcom/media/libc2dcolorconvert
 libmm-venc-inc      += hardware/qcom/media/hypv-intercept
@@ -144,6 +143,7 @@ LOCAL_HEADER_LIBRARIES := \
         libcutils_headers \
         libutils_headers \
         libhardware_headers \
+        display_headers \
 
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
@@ -184,6 +184,7 @@ LOCAL_HEADER_LIBRARIES := \
         libnativebase_headers \
         libutils_headers \
         libhardware_headers \
+        display_headers \
 
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
