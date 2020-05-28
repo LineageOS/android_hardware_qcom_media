@@ -6423,6 +6423,11 @@ int omx_vdec::async_message_process (void *context, void* message)
 
                if (vdec_msg->msgdata.output_frame.len <=  omxhdr->nAllocLen) {
                    omxhdr->nFilledLen = vdec_msg->msgdata.output_frame.len;
+               } else {
+                   DEBUG_PRINT_ERROR("Invalid filled length = %u, set it as buffer size = %u",
+                           (unsigned int)vdec_msg->msgdata.output_frame.len, omxhdr->nAllocLen);
+                   omxhdr->nFilledLen = omxhdr->nAllocLen;
+               }
                    omxhdr->nOffset = vdec_msg->msgdata.output_frame.offset;
                    omxhdr->nTimeStamp = vdec_msg->msgdata.output_frame.time_stamp;
                    omxhdr->nFlags = 0;
@@ -6552,12 +6557,6 @@ int omx_vdec::async_message_process (void *context, void* message)
                                ((unsigned long)vdec_msg->msgdata.output_frame.bufferaddr +
                                 (unsigned long)vdec_msg->msgdata.output_frame.offset),
                                vdec_msg->msgdata.output_frame.len);
-               } else {
-                   DEBUG_PRINT_ERROR("Invalid filled length = %u, buffer size = %u, prev_length = %u",
-                           (unsigned int)vdec_msg->msgdata.output_frame.len,
-                           omxhdr->nAllocLen, omx->prev_n_filled_len);
-                   omxhdr->nFilledLen = 0;
-               }
 
                omx->post_event ((unsigned long)omxhdr, vdec_msg->status_code,
                         OMX_COMPONENT_GENERATE_FBD);
