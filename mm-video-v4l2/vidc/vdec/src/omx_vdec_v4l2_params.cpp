@@ -609,7 +609,7 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                        control.id =  V4L2_CID_MPEG_VIDC_VIDEO_FRAME_RATE;
                                        control.value = drv_ctx.frame_rate.fps_numerator / drv_ctx.frame_rate.fps_denominator;
                                        control.value <<= 16;
-                                       control.value |= (0x0000FFFF | drv_ctx.frame_rate.fps_numerator % drv_ctx.frame_rate.fps_denominator);
+                                       control.value |= (0x0000FFFF & (drv_ctx.frame_rate.fps_numerator % drv_ctx.frame_rate.fps_denominator));
                                        DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
                                        ret = ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control);
                                        if (ret) {

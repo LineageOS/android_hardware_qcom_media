@@ -3223,7 +3223,7 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                     control.id =  V4L2_CID_MPEG_VIDC_VIDEO_FRAME_RATE;
                     control.value = drv_ctx.frame_rate.fps_numerator / drv_ctx.frame_rate.fps_denominator;
                     control.value <<= 16;
-                    control.value |= (0x0000FFFF | drv_ctx.frame_rate.fps_numerator % drv_ctx.frame_rate.fps_denominator);
+                    control.value |= (0x0000FFFF & (drv_ctx.frame_rate.fps_numerator % drv_ctx.frame_rate.fps_denominator));
                     DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
                     if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
                        DEBUG_PRINT_ERROR("Unable to convey fps info to driver, \
@@ -7523,7 +7523,7 @@ void omx_vdec::set_frame_rate(OMX_S64 act_timestamp)
                 control.id =  V4L2_CID_MPEG_VIDC_VIDEO_FRAME_RATE;
                 control.value = drv_ctx.frame_rate.fps_numerator / drv_ctx.frame_rate.fps_denominator;
                 control.value <<= 16;
-                control.value |= (0x0000FFFF | drv_ctx.frame_rate.fps_numerator % drv_ctx.frame_rate.fps_denominator);
+                control.value |= (0x0000FFFF & (drv_ctx.frame_rate.fps_numerator % drv_ctx.frame_rate.fps_denominator));
                 DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
                 if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
                    DEBUG_PRINT_ERROR("Unable to convey fps info to driver, \
