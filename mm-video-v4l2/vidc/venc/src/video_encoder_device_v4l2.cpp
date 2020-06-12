@@ -5022,8 +5022,9 @@ void venc_dev::venc_set_quality_boost(OMX_BOOL c2d_enable)
     // 2. RCMode is VBR
     // 3. Input is RGBA/RGBA_UBWC (C2D enabled)
     // 4. width <= 960 and height <= 960
-    // 5. FPS <= 30
-    // 6. bitrate < 2Mbps
+    // 5. width >= 400 and height >= 400
+    // 6. FPS <= 30
+    // 7. bitrate < 2Mbps
 
     if (mQualityBoostRequested && c2d_enable &&
         m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264 &&
