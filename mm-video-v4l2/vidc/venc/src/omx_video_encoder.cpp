@@ -2236,6 +2236,16 @@ bool omx_venc::dev_fill_buf(void *buffer, void *pmem_data_buf,unsigned index,uns
     return handle->venc_fill_buf(buffer, pmem_data_buf,index,fd);
 }
 
+bool omx_venc::dev_is_meta_mode()
+{
+    return handle->venc_get_buffer_mode();;
+}
+
+bool omx_venc::dev_is_avtimer_needed()
+{
+    return handle->venc_is_avtimer_needed();
+}
+
 bool omx_venc::dev_get_seq_hdr(void *buffer, unsigned size, unsigned *hdrlen)
 {
     return handle->venc_get_seq_hdr(buffer, size, hdrlen);
@@ -2487,7 +2497,6 @@ int omx_venc::async_message_process (void *context, void* message)
                     omxhdr->nFilledLen = m_sVenc_msg->buf.len;
                     omxhdr->nOffset = m_sVenc_msg->buf.offset;
                     omxhdr->nTimeStamp = m_sVenc_msg->buf.timestamp;
-                    DEBUG_PRINT_LOW("o/p TS = %u", (unsigned int)m_sVenc_msg->buf.timestamp);
                     omxhdr->nFlags = m_sVenc_msg->buf.flags;
 
                     /*Use buffer case*/

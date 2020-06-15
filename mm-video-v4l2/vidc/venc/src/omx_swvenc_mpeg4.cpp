@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2014-2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -2774,6 +2774,20 @@ bool omx_venc::dev_get_dimensions(OMX_U32 index, OMX_U32 *width, OMX_U32 *height
    (void)index;
    (void)width;
    (void)height;
+
+   RETURN(true);
+}
+
+bool omx_venc::dev_is_meta_mode()
+{
+   ENTER_FUNC();
+
+   RETURN(true);
+}
+
+bool omx_venc::dev_is_avtimer_needed()
+{
+   ENTER_FUNC();
 
    RETURN(true);
 }

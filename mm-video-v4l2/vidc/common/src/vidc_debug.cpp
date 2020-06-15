@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2018, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2018,2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -28,42 +28,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 --------------------------------------------------------------------------*/
 
 #include "vidc_debug.h"
-
-void print_omx_buffer(const char *str, OMX_BUFFERHEADERTYPE *pHeader)
-{
-    if (!pHeader)
-        return;
-
-    DEBUG_PRINT_HIGH("%s: Header %p buffer %p alloclen %d offset %d filledlen %d timestamp %lld flags %#x",
-        str, pHeader, pHeader->pBuffer, pHeader->nAllocLen,
-        pHeader->nOffset, pHeader->nFilledLen,
-        pHeader->nTimeStamp, pHeader->nFlags);
-}
-
-void print_v4l2_buffer(const char *str, struct v4l2_buffer *v4l2)
-{
-    if (!v4l2)
-        return;
-
-    if (v4l2->length == 1)
-        DEBUG_PRINT_HIGH(
-            "%s: %s: idx %2d userptr %#lx fd %d off %d size %d filled %d flags %#x\n",
-            str, v4l2->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE ?
-            "OUTPUT" : "CAPTURE", v4l2->index,
-            v4l2->m.planes[0].m.userptr, v4l2->m.planes[0].reserved[MSM_VIDC_BUFFER_FD],
-            v4l2->m.planes[0].reserved[MSM_VIDC_DATA_OFFSET], v4l2->m.planes[0].length,
-            v4l2->m.planes[0].bytesused, v4l2->flags);
-    else
-        DEBUG_PRINT_HIGH(
-            "%s: %s: idx %2d userptr %#lx fd %d off %d size %d filled %d flags %#x, extradata: fd %d off %d size %d filled %d\n",
-            str, v4l2->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE ?
-            "OUTPUT" : "CAPTURE", v4l2->index,
-            v4l2->m.planes[0].m.userptr, v4l2->m.planes[0].reserved[MSM_VIDC_BUFFER_FD],
-            v4l2->m.planes[0].reserved[MSM_VIDC_DATA_OFFSET], v4l2->m.planes[0].length,
-            v4l2->m.planes[0].bytesused, v4l2->m.planes[1].reserved[MSM_VIDC_BUFFER_FD],
-            v4l2->flags, v4l2->m.planes[1].reserved[MSM_VIDC_DATA_OFFSET],
-            v4l2->m.planes[1].length, v4l2->m.planes[1].bytesused);
-}
 
 void print_debug_color_aspects(ColorAspects *a, const char *prefix)
 {
