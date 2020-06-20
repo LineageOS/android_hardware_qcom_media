@@ -198,7 +198,7 @@ limitations under the License.
         </MediaCodec>
         <MediaCodec name="c2.android.vp8.decoder" type="video/x-vnd.on2.vp8" update="true">
             <Limit name="measured-frame-rate-320x180" range="601-1177" />
-            <Limit name="measured-frame-rate-640x360" range="390-580" />
+            <Limit name="measured-frame-rate-640x360" range="460-560" />
             <Limit name="measured-frame-rate-1280x720" range="107-145" />
             <Limit name="measured-frame-rate-1920x1080" range="31-43" />
         </MediaCodec>
