@@ -44,12 +44,12 @@ limitations under the License.
         </MediaCodec>
         <MediaCodec name="OMX.qcom.video.encoder.mpeg4sw" type="video/mp4v-es" update="true">
             <Limit name="measured-frame-rate-176x144" range="299-299" />
-            <Limit name="measured-frame-rate-352x288" range="56-81" />
+            <Limit name="measured-frame-rate-352x288" range="120-170" />
             <Limit name="measured-frame-rate-640x480" range="148-148" />
         </MediaCodec>
         <MediaCodec name="OMX.qcom.video.encoder.vp8" type="video/x-vnd.on2.vp8" update="true">
             <Limit name="measured-frame-rate-320x180" range="355-520" />
-            <Limit name="measured-frame-rate-640x360" range="165-165" />
+            <Limit name="measured-frame-rate-640x360" range="236-302" />
             <Limit name="measured-frame-rate-1280x720" range="123-125" />
             <Limit name="measured-frame-rate-1920x1080" range="16-40" />
         </MediaCodec>
@@ -188,7 +188,7 @@ limitations under the License.
         </MediaCodec>
         <MediaCodec name="c2.android.h263.decoder" type="video/3gpp" update="true">
             <Limit name="measured-frame-rate-176x144" range="950-1450" />
-            <Limit name="measured-frame-rate-352x288" range="324-769" />
+            <Limit name="measured-frame-rate-352x288" range="653-1526" />
         </MediaCodec>
         <MediaCodec name="c2.android.vp9.decoder" type="video/x-vnd.on2.vp9" update="true">
             <Limit name="measured-frame-rate-320x180" range="573-1136" />
@@ -198,7 +198,7 @@ limitations under the License.
         </MediaCodec>
         <MediaCodec name="c2.android.vp8.decoder" type="video/x-vnd.on2.vp8" update="true">
             <Limit name="measured-frame-rate-320x180" range="601-1177" />
-            <Limit name="measured-frame-rate-640x360" range="222-302" />
+            <Limit name="measured-frame-rate-640x360" range="460-560" />
             <Limit name="measured-frame-rate-1280x720" range="107-145" />
             <Limit name="measured-frame-rate-1920x1080" range="31-43" />
         </MediaCodec>

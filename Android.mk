@@ -18,5 +18,6 @@ ifeq ($(VIDC_STUB_HAL),false)
 include $(QCOM_MEDIA_ROOT)/libplatformconfig/Android.mk
 include $(QCOM_MEDIA_ROOT)/mm-video-v4l2/Android.mk
 include $(QCOM_MEDIA_ROOT)/libc2dcolorconvert/Android.mk
+include $(QCOM_MEDIA_ROOT)/media-prop/Android.mk
 endif #VIDC_STUB_HAL
 endif

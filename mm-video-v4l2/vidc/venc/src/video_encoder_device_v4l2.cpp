@@ -99,6 +99,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #undef LOG_TAG
 #define LOG_TAG "OMX-VENC: venc_dev"
 
+#define LUMINANCE_MULTIPLICATION_FACTOR 10000
+
 //constructor
 venc_dev::venc_dev(class omx_venc *venc_class)
 {
@@ -327,7 +329,7 @@ void* venc_dev::async_venc_message_thread (void *input)
                 venc_msg.buf.flags = 0;
                 venc_msg.buf.ptrbuffer = (OMX_U8 *)omx_venc_base->m_pOutput_pmem[v4l2_buf.index].buffer;
                 venc_msg.buf.clientdata=(void*)omxhdr;
-                venc_msg.buf.timestamp = (uint64_t) v4l2_buf.timestamp.tv_sec * (uint64_t) 1000000 + (uint64_t) v4l2_buf.timestamp.tv_usec;
+                venc_msg.buf.timestamp = (int64_t) v4l2_buf.timestamp.tv_sec * (int64_t) 1000000 + (int64_t) v4l2_buf.timestamp.tv_usec;
 
                 /* TODO: ideally report other types of frames as well
                  * for now it doesn't look like IL client cares about
@@ -1130,10 +1132,8 @@ bool venc_dev::venc_get_supported_color_format(unsigned index, OMX_U32 *colorFor
 
 OMX_ERRORTYPE venc_dev::allocate_extradata(struct extradata_buffer_info *extradata_info, int flags)
 {
-    if (extradata_info->allocated) {
-        DEBUG_PRINT_HIGH("2nd allocation return for port = %d",extradata_info->port_index);
+    if (extradata_info->allocated)
         return OMX_ErrorNone;
-    }
 
     if (!extradata_info->buffer_size || !extradata_info->count) {
         DEBUG_PRINT_ERROR("Invalid extradata buffer size(%lu) or count(%d) for port %d",
@@ -2439,6 +2439,15 @@ bool venc_dev::venc_get_batch_size(OMX_U32 *size)
     }
 }
 
+bool venc_dev::venc_get_buffer_mode()
+{
+    return metadatamode;
+}
+
+bool venc_dev::venc_is_avtimer_needed()
+{
+    return mUseAVTimerTimestamps;
+}
 
 bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index, unsigned fd)
 {
@@ -2464,8 +2473,6 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
     bufreq.memory = V4L2_MEMORY_USERPTR;
     bufreq.count = m_sInput_buff_property.actualcount;
     bufreq.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
-
-    DEBUG_PRINT_LOW("Input buffer length %u, Timestamp = %lld", (unsigned int)bufhdr->nFilledLen, bufhdr->nTimeStamp);
 
     if (pmem_data_buf) {
         DEBUG_PRINT_LOW("\n Internal PMEM addr for i/p Heap UseBuf: %p", pmem_data_buf);
@@ -2961,6 +2968,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
             (OMX_U64)input_extradata_info.ion[index].uaddr, (unsigned int)plane[index].m.userptr);
         venc_extradata_log_buffers((char *)plane[extra_idx].m.userptr, index, true);
     }
+    print_v4l2_buffer("QBUF-ETB", &buf);
     rc = ioctl(m_nDriver_fd, VIDIOC_QBUF, &buf);
 
     if (rc) {
@@ -3119,6 +3127,7 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
 
             VIDC_TRACE_INT_LOW("ETB-TS", bufTimeStamp / 1000);
 
+            print_v4l2_buffer("QBUF-ETB", &buf);
             rc = ioctl(m_nDriver_fd, VIDIOC_QBUF, &buf);
             if (rc) {
                 DEBUG_PRINT_ERROR("%s: Failed to qbuf (etb) to driver", __func__);
@@ -3232,6 +3241,7 @@ bool venc_dev::venc_fill_buf(void *buffer, void *pmem_data_buf,unsigned index,un
         return false;
     }
 
+    print_v4l2_buffer("QBUF-FTB", &buf);
     rc = ioctl(m_nDriver_fd, VIDIOC_QBUF, &buf);
 
     if (rc) {
@@ -4655,7 +4665,10 @@ bool venc_dev::venc_set_hdr_info(const MasteringDisplay& mastering_disp_info,
         mastering_disp_info.primaries.rgbPrimaries[2][1],
         mastering_disp_info.primaries.whitePoint[0],
         mastering_disp_info.primaries.whitePoint[1],
-        mastering_disp_info.maxDisplayLuminance,
+        // maxDisplayLuminance is in cd/m^2 scale. But the standard requires this field
+        // to be in 0.0001 cd/m^2 scale. So, multiply with LUMINANCE_MULTIPLICATION_FACTOR
+        // and give to be driver
+        mastering_disp_info.maxDisplayLuminance * LUMINANCE_MULTIPLICATION_FACTOR,
         mastering_disp_info.minDisplayLuminance,
         content_light_level_info.maxContentLightLevel,
         content_light_level_info.minPicAverageLightLevel
@@ -4891,8 +4904,9 @@ void venc_dev::venc_set_quality_boost(OMX_BOOL c2d_enable)
     // 2. RCMode is VBR
     // 3. Input is RGBA/RGBA_UBWC (C2D enabled)
     // 4. width <= 960 and height <= 960
-    // 5. FPS <= 30
-    // 6. bitrate < 2Mbps
+    // 5. width >= 400 and height >= 400
+    // 6. FPS <= 30
+    // 7. bitrate < 2Mbps
 
     if (mQualityBoostRequested && c2d_enable &&
         m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264 &&

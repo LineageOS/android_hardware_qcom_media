@@ -3223,7 +3223,7 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
                     control.id =  V4L2_CID_MPEG_VIDC_VIDEO_FRAME_RATE;
                     control.value = drv_ctx.frame_rate.fps_numerator / drv_ctx.frame_rate.fps_denominator;
                     control.value <<= 16;
-                    control.value |= (0x0000FFFF | drv_ctx.frame_rate.fps_numerator % drv_ctx.frame_rate.fps_denominator);
+                    control.value |= (0x0000FFFF & (drv_ctx.frame_rate.fps_numerator % drv_ctx.frame_rate.fps_denominator));
                     DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
                     if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
                        DEBUG_PRINT_ERROR("Unable to convey fps info to driver, \
@@ -5022,8 +5022,6 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer(OMX_IN OMX_HANDLETYPE         hComp,
     if (!m_etb_count)
         m_etb_count++;
     m_etb_timestamp = buffer->nTimeStamp;
-    DEBUG_PRINT_LOW("[ETB] nCnt(%u) BHdr(%p) pBuf(%p) nTS(%lld) nFL(%u)",
-            m_etb_count, buffer, buffer->pBuffer, buffer->nTimeStamp, (unsigned int)buffer->nFilledLen);
     buffer->pMarkData = (OMX_PTR)(unsigned long)m_etb_count;
     post_event ((unsigned long)hComp,(unsigned long)buffer,OMX_COMPONENT_GENERATE_ETB);
 
@@ -5313,10 +5311,6 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer(OMX_IN OMX_HANDLETYPE  hComp,
         meta = (struct VideoDecoderOutputMetaData *)buffer->pBuffer;
         handle = (private_handle_t *)meta->pHandle;
 
-        //get the buffer type and fd info
-        DEBUG_PRINT_LOW("FTB: metabuf: %p buftype: %d bufhndl: %p ",
-                        meta, meta->eType, meta->pHandle);
-
         if (!handle) {
             DEBUG_PRINT_ERROR("FTB: Error: IL client passed an invalid buf handle - %p", handle);
             return OMX_ErrorBadParameter;
@@ -5337,8 +5331,6 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer(OMX_IN OMX_HANDLETYPE  hComp,
         }
 
         buffer->nAllocLen = handle->size;
-        DEBUG_PRINT_LOW("%s: buffer size = d-%d:b-%d",
-                        __func__, (int)drv_ctx.op_buf.buffer_size, (int)handle->size);
 
         if (!client_buffers.is_color_conversion_enabled()) {
             drv_ctx.op_buf.buffer_size = handle->size;
@@ -6423,6 +6415,11 @@ int omx_vdec::async_message_process (void *context, void* message)
 
                if (vdec_msg->msgdata.output_frame.len <=  omxhdr->nAllocLen) {
                    omxhdr->nFilledLen = vdec_msg->msgdata.output_frame.len;
+               } else {
+                   DEBUG_PRINT_ERROR("Invalid filled length = %u, set it as buffer size = %u",
+                           (unsigned int)vdec_msg->msgdata.output_frame.len, omxhdr->nAllocLen);
+                   omxhdr->nFilledLen = omxhdr->nAllocLen;
+               }
                    omxhdr->nOffset = vdec_msg->msgdata.output_frame.offset;
                    omxhdr->nTimeStamp = vdec_msg->msgdata.output_frame.time_stamp;
                    omxhdr->nFlags = 0;
@@ -6552,12 +6549,6 @@ int omx_vdec::async_message_process (void *context, void* message)
                                ((unsigned long)vdec_msg->msgdata.output_frame.bufferaddr +
                                 (unsigned long)vdec_msg->msgdata.output_frame.offset),
                                vdec_msg->msgdata.output_frame.len);
-               } else {
-                   DEBUG_PRINT_ERROR("Invalid filled length = %u, buffer size = %u, prev_length = %u",
-                           (unsigned int)vdec_msg->msgdata.output_frame.len,
-                           omxhdr->nAllocLen, omx->prev_n_filled_len);
-                   omxhdr->nFilledLen = 0;
-               }
 
                omx->post_event ((unsigned long)omxhdr, vdec_msg->status_code,
                         OMX_COMPONENT_GENERATE_FBD);
@@ -6741,8 +6732,9 @@ void omx_vdec::free_ion_memory(struct vdec_ion *buf_ion_info)
         DEBUG_PRINT_ERROR("ION: free called with invalid fd/allocdata");
         return;
     }
-    DEBUG_PRINT_HIGH("Free ion memory: mmap fd %d ion_dev fd %d len %d flags %#x mask %#x",
-        buf_ion_info->data_fd, buf_ion_info->dev_fd,
+
+    DEBUG_PRINT_HIGH("Free ion memory: fd (dev:%d data:%d) len %d flags %#x mask %#x",
+        buf_ion_info->dev_fd, buf_ion_info->data_fd,
         (unsigned int)buf_ion_info->alloc_data.len,
         (unsigned int)buf_ion_info->alloc_data.flags,
         (unsigned int)buf_ion_info->alloc_data.heap_id_mask);
@@ -7524,7 +7516,7 @@ void omx_vdec::set_frame_rate(OMX_S64 act_timestamp)
                 control.id =  V4L2_CID_MPEG_VIDC_VIDEO_FRAME_RATE;
                 control.value = drv_ctx.frame_rate.fps_numerator / drv_ctx.frame_rate.fps_denominator;
                 control.value <<= 16;
-                control.value |= (0x0000FFFF | drv_ctx.frame_rate.fps_numerator % drv_ctx.frame_rate.fps_denominator);
+                control.value |= (0x0000FFFF & (drv_ctx.frame_rate.fps_numerator % drv_ctx.frame_rate.fps_denominator));
                 DEBUG_PRINT_LOW("Calling IOCTL set control for id=%d, val=%d", control.id, control.value);
                 if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
                    DEBUG_PRINT_ERROR("Unable to convey fps info to driver, \

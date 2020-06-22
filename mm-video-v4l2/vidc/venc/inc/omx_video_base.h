@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -65,7 +65,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <linux/videodev2.h>
 #include <dlfcn.h>
 #include "C2DColorConverter.h"
-#include "vidc_debug.h"
 #include <vector>
 #include "vidc_vendor_extensions.h"
 
@@ -79,6 +78,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #undef LOG_TAG
 #define LOG_TAG "OMX-VENC"
+#include "vidc_debug.h"
 
 #ifdef _ANDROID_
 using namespace android;
@@ -264,6 +264,8 @@ class omx_video: public qc_omx_component
         virtual bool dev_free_buf(void *,unsigned) = 0;
         virtual bool dev_empty_buf(void *, void *,unsigned,unsigned) = 0;
         virtual bool dev_fill_buf(void *buffer, void *,unsigned,unsigned) = 0;
+        virtual bool dev_is_meta_mode() = 0;
+        virtual bool dev_is_avtimer_needed() = 0;
         virtual bool dev_get_buf_req(OMX_U32 *,OMX_U32 *,OMX_U32 *,OMX_U32) = 0;
         virtual bool dev_get_dimensions(OMX_U32 ,OMX_U32 *,OMX_U32 *) = 0;
         virtual bool is_streamon_done(OMX_U32 port) = 0;
@@ -623,6 +625,7 @@ class omx_video: public qc_omx_component
         client_extradata_info m_client_in_extradata_info;
 
         void complete_pending_buffer_done_cbs();
+        bool is_rotation_enabled();
         bool is_conv_needed(private_handle_t *handle);
         void print_debug_color_aspects(ColorAspects *aspects, const char *prefix);
 
