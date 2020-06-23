@@ -120,6 +120,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #undef LOG_TAG
 #define LOG_TAG "OMX-VENC: venc_dev"
 
+#define LUMINANCE_MULTIPLICATION_FACTOR 10000
+
 //constructor
 venc_dev::venc_dev(class omx_venc *venc_class)
 {
@@ -7670,7 +7672,10 @@ bool venc_dev::venc_set_hdr_info(const MasteringDisplay& mastering_disp_info,
     ctrl[8].value = mastering_disp_info.primaries.whitePoint[1];
 
     ctrl[9].id = V4L2_CID_MPEG_VIDC_VENC_MAX_DISP_LUM;
-    ctrl[9].value = mastering_disp_info.maxDisplayLuminance;
+    // maxDisplayLuminance is in cd/m^2 scale. But the standard requires this field
+    // to be in 0.0001 cd/m^2 scale. So, multiply with LUMINANCE_MULTIPLICATION_FACTOR
+    // and give to be driver
+    ctrl[9].value = mastering_disp_info.maxDisplayLuminance * LUMINANCE_MULTIPLICATION_FACTOR;
 
     ctrl[10].id = V4L2_CID_MPEG_VIDC_VENC_MIN_DISP_LUM;
     ctrl[10].value = mastering_disp_info.minDisplayLuminance;

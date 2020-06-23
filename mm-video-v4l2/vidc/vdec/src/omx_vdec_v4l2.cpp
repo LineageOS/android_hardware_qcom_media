@@ -1140,7 +1140,8 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode()
                  capture_capability = V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010_VENUS;
                  capability_changed = true;
             }
-        } else  if (m_progressive == MSM_VIDC_PIC_STRUCT_PROGRESSIVE) {
+        } else  if (m_progressive == MSM_VIDC_PIC_STRUCT_PROGRESSIVE &&
+                    eCompressionFormat != OMX_VIDEO_CodingMPEG2) {
             enable_split = true;
         } else {
             // Hardware does not support NV12+interlace clips.
@@ -8986,6 +8987,11 @@ int omx_vdec::async_message_process (void *context, void* message)
 
                if (vdec_msg->msgdata.output_frame.len <=  omxhdr->nAllocLen) {
                    omxhdr->nFilledLen = vdec_msg->msgdata.output_frame.len;
+               } else {
+                   DEBUG_PRINT_ERROR("Invalid filled length = %u, set it as buffer size = %u",
+                           (unsigned int)vdec_msg->msgdata.output_frame.len, omxhdr->nAllocLen);
+                   omxhdr->nFilledLen = omxhdr->nAllocLen;
+               }
                    omxhdr->nOffset = vdec_msg->msgdata.output_frame.offset;
                    omxhdr->nTimeStamp = vdec_msg->msgdata.output_frame.time_stamp;
                    omxhdr->nFlags = 0;
@@ -9162,12 +9168,6 @@ int omx_vdec::async_message_process (void *context, void* message)
                                ((unsigned long)vdec_msg->msgdata.output_frame.bufferaddr +
                                 (unsigned long)vdec_msg->msgdata.output_frame.offset),
                                vdec_msg->msgdata.output_frame.len);
-               } else {
-                   DEBUG_PRINT_ERROR("Invalid filled length = %u, buffer size = %u, prev_length = %u",
-                           (unsigned int)vdec_msg->msgdata.output_frame.len,
-                           omxhdr->nAllocLen, omx->prev_n_filled_len);
-                   omxhdr->nFilledLen = 0;
-               }
 
                omx->post_event ((unsigned long)omxhdr, vdec_msg->status_code,
                         OMX_COMPONENT_GENERATE_FBD);
@@ -12608,7 +12608,8 @@ bool omx_vdec::allocate_color_convert_buf::set_color_format(
         DEBUG_PRINT_LOW("Enabling C2D");
         if (dest_color_format == OMX_COLOR_FormatYUV420Planar ||
             dest_color_format == OMX_COLOR_FormatYUV420SemiPlanar ||
-            (omx->m_progressive != MSM_VIDC_PIC_STRUCT_PROGRESSIVE &&
+            ((omx->m_progressive != MSM_VIDC_PIC_STRUCT_PROGRESSIVE ||
+            omx->eCompressionFormat == OMX_VIDEO_CodingMPEG2) &&
             dest_color_format == (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m)) {
             ColorFormat = dest_color_format;
             if (dest_color_format == OMX_COLOR_FormatYUV420Planar) {
