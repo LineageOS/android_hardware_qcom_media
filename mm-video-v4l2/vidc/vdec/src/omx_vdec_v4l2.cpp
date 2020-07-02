@@ -12686,6 +12686,10 @@ OMX_BUFFERHEADERTYPE* omx_vdec::allocate_color_convert_buf::get_il_buf_hdr
             } else {
                 unsigned int filledLen = 0;
                 c2dcc.getBuffFilledLen(C2D_OUTPUT, filledLen);
+                if (filledLen > omx->m_out_mem_ptr[index].nAllocLen) {
+                    DEBUG_PRINT_ERROR("Invalid C2D FBD length filledLen = %d alloclen = %d ",filledLen,omx->m_out_mem_ptr[index].nAllocLen);
+                    filledLen = 0;
+                }
                 m_out_mem_ptr_client[index].nFilledLen = filledLen;
                 omx->m_out_mem_ptr[index].nFilledLen = filledLen;
             }
