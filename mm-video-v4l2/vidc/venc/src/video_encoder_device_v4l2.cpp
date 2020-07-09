@@ -3771,7 +3771,15 @@ unsigned venc_dev::venc_start(void)
         return 1;
     }
 
-    venc_set_extradata_hdr10metadata();
+    char platform_name[PROP_VALUE_MAX] = {0};
+    char version[PROP_VALUE_MAX] = {0};
+    property_get("ro.board.platform", platform_name, "0");
+    if (!strcmp(platform_name, "sm6150"))
+    {
+        DEBUG_PRINT_HIGH("HDR10 is not supported on this target");
+    } else {
+        venc_set_extradata_hdr10metadata();
+    }
 
     venc_config_print();
 
