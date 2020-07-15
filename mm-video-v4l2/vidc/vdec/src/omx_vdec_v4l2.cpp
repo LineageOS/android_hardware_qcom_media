@@ -7891,6 +7891,9 @@ void omx_vdec::convert_hdr_info_to_metadata(HDRStaticInfo& hdr_info, ColorMetaDa
 
 void omx_vdec::get_preferred_color_aspects(ColorAspects& preferredColorAspects)
 {
+    OMX_U32 width = drv_ctx.video_resolution.frame_width;
+    OMX_U32 height = drv_ctx.video_resolution.frame_height;
+
     // For VPX, use client-color if specified.
     // For the rest, try to use the stream-color if present
     bool preferClientColor = (output_capability == V4L2_PIX_FMT_VP8 ||
@@ -7901,7 +7904,9 @@ void omx_vdec::get_preferred_color_aspects(ColorAspects& preferredColorAspects)
     const ColorAspects &defaultColor = preferClientColor ?
         m_internal_color_space.sAspects : m_client_color_space.sAspects;
 
-    if ((m_client_color_space.sAspects.mPrimaries == ColorAspects::PrimariesBT2020) && (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_8)) {
+    if ((width >= 3840 || height >= 3840 || width * (int64_t)height >= 3840 * 1634) &&
+        (m_client_color_space.sAspects.mPrimaries == ColorAspects::PrimariesBT2020) &&
+        (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_8)) {
         m_client_color_space.sAspects.mPrimaries = ColorAspects::PrimariesBT709_5;
         m_client_color_space.sAspects.mMatrixCoeffs = ColorAspects::MatrixBT709_5;
     }
