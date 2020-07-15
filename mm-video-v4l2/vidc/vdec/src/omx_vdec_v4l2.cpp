@@ -7561,6 +7561,8 @@ void omx_vdec::convert_color_space_info(OMX_U32 primaries,
     switch (transfer) {
         case MSM_VIDC_TRANSFER_BT709_5:
         case MSM_VIDC_TRANSFER_601_6_525: // case MSM_VIDC_TRANSFER_601_6_625:
+        case MSM_VIDC_TRANSFER_BT_2020_10:
+        case MSM_VIDC_TRANSFER_BT_2020_12:
             aspects->mTransfer = ColorAspects::TransferSMPTE170M;
             break;
         case MSM_VIDC_TRANSFER_BT_470_6_M:
