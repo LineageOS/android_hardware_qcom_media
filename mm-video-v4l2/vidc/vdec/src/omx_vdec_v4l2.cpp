@@ -3303,6 +3303,27 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
         }
         return ret;
 
+    } else if ((int)configIndex == (int)OMX_IndexConfigLowLatency) {
+        OMX_CONFIG_BOOLEANTYPE *lowLatency = (OMX_CONFIG_BOOLEANTYPE *)configData;
+        DEBUG_PRINT_LOW("Set_config: low-latency %u",(uint32_t)lowLatency->bEnabled);
+
+        struct v4l2_control control;
+
+        control.id = V4L2_CID_MPEG_VIDC_VIDEO_LOWLATENCY_MODE;
+        if (lowLatency->bEnabled) {
+            control.value = V4L2_MPEG_MSM_VIDC_ENABLE;
+        } else {
+            control.value = V4L2_MPEG_MSM_VIDC_DISABLE;
+        }
+
+        if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
+            DEBUG_PRINT_ERROR("Set low latency failed");
+            ret = OMX_ErrorUnsupportedSetting;
+        } else {
+            m_sParamLowLatency.bEnableLowLatencyMode = lowLatency->bEnabled;
+        }
+        return ret;
+
     } else if ((int)configIndex == (int)OMX_IndexConfigAndroidVendorExtension) {
         VALIDATE_OMX_PARAM_DATA(configData, OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE);
 
