@@ -3303,6 +3303,27 @@ OMX_ERRORTYPE  omx_vdec::set_config(OMX_IN OMX_HANDLETYPE      hComp,
         }
         return ret;
 
+    } else if ((int)configIndex == (int)OMX_IndexConfigLowLatency) {
+        OMX_CONFIG_BOOLEANTYPE *lowLatency = (OMX_CONFIG_BOOLEANTYPE *)configData;
+        DEBUG_PRINT_LOW("Set_config: low-latency %u",(uint32_t)lowLatency->bEnabled);
+
+        struct v4l2_control control;
+
+        control.id = V4L2_CID_MPEG_VIDC_VIDEO_LOWLATENCY_MODE;
+        if (lowLatency->bEnabled) {
+            control.value = V4L2_MPEG_MSM_VIDC_ENABLE;
+        } else {
+            control.value = V4L2_MPEG_MSM_VIDC_DISABLE;
+        }
+
+        if (ioctl(drv_ctx.video_driver_fd, VIDIOC_S_CTRL, &control)) {
+            DEBUG_PRINT_ERROR("Set low latency failed");
+            ret = OMX_ErrorUnsupportedSetting;
+        } else {
+            m_sParamLowLatency.bEnableLowLatencyMode = lowLatency->bEnabled;
+        }
+        return ret;
+
     } else if ((int)configIndex == (int)OMX_IndexConfigAndroidVendorExtension) {
         VALIDATE_OMX_PARAM_DATA(configData, OMX_CONFIG_ANDROID_VENDOR_EXTENSIONTYPE);
 
@@ -7561,6 +7582,8 @@ void omx_vdec::convert_color_space_info(OMX_U32 primaries,
     switch (transfer) {
         case MSM_VIDC_TRANSFER_BT709_5:
         case MSM_VIDC_TRANSFER_601_6_525: // case MSM_VIDC_TRANSFER_601_6_625:
+        case MSM_VIDC_TRANSFER_BT_2020_10:
+        case MSM_VIDC_TRANSFER_BT_2020_12:
             aspects->mTransfer = ColorAspects::TransferSMPTE170M;
             break;
         case MSM_VIDC_TRANSFER_BT_470_6_M:
@@ -7891,6 +7914,9 @@ void omx_vdec::convert_hdr_info_to_metadata(HDRStaticInfo& hdr_info, ColorMetaDa
 
 void omx_vdec::get_preferred_color_aspects(ColorAspects& preferredColorAspects)
 {
+    OMX_U32 width = drv_ctx.video_resolution.frame_width;
+    OMX_U32 height = drv_ctx.video_resolution.frame_height;
+
     // For VPX, use client-color if specified.
     // For the rest, try to use the stream-color if present
     bool preferClientColor = (output_capability == V4L2_PIX_FMT_VP8 ||
@@ -7901,7 +7927,9 @@ void omx_vdec::get_preferred_color_aspects(ColorAspects& preferredColorAspects)
     const ColorAspects &defaultColor = preferClientColor ?
         m_internal_color_space.sAspects : m_client_color_space.sAspects;
 
-    if ((m_client_color_space.sAspects.mPrimaries == ColorAspects::PrimariesBT2020) && (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_8)) {
+    if ((width >= 3840 || height >= 3840 || width * (int64_t)height >= 3840 * 1634) &&
+        (m_client_color_space.sAspects.mPrimaries == ColorAspects::PrimariesBT2020) &&
+        (dpb_bit_depth == MSM_VIDC_BIT_DEPTH_8)) {
         m_client_color_space.sAspects.mPrimaries = ColorAspects::PrimariesBT709_5;
         m_client_color_space.sAspects.mMatrixCoeffs = ColorAspects::MatrixBT709_5;
     }
