@@ -66,7 +66,7 @@ libmm-venc-inc      += hardware/qcom/media/libc2dcolorconvert
 libmm-venc-inc      += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 libmm-venc-inc      += $(TOP)/frameworks/native/libs/nativewindow/include
 libmm-venc-inc      += $(TOP)/frameworks/native/libs/nativebase/include
-libmm-venc-inc      += $(TOP)/vendor/qcom/proprietary/cv-noship/fastcv/inc/fastcv
+libmm-venc-inc      += $(TARGET_OUT_HEADERS)/fastcv
 libmm-venc-inc      += $(TOP)/frameworks/native/libs/arect/include
 libmm-venc-inc      += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 

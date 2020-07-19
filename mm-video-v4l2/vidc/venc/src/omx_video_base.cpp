@@ -44,7 +44,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <qdMetaData.h>
 #include "omx_video_base.h"
 #include "fastcv.h"
-#include "fastcv_.h"
 #include <stdlib.h>
 #include <errno.h>
 #include <fcntl.h>
