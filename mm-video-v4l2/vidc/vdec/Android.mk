@@ -80,6 +80,8 @@ include $(CLEAR_VARS)
 
 # Common Includes
 libmm-vdec-inc          := $(LOCAL_PATH)/inc
+libmm-vdec-inc          += $(TOP)/system/core/libion/include
+libmm-vdec-inc          += $(TOP)/system/core/libion/kernel-headers
 libmm-vdec-inc          += $(TOP)/hardware/qcom/media/mm-video-v4l2/vidc/common/inc
 libmm-vdec-inc          += $(TOP)/hardware/qcom/media/mm-core/inc
 libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/qcom/display
@@ -121,7 +123,7 @@ libmm-vdec-def += -DMAX_H264_LEVEL_52
 endif
 
 # Hypervisor
-ifneq (,$(filter $(MACHINE), "8x96autogvmquin" "8x96autogvmred"))
+ifeq ($(ENABLE_HYP),true)
 libmm-vdec-def += -D_HYPERVISOR_
 endif
 # ---------------------------------------------------------------------------------
@@ -146,7 +148,7 @@ LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-vdec-add-dep)
 
 LOCAL_PRELINK_MODULE    := false
-LOCAL_SHARED_LIBRARIES  := liblog libcutils libdl libqdutils
+LOCAL_SHARED_LIBRARIES  := liblog libcutils libdl libqdutils libion
 
 LOCAL_SHARED_LIBRARIES  += libqdMetaData libhypv_intercept
 
@@ -185,7 +187,7 @@ LOCAL_C_INCLUDES              += $(libmm-vdec-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES := $(libmm-vdec-add-dep)
 
 LOCAL_PRELINK_MODULE          := false
-LOCAL_SHARED_LIBRARIES        := liblog libcutils
+LOCAL_SHARED_LIBRARIES        := liblog libcutils libion
 LOCAL_SHARED_LIBRARIES        += libswvdec
 
 LOCAL_SRC_FILES               := src/omx_swvdec.cpp

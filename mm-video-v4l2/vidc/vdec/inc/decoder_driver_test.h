@@ -35,11 +35,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <pthread.h>
 #include <semaphore.h>
 #include <stdio.h>
-#ifndef _TARGET_KERNEL_VERSION_49_
-#include <linux/msm_vidc_dec.h>
-#else
 #include "omx_vdec.h"
-#endif
 
 struct video_decoder_context {
     enum vdec_codec               decoder_format;
