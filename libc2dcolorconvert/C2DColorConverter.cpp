@@ -333,7 +333,6 @@ void* C2DColorConverter::getDummySurfaceDef(ColorConvertFormat format, size_t wi
 
         if (format == YCbCr420P ||
             format == YCrCb420P) {
-          printf("half stride for Cb Cr planes \n");
           surfaceDef->stride1 = calcStride(format, width) / 2;
           surfaceDef->phys2 = (void *)0xaaaaaaaa;
           surfaceDef->stride2 = calcStride(format, width) / 2;
@@ -713,7 +712,6 @@ int32_t C2DColorConverter::dumpOutput(char * filename, char mode) {
 
       if (mDstFormat == YCbCr420P ||
           mDstFormat == YCrCb420P) {
-          printf("Dump Cb and Cr separately for Planar\n");
           //dump Cb/Cr
           base = (uint8_t *)dstSurfaceDef->plane1;
           stride = dstSurfaceDef->stride1;
@@ -749,10 +747,6 @@ int32_t C2DColorConverter::dumpOutput(char * filename, char mode) {
       stride = dstSurfaceDef->stride;
       sliceHeight = dstSurfaceDef->height;
 
-      printf("rgb surface base is %p", base);
-      printf("rgb surface dumpsslice height is %lu\n", (unsigned long)sliceHeight);
-      printf("rgb surface dump stride is %lu\n", (unsigned long)stride);
-
       int bpp = 1; //bytes per pixel
       if (mDstFormat == RGB565) {
         bpp = 2;
@@ -764,7 +758,6 @@ int32_t C2DColorConverter::dumpOutput(char * filename, char mode) {
       for (size_t i = 0; i < sliceHeight; i++) {
         ret = write(fd, base, mDstWidth*bpp);
         if (ret < 0) {
-          printf("write failed, count = %d\n", count);
           goto cleanup;
         }
         base += stride;
