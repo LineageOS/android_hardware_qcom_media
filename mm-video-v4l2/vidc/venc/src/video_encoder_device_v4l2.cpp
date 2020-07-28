@@ -3768,7 +3768,7 @@ unsigned venc_dev::venc_start(void)
     char platform_name[PROP_VALUE_MAX] = {0};
     char version[PROP_VALUE_MAX] = {0};
     property_get("ro.board.platform", platform_name, "0");
-    if (!strcmp(platform_name, "sm6150") || !strcmp(platform_name, "atoll"))
+    if (!strcmp(platform_name, "sm6150") || !strcmp(platform_name, "atoll") || !strcmp(platform_name, "trinket"))
     {
         DEBUG_PRINT_HIGH("HDR10 is not supported on this target");
     } else {
