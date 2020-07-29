@@ -32,7 +32,7 @@ endif
 # Vendor property overrides
 # Enable Codec2.0 HAL for pure AOSP variants.
 # Enable OMX for pure AOSP AUTO variants.
-ifeq (,$(filter true, $(GENERIC_ODM_IMAGE)$(TARGET_BOARD_AUTO)))
+ifeq ($(GENERIC_ODM_IMAGE)$(TARGET_BOARD_AUTO),truetrue)
   $(warning "Forcing OMX for Generic auto build variant")
   DEVICE_MANIFEST_FILE += hardware/qcom/media/conf_files/sm6150/c2_manifest_vendor.xml
   PRODUCT_ODM_PROPERTIES += debug.media.codec2=0
