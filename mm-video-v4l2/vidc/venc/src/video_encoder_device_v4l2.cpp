@@ -5726,7 +5726,7 @@ bool venc_dev::venc_set_intra_refresh()
 {
     bool status = true;
     int rc;
-    struct v4l2_control control_mode, control_mbs;
+    struct v4l2_control control_mode;
     control_mode.id   = V4L2_CID_MPEG_VIDC_VIDEO_INTRA_REFRESH_MODE_CYCLIC;
     control_mode.value = 0;
     // There is no disabled mode.  Disabled mode is indicated by a 0 count.
@@ -5749,7 +5749,6 @@ bool venc_dev::venc_set_intra_refresh()
         return false;
     }
 
-    intra_refresh.mbcount = control_mbs.value;
     return status;
 }
 
