@@ -3699,7 +3699,7 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                OMX_COLOR_FORMATTYPE drv_color_format;
                                bool status = false;
 
-                               if (in_reconfig && !client_buffers.is_color_conversion_enabled()) {
+                               if (!client_buffers.is_color_conversion_enabled()) {
                                    status = client_buffers.get_color_format(drv_color_format);
                                }
 
@@ -3708,7 +3708,7 @@ OMX_ERRORTYPE  omx_vdec::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                    return OMX_ErrorBadParameter;
                                }
 
-                              if (in_reconfig && status) {
+                              if (status) {
                                  if (!client_buffers.is_color_conversion_enabled()) {
                                          client_buffers.set_client_buffers_disabled(true);
                                          client_buffers.set_color_format(drv_color_format);
