@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2018, The Linux Foundation. All rights reserved.
+Copyright (c) 2010-2018, 2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -192,6 +192,7 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     intra_period.num_bframes = 0;
     mIsNativeRecorder = false;
     m_hdr10meta_enabled = false;
+    hdr10metadata_supported = false;
 
     Platform::Config::getInt32(Platform::vidc_enc_log_in,
             (int32_t *)&m_debug.in_buffer_log, 0);
@@ -1655,6 +1656,14 @@ bool venc_dev::venc_open(OMX_U32 codec)
     if (!strncmp(m_platform_name, "msm8610", 7)) {
         device_name = (OMX_STRING)"/dev/video/q6_enc";
         supported_rc_modes = (RC_ALL & ~RC_CBR_CFR);
+    }
+
+    if (!strcmp(m_platform_name, "sm6150") || !strcmp(m_platform_name, "atoll") || !strcmp(m_platform_name, "trinket"))
+    {
+       hdr10metadata_supported = false;
+    }
+    else {
+       hdr10metadata_supported = true;
     }
 
 #ifdef HYPERVISOR
@@ -3765,13 +3774,7 @@ unsigned venc_dev::venc_start(void)
         return 1;
     }
 
-    char platform_name[PROP_VALUE_MAX] = {0};
-    char version[PROP_VALUE_MAX] = {0};
-    property_get("ro.board.platform", platform_name, "0");
-    if (!strcmp(platform_name, "sm6150") || !strcmp(platform_name, "atoll") || !strcmp(platform_name, "trinket"))
-    {
-        DEBUG_PRINT_HIGH("HDR10 is not supported on this target");
-    } else {
+    if (hdr10metadata_supported == true) {
         venc_set_extradata_hdr10metadata();
     }
 
@@ -5288,6 +5291,14 @@ bool venc_dev::venc_set_profile(OMX_U32 eProfile)
     DEBUG_PRINT_LOW("Success IOCTL set control for id=%d, value=%d", control.id, control.value);
 
     codec_profile.profile = control.value;
+
+    if (hdr10metadata_supported == true) {
+        if (venc_set_extradata_hdr10metadata() == false)
+        {
+            DEBUG_PRINT_ERROR("Failed to set extradata HDR10PLUS_METADATA");
+            return false;
+        }
+    }
     return true;
 }
 
