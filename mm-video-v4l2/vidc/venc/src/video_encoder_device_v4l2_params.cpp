@@ -136,12 +136,10 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                 if (!venc_handle->m_no_vpss && venc_set_mirror(mirror->eMirror) == false) {
                     DEBUG_PRINT_ERROR("ERROR: Setting OMX_IndexConfigCommonMirror failed");
                     return false;
-                } else if(venc_handle->m_no_vpss){
+                } else if(venc_handle->m_no_vpss) {
                     venc_handle->initFastCV();
-                } else {
-                    DEBUG_PRINT_ERROR("ERROR: Invalid Setting OMX_IndexConfigCommonMirror");
-                    return false;
                 }
+
                 break;
             }
         case OMX_IndexConfigCommonRotate:
