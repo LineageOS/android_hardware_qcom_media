@@ -45,6 +45,9 @@ void omx_vdec::init_vendor_extensions (VendorExtensionStore &store) {
 
     ADD_EXTENSION("qti-ext-dec-output-frame-rate", OMX_QTIIndexParamVideoDecoderOutputFrameRate, OMX_DirOutput)
     ADD_PARAM_END("value", OMX_AndroidVendorValueInt32)
+
+    ADD_EXTENSION("qti-ext-dec-thumbnail-mode", OMX_QcomIndexParamVideoSyncFrameDecodingMode, OMX_DirOutput)
+    ADD_PARAM_END("value", OMX_AndroidVendorValueInt32)
 }
 
 
@@ -101,6 +104,11 @@ OMX_ERRORTYPE omx_vdec::get_vendor_extension_config(
         case OMX_QTIIndexParamVideoDecoderOutputFrameRate:
         {
             setStatus &= vExt.setParamInt32(ext, "value", m_dec_hfr_fps);
+            break;
+        }
+        case OMX_QcomIndexParamVideoSyncFrameDecodingMode:
+        {
+            setStatus &= vExt.setParamInt32(ext, "value", drv_ctx.idr_only_decoding);
             break;
         }
         default:
@@ -224,6 +232,21 @@ OMX_ERRORTYPE omx_vdec::set_vendor_extension_config(
                     NULL, (OMX_INDEXTYPE)OMX_QTIIndexParamVideoDecoderOutputFrameRate, &decOutputFrameRateParam);
             if (err != OMX_ErrorNone) {
                 DEBUG_PRINT_ERROR("set_param: OMX_QTIIndexParamVideoDecoderOutputFrameRate failed !");
+            }
+            break;
+        }
+        case OMX_QcomIndexParamVideoSyncFrameDecodingMode:
+        {
+            OMX_U32 thumbnail_mode = 0;
+            valueSet |= vExt.readParamInt32(ext, "value", (OMX_S32 *)&thumbnail_mode);
+            DEBUG_PRINT_HIGH("VENDOR-EXT: set_config: OMX_QcomIndexParamVideoSyncFrameDecodingMode : %d",
+                    thumbnail_mode);
+            if (!valueSet || !thumbnail_mode)
+                break;
+            err = set_parameter(
+                    NULL, (OMX_INDEXTYPE)OMX_QcomIndexParamVideoSyncFrameDecodingMode, &thumbnail_mode);
+            if (err != OMX_ErrorNone) {
+                DEBUG_PRINT_ERROR("set_param: OMX_QcomIndexParamVideoSyncFrameDecodingMode failed !");
             }
             break;
         }
