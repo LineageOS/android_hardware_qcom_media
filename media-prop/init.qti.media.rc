@@ -34,7 +34,7 @@ service qti-media /vendor/bin/init.qti.media.sh
     group media
     disabled
     oneshot
-    seclabel u:r:qti-media:s0
+    seclabel u:r:vendor_qti_media:s0
 
 on early-init
     start qti-media
