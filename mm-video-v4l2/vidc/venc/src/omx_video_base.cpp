@@ -3467,19 +3467,19 @@ OMX_ERRORTYPE  omx_video::allocate_output_buffer(
 #ifdef USE_ION
 #ifdef _MSM8974_
             align_size = ALIGN(m_sOutPortDef.nBufferSize, 4096);
-            m_pOutput_ion[i].dev_fd = alloc_map_ion_memory(align_size,
+            bool status = alloc_map_ion_memory(align_size,
                     &m_pOutput_ion[i],
                     secure_session ? SECURE_FLAGS_OUTPUT_BUFFER : ION_FLAG_CACHED);
+
+            if (status == false) {
+                DEBUG_PRINT_ERROR("ERROR:ION memory allocation Failed");
+                return OMX_ErrorInsufficientResources;
+            }
 #else
             m_pOutput_ion[i].ion_device_fd = alloc_map_ion_memory(m_sOutPortDef.nBufferSize,
                     &m_pOutput_ion[i].ion_alloc_data,
                     &m_pOutput_ion[i].fd_ion_data, ION_FLAG_CACHED);
 #endif
-            if (m_pOutput_ion[i].dev_fd < 0) {
-                DEBUG_PRINT_ERROR("ERROR:ION device open() Failed");
-                return OMX_ErrorInsufficientResources;
-            }
-
             m_pOutput_pmem[i].fd = m_pOutput_ion[i].data_fd;
 #else
             m_pOutput_pmem[i].fd = open (MEM_DEVICE,O_RDWR);
