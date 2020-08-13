@@ -31,7 +31,17 @@ endif
 
 # Vendor property overrides
 # Enable Codec2.0 HAL for pure AOSP variants.
-ifeq ($(GENERIC_ODM_IMAGE),true)
+# Enable OMX for pure AOSP AUTO variants.
+ifeq ($(GENERIC_ODM_IMAGE)$(TARGET_BOARD_AUTO),truetrue)
+  $(warning "Forcing OMX for Generic auto build variant")
+  DEVICE_MANIFEST_FILE += hardware/qcom/media/conf_files/sm6150/c2_manifest_vendor.xml
+  PRODUCT_ODM_PROPERTIES += debug.media.codec2=0
+  PRODUCT_ODM_PROPERTIES += debug.stagefright.ccodec=0
+  PRODUCT_ODM_PROPERTIES += debug.stagefright.omx_default_rank=1000
+  PRODUCT_COPY_FILES += \
+      device/qcom/common/media/media_profiles.xml:$(TARGET_COPY_OUT_ODM)/etc/media_profiles_V1_0.xml \
+      device/qcom/common/media/media_profiles.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_profiles_vendor.xml
+else ifeq ($(GENERIC_ODM_IMAGE),true)
   $(warning "Forcing codec2.0 HW for generic odm build variant")
   DEVICE_MANIFEST_FILE += hardware/qcom/media/conf_files/sm6150/c2_manifest_vendor.xml
   #Set default ranks and rank Codec 2.0 over OMX codecs
