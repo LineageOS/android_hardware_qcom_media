@@ -3155,8 +3155,8 @@ OMX_ERRORTYPE omx_swvdec::describe_color_format(
             /**
              * alignment factors:
              *
-             * - stride:    512
-             * - scanlines: 512
+             * - stride:    512 or 128
+             * - scanlines: 512 or 32
              */
             stride    = VENUS_Y_STRIDE(COLOR_FMT_NV12, p_img->mWidth);
             scanlines = VENUS_Y_SCANLINES(COLOR_FMT_NV12, p_img->mHeight);
