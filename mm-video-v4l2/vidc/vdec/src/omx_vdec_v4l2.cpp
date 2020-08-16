@@ -1078,7 +1078,6 @@ void omx_vdec::process_event_cb(void *ctxt)
                         pThis->omx_report_error ();
                         break;
                     }
-#if !HDR10_SETMETADATA_ENABLE
                     if (pThis->m_cb.EventHandler) {
                         OMX_BUFFERHEADERTYPE * buffer = (OMX_BUFFERHEADERTYPE *)(intptr_t)p1;
                         if (buffer->nFilledLen && (pThis->output_capability == V4L2_PIX_FMT_HEVC ||
@@ -1096,7 +1095,6 @@ void omx_vdec::process_event_cb(void *ctxt)
                            }
                         }
                     }
-#endif
                     if (pThis->fill_buffer_done(&pThis->m_cmp,
                                (OMX_BUFFERHEADERTYPE *)(intptr_t)p1) != OMX_ErrorNone ) {
                         DEBUG_PRINT_ERROR("fill_buffer_done failure");
@@ -8145,17 +8143,17 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                             (payload_len > HDR_DYNAMIC_META_DATA_SZ)) {
                             DEBUG_PRINT_ERROR("Invalid User extradata size %u for HDR10+", data->nDataSize);
                         } else {
-#if HDR10_SETMETADATA_ENABLE
+// enable setting metadata via gralloc handle
+//#if HDR10_SETMETADATA_ENABLE
                             color_mdata.dynamicMetaDataValid = true;
                             color_mdata.dynamicMetaDataLen = payload_len;
                             memcpy(color_mdata.dynamicMetaDataPayload, userdata_payload->data, payload_len);
                             DEBUG_PRINT_HIGH("Copied %u bytes of HDR10+ extradata", payload_len);
-#else
+//#endif
                             if(!is_hdr10_plus_info_found) {
                                store_hevc_hdr10plusinfo(payload_len, userdata_payload);
                                is_hdr10_plus_info_found = true;
                             }
-#endif
                         }
                     }
                     break;
@@ -8219,15 +8217,15 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                     final_color_aspects.mMatrixCoeffs = ColorAspects::MatrixBT601_6;
                 }
                 get_preferred_hdr_info(final_hdr_info);
-#if HDR10_SETMETADATA_ENABLE
+// enable setting metadata via gralloc handle
+//#if HDR10_SETMETADATA_ENABLE
                 convert_hdr_info_to_metadata(final_hdr_info, color_mdata);
                 convert_hdr10plusinfo_to_metadata(p_buf_hdr->pMarkData, color_mdata);
-                remove_hdr10plusinfo_using_cookie(p_buf_hdr->pMarkData);
                 convert_color_aspects_to_metadata(final_color_aspects, color_mdata);
                 print_debug_hdr_color_info_mdata(&color_mdata);
                 print_debug_hdr10plus_metadata(color_mdata);
                 setMetaData(private_handle, COLOR_METADATA, (void*)&color_mdata);
-#endif
+//#endif
                 set_histogram_metadata(private_handle);
         }
 
