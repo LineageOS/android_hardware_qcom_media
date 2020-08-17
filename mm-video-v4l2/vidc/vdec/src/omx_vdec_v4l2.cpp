@@ -752,7 +752,8 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     allocate_native_handle(false),
     client_set_fps(false),
     stereo_output_mode(HAL_NO_3D),
-    m_last_rendered_TS(-1),
+    m_prev_timestampUs(0),
+    m_prev_frame_rendered(false),
     m_dec_hfr_fps(0),
     m_dec_secure_prefetch_size_internal(0),
     m_dec_secure_prefetch_size_output(0),
@@ -3337,10 +3338,7 @@ bool omx_vdec::execute_output_flush()
     pthread_mutex_lock(&m_lock);
     DEBUG_PRINT_LOW("Initiate Output Flush");
 
-    //reset last render TS
-    if(m_last_rendered_TS > 0) {
-        m_last_rendered_TS = 0;
-    }
+    m_prev_timestampUs = 0;
 
     while (m_ftb_q.m_size) {
         m_ftb_q.pop_entry(&p1,&p2,&ident);
@@ -5280,9 +5278,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
             DEBUG_PRINT_LOW("set_parameter: decoder output-frame-rate %d", pParam->fps);
             m_dec_hfr_fps=pParam->fps;
             DEBUG_PRINT_HIGH("output-frame-rate value = %d", m_dec_hfr_fps);
-            if (m_dec_hfr_fps) {
-                m_last_rendered_TS = 0;
-            }
             break;
         }
         default: {
@@ -8667,37 +8662,35 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
         il_buffer = client_buffers.get_il_buf_hdr(buffer);
         OMX_U32 current_framerate = (int)(drv_ctx.frame_rate.fps_numerator / drv_ctx.frame_rate.fps_denominator);
 
-        if (il_buffer && m_last_rendered_TS >= 0) {
-            OMX_TICKS ts_delta = (OMX_TICKS)llabs(il_buffer->nTimeStamp - m_last_rendered_TS);
-            // Convert fps into ms value. 1 sec = 1000000 ms.
-            OMX_U64 target_ts_delta = m_dec_hfr_fps ? 1000000 / m_dec_hfr_fps : ts_delta;
+        if (il_buffer && m_dec_hfr_fps > 0 && buffer->nFilledLen > 0) {
+            uint64_t tsDeltaUs = llabs(il_buffer->nTimeStamp - m_prev_timestampUs);
+            double vsyncUs = 1e6/m_dec_hfr_fps;
+            double vsync_start = (static_cast<uint64_t>(il_buffer->nTimeStamp/vsyncUs)) * vsyncUs;
+            double vsync_end = vsync_start + vsyncUs;
+            bool render_frame = false;
 
-            // Current frame can be send for rendering if
-            // (a) current FPS is <=  60
-            // (b) is the next frame after the frame with TS 0
-            // (c) is the first frame after seek
-            // (d) the delta TS b\w two consecutive frames is > 16 ms
-            // (e) its TS is equal to previous frame TS
-            // (f) if marked EOS
-
-            if(current_framerate <= (OMX_U32)m_dec_hfr_fps || m_last_rendered_TS == 0 ||
-               il_buffer->nTimeStamp == 0 || ts_delta >= (OMX_TICKS)target_ts_delta||
-               ts_delta == 0 || (il_buffer->nFlags & OMX_BUFFERFLAG_EOS)) {
-               m_last_rendered_TS = il_buffer->nTimeStamp;
+            if ((static_cast<double>(il_buffer->nTimeStamp + tsDeltaUs) > vsync_end) ||
+                 !m_prev_timestampUs || il_buffer->nFlags & OMX_BUFFERFLAG_EOS) {
+                render_frame = true;
+            }
+            // Render frames very close to boundaries of vsync interval
+            if ((abs(static_cast<double>(il_buffer->nTimeStamp) - vsync_start) < 1.0) ||
+                (abs(static_cast<double>(il_buffer->nTimeStamp) - vsync_end) < 1.0)) {
+                render_frame = true;
+            }
+            // Render frames for which ts_Delta == 0, only if previous frame was rendered.
+            if (tsDeltaUs == 0 && m_prev_frame_rendered) {
+                render_frame = true;
+            }
+            if (!render_frame) {
+                buffer->nFilledLen = 0;
+                m_prev_frame_rendered = false;
             } else {
-               //mark for droping
-               buffer->nFilledLen = 0;
+                m_prev_frame_rendered = true;
             }
 
-            DEBUG_PRINT_LOW(" -- %s Frame -- info:: fps(%d) lastRenderTime(%lld) bufferTs(%lld) ts_delta(%lld)",
-                              buffer->nFilledLen? "Rendering":"Dropping",current_framerate,m_last_rendered_TS,
-                              il_buffer->nTimeStamp,ts_delta);
-
-            //above code makes sure that delta b\w two consecutive frames is not
-            //greater than 16ms, slow-mo feature, so cap fps to max 60
-            if (current_framerate > (OMX_U32)m_dec_hfr_fps ) {
-                current_framerate = m_dec_hfr_fps;
-            }
+            m_prev_timestampUs = il_buffer->nTimeStamp;
+            DEBUG_PRINT_LOW(" -- %s Frame with bufferTs(%lld)", buffer->nFilledLen? "Rendering":"Dropping", il_buffer->nTimeStamp);
         }
 
         // add current framerate to gralloc meta data
