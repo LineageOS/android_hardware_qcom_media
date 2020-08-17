@@ -1082,9 +1082,6 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                 m_dec_hfr_fps = m_dec_output_rate;
 
             DEBUG_PRINT_HIGH("output-frame-rate value = %d", m_dec_hfr_fps);
-            if (m_dec_hfr_fps) {
-                m_last_rendered_TS = 0;
-            }
             break;
         }
         case OMX_QcomIndexParamVideoMetaBufferMode:

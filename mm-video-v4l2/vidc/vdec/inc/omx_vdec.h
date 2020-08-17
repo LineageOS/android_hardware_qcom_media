@@ -1201,7 +1201,8 @@ class omx_vdec: public qc_omx_component
         int log_output_buffers(OMX_BUFFERHEADERTYPE *);
         int log_cc_output_buffers(OMX_BUFFERHEADERTYPE *);
         void send_codec_config();
-        OMX_TICKS m_last_rendered_TS;
+        OMX_TICKS m_prev_timestampUs;
+        bool m_prev_frame_rendered;
         int32_t m_dec_hfr_fps;
         int32_t m_dec_secure_prefetch_size_internal;
         int32_t m_dec_secure_prefetch_size_output;
