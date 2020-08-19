@@ -169,6 +169,7 @@ Only the three quirks included above are recognized at this point:
             <Limit name="performance-point-3840x2160" value="30" />
             <Limit name="performance-point-1920x1080" value="120" />
             <Limit name="performance-point-1280x720" value="240" />
+        </MediaCodec>
         <MediaCodec name="OMX.qcom.video.encoder.hevc.cq" type="video/hevc" >
             <Quirk name="requires-allocate-on-input-ports" />
             <Quirk name="requires-allocate-on-input-ports" />
@@ -180,7 +181,6 @@ Only the three quirks included above are recognized at this point:
             <Limit name="quality" range="0-100" default="80" />
             <Limit name="performance-point-512x512" value="480" />
             <Feature name="bitrate-modes" value="CQ" />
-        </MediaCodec>
         </MediaCodec>
         <!-- Video Software -->
         <MediaCodec name="OMX.qcom.video.encoder.h263sw" type="video/3gpp" >
