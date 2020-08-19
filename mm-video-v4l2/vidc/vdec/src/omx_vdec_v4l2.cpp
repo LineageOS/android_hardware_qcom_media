@@ -1110,7 +1110,8 @@ OMX_ERRORTYPE omx_vdec::decide_dpb_buffer_mode(bool is_downscalar_enabled)
                  capture_capability = V4L2_PIX_FMT_SDE_Y_CBCR_H2V2_P010_VENUS;
                  capability_changed = true;
             }
-        } else  if (m_progressive == MSM_VIDC_PIC_STRUCT_PROGRESSIVE) {
+        } else  if (m_progressive == MSM_VIDC_PIC_STRUCT_PROGRESSIVE &&
+                    eCompressionFormat != OMX_VIDEO_CodingMPEG2) {
             enable_split = true;
             dpb_color_format = V4L2_MPEG_VIDC_VIDEO_DPB_COLOR_FMT_UBWC;
         } else {
@@ -12319,7 +12320,8 @@ bool omx_vdec::allocate_color_convert_buf::set_color_format(
         DEBUG_PRINT_LOW("Enabling C2D");
         if (dest_color_format == OMX_COLOR_FormatYUV420Planar ||
             dest_color_format == OMX_COLOR_FormatYUV420SemiPlanar ||
-            (omx->m_progressive != MSM_VIDC_PIC_STRUCT_PROGRESSIVE &&
+            ((omx->m_progressive != MSM_VIDC_PIC_STRUCT_PROGRESSIVE ||
+            omx->eCompressionFormat == OMX_VIDEO_CodingMPEG2) &&
             dest_color_format == (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m)) {
             ColorFormat = dest_color_format;
             if (dest_color_format == OMX_COLOR_FormatYUV420Planar) {
