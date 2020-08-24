@@ -142,9 +142,13 @@ OMX_Init()
                   continue;
           } else if (!strcmp("OMX.qcom.video.encoder.tme", core[i].name) || !strcmp("OMX.qcom.video.encoder.tme.secure", core[i].name))
                     continue;
-      } else if (!strcmp(platform_name, "atoll") || !strcmp(platform_name, "trinket")) {
-                //Trinket and Atoll both does not support vc1 hence don't add them in list
-                 if (!strcmp("OMX.qti.video.decoder.vc1sw", core[i].name))
+      } else if (!strcmp(platform_name, "atoll")) {
+                //Atoll does not support vc1 and vpp hence don't add them in list
+              if (!strcmp("OMX.qti.video.decoder.vc1sw", core[i].name) || !strcmp("OMX.qti.vdec.vpp", core[i].name))
+                     continue;
+      } else if (!strcmp(platform_name, "trinket")) {
+                //Trinket does not support vc1 hence don't add them in list
+              if (!strcmp("OMX.qti.video.decoder.vc1sw", core[i].name))
                      continue;
       } else if (!strcmp(platform_name, "msmnile")) {
                 //Hana does not support tme,tme secure hence donot add to list

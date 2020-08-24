@@ -78,7 +78,7 @@ omx_core_cb_type core[] =
     //Entries specific to msmsteppe
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.tme", "libOmxVenc.so", "video_encoder.tme"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.tme.secure", "libOmxVenc.so", "video_encoder.tme"),
-    OMX_REGISTRY_ENTRY("OMX.qti.vdec.vpp", "libOmxVpp.so", "video_decoder.vpp"),
+//    OMX_REGISTRY_ENTRY("OMX.qti.vdec.vpp", "libOmxVpp.so", "video_decoder.vpp"),
 //#endif //_STEPPE_ || _ATOLL_
 
 //#if !defined(_ATOLL_) && !defined(_TRINKET_)
