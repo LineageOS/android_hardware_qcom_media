@@ -1,4 +1,4 @@
-/* Copyright (c) 2012 - 2013, 2015, 2018 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012 - 2013, 2015, 2018, 2020 The Linux Foundation. All rights reserved.
  *
  * redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -109,6 +109,7 @@ enum ColorConvertFormat {
     RGBA8888,
     RGBA8888_UBWC,
     NV12_2K,
+    NV12_512,
     NV12_128m,
     NV12_UBWC,
     TP10_UBWC,
