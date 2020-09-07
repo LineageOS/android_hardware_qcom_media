@@ -598,10 +598,10 @@ OMX_ERRORTYPE  omx_venc::set_parameter
                 }
 
                 /* set the frame attributes */
-                /*Align stide and scanline to worst case*/
+                /*Align stride and scanline to worst case*/
                 /*------------------------------------------------------------------------------------------
                 *           [Color Format]                   [Stride Alignment]        [Scanline Alignment]
-                * QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m       512                         512
+                * QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m       512 or 128                  512 or 32
                 * OMX_COLOR_FormatYUV420SemiPlanar                 512                         512
                 * QOMX_COLOR_FormatYVU420SemiPlanar                16                          16
                 * HAL_PIXEL_FORMAT_NV21_ZSL                        64                          64

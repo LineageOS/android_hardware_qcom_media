@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
+Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -356,6 +356,9 @@ void get_v4l2_color_format_as_string(char * buf, int buf_len, unsigned long v4l2
             break;
         case V4L2_PIX_FMT_NV12:
             snprintf(buf, buf_len, "V4L2_PIX_FMT_NV12");
+            break;
+        case V4L2_PIX_FMT_NV12_512:
+            snprintf(buf, buf_len, "V4L2_PIX_FMT_NV12_512");
             break;
         case V4L2_PIX_FMT_NV12_UBWC:
             snprintf(buf, buf_len, "V4L2_PIX_FMT_NV12_UBWC");

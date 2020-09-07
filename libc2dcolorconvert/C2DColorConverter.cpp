@@ -1,4 +1,4 @@
-/* Copyright (c) 2012 - 2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012 - 2020, The Linux Foundation. All rights reserved.
  *
  * redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -575,8 +575,10 @@ size_t C2DColorConverter::calcStride(ColorConvertFormat format, size_t width)
             return ALIGN(width, ALIGN16);
         case NV12_2K:
             return ALIGN(width, ALIGN16);
-        case NV12_128m:
-            return ALIGN(width, ALIGN512);
+        case NV12_128m: {
+            int32_t stride_alignment = VENUS_Y_STRIDE(COLOR_FMT_NV12, 1);
+            return ALIGN(width, stride_alignment);
+        }
         case YCbCr420P:
             return ALIGN(width, ALIGN16);
         case YCrCb420P:
@@ -611,8 +613,11 @@ size_t C2DColorConverter::calcYSize(ColorConvertFormat format, size_t width, siz
             size_t lumaSize = ALIGN(alignedw * height, ALIGN2K);
             return lumaSize;
         }
-        case NV12_128m:
-            return ALIGN(width, ALIGN512) * ALIGN(height, ALIGN512);
+        case NV12_128m: {
+            int32_t stride_alignment = VENUS_Y_STRIDE(COLOR_FMT_NV12, 1);
+            int32_t scanline_alignment = VENUS_Y_SCANLINES(COLOR_FMT_NV12, 1);
+            return ALIGN(width, stride_alignment) * ALIGN(height, scanline_alignment);
+        }
         case NV12_UBWC:
             return ALIGN( VENUS_Y_STRIDE(COLOR_FMT_NV12_UBWC, width) *
                     VENUS_Y_SCANLINES(COLOR_FMT_NV12_UBWC, height), ALIGN4K) +
@@ -696,9 +701,9 @@ size_t C2DColorConverter::calcSize(ColorConvertFormat format, size_t width, size
             }
             break;
         case NV12_128m:
-            alignedw = ALIGN(width, ALIGN512);
-            alignedh = ALIGN(height, ALIGN512);
-            size = ALIGN(alignedw * alignedh + (alignedw * ALIGN((height+1)/2, ALIGN256)), ALIGN4K);
+            alignedw = VENUS_Y_STRIDE(COLOR_FMT_NV12, width);
+            alignedh = VENUS_Y_SCANLINES(COLOR_FMT_NV12, height);
+            size = ALIGN(alignedw * alignedh + (alignedw * ALIGN((height+1)/2, VENUS_Y_SCANLINES(COLOR_FMT_NV12, 1)/2)), ALIGN4K);
             break;
         case NV12_UBWC:
             size = VENUS_BUFFER_SIZE(COLOR_FMT_NV12_UBWC, width, height);
