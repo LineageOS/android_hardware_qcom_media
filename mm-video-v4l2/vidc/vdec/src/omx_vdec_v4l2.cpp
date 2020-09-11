@@ -8678,7 +8678,7 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
             double vsync_end = vsync_start + vsyncUs;
             bool render_frame = false;
 
-            if ((static_cast<double>(il_buffer->nTimeStamp + tsDeltaUs) > vsync_end) ||
+            if ((static_cast<double>(il_buffer->nTimeStamp + tsDeltaUs) > (vsync_end + 1.0)) ||
                  !m_prev_timestampUs || il_buffer->nFlags & OMX_BUFFERFLAG_EOS) {
                 render_frame = true;
             }
