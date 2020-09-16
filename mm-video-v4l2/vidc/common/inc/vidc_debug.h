@@ -201,8 +201,11 @@ class Signal {
     pthread_cond_t condition;
 public:
     Signal() {
+        pthread_condattr_t attr;
         signalled = false;
-        pthread_cond_init(&condition, NULL);
+        pthread_condattr_init(&attr);
+        pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
+        pthread_cond_init(&condition, &attr);
         pthread_mutex_init(&mutex, NULL);
     }
 
@@ -227,7 +230,7 @@ public:
             pthread_mutex_unlock(&mutex);
             return 0;
         }
-        clock_gettime(CLOCK_REALTIME, &ts);
+        clock_gettime(CLOCK_MONOTONIC, &ts);
         ts.tv_sec += timeout_nsec / 1000000000;
         ts.tv_nsec += timeout_nsec % 1000000000;
         if (ts.tv_nsec >= 1000000000) {
