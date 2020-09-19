@@ -17,14 +17,6 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
-#===============================================================================
-#             Deploy the headers that can be exposed
-#===============================================================================
-
-LOCAL_COPY_HEADERS_TO   := mm-core/omxcore
-LOCAL_COPY_HEADERS      := QComOMXMetadata.h \
-                           QComOMXPlugin.h
-
 LOCAL_SRC_FILES := \
     QComOMXPlugin.cpp                      \
 
