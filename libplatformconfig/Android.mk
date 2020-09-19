@@ -2,21 +2,6 @@ LOCAL_PATH := $(call my-dir)
 LOCAL_DIR_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
-LOCAL_COPY_HEADERS_TO := libplatformconfig
-
-libplatformconfig-def := \
-      -g0 -O3 -fpic \
-      -Wno-deprecated-declarations -Werror \
-        -Wno-error=unused-variable \
-        -w -Wall -Wextra\
-    -fexceptions \
-    -Wno-missing-field-initializers \
-    -D_ANDROID_
-
-COMMON_CFLAGS := -O3
-
-include $(BUILD_COPY_HEADERS)
-
 LOCAL_CFLAGS := $(COMMON_CFLAGS) $(libplatformconfig-def)
 
 LOCAL_SHARED_LIBRARIES += \
