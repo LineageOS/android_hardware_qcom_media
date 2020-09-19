@@ -23,41 +23,19 @@ MM_CORE_TARGET = default
 endif
 
 #===============================================================================
-#             Deploy the headers that can be exposed
+#             Expose media headers
 #===============================================================================
 
-LOCAL_COPY_HEADERS_TO   := mm-core/omxcore
-LOCAL_COPY_HEADERS      := inc/OMX_Audio.h
-LOCAL_COPY_HEADERS      += inc/OMX_Component.h
-LOCAL_COPY_HEADERS      += inc/OMX_ContentPipe.h
-LOCAL_COPY_HEADERS      += inc/OMX_Core.h
-LOCAL_COPY_HEADERS      += inc/OMX_Image.h
-LOCAL_COPY_HEADERS      += inc/OMX_Index.h
-LOCAL_COPY_HEADERS      += inc/OMX_IVCommon.h
-LOCAL_COPY_HEADERS      += inc/OMX_Other.h
-LOCAL_COPY_HEADERS      += inc/OMX_QCOMExtns.h
-LOCAL_COPY_HEADERS      += inc/OMX_Types.h
-LOCAL_COPY_HEADERS      += inc/OMX_Video.h
-LOCAL_COPY_HEADERS      += inc/qc_omx_common.h
-LOCAL_COPY_HEADERS      += inc/qc_omx_component.h
-LOCAL_COPY_HEADERS      += inc/qc_omx_msg.h
-LOCAL_COPY_HEADERS      += inc/QOMX_AudioExtensions.h
-LOCAL_COPY_HEADERS      += inc/QOMX_AudioIndexExtensions.h
-LOCAL_COPY_HEADERS      += inc/OMX_CoreExt.h
-LOCAL_COPY_HEADERS      += inc/QOMX_CoreExtensions.h
-LOCAL_COPY_HEADERS      += inc/QOMX_FileFormatExtensions.h
-LOCAL_COPY_HEADERS      += inc/QOMX_IVCommonExtensions.h
-LOCAL_COPY_HEADERS      += inc/QOMX_SourceExtensions.h
-LOCAL_COPY_HEADERS      += inc/QOMX_VideoExtensions.h
-LOCAL_COPY_HEADERS      += inc/OMX_IndexExt.h
-LOCAL_COPY_HEADERS      += inc/OMX_VideoExt.h
-LOCAL_COPY_HEADERS      += inc/QOMX_StreamingExtensions.h
-LOCAL_COPY_HEADERS      += inc/QCMediaDefs.h
-LOCAL_COPY_HEADERS      += inc/QCMetaData.h
+include $(CLEAR_VARS)
+LOCAL_MODULE := media_headers
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/inc
+include $(BUILD_HEADER_LIBRARY)
 
 #===============================================================================
 #             LIBRARY for Android apps
 #===============================================================================
+
+include $(CLEAR_VARS)
 
 LOCAL_C_INCLUDES        := $(LOCAL_PATH)/src/common
 LOCAL_C_INCLUDES        += $(LOCAL_PATH)/inc
