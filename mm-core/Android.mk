@@ -63,39 +63,6 @@ OMXCORE_CFLAGS += -D_ANDROID_O_MR1_DIVX_CHANGES
 endif
 
 #===============================================================================
-#             Deploy the headers that can be exposed
-#===============================================================================
-
-LOCAL_COPY_HEADERS_TO   := mm-core/omxcore
-LOCAL_COPY_HEADERS      := inc/OMX_Audio.h
-LOCAL_COPY_HEADERS      += inc/OMX_Component.h
-LOCAL_COPY_HEADERS      += inc/OMX_ContentPipe.h
-LOCAL_COPY_HEADERS      += inc/OMX_Core.h
-LOCAL_COPY_HEADERS      += inc/OMX_Image.h
-LOCAL_COPY_HEADERS      += inc/OMX_Index.h
-LOCAL_COPY_HEADERS      += inc/OMX_IVCommon.h
-LOCAL_COPY_HEADERS      += inc/OMX_Other.h
-LOCAL_COPY_HEADERS      += inc/OMX_QCOMExtns.h
-LOCAL_COPY_HEADERS      += inc/OMX_Types.h
-LOCAL_COPY_HEADERS      += inc/OMX_Video.h
-LOCAL_COPY_HEADERS      += inc/qc_omx_common.h
-LOCAL_COPY_HEADERS      += inc/qc_omx_component.h
-LOCAL_COPY_HEADERS      += inc/qc_omx_msg.h
-LOCAL_COPY_HEADERS      += inc/QOMX_AudioExtensions.h
-LOCAL_COPY_HEADERS      += inc/QOMX_AudioIndexExtensions.h
-LOCAL_COPY_HEADERS      += inc/OMX_CoreExt.h
-LOCAL_COPY_HEADERS      += inc/QOMX_CoreExtensions.h
-LOCAL_COPY_HEADERS      += inc/QOMX_FileFormatExtensions.h
-LOCAL_COPY_HEADERS      += inc/QOMX_IVCommonExtensions.h
-LOCAL_COPY_HEADERS      += inc/QOMX_SourceExtensions.h
-LOCAL_COPY_HEADERS      += inc/QOMX_VideoExtensions.h
-LOCAL_COPY_HEADERS      += inc/OMX_IndexExt.h
-LOCAL_COPY_HEADERS      += inc/OMX_VideoExt.h
-LOCAL_COPY_HEADERS      += inc/QOMX_StreamingExtensions.h
-LOCAL_COPY_HEADERS      += inc/QCMediaDefs.h
-LOCAL_COPY_HEADERS      += inc/QCMetaData.h
-
-#===============================================================================
 #             LIBRARY for Android apps
 #===============================================================================
 
@@ -150,5 +117,14 @@ LOCAL_SRC_FILES         += src/$(MM_CORE_TARGET)/qc_registry_table.c
 endif
 
 include $(BUILD_SHARED_LIBRARY)
+
+#===============================================================================
+#             Expose media headers
+#===============================================================================
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := media_headers
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/inc
+include $(BUILD_HEADER_LIBRARY)
 
 endif #BUILD_TINY_ANDROID
