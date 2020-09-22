@@ -2440,7 +2440,7 @@ void venc_dev::venc_config_print()
     }
 
     if (temporal_layers_config.nPLayers) {
-        DEBUG_PRINT_INFO("ENC_CONFIG: Temporal layers: P-layers: %u, B-layers: %u, Adjusted I-frame-interval: %u",
+        DEBUG_PRINT_INFO("ENC_CONFIG: Temporal layers: P-layers: %u, B-layers: %u, Adjusted I-frame-interval: %lu",
                 temporal_layers_config.nPLayers, temporal_layers_config.nBLayers,
                 intra_period.num_pframes + intra_period.num_bframes + 1);
     }
@@ -2813,7 +2813,7 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
 			fmt.fmt.pix_mp.height = m_sVenc_cfg.input_height;
 			fmt.fmt.pix_mp.width = m_sVenc_cfg.input_width;
 			if (ioctl(m_nDriver_fd, VIDIOC_S_FMT, &fmt)) {
-				DEBUG_PRINT_ERROR("Failed setting color format in in etb %x", m_sVenc_cfg.inputformat);
+				DEBUG_PRINT_ERROR("Failed setting color format in in etb %lx", m_sVenc_cfg.inputformat);
 				return false;
 			}
 		}
