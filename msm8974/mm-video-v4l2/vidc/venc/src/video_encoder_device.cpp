@@ -2421,7 +2421,7 @@ bool venc_dev::venc_set_entropy_config(OMX_BOOL enable, OMX_U32 i_cabac_level)
     ioctl_msg.in = (void*)&entropy_cfg;
     ioctl_msg.out = NULL;
 
-    if (ioctl (m_nDriver_fd,VEN_IOCTL_SET_ENTROPY_CFG,(void*)&ioctl_msg)< 0) {
+    if ((int)(ioctl (m_nDriver_fd,VEN_IOCTL_SET_ENTROPY_CFG,(void*)&ioctl_msg)) < 0) {
         DEBUG_PRINT_ERROR("ERROR: Request for setting entropy config failed");
         return false;
     }
