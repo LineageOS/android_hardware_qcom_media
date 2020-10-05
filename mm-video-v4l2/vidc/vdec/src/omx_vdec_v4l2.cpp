@@ -2490,16 +2490,25 @@ OMX_ERRORTYPE  omx_vdec::send_command_proxy(OMX_IN OMX_HANDLETYPE hComp,
         if (cmd == OMX_CommandFlush && (param1 == OMX_CORE_INPUT_PORT_INDEX ||
                     param1 == OMX_ALL)) {
             if (android_atomic_add(0, &m_queued_codec_config_count) > 0) {
-               struct timespec ts;
-
-               clock_gettime(CLOCK_REALTIME, &ts);
-               ts.tv_sec += 1;
-               DEBUG_PRINT_LOW("waiting for %d EBDs of CODEC CONFIG buffers ",
+                struct timespec ts;
+                int rc = 0;
+#ifdef __BIONIC__
+                clock_gettime(CLOCK_MONOTONIC, &ts);
+#elif __GLIBC__
+                clock_gettime(CLOCK_REALTIME, &ts);
+#endif
+                ts.tv_sec += 1;
+                DEBUG_PRINT_LOW("waiting for %d EBDs of CODEC CONFIG buffers ",
                        m_queued_codec_config_count);
-               BITMASK_SET(&m_flags, OMX_COMPONENT_FLUSH_DEFERRED);
-               if (sem_timedwait(&m_safe_flush, &ts)) {
-                   DEBUG_PRINT_ERROR("Failed to wait for EBDs of CODEC CONFIG buffers");
-               }
+                BITMASK_SET(&m_flags, OMX_COMPONENT_FLUSH_DEFERRED);
+#ifdef __BIONIC__
+                rc = sem_timedwait_monotonic_np(&m_safe_flush, &ts);
+#elif __GLIBC__
+                rc = sem_timedwait(&m_safe_flush, &ts);
+#endif
+                if (rc) {
+                    DEBUG_PRINT_ERROR("Failed to wait for EBDs of CODEC CONFIG buffers");
+                }
                BITMASK_CLEAR (&m_flags,OMX_COMPONENT_FLUSH_DEFERRED);
             }
         }
@@ -6187,7 +6196,7 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
             double vsync_end = vsync_start + vsyncUs;
             bool render_frame = false;
 
-            if ((static_cast<double>(il_buffer->nTimeStamp + tsDeltaUs) > vsync_end) ||
+            if ((static_cast<double>(il_buffer->nTimeStamp + tsDeltaUs) > (vsync_end + 1.0)) ||
                  !m_prev_timestampUs || il_buffer->nFlags & OMX_BUFFERFLAG_EOS) {
                 render_frame = true;
             }
