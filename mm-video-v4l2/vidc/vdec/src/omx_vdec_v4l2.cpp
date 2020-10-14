@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010 - 2019, The Linux Foundation. All rights reserved.
+Copyright (c) 2010 - 2020, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -5311,6 +5311,12 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                     DEBUG_PRINT_ERROR("Failed to set input buffer size");
                     eRet = OMX_ErrorUnsupportedSetting;
                 } else {
+                    if (pParam->nBufferSize != drv_ctx.ip_buf.buffer_size) {
+                        vdec_allocatorproperty *buffer_prop = &drv_ctx.ip_buf;
+                        drv_ctx.ip_buf.buffer_size = (pParam->nBufferSize + buffer_prop->alignment - 1) &
+                                (~(buffer_prop->alignment - 1));
+                        eRet = set_buffer_req(buffer_prop);
+                    }
                     eRet = get_buffer_req(&drv_ctx.ip_buf);
                     if (eRet == OMX_ErrorNone) {
                         m_custom_buffersize.input_buffersize = drv_ctx.ip_buf.buffer_size;
