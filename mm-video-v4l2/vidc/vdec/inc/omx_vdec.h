@@ -1274,6 +1274,7 @@ class omx_vdec: public qc_omx_component
 #ifdef USE_ION
         bool alloc_map_ion_memory(OMX_U32 buffer_size, vdec_ion *ion_info, int flag);
         void free_ion_memory(struct vdec_ion *buf_ion_info);
+        void do_cache_operations(int fd);
 #endif
 
 
