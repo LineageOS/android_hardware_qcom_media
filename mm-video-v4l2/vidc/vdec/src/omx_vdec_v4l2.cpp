@@ -10284,7 +10284,7 @@ char *omx_vdec::ion_map(int fd, int len)
                                 MAP_SHARED, fd, 0);
     if (bufaddr != MAP_FAILED) {
 #ifdef USE_ION
-    //do_cache_operations(fd);
+    do_cache_operations(fd);
 #endif
     }
     return bufaddr;
@@ -10309,7 +10309,7 @@ char *omx_vdec::ion_map(int fd, int len)
 OMX_ERRORTYPE omx_vdec::ion_unmap(int fd, void *bufaddr, int len)
 {
     (void)fd;
-    //do_cache_operations(fd);
+    do_cache_operations(fd);
 
     if (-1 == munmap(bufaddr, len)) {
         DEBUG_PRINT_ERROR("munmap failed.");
@@ -10411,6 +10411,23 @@ void omx_vdec::free_ion_memory(struct vdec_ion *buf_ion_info)
     if (buf_ion_info->dev_fd >= 0) {
         ion_close(buf_ion_info->dev_fd);
         buf_ion_info->dev_fd = -1;
+    }
+}
+void omx_vdec::do_cache_operations(int fd)
+{
+    if (fd < 0)
+        return;
+
+    struct dma_buf_sync dma_buf_sync_data[2];
+    dma_buf_sync_data[0].flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_RW;
+    dma_buf_sync_data[1].flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_RW;
+
+    for(unsigned int i=0; i<2; i++) {
+        int rc = ioctl(fd, DMA_BUF_IOCTL_SYNC, &dma_buf_sync_data[i]);
+        if (rc < 0) {
+            DEBUG_PRINT_ERROR("Failed DMA_BUF_IOCTL_SYNC %s fd : %d", i==0?"start":"end", fd);
+            return;
+        }
     }
 }
 #endif
@@ -13062,9 +13079,11 @@ OMX_BUFFERHEADERTYPE* omx_vdec::allocate_color_convert_buf::get_il_buf_hdr()
         bool status;
         if (!omx->in_reconfig && !omx->output_flush_progress && bufadd->nFilledLen) {
             pthread_mutex_lock(&omx->c_lock);
+            omx->do_cache_operations(omx->drv_ctx.op_buf_ion_info[index].data_fd);
             status = c2d.convert(omx->drv_ctx.ptr_outputbuffer[index].pmem_fd,
                     omx->drv_ctx.op_buf_map_info[index].base_address, bufadd->pBuffer, pmem_fd[index],
                     pmem_baseaddress[index], pmem_baseaddress[index]);
+            omx->do_cache_operations(omx->drv_ctx.op_buf_ion_info[index].data_fd);
             if (!status) {
                 DEBUG_PRINT_ERROR("Failed color conversion %d", status);
                 m_out_mem_ptr_client[index].nFilledLen = 0;
