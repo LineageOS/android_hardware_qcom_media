@@ -8635,12 +8635,6 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
                     is_interlaced && is_duplicate_ts_valid && !is_mbaff);
         }
     }
-
-    if (buffer->nTimeStamp < 0) {
-        DEBUG_PRINT_ERROR("[FBD] Invalid buffer timestamp %lld", (long long)buffer->nTimeStamp);
-        return OMX_ErrorBadParameter;
-    }
-
     VIDC_TRACE_INT_LOW("FBD-TS", buffer->nTimeStamp / 1000);
 
     if (m_cb.FillBufferDone) {
