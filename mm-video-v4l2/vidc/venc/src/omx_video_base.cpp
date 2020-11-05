@@ -252,6 +252,7 @@ omx_video::omx_video():
     m_sExtraData(0),
     m_sParamConsumerUsage(0),
     m_input_msg_id(OMX_COMPONENT_GENERATE_ETB),
+    m_nOperatingRate(0),
     m_inp_mem_ptr(NULL),
     m_out_mem_ptr(NULL),
     m_client_output_extradata_mem_ptr(NULL),
@@ -5047,9 +5048,11 @@ void omx_video::initFastCV() {
 bool omx_video::is_flip_conv_needed() {
     OMX_MIRRORTYPE mirror;
     mirror = m_sConfigFrameMirror.eMirror;
+    OMX_U32 captureRate = m_nOperatingRate >> 16;
 
-    if (m_no_vpss && (mirror == OMX_MirrorVertical || mirror == OMX_MirrorHorizontal
-        || mirror == OMX_MirrorBoth)) {
+    if (m_no_vpss && m_fastCV_init_done && captureRate <= 30 &&
+        (mirror == OMX_MirrorVertical || mirror == OMX_MirrorHorizontal ||
+         mirror == OMX_MirrorBoth)) {
         return true;
     }
 

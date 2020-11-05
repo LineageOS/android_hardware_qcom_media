@@ -142,7 +142,12 @@ bool venc_dev::venc_set_config(void *configData, OMX_INDEXTYPE index)
                     DEBUG_PRINT_ERROR("ERROR: Setting OMX_IndexConfigCommonMirror failed");
                     return false;
                 } else if(venc_handle->m_no_vpss) {
-                    venc_handle->initFastCV();
+                    if ((venc_handle->m_nOperatingRate >> 16) <= 30) {
+                        venc_handle->initFastCV();
+                    } else {
+                        DEBUG_PRINT_ERROR("ERROR: Flip not supported fps %u",
+                                venc_handle->m_nOperatingRate >> 16);
+                    }
                 }
 
                 break;
