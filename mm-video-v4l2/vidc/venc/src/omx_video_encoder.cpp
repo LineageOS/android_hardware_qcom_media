@@ -41,7 +41,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define strlcpy g_strlcpy
 #endif
 
-extern int m_pipe;
 static int bframes;
 static int entropy;
 static int perfmode;
@@ -599,55 +598,27 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
     m_sExtraData = 0;
 
     if (eRet == OMX_ErrorNone) {
-        if (pipe(fds)) {
-            DEBUG_PRINT_ERROR("ERROR: pipe creation failed");
+        msg_thread_created = true;
+        r = pthread_create(&msg_thread_id,0, message_thread_enc, this);
+        if (r < 0) {
+            DEBUG_PRINT_ERROR("ERROR: message_thread_enc thread creation failed");
             eRet = OMX_ErrorInsufficientResources;
+            msg_thread_created = false;
             goto init_error;
         } else {
-            if (fds[0] == 0 || fds[1] == 0) {
-                if (pipe(fds)) {
-                    DEBUG_PRINT_ERROR("ERROR: pipe creation failed");
-                    eRet = OMX_ErrorInsufficientResources;
-                    goto init_error;
-                }
-            }
-            if (eRet == OMX_ErrorNone) {
-                m_pipe_in = fds[0];
-                m_pipe_out = fds[1];
-
-                msg_thread_created = true;
-                r = pthread_create(&msg_thread_id,0, message_thread_enc, this);
-                if (r < 0) {
-                    DEBUG_PRINT_ERROR("ERROR: message_thread_enc thread creation failed");
-                    eRet = OMX_ErrorInsufficientResources;
-                    msg_thread_created = false;
-                    goto init_error;
-                } else {
-                    async_thread_created = true;
-                    r = pthread_create(&async_thread_id,0, venc_dev::async_venc_message_thread, this);
-                    if (r < 0) {
-                        DEBUG_PRINT_ERROR("ERROR: venc_dev::async_venc_message_thread thread creation failed");
-                        eRet = OMX_ErrorInsufficientResources;
-                        async_thread_created = false;
-
-                        msg_thread_stop = true;
-                        pthread_join(msg_thread_id,NULL);
-                        msg_thread_created = false;
-
-                        goto init_error;
-                    } else
-                        dev_set_message_thread_id(async_thread_id);
-                }
-            }
+            async_thread_created = true;
+            r = pthread_create(&async_thread_id,0, venc_dev::async_venc_message_thread, this);
+            if (r < 0) {
+                DEBUG_PRINT_ERROR("ERROR: venc_dev::async_venc_message_thread thread creation failed");
+                eRet = OMX_ErrorInsufficientResources;
+                async_thread_created = false;
+                msg_thread_stop = true;
+                pthread_join(msg_thread_id,NULL);
+                msg_thread_created = false;
+                goto init_error;
+            } else
+                dev_set_message_thread_id(async_thread_id);
         }
-    }
-
-    if (perfmode) {
-        QOMX_EXTNINDEX_VIDEO_PERFMODE pParam;
-        pParam.nPerfMode = perfmode;
-        DEBUG_PRINT_LOW("Perfmode = 0x%x", pParam.nPerfMode);
-        if (!handle->venc_set_config(&pParam, (OMX_INDEXTYPE)OMX_QcomIndexConfigVideoVencPerfMode))
-            DEBUG_PRINT_ERROR("Failed setting PerfMode to %d", pParam.nPerfMode);
     }
 
     if (lowlatency)
