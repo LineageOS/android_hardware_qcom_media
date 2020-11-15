@@ -63,7 +63,6 @@ libmm-venc-inc      += $(call project-path-for,qcom-media)/mm-video-v4l2/vidc/co
 libmm-venc-inc      += $(call project-path-for,qcom-media)/mm-core/inc
 libmm-venc-inc      += $(call project-path-for,qcom-media)/libstagefrighthw
 libmm-venc-inc      += $(call project-path-for,qcom-media)/libplatformconfig
-libmm-venc-inc      += $(TARGET_OUT_HEADERS)/qcom/display
 libmm-venc-inc      += $(TARGET_OUT_HEADERS)/adreno
 libmm-venc-inc      += $(call project-path-for,qcom-media)/libc2dcolorconvert
 libmm-venc-inc      += $(TARGET_OUT_HEADERS)/libvqzip
@@ -88,6 +87,7 @@ LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libmm-venc-def)
 
 LOCAL_HEADER_LIBRARIES := \
+        display_headers \
         media_plugin_headers \
         libnativebase_headers \
         libcutils_headers \
@@ -129,6 +129,7 @@ LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libmm-venc-def)
 
 LOCAL_HEADER_LIBRARIES := \
+        display_headers \
         media_plugin_headers \
         libnativebase_headers \
         libutils_headers \
