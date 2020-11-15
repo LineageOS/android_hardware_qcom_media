@@ -5,12 +5,9 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := \
         C2DColorConverter.cpp
 
-LOCAL_C_INCLUDES := \
-    $(TARGET_OUT_HEADERS)/qcom/display
-
 LOCAL_SHARED_LIBRARIES := libutils liblog libdl
 
-LOCAL_HEADER_LIBRARIES := generated_kernel_headers
+LOCAL_HEADER_LIBRARIES := display_headers generated_kernel_headers
 
 LOCAL_MODULE_TAGS := optional
 

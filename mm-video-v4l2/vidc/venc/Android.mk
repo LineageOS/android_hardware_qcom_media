@@ -58,7 +58,6 @@ libmm-venc-inc      := $(LOCAL_PATH)/inc
 libmm-venc-inc      += $(OMX_VIDEO_PATH)/vidc/common/inc
 libmm-venc-inc      += $(call project-path-for,qcom-media)/mm-core/inc
 libmm-venc-inc      += $(call project-path-for,qcom-media)/libstagefrighthw
-libmm-venc-inc      += $(TARGET_OUT_HEADERS)/qcom/display
 libmm-venc-inc      += $(TARGET_OUT_HEADERS)/adreno
 libmm-venc-inc      += frameworks/native/include/media/hardware
 ifeq ($(call is-platform-sdk-version-at-least,27),true) #O_MR1
@@ -92,7 +91,7 @@ LOCAL_STATIC_LIBRARIES    := libOmxVidcCommon
 
 LOCAL_HEADER_LIBRARIES    := media_plugin_headers
 
-LOCAL_HEADER_LIBRARIES    += generated_kernel_headers
+LOCAL_HEADER_LIBRARIES    += display_headers generated_kernel_headers
 
 LOCAL_SRC_FILES   := src/omx_video_base.cpp
 LOCAL_SRC_FILES   += src/omx_video_encoder.cpp

@@ -62,7 +62,6 @@ include $(CLEAR_VARS)
 libmm-vdec-inc          := $(LOCAL_PATH)/inc
 libmm-vdec-inc          += $(OMX_VIDEO_PATH)/vidc/common/inc
 libmm-vdec-inc          += $(TOP)/$(call project-path-for,qcom-media)/mm-core/inc
-libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/qcom/display
 libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/adreno
 libmm-vdec-inc          += $(TOP)/frameworks/native/include/media/openmax
 libmm-vdec-inc          += $(TOP)/frameworks/native/include/media/hardware
@@ -116,7 +115,7 @@ LOCAL_SHARED_LIBRARIES  += libqdMetaData
 
 LOCAL_HEADER_LIBRARIES  := media_plugin_headers
 
-LOCAL_HEADER_LIBRARIES  += generated_kernel_headers
+LOCAL_HEADER_LIBRARIES  += display_headers generated_kernel_headers
 
 LOCAL_SRC_FILES         := src/frameparser.cpp
 LOCAL_SRC_FILES         += src/h264_utils.cpp
