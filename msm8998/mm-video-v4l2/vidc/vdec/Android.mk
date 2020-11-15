@@ -66,7 +66,6 @@ include $(CLEAR_VARS)
 libmm-vdec-inc          := $(LOCAL_PATH)/inc
 libmm-vdec-inc          += $(QCOM_MEDIA_ROOT)/mm-video-v4l2/vidc/common/inc
 libmm-vdec-inc          += $(QCOM_MEDIA_ROOT)/mm-core/inc
-libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/qcom/display
 libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/adreno
 libmm-vdec-inc          += $(TOP)/frameworks/native/include/media/openmax
 libmm-vdec-inc          += $(TOP)/frameworks/native/include/media/hardware
@@ -117,6 +116,7 @@ LOCAL_CFLAGS                    := $(libmm-vdec-def) -Werror
 LOCAL_C_INCLUDES                += $(libmm-vdec-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-vdec-add-dep)
 LOCAL_HEADER_LIBRARIES          := \
+    display_headers \
     libnativebase_headers \
     libhardware_headers \
     media_plugin_headers \
