@@ -84,7 +84,6 @@ libmm-venc-inc      := $(LOCAL_PATH)/inc
 libmm-venc-inc      += $(QCOM_MEDIA_ROOT)/mm-video-v4l2/vidc/common/inc
 libmm-venc-inc      += $(QCOM_MEDIA_ROOT)/mm-core/inc
 libmm-venc-inc      += $(QCOM_MEDIA_ROOT)/libstagefrighthw
-libmm-venc-inc      += $(TARGET_OUT_HEADERS)/qcom/display
 libmm-venc-inc      += $(TARGET_OUT_HEADERS)/adreno
 libmm-venc-inc      += frameworks/native/include/media/hardware
 libmm-venc-inc      += frameworks/native/include/media/openmax
@@ -122,6 +121,7 @@ LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 LOCAL_PRELINK_MODULE      := false
 LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl
 LOCAL_HEADER_LIBRARIES    := \
+    display_headers \
     media_plugin_headers \
     libhardware_headers \
 
@@ -162,6 +162,9 @@ LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 
 LOCAL_PRELINK_MODULE      := false
 LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl
+LOCAL_HEADER_LIBRARIES := \
+    display_headers
+
 LOCAL_SHARED_LIBRARIES    += libMpeg4SwEncoder
 ifeq ($(BOARD_USES_ADRENO), true)
 LOCAL_SHARED_LIBRARIES    += libc2dcolorconvert
