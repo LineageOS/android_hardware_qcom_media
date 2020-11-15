@@ -31,11 +31,7 @@ LOCAL_SHARED_LIBRARIES :=       \
         libutils                \
         libcutils               \
         libdl                   \
-        libui                   \
-
-LOCAL_COPY_HEADERS_TO         := qcom/media
-LOCAL_COPY_HEADERS            := QComOMXMetadata.h \
-                                 QComOMXPlugin.h
+        libui
 
 LOCAL_MODULE := libstagefrighthw
 
