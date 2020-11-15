@@ -11,7 +11,8 @@ LOCAL_C_INCLUDES := \
 LOCAL_HEADER_LIBRARIES := \
         generated_kernel_headers \
         libutils_headers \
-        libhardware_headers
+        libhardware_headers \
+        display_headers
 
 LOCAL_SHARED_LIBRARIES := liblog libdl
 
