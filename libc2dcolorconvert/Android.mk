@@ -10,6 +10,7 @@ LOCAL_C_INCLUDES := \
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 
 LOCAL_HEADER_LIBRARIES := \
+        display_headers \
         libutils_headers \
         libhardware_headers \
         display_headers
