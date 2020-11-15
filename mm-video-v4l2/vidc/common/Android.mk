@@ -35,7 +35,8 @@ LOCAL_PRELINK_MODULE      := false
 LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl
 
 LOCAL_HEADER_LIBRARIES := \
-        libutils_headers display_intf_headers
+        display_headers \
+        libutils_headers
 
 LOCAL_SRC_FILES   += src/vidc_common.cpp
 LOCAL_SRC_FILES   += src/vidc_vendor_extensions.cpp
