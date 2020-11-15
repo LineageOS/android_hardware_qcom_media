@@ -87,7 +87,6 @@ libmm-venc-inc      += $(call project-path-for,qcom-display)/libgralloc
 libmm-venc-inc      += $(call project-path-for,qcom-media)/libc2dcolorconvert
 libmm-venc-inc      += $(call project-path-for,qcom-display)/libcopybit
 libmm-venc-inc      += frameworks/av/include/media/stagefright
-libmm-venc-inc      += $(TARGET_OUT_HEADERS)/qcom/display/
 
 LOCAL_HEADER_LIBRARIES := \
         generated_kernel_headers \
