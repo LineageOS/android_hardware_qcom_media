@@ -63,7 +63,7 @@ void venc_dev::venc_get_consumer_usage(OMX_U32* usage)
         DEBUG_PRINT_INFO("Clear UBWC consumer usage bits as 8-bit linear color requested");
     }
 
-    if (venc_handle->is_flip_conv_needed())
+    if (venc_handle->is_flip_conv_needed(NULL))
         *usage = *usage | GRALLOC_USAGE_SW_READ_OFTEN;
 
     if (m_codec == OMX_VIDEO_CodingImageHEIC) {
