@@ -147,8 +147,9 @@ OMX_Init()
               if (!strcmp("OMX.qti.video.decoder.vc1sw", core[i].name) || !strcmp("OMX.qti.vdec.vpp", core[i].name))
                      continue;
       } else if (!strcmp(platform_name, "trinket")) {
-                //Trinket does not support vc1 hence don't add them in list
-              if (!strcmp("OMX.qti.video.decoder.vc1sw", core[i].name))
+                //Trinket does not support vc1,tme,tme-secure hence don't add them in list
+              if (!strcmp("OMX.qti.video.decoder.vc1sw", core[i].name) || !strcmp("OMX.qcom.video.encoder.tme", core[i].name) ||
+                  !strcmp("OMX.qcom.video.encoder.tme.secure", core[i].name) || !strcmp("OMX.qti.vdec.vpp", core[i].name))
                      continue;
       } else if (!strcmp(platform_name, "msmnile")) {
                 //Hana does not support tme,tme secure hence donot add to list
