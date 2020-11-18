@@ -84,7 +84,8 @@ LOCAL_HEADER_LIBRARIES := \
         media_plugin_headers \
         libnativebase_headers \
         libcutils_headers \
-        libutils_headers
+        libutils_headers \
+        display_headers
 
 LOCAL_MODULE                    := libOmxVenc
 LOCAL_MODULE_TAGS               := optional
