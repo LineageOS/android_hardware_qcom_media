@@ -134,6 +134,7 @@ LOCAL_HEADER_LIBRARIES := \
     libutils_headers \
     libhardware_headers \
     media_plugin_headers \
+    display_headers \
 
 LOCAL_PRELINK_MODULE    := false
 LOCAL_SHARED_LIBRARIES  := libui libhardware liblog libutils libbinder \
