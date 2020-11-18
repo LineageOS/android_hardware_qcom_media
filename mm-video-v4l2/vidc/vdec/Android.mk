@@ -97,7 +97,7 @@ endif
 
 include $(CLEAR_VARS)
 
-LOCAL_HEADER_LIBRARIES := generated_kernel_headers
+LOCAL_HEADER_LIBRARIES := display_headers generated_kernel_headers
 
 LOCAL_MODULE                    := libOmxVdec
 LOCAL_MODULE_TAGS               := optional
@@ -136,7 +136,7 @@ include $(CLEAR_VARS)
 ifneq "$(wildcard $(QCPATH) )" ""
 ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_NEED_HEVC_LIB)),true)
 
-LOCAL_HEADER_LIBRARIES := generated_kernel_headers
+LOCAL_HEADER_LIBRARIES := display_headers generated_kernel_headers
 
 LOCAL_MODULE                    := libOmxVdecHevc
 LOCAL_MODULE_TAGS               := optional

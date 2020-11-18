@@ -80,6 +80,7 @@ libmm-venc-inc      += frameworks/av/include/media/stagefright
 include $(CLEAR_VARS)
 
 LOCAL_HEADER_LIBRARIES := \
+        display_headers \
         generated_kernel_headers \
         media_plugin_headers \
         libnativebase_headers \
@@ -114,7 +115,7 @@ include $(CLEAR_VARS)
 
 libmm-venc-inc      += $(TARGET_OUT_HEADERS)/mm-video/swvenc
 
-LOCAL_HEADER_LIBRARIES := generated_kernel_headers
+LOCAL_HEADER_LIBRARIES := display_headers generated_kernel_headers
 
 LOCAL_MODULE                    := libOmxSwVencMpeg4
 
