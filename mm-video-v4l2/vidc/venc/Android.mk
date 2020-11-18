@@ -76,10 +76,7 @@ libmm-venc-inc      += frameworks/native/libs/arect/include
 libmm-venc-inc      += frameworks/native/libs/nativebase/include
 libmm-venc-inc      += $(call project-path-for,qcom-media)/libc2dcolorconvert
 libmm-venc-inc      += frameworks/av/include/media/stagefright
-libmm-venc-inc      += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 
-# Common Dependencies
-libmm-venc-add-dep  := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 # ---------------------------------------------------------------------------------
 # 			Make the Shared library (libOmxVenc)
@@ -87,12 +84,13 @@ libmm-venc-add-dep  := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 include $(CLEAR_VARS)
 
+LOCAL_HEADER_LIBRARIES := generated_kernel_headers
+
 LOCAL_MODULE                    := libOmxVenc
 LOCAL_MODULE_TAGS               := optional
 LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libmm-venc-def)
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
-LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 
 LOCAL_PRELINK_MODULE      := false
 LOCAL_SHARED_LIBRARIES    := liblog libutils libcutils \
@@ -116,13 +114,14 @@ include $(CLEAR_VARS)
 
 libmm-venc-inc      += $(TARGET_OUT_HEADERS)/mm-video/swvenc
 
+LOCAL_HEADER_LIBRARIES := generated_kernel_headers
+
 LOCAL_MODULE                    := libOmxSwVencMpeg4
 
 LOCAL_MODULE_TAGS               := optional
 LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libmm-venc-def)
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
-LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 
 LOCAL_PRELINK_MODULE      := false
 LOCAL_SHARED_LIBRARIES    := liblog libutils libcutils \
@@ -145,12 +144,13 @@ include $(CLEAR_VARS)
 
 libmm-venc-inc      += $(TARGET_OUT_HEADERS)/mm-video/swVenc
 
+LOCAL_HEADER_LIBRARIES := generated_kernel_headers
+
 LOCAL_MODULE                    := libOmxSwVencHevc
 LOCAL_MODULE_TAGS               := optional
 LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libmm-venc-def)
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
-LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 
 LOCAL_PRELINK_MODULE      := false
 LOCAL_SHARED_LIBRARIES    := liblog libutils libbinder libcutils \
