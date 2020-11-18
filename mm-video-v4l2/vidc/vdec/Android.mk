@@ -61,17 +61,16 @@ libmm-vdec-inc          += $(call project-path-for,qcom-media)/mm-video-v4l2/vid
 libmm-vdec-inc          += $(TOP)/$(call project-path-for,qcom-media)/mm-core/inc
 libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/qcom/display
 libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/adreno
-libmm-vdec-inc          += $(TOP)/frameworks/native/include/media/openmax
-libmm-vdec-inc          += $(TOP)/frameworks/native/include/media/hardware
-libmm-vdec-inc          += $(TOP)/frameworks/native/libs/nativewindow/include
-libmm-vdec-inc          += $(TOP)/frameworks/native/libs/arect/include
-libmm-vdec-inc          += $(TOP)/frameworks/native/libs/nativebase/include
 libmm-vdec-inc      	+= $(TOP)/$(call project-path-for,qcom-media)/libc2dcolorconvert
 libmm-vdec-inc      	+= $(TOP)/frameworks/av/include/media/stagefright
 libmm-vdec-inc      	+= $(TARGET_OUT_HEADERS)/mm-video/SwVdec
 libmm-vdec-inc      	+= $(TARGET_OUT_HEADERS)/mm-video/swvdec
 
-LOCAL_HEADER_LIBRARIES := generated_kernel_headers
+LOCAL_HEADER_LIBRARIES := \
+        generated_kernel_headers \
+        media_plugin_headers \
+        libnativebase_headers \
+        libutils_headers
 
 ifeq ($(PLATFORM_SDK_VERSION), 18)  #JB_MR2
 libmm-vdec-def += -DANDROID_JELLYBEAN_MR2=1
