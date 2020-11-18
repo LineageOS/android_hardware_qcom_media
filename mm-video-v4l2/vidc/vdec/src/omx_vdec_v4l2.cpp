@@ -10279,7 +10279,6 @@ char *omx_vdec::ion_map(int fd, int len)
    ========================================================================== */
 OMX_ERRORTYPE omx_vdec::ion_unmap(int fd, void *bufaddr, int len)
 {
-    (void)fd;
     do_cache_operations(fd);
 
     if (-1 == munmap(bufaddr, len)) {
