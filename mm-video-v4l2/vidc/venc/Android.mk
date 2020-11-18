@@ -80,6 +80,7 @@ libmm-venc-inc      += frameworks/av/include/media/stagefright
 include $(CLEAR_VARS)
 
 LOCAL_HEADER_LIBRARIES := \
+        display_headers \
         generated_kernel_headers \
         media_plugin_headers \
         libnativebase_headers \
