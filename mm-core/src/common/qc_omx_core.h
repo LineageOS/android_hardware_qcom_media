@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2009, The Linux Foundation. All rights reserved.
+Copyright (c) 2009, 2020 The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -39,7 +39,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "qc_omx_common.h"        // OMX API
 #include <string.h>
 
-#define OMX_COMP_MAX_INST 16
+#define OMX_COMP_MAX_INST 24
 
 typedef struct _omx_core_cb_type
 {
