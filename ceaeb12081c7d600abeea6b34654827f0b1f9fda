@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ba3001b6_a453c043",
+        "filename": "mm-core/Android.mk",
+        "patchSetId": 2
+      },
+      "lineNbr": 128,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2020-11-22T22:35:43Z",
+      "side": 1,
+      "message": "How about exposing these using Android.bp so they are visible to targets defined in Android.bp files?",
+      "range": {
+        "startLine": 121,
+        "startChar": 0,
+        "endLine": 128,
+        "endChar": 31
+      },
+      "revId": "ceaeb12081c7d600abeea6b34654827f0b1f9fda",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
