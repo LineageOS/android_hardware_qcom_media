@@ -22,6 +22,30 @@
       "revId": "ceaeb12081c7d600abeea6b34654827f0b1f9fda",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
       "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "0cce5907_9de56297",
+        "filename": "mm-core/Android.mk",
+        "patchSetId": 2
+      },
+      "lineNbr": 128,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2020-11-22T22:39:02Z",
+      "side": 1,
+      "message": "There are no such users in case of any QCOM HALs. See: https://review.lineageos.org/c/LineageOS/android_hardware_qcom_audio/+/293253",
+      "parentUuid": "ba3001b6_a453c043",
+      "range": {
+        "startLine": 121,
+        "startChar": 0,
+        "endLine": 128,
+        "endChar": 31
+      },
+      "revId": "ceaeb12081c7d600abeea6b34654827f0b1f9fda",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
     }
   ]
 }
