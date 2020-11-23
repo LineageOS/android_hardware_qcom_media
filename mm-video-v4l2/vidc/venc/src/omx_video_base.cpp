@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2010-2020, Linux Foundation. All rights reserved.
+Copyright (c) 2010-2021, Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -5268,6 +5268,44 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
         m_pCallbacks.EmptyBufferDone(hComp,m_app_data,buffer);
         DEBUG_PRINT_ERROR("ERROR: ETBProxyA: Input flush in progress");
         return OMX_ErrorNone;
+    }
+
+    if (dev_is_meta_mode()) {
+        LEGACY_CAM_METADATA_TYPE * meta_buf = NULL;
+
+        meta_buf = (LEGACY_CAM_METADATA_TYPE *)buffer->pBuffer;
+
+        if (meta_buf && m_no_vpss && is_rotation_enabled() &&
+            meta_buf->buffer_type == kMetadataBufferTypeGrallocSource) {
+            VideoGrallocMetadata *meta_buf = (VideoGrallocMetadata *)buffer->pBuffer;
+#ifdef USE_GBM
+            struct gbm_bo *handle = (struct gbm_bo *)meta_buf->pHandle;
+#else
+            private_handle_t *handle = (private_handle_t *)meta_buf->pHandle;
+#endif
+            if (!handle) {
+                DEBUG_PRINT_ERROR("%s : handle is null!", __FUNCTION__);
+                return OMX_ErrorUndefined;
+            }
+
+            // if input buffer dimensions is different from what is configured,
+            // reject the buffer
+#ifdef USE_GBM
+            if (ALIGN((int)m_sInPortDef.format.video.nFrameWidth,32) != ALIGN(handle->width,32) ||
+                    ALIGN((int)m_sInPortDef.format.video.nFrameHeight,32) != ALIGN(handle->height,32)) {
+                ALOGE("%s: Graphic buf size(%dx%d) does not match configured size(%ux%u)",
+                        __func__, handle->width, handle->height,
+#else
+            if (ALIGN((int)m_sInPortDef.format.video.nFrameWidth,32) != ALIGN(handle->unaligned_width,32) ||
+                    ALIGN((int)m_sInPortDef.format.video.nFrameHeight,32) != ALIGN(handle->unaligned_height,32)) {
+                ALOGE("%s: Graphic buf size(%dx%d) does not match configured size(%ux%u)",
+                        __func__, handle->unaligned_width, handle->unaligned_height,
+#endif
+                        m_sInPortDef.format.video.nFrameWidth, m_sInPortDef.format.video.nFrameHeight);
+                m_pCallbacks.EmptyBufferDone(hComp, m_app_data, buffer);
+                return OMX_ErrorNone;
+            }
+        }
     }
 
     if (!psource_frame) {
