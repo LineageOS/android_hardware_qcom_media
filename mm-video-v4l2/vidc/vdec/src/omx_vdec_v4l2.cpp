@@ -6611,7 +6611,7 @@ OMX_ERRORTYPE omx_vdec::free_input_buffer(OMX_BUFFERHEADERTYPE *bufferHdr)
                 DEBUG_PRINT_LOW("unmap the input buffer size=%u  address = %p",
                         (unsigned int)drv_ctx.ptr_inputbuffer[index].mmaped_size,
                         drv_ctx.ptr_inputbuffer[index].bufferaddr);
-                ion_unmap(drv_ctx.ptr_outputbuffer[index].pmem_fd,
+                ion_unmap(drv_ctx.ptr_inputbuffer[index].pmem_fd,
                           drv_ctx.ptr_inputbuffer[index].bufferaddr,
                           drv_ctx.ptr_inputbuffer[index].mmaped_size);
             }
