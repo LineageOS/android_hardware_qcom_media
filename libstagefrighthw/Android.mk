@@ -30,8 +30,6 @@ LOCAL_HEADER_LIBRARIES := \
         libcutils_headers \
         libutils_headers
 
-LOCAL_C_INCLUDES:= $(TARGET_OUT_HEADERS)/mm-core/omxcore/
-
 LOCAL_SHARED_LIBRARIES :=       \
         libbinder               \
         libutils                \
