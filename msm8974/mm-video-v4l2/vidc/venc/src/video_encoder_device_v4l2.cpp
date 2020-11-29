@@ -2421,7 +2421,7 @@ void venc_dev::venc_config_print()
             voptimecfg.voptime_resolution, multislice.mslice_mode,
             multislice.mslice_size);
 
-    DEBUG_PRINT_HIGH("ENC_CONFIG: EntropyMode: %d, CabacModel: %ld",
+    DEBUG_PRINT_HIGH("ENC_CONFIG: EntropyMode: %lu, CabacModel: %ld",
             entropy.entropysel, entropy.cabacmodel);
 
     DEBUG_PRINT_HIGH("ENC_CONFIG: DB-Mode: %ld, alpha: %ld, Beta: %ld",
