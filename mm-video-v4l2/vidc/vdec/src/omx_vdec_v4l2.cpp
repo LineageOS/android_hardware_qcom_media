@@ -11584,11 +11584,7 @@ void omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
         DEBUG_PRINT_HIGH("NULL drv_ctx.extradata_info.uaddr");
         return;
     }
-    if (!secure_mode && (drv_ctx.extradata_info.buffer_size > (p_buf_hdr->nAllocLen - p_buf_hdr->nFilledLen)) ) {
-        DEBUG_PRINT_ERROR("Error: Insufficient size allocated for extra-data");
-        p_extra = NULL;
-        return;
-    }
+
     if (!secure_mode) {
         pBuffer = (OMX_U8*)mmap(0, drv_ctx.ptr_outputbuffer[buf_index].buffer_len,
                     PROT_READ|PROT_WRITE, MAP_SHARED, drv_ctx.ptr_outputbuffer[buf_index].pmem_fd, 0);
