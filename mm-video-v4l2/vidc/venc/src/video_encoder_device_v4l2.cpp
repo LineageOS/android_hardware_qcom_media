@@ -81,7 +81,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define HEVC_MAIN10_START (HEVC_MAIN_START + 13)
 #define POLL_TIMEOUT 1000
 #define MAX_SUPPORTED_SLICES_PER_FRAME 28 /* Max supported slices with 32 output buffers */
-#define ENC_HDR_DISABLE_FLAG 0x2
 
 #define SZ_4K 0x1000
 #define SZ_1M 0x100000
@@ -1083,6 +1082,17 @@ OMX_ERRORTYPE venc_dev::venc_get_supported_profile_level(OMX_VIDEO_PARAM_PROFILE
     if(!((profile_cap.flags >> v4l2_profile) & 0x1)) {
         DEBUG_PRINT_ERROR("%s: Invalid index corresponding profile not supported : %d ",__FUNCTION__, profileLevelType->eProfile);
         eRet = OMX_ErrorNoMore;
+    }
+
+    if (m_disable_hdr & ENC_HDR_DISABLE_FLAG) {
+        if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
+            if (profileLevelType->eProfile == OMX_VIDEO_HEVCProfileMain10 ||
+                profileLevelType->eProfile == OMX_VIDEO_HEVCProfileMain10HDR10 ||
+                profileLevelType->eProfile == OMX_VIDEO_HEVCProfileMain10HDR10Plus) {
+                DEBUG_PRINT_LOW("%s: HDR profile unsupported", __FUNCTION__);
+                return OMX_ErrorHardware;
+            }
+        }
     }
 
     DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoProfileLevelQuerySupported for Input port returned Profile:%u, Level:%u",

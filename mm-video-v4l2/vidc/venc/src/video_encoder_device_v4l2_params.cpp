@@ -1277,6 +1277,17 @@ bool venc_dev::venc_set_profile(OMX_U32 eProfile)
         return false;
     }
 
+    if (m_disable_hdr & ENC_HDR_DISABLE_FLAG) {
+        if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
+            if (eProfile == OMX_VIDEO_HEVCProfileMain10 ||
+                eProfile == OMX_VIDEO_HEVCProfileMain10HDR10 ||
+                eProfile == OMX_VIDEO_HEVCProfileMain10HDR10Plus) {
+                DEBUG_PRINT_ERROR("%s: HDR profile unsupported", __FUNCTION__);
+                return false;
+            }
+        }
+    }
+
     if (!profile_level_converter::convert_omx_profile_to_v4l2(m_sVenc_cfg.codectype, eProfile, &control.value)) {
         DEBUG_PRINT_ERROR("Cannot find v4l2 profile for OMX profile : %d Codec : %lu ",
                           eProfile, m_sVenc_cfg.codectype);
