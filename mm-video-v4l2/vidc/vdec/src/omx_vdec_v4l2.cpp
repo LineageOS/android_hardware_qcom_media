@@ -7171,7 +7171,11 @@ OMX_ERRORTYPE omx_vdec::update_portdef(OMX_PARAM_PORTDEFINITIONTYPE *portDefn)
             return OMX_ErrorHardware;
         }
         drv_ctx.ip_buf.mincount = control.value;
-        drv_ctx.ip_buf.actualcount = control.value;
+        // update actualcount only if it is small than mincount
+        if (drv_ctx.ip_buf.actualcount < drv_ctx.ip_buf.mincount){
+             DEBUG_PRINT_LOW("Updated actualcount same as mincount");
+             drv_ctx.ip_buf.actualcount = drv_ctx.ip_buf.mincount;
+        }
 
         portDefn->eDir =  OMX_DirInput;
         portDefn->nBufferCountActual = drv_ctx.ip_buf.actualcount;
