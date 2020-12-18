@@ -7011,7 +7011,7 @@ bool venc_dev::venc_set_iframesize_type(QOMX_VIDEO_IFRAMESIZE_TYPE type)
 bool venc_dev::venc_set_baselayerid(OMX_U32 baseid)
 {
     struct v4l2_control control;
-    if (hier_layers.hier_mode == HIER_P) {
+    if (hier_layers.hier_mode == HIER_P || temporal_layers_config.hier_mode == HIER_P) {
         control.id = V4L2_CID_MPEG_VIDC_VIDEO_BASELAYER_ID;
         control.value = baseid;
         DEBUG_PRINT_LOW("Going to set V4L2_CID_MPEG_VIDC_VIDEO_BASELAYER_ID");
