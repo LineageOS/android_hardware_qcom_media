@@ -135,6 +135,52 @@ class AutoUnmap {
         }
 };
 
+class Signal {
+    bool signalled;
+    pthread_mutex_t mutex;
+    pthread_cond_t condition;
+public:
+    Signal() {
+        signalled = false;
+        pthread_cond_init(&condition, NULL);
+        pthread_mutex_init(&mutex, NULL);
+    }
+
+    ~Signal() {
+            pthread_cond_destroy(&condition);
+            pthread_mutex_destroy(&mutex);
+    }
+
+    void signal() {
+        pthread_mutex_lock(&mutex);
+        signalled = true;
+        pthread_cond_signal(&condition);
+        pthread_mutex_unlock(&mutex);
+    }
+
+    int wait(uint64_t timeout_nsec) {
+        struct timespec ts;
+
+        pthread_mutex_lock(&mutex);
+        if (signalled) {
+            signalled = false;
+            pthread_mutex_unlock(&mutex);
+            return 0;
+        }
+        clock_gettime(CLOCK_REALTIME, &ts);
+        ts.tv_sec += timeout_nsec / 1000000000;
+        ts.tv_nsec += timeout_nsec % 1000000000;
+        if (ts.tv_nsec >= 1000000000) {
+            ts.tv_nsec -= 1000000000;
+            ts.tv_sec  += 1;
+        }
+        int ret = pthread_cond_timedwait(&condition, &mutex, &ts);
+        signalled = false;
+        pthread_mutex_unlock(&mutex);
+        return ret;
+    }
+};
+
 #ifdef _ANDROID_
 #define ATRACE_TAG ATRACE_TAG_VIDEO
 #include <utils/Trace.h>
