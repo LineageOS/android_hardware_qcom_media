@@ -81,7 +81,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define HEVC_MAIN10_START (HEVC_MAIN_START + 13)
 #define POLL_TIMEOUT 1000
 #define MAX_SUPPORTED_SLICES_PER_FRAME 28 /* Max supported slices with 32 output buffers */
-#define ENC_HDR_DISABLE_FLAG 0x2
 
 #define SZ_4K 0x1000
 #define SZ_1M 0x100000
@@ -188,6 +187,9 @@ venc_dev::venc_dev(class omx_venc *venc_class)
 
     property_get("vendor.vidc.enc.log.extradata", property_value, "0");
     m_debug.extradata_log = atoi(property_value);
+
+    property_get("vendor.vidc.cvp.log.in", property_value, "0");
+    m_debug.cvp_log |= atoi(property_value);
 
 #ifdef _UBWC_
     property_get("vendor.gralloc.disable_ubwc", property_value, "0");
@@ -1085,6 +1087,17 @@ OMX_ERRORTYPE venc_dev::venc_get_supported_profile_level(OMX_VIDEO_PARAM_PROFILE
         eRet = OMX_ErrorNoMore;
     }
 
+    if (m_disable_hdr & ENC_HDR_DISABLE_FLAG) {
+        if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
+            if (profileLevelType->eProfile == OMX_VIDEO_HEVCProfileMain10 ||
+                profileLevelType->eProfile == OMX_VIDEO_HEVCProfileMain10HDR10 ||
+                profileLevelType->eProfile == OMX_VIDEO_HEVCProfileMain10HDR10Plus) {
+                DEBUG_PRINT_LOW("%s: HDR profile unsupported", __FUNCTION__);
+                return OMX_ErrorHardware;
+            }
+        }
+    }
+
     DEBUG_PRINT_LOW("get_parameter: OMX_IndexParamVideoProfileLevelQuerySupported for Input port returned Profile:%u, Level:%u",
             (unsigned int)profileLevelType->eProfile, (unsigned int)profileLevelType->eLevel);
     return eRet;
@@ -1216,6 +1229,45 @@ bool venc_dev::venc_get_output_log_flag()
 {
     return (m_debug.out_buffer_log == 1);
 }
+
+int venc_dev::venc_cvp_log_buffers(const char *metadataName, uint32_t buffer_len, uint8_t *buf)
+{
+    if (!m_debug.cvpfile && m_debug.cvp_log) {
+        int size = 0;
+
+        if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_H264 ||
+            m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
+                size = snprintf(m_debug.cvpfile_name, PROPERTY_VALUE_MAX, "%s/enc_cvp_%lu_%lu_%p.bin",
+                        m_debug.log_loc, m_sVenc_cfg.input_width, m_sVenc_cfg.input_height, this);
+        }
+
+        if ((size > PROPERTY_VALUE_MAX) && (size < 0)) {
+            DEBUG_PRINT_ERROR("Failed to open cvp file: %s for logging size:%d",
+                    m_debug.cvpfile_name, size);
+        }
+
+        m_debug.cvpfile = fopen(m_debug.cvpfile_name, "ab");
+        if (!m_debug.cvpfile) {
+            DEBUG_PRINT_ERROR("Failed to open cvp file: %s for logging errno:%d",
+                            m_debug.cvpfile_name, errno);
+            m_debug.cvpfile_name[0] = '\0';
+            return -1;
+        }
+    }
+
+    if (m_debug.cvpfile) {
+        // Truncate or Zero-filled to match the string size to 5
+        char name[6] = {0};
+        for(int i=0; i<5 && i<strlen(metadataName); i++) {
+            name[i] = metadataName[i];
+        }
+        fwrite(name, 5, 1, m_debug.cvpfile);                            // Metadata name
+        fwrite(&buffer_len, sizeof(buffer_len), 1, m_debug.cvpfile);    // Blob size
+        fwrite(buf, buffer_len, 1, m_debug.cvpfile);                    // Blob data
+    }
+    return 0;
+}
+
 
 int venc_dev::venc_output_log_buffers(const char *buffer_addr, int buffer_len, uint64_t timestamp)
 {
@@ -1723,6 +1775,11 @@ void venc_dev::venc_close()
     if (m_debug.extradatafile) {
         fclose(m_debug.extradatafile);
         m_debug.extradatafile = NULL;
+    }
+
+    if (m_debug.cvpfile) {
+        fclose(m_debug.cvpfile);
+        m_debug.cvpfile = NULL;
     }
 }
 
@@ -4455,6 +4512,9 @@ bool venc_dev::venc_get_cvp_metadata(private_handle_t *handle, struct v4l2_buffe
             return false;
         }
         DEBUG_PRINT_LOW("CVP metadata size %d", cvpMetadata.size);
+        if (m_debug.cvp_log) {
+            venc_cvp_log_buffers("CVP", cvpMetadata.size, cvpMetadata.payload);
+        }
     } else {
         DEBUG_PRINT_ERROR("ERROR: CVP metadata not available");
         return false;

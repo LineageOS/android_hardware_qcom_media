@@ -55,6 +55,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ENABLE_I_QP 0x1
 #define ENABLE_P_QP 0x2
 #define ENABLE_B_QP 0x4
+#define ENC_HDR_DISABLE_FLAG 0x2
 
 #define OMX_VIDEO_LEVEL_UNKNOWN 0
 
@@ -346,6 +347,7 @@ class venc_dev
         OMX_ERRORTYPE venc_set_bitrate_ratios();
         bool venc_validate_temporal_extn(OMX_VIDEO_PARAM_ANDROID_TEMPORALLAYERINGTYPE &temporalSettings);
         bool venc_get_output_log_flag();
+        int venc_cvp_log_buffers(const char *metadataName, uint32_t buffer_len, uint8_t *buf);
         int venc_output_log_buffers(const char *buffer_addr, int buffer_len, uint64_t timestamp);
         int venc_input_log_buffers(OMX_BUFFERHEADERTYPE *buffer, int fd, int plane_offset,
                         unsigned long inputformat, bool interlaced);
