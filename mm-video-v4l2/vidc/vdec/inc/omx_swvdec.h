@@ -1,7 +1,7 @@
 /**
  * @copyright
  *
- *   Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
+ *   Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
  *
  *   Redistribution and use in source and binary forms, with or without
  *   modification, are permitted provided that the following conditions are met:
@@ -45,9 +45,11 @@
 #include <semaphore.h>
 
 #include <linux/msm_ion.h>
-#ifndef _TARGET_KERNEL_VERSION_49_
-#include "omx_vdec.h"
+#if TARGET_ION_ABI_VERSION >= 2
+#include <ion/ion.h>
+#include <linux/dma-buf.h>
 #endif
+
 #include "qc_omx_component.h"
 
 #include "omx_swvdec_utils.h"
@@ -90,7 +92,6 @@ typedef struct {
 } ASYNC_THREAD;
 
 /// @cond
-#ifdef _TARGET_KERNEL_VERSION_49_
 struct vdec_bufferpayload {
     void *bufferaddr;
     size_t buffer_len;
@@ -98,11 +99,11 @@ struct vdec_bufferpayload {
     size_t offset;
     size_t mmaped_size;
 };
-#endif //_TARGET_KERNEL_VERSION_49_
+
 struct vdec_ion {
-    int                        ion_fd_device;
-    struct ion_fd_data         ion_fd_data;
+    int dev_fd;
     struct ion_allocation_data ion_alloc_data;
+    int data_fd;
 };
 
 typedef struct {
@@ -383,12 +384,11 @@ private:
 
     OMX_ERRORTYPE flush(unsigned int port_index);
 
-    int  ion_memory_alloc_map(struct ion_allocation_data *p_alloc_data,
-                              struct ion_fd_data         *p_fd_data,
-                              OMX_U32                     size,
-                              OMX_U32                     alignment);
+    int  ion_memory_alloc_map(struct vdec_ion *p_ion_info, OMX_U32 size, OMX_U32 alignment);
     void ion_memory_free(struct vdec_ion *p_ion_buf_info);
     void ion_flush_op(unsigned int index);
+    unsigned char *ion_map(int fd, int len);
+    OMX_ERRORTYPE ion_unmap(int fd, void *bufaddr, int len);
 
     // component callback functions
 
