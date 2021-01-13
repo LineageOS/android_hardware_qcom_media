@@ -1,5 +1,6 @@
 LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
+include $(LIBION_HEADER_PATH_WRAPPER)
 
 # ---------------------------------------------------------------------------------
 # 				Common definitons
@@ -80,8 +81,7 @@ include $(CLEAR_VARS)
 
 # Common Includes
 libmm-vdec-inc          := $(LOCAL_PATH)/inc
-libmm-vdec-inc          += $(TOP)/system/core/libion/include
-libmm-vdec-inc          += $(TOP)/system/core/libion/kernel-headers
+libmm-vdec-inc          += $(LIBION_HEADER_PATHS)
 libmm-vdec-inc          += $(TOP)/hardware/qcom/media/mm-video-v4l2/vidc/common/inc
 libmm-vdec-inc          += $(TOP)/hardware/qcom/media/mm-core/inc
 libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/qcom/display
