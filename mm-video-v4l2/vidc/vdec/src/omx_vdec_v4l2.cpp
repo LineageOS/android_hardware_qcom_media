@@ -145,6 +145,7 @@ extern "C" {
 #endif
 
 #define LUMINANCE_DIV_FACTOR 10000.0
+#define LUMINANCE_MAXDISPLAY_CDM2 1000
 
 /* defined in mp-ctl.h */
 #define MPCTLV3_VIDEO_DECODE_PB_HINT 0x41C04000
@@ -11104,10 +11105,24 @@ bool omx_vdec::handle_mastering_display_color_info(void* data)
         (hdr_info->sType1.mW.y != mastering_display_payload->nWhitePointY);
 
     /* Maximum Display Luminance from the bitstream is in 0.0001 cd/m2 while the HDRStaticInfo extension
-       requires it in cd/m2, so dividing by 10000 and rounding the value after division
+       requires it in cd/m2, so dividing by 10000 and rounding the value after division.
+       Check if max luminance is at least 100 cd/m^2.This check is required for few bistreams where
+       max luminance is not in correct scale. Use the default max luminance value if the value from
+       the bitstream is less than 100 cd/m^2.
     */
-    uint16_t max_display_luminance_cd_m2 =
+
+    uint16_t max_display_luminance_cd_m2;
+    if ((mastering_display_payload->nMaxDisplayMasteringLuminance > 0) &&
+                        ((mastering_display_payload->nMaxDisplayMasteringLuminance / LUMINANCE_DIV_FACTOR) < 100)) {
+        max_display_luminance_cd_m2 = LUMINANCE_MAXDISPLAY_CDM2;
+        DEBUG_PRINT_HIGH("Invalid maxLuminance value from SEI [%.4f]. Using default [%u]",
+              (mastering_display_payload->nMaxDisplayMasteringLuminance / LUMINANCE_DIV_FACTOR),
+              LUMINANCE_MAXDISPLAY_CDM2);
+    } else {
+        max_display_luminance_cd_m2 =
         static_cast<int>((mastering_display_payload->nMaxDisplayMasteringLuminance / LUMINANCE_DIV_FACTOR) + 0.5);
+    }
+
     internal_disp_changed_flag |= (hdr_info->sType1.mMaxDisplayLuminance != max_display_luminance_cd_m2) ||
         (hdr_info->sType1.mMinDisplayLuminance != mastering_display_payload->nMinDisplayMasteringLuminance);
 
