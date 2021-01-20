@@ -1,10 +1,11 @@
 ROOT_DIR := $(call my-dir)
 
 include $(CLEAR_VARS)
+include $(LIBION_HEADER_PATH_WRAPPER)
 LOCAL_PATH:= $(ROOT_DIR)
 
 # ---------------------------------------------------------------------------------
-# 				Common definitons
+#                    Common definitons
 # ---------------------------------------------------------------------------------
 
 libmm-vidc-def := -g -O3 -Dlrintf=_ffix_r
@@ -20,13 +21,14 @@ ifeq ($(TARGET_KERNEL_VERSION), 4.9)
 libmm-vidc-def += -D_TARGET_KERNEL_VERSION_49_
 endif
 # ---------------------------------------------------------------------------------
-# 			Make the Shared library (libOmxVidcCommon)
+#          Make the Shared library (libOmxVidcCommon)
 # ---------------------------------------------------------------------------------
 
 libmm-vidc-inc      := $(LOCAL_PATH)/inc
 libmm-vidc-inc      += $(TOP)/hardware/qcom/media/mm-core/inc
 libmm-vidc-inc      += $(TOP)/hardware/qcom/media/libc2dcolorconvert
 libmm-vidc-inc      += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+libmm-vidc-inc      += $(LIBION_HEADER_PATHS)
 
 LOCAL_MODULE                    := libOmxVidcCommon
 LOCAL_MODULE_TAGS               := optional
