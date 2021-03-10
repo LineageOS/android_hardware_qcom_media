@@ -3013,7 +3013,8 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
     }
     if (m_disable_hdr & DEC_HDR_DISABLE_FLAG) {
         if (output_capability == V4L2_PIX_FMT_VP9) {
-            if (profileLevelType->eProfile == OMX_VIDEO_VP9Profile2HDR || profileLevelType->eProfile == OMX_VIDEO_VP9Profile2HDR10Plus)
+            if (profileLevelType->eProfile == OMX_VIDEO_VP9Profile2HDR || profileLevelType->eProfile == OMX_VIDEO_VP9Profile2HDR10Plus
+                || profileLevelType->eProfile == OMX_VIDEO_VP9Profile2)
                 hdr_supported = false;
         }
         if (output_capability == V4L2_PIX_FMT_HEVC) {
