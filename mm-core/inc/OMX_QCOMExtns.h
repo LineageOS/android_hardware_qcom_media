@@ -1216,6 +1216,14 @@ typedef struct OMX_QCOM_CONFIG_INTERLACETYPE
 
 #define MAX_PAN_SCAN_WINDOWS 4
 
+#ifdef VENUS_USES_LEGACY_MISR_INFO
+typedef struct OMX_QCOM_MISR_INFO {
+	OMX_U32 misr_dpb_luma;
+	OMX_U32 misr_dpb_chroma;
+	OMX_U32 misr_opb_luma;
+	OMX_U32 misr_opb_chroma;
+} OMX_QCOM_MISR_INFO;
+#else
 typedef struct OMX_QCOM_MISR_INFO {
 	unsigned int misr_set;
 	unsigned int misr_dpb_luma[8];
@@ -1223,6 +1231,7 @@ typedef struct OMX_QCOM_MISR_INFO {
 	unsigned int misr_opb_luma[8];
 	unsigned int misr_opb_chroma[8];
 } OMX_QCOM_MISR_INFO;
+#endif
 
 typedef struct OMX_QCOM_OUTPUT_CROP {
     OMX_U32 size;

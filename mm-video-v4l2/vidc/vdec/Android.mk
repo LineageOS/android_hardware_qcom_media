@@ -58,6 +58,10 @@ ifeq ($(call is-platform-sdk-version-at-least,27),true) # O-MR1
 libmm-vdec-def += -D_ANDROID_O_MR1_DIVX_CHANGES
 endif
 
+ifeq ($(call is-board-platform-in-list, sdm845),true)
+libmm-vdec-def += -DVENUS_USES_LEGACY_MISR_INFO
+endif
+
 include $(CLEAR_VARS)
 
 # Common Includes

@@ -8111,6 +8111,18 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                             m_extradata_misr.output_width = output_crop_payload->width;
                             m_extradata_misr.output_height = output_crop_payload->height;
                             m_extradata_misr.output_crop_updated = OMX_TRUE;
+#ifdef VENUS_USES_LEGACY_MISR_INFO
+                            DEBUG_PRINT_HIGH("MISR0: %x %x %x %x\n",
+                                output_crop_payload->misr_info[0].misr_dpb_luma,
+                                output_crop_payload->misr_info[0].misr_dpb_chroma,
+                                output_crop_payload->misr_info[0].misr_opb_luma,
+                                output_crop_payload->misr_info[0].misr_opb_chroma);
+                            DEBUG_PRINT_HIGH("MISR1: %x %x %x %x\n",
+                                output_crop_payload->misr_info[1].misr_dpb_luma,
+                                output_crop_payload->misr_info[1].misr_dpb_chroma,
+                                output_crop_payload->misr_info[1].misr_opb_luma,
+                                output_crop_payload->misr_info[1].misr_opb_chroma);
+#else
                             for(unsigned int m=0; m<output_crop_payload->misr_info[0].misr_set; m++) {
                             DEBUG_PRINT_HIGH("MISR0: %x %x %x %x\n",
                                 output_crop_payload->misr_info[0].misr_dpb_luma[m],
@@ -8125,6 +8137,7 @@ bool omx_vdec::handle_extradata(OMX_BUFFERHEADERTYPE *p_buf_hdr)
                                                  output_crop_payload->misr_info[1].misr_opb_luma[m],
                                                  output_crop_payload->misr_info[1].misr_opb_chroma[m]);
                             }
+#endif
                             memcpy(m_extradata_misr.misr_info, output_crop_payload->misr_info, 2 * sizeof(msm_vidc_misr_info));
                         }
                     }
