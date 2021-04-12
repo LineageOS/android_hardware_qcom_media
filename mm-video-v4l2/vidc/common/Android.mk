@@ -39,7 +39,7 @@ LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl
 
 LOCAL_SRC_FILES   := src/extra_data_handler.cpp
 LOCAL_SRC_FILES   += src/vidc_color_converter.cpp
-LOCAL_HEADER_LIBRARIES := display_headers libhardware_headers libutils_headers
+LOCAL_HEADER_LIBRARIES := libhardware_headers libutils_headers display_headers
 
 LOCAL_SRC_FILES   += src/vidc_vendor_extensions.cpp
 

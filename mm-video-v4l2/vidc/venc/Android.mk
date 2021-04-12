@@ -26,7 +26,7 @@ TARGETS_THAT_NEED_SW_VENC_MPEG4 := msm8909 msm8937
 TARGETS_THAT_NEED_SW_VENC_HEVC := msm8992
 TARGETS_THAT_SUPPORT_UBWC := msm8996 msm8998 apq8098_latv
 TARGETS_THAT_SUPPORT_VQZIP := msm8996 msm8998 apq8098_latv
-TARGETS_THAT_SUPPORT_PQ := msm8996 msm8998 apq8098_latv msm8953 sdm660
+TARGETS_THAT_SUPPORT_PQ := msm8996 apq8098_latv
 TARGETS_THAT_USE_NV21 := sdm660 msm8953
 TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_4 := msm8937
 TARGETS_THAT_SUPPORT_MAX_H264_LEVEL_51 := msm8953 sdm660
@@ -138,12 +138,12 @@ LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libmm-venc-def)
 
 LOCAL_HEADER_LIBRARIES := \
-        display_headers \
         media_plugin_headers \
         libnativebase_headers \
         libcutils_headers \
         libutils_headers \
         libhardware_headers \
+        display_headers \
 
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
@@ -180,11 +180,11 @@ LOCAL_VENDOR_MODULE             := true
 LOCAL_CFLAGS                    := $(libmm-venc-def)
 
 LOCAL_HEADER_LIBRARIES := \
-        display_headers \
         media_plugin_headers \
         libnativebase_headers \
         libutils_headers \
         libhardware_headers \
+        display_headers \
 
 LOCAL_C_INCLUDES                := $(libmm-venc-inc)
 LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
