@@ -253,6 +253,12 @@ OMX_ERRORTYPE omx_swvdec::component_init(OMX_STRING cmp_name)
             goto component_init_exit;
         }
 
+        if ((retval_swvdec = swvdec_check_inst_load(m_swvdec_handle)) !=
+            SWVDEC_STATUS_SUCCESS)
+        {
+            retval = retval_swvdec2omx(retval_swvdec);
+            goto component_init_exit;
+        }
         m_swvdec_created = true;
 
         if ((retval = set_frame_dimensions(DEFAULT_FRAME_WIDTH,
