@@ -725,11 +725,18 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
     property_value[0] = '\0';
     property_get("vendor.vidc.dec.log.in", property_value, "0");
     m_debug.in_buffer_log = atoi(property_value);
+    DEBUG_PRINT_HIGH("vendor.vidc.dec.log.in value is %d", m_debug.in_buffer_log);
 
     property_value[0] = '\0';
     property_get("vendor.vidc.dec.log.out", property_value, "0");
     m_debug.out_buffer_log = atoi(property_value);
     snprintf(m_debug.log_loc, PROPERTY_VALUE_MAX, "%s", BUFFER_LOG_LOC);
+    DEBUG_PRINT_HIGH("vendor.vidc.dec.log.out value is %d", m_debug.out_buffer_log);
+
+    property_value[0] = '\0';
+    property_get("vendor.vidc.dec.log.cc.out", property_value, "0");
+    m_debug.out_cc_buffer_log = atoi(property_value);
+    DEBUG_PRINT_HIGH("vendor.vidc.dec.log.cc.out value is %d", m_debug.out_buffer_log);
 
     property_value[0] = '\0';
     property_get("vendor.vidc.dec.meta.log.out", property_value, "0");
@@ -761,6 +768,11 @@ omx_vdec::omx_vdec(): m_error_propogated(false),
         m_drc_enable = true;
         DEBUG_PRINT_HIGH("DRC enabled");
     }
+
+    struct timeval te;
+    gettimeofday(&te, NULL);
+    m_debug.session_id = te.tv_sec*1000LL + te.tv_usec/1000;
+    m_debug.seq_count = 0;
 
 #ifdef _UBWC_
     property_value[0] = '\0';
@@ -1904,6 +1916,10 @@ void omx_vdec::process_event_cb(void *ctxt, unsigned char id)
                                             fclose(pThis->m_debug.outfile);
                                             pThis->m_debug.outfile = NULL;
                                         }
+                                        if (pThis->m_debug.ccoutfile) {
+                                            fclose(pThis->m_debug.ccoutfile);
+                                            pThis->m_debug.ccoutfile = NULL;
+                                        }
                                         if (pThis->m_debug.out_ymeta_file) {
                                             fclose(pThis->m_debug.out_ymeta_file);
                                             pThis->m_debug.out_ymeta_file = NULL;
@@ -1912,6 +1928,7 @@ void omx_vdec::process_event_cb(void *ctxt, unsigned char id)
                                             fclose(pThis->m_debug.out_uvmeta_file);
                                             pThis->m_debug.out_uvmeta_file = NULL;
                                         }
+                                        pThis->m_debug.seq_count++;
 
                                         if (pThis->secure_mode && pThis->m_cb.EventHandler && pThis->in_reconfig) {
                                             pThis->prefetchNewBuffers(true);
@@ -2099,22 +2116,47 @@ int omx_vdec::log_input_buffers(const char *buffer_addr, int buffer_len, uint64_
     return 0;
 }
 
+int omx_vdec::log_cc_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
+    DEBUG_PRINT_LOW("%s is_color_conversion_enabled() :%d ", __func__,client_buffers.is_color_conversion_enabled());
+
+    if (!client_buffers.is_color_conversion_enabled() ||
+        !m_debug.out_cc_buffer_log || !buffer || !buffer->nFilledLen)
+        return 0;
+
+    if (m_debug.out_cc_buffer_log && !m_debug.ccoutfile) {
+        snprintf(m_debug.ccoutfile_name, OMX_MAX_STRINGNAME_SIZE, "%s/output_cc_%d_%d_%p_%" PRId64 "_%d.yuv",
+                m_debug.log_loc, drv_ctx.video_resolution.frame_width, drv_ctx.video_resolution.frame_height, this,
+                m_debug.session_id, m_debug.seq_count);
+        m_debug.ccoutfile = fopen (m_debug.ccoutfile_name, "ab");
+        if (!m_debug.ccoutfile) {
+            DEBUG_PRINT_HIGH("Failed to open output file: %s for logging", m_debug.log_loc);
+            m_debug.ccoutfile_name[0] = '\0';
+            return -1;
+        }
+        DEBUG_PRINT_HIGH("Opened CC output file: %s for logging", m_debug.ccoutfile_name);
+    }
+
+    fwrite(buffer->pBuffer, buffer->nFilledLen, 1, m_debug.ccoutfile);
+    return 0;
+}
 int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
     int buf_index = 0;
     char *temp = NULL;
-
+    char *bufaddr = NULL;
     if (!(m_debug.out_buffer_log || m_debug.out_meta_buffer_log) || !buffer || !buffer->nFilledLen)
         return 0;
 
     if (m_debug.out_buffer_log && !m_debug.outfile) {
-        snprintf(m_debug.outfile_name, OMX_MAX_STRINGNAME_SIZE, "%s/output_%d_%d_%p.yuv",
-                m_debug.log_loc, drv_ctx.video_resolution.frame_width, drv_ctx.video_resolution.frame_height, this);
+        snprintf(m_debug.outfile_name, OMX_MAX_STRINGNAME_SIZE, "%s/output_%d_%d_%p_%" PRId64 "_%d.yuv",
+                m_debug.log_loc, drv_ctx.video_resolution.frame_width, drv_ctx.video_resolution.frame_height, this,
+                m_debug.session_id, m_debug.seq_count);
         m_debug.outfile = fopen (m_debug.outfile_name, "ab");
         if (!m_debug.outfile) {
             DEBUG_PRINT_HIGH("Failed to open output file: %s for logging", m_debug.log_loc);
             m_debug.outfile_name[0] = '\0';
             return -1;
         }
+        DEBUG_PRINT_HIGH("Opened output file: %s for logging", m_debug.outfile_name);
     }
 
     if (m_debug.out_meta_buffer_log && !m_debug.out_ymeta_file && !m_debug.out_uvmeta_file) {
@@ -2133,7 +2175,17 @@ int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
     }
 
     buf_index = buffer - m_out_mem_ptr;
-    temp = (char *)drv_ctx.ptr_outputbuffer[buf_index].bufferaddr;
+    bufaddr = (char *)drv_ctx.ptr_outputbuffer[buf_index].bufferaddr;
+    if (dynamic_buf_mode && !secure_mode) {
+        bufaddr = ion_map(drv_ctx.ptr_outputbuffer[buf_index].pmem_fd,
+                          drv_ctx.ptr_outputbuffer[buf_index].buffer_len);
+        //mmap returns (void *)-1 on failure and sets error code in errno.
+        if (bufaddr == MAP_FAILED) {
+            DEBUG_PRINT_ERROR("mmap failed - errno: %d", errno);
+            return -1;
+        }
+    }
+    temp = bufaddr;
 
     if (drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_UBWC ||
             drv_ctx.output_format == VDEC_YUV_FORMAT_NV12_TP10_UBWC) {
@@ -2165,13 +2217,12 @@ int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
             y_meta_plane = MSM_MEDIA_ALIGN(y_meta_stride * y_meta_scanlines, 4096);
             y_plane = MSM_MEDIA_ALIGN(y_stride * y_sclines, 4096);
 
-            temp = (char *)drv_ctx.ptr_outputbuffer[buf_index].bufferaddr;
             for (i = 0; i < y_meta_scanlines; i++) {
                  bytes_written = fwrite(temp, y_meta_stride, 1, m_debug.out_ymeta_file);
                  temp += y_meta_stride;
             }
 
-            temp = (char *)drv_ctx.ptr_outputbuffer[buf_index].bufferaddr + y_meta_plane + y_plane;
+            temp = bufaddr + y_meta_plane + y_plane;
             for(i = 0; i < uv_meta_scanlines; i++) {
                 bytes_written += fwrite(temp, uv_meta_stride, 1, m_debug.out_uvmeta_file);
                 temp += uv_meta_stride;
@@ -2195,12 +2246,17 @@ int omx_vdec::log_output_buffers(OMX_BUFFERHEADERTYPE *buffer) {
              bytes_written = fwrite(temp, drv_ctx.video_resolution.frame_width, 1, m_debug.outfile);
              temp += stride;
         }
-        temp = (char *)drv_ctx.ptr_outputbuffer[buf_index].bufferaddr + stride * scanlines;
+        temp = bufaddr + stride * scanlines;
         int stride_c = stride;
         for(i = 0; i < drv_ctx.video_resolution.frame_height/2; i++) {
             bytes_written += fwrite(temp, drv_ctx.video_resolution.frame_width, 1, m_debug.outfile);
             temp += stride_c;
         }
+    }
+
+    if (dynamic_buf_mode && !secure_mode) {
+        ion_unmap(drv_ctx.ptr_outputbuffer[buf_index].pmem_fd, bufaddr,
+                  drv_ctx.ptr_outputbuffer[buf_index].buffer_len);
     }
     return 0;
 }
@@ -8382,6 +8438,10 @@ OMX_ERRORTYPE  omx_vdec::component_deinit(OMX_IN OMX_HANDLETYPE hComp)
         fclose(m_debug.outfile);
         m_debug.outfile = NULL;
     }
+    if (m_debug.ccoutfile) {
+        fclose(m_debug.ccoutfile);
+        m_debug.ccoutfile = NULL;
+    }
     if (m_debug.out_ymeta_file) {
         fclose(m_debug.out_ymeta_file);
         m_debug.out_ymeta_file = NULL;
@@ -9098,7 +9158,8 @@ OMX_ERRORTYPE omx_vdec::fill_buffer_done(OMX_HANDLETYPE hComp,
         }
 
         if (il_buffer) {
-            log_output_buffers(il_buffer);
+            log_output_buffers(buffer);
+            log_cc_output_buffers(il_buffer);
             if (dynamic_buf_mode) {
                 unsigned int nPortIndex = 0;
                 nPortIndex = buffer-((OMX_BUFFERHEADERTYPE *)client_buffers.get_il_buf_hdr());
