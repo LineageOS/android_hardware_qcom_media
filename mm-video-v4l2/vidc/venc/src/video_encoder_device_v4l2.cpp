@@ -2492,7 +2492,7 @@ bool venc_dev::venc_set_param(void *paramData, OMX_INDEXTYPE index)
                         }
                     }
 
-                    if(!venc_set_level(OMX_VIDEO_LEVEL_UNKNOWN)) {
+                    if(!venc_set_level(pParam->eLevel)) {
                         DEBUG_PRINT_ERROR("ERROR: Unsuccessful in updating level to unknown");
                         return false;
                     }
