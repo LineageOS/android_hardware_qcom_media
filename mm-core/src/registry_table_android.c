@@ -1,5 +1,5 @@
 /*--------------------------------------------------------------------------
-Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
@@ -37,38 +37,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "qc_omx_core.h"
 
-omx_core_cb_type core[] =
-{
+omx_core_cb_type core[] = {};
 
-    //------------- Audio HW components -----------------------------------------------------------
-    OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.Qcelp13", "libOmxQcelp13Dec.so", "audio_decoder.Qcelp13"),
-    OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.evrc", "libOmxEvrcDec.so", "audio_decoder.evrc"),
-    OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.wma", "libOmxWmaDec.so", "audio_decoder.wma"),
-    OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.wma10Pro", "libOmxWmaDec.so", "audio_decoder.wma"),
-    OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.wmaLossLess", "libOmxWmaDec.so", "audio_decoder.wma"),
-    OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.amrwbplus", "libOmxAmrwbplusDec.so", "audio_decoder.awbplus"),
-    OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.alac", "libOmxAlacDec.so", "audio_decoder.alac"),
-    OMX_REGISTRY_ENTRY("OMX.qti.audio.decoder.alac.sw", "libOmxAlacDecSw.so", "audio_decoder.alac"),
-    OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.ape", "libOmxApeDec.so", "audio_decoder.ape"),
-    OMX_REGISTRY_ENTRY("OMX.qti.audio.decoder.ape.sw", "libOmxApeDecSw.so", "audio_decoder.ape"),
-    OMX_REGISTRY_ENTRY("OMX.qti.audio.decoder.dsd", "libOmxDsdDec.so", "audio_decoder.dsd"),
-    OMX_REGISTRY_ENTRY("OMX.qcom.audio.encoder.aac", "libOmxAacEnc.so", "audio_encoder.aac"),
-    OMX_REGISTRY_ENTRY("OMX.qcom.audio.encoder.qcelp13", "libOmxQcelp13Enc.so", "audio_encoder.qcelp13"),
-    OMX_REGISTRY_ENTRY("OMX.qcom.audio.encoder.evrc", "libOmxEvrcEnc.so", "audio_encoder.evrc"),
-    OMX_REGISTRY_ENTRY("OMX.qcom.audio.encoder.amrnb", "libOmxAmrEnc.so", "audio_encoder.amrnb"),
-    OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.multiaac", "libOmxAacDec.so", "audio_decoder.aac"),
-
-#ifdef _EN_ADDTNL_CDCS_
-    OMX_REGISTRY_ENTRY("OMX.qti.audio.decoder.mpegh", "libOmxMpeghDecSw.so", "audio_decoder.mpegh"),
-    OMX_REGISTRY_ENTRY("OMX.qcom.audio.encoder.mpegh", "libOmxMpeghEncSw.so", "audio_encoder.mpegh"),
-#endif //_EN_ADDTNL_CDCS_
-
-    // HACK: Hidden components marker
-    OMX_REGISTRY_ENTRY("OMX.QCOM.CUST.COMP.START", NULL, NULL),
-
-    // Hidden components
-    OMX_REGISTRY_ENTRY("OMX.qcom.file.muxer", "libOmxMux.so", "container_muxer.mp2"),
-    OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.aac", "libOmxAacDec.so", "audio_decoder.aac"),
-
-};
 const unsigned int SIZE_OF_CORE = sizeof(core) / sizeof(omx_core_cb_type);
