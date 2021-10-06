@@ -89,12 +89,12 @@ ifeq ($(TARGET_COMPILE_WITH_MSM_KERNEL),true)
 libmm-vdec-add-dep := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 endif
 
-ifeq ($(call is-platform-sdk-version-at-least, 19),true)
+ifeq (T,T)  # TODO: Obsolete, please remove
 # This feature is enabled for Android KK+
 libmm-vdec-def += -DADAPTIVE_PLAYBACK_SUPPORTED
 endif
 
-ifeq ($(call is-platform-sdk-version-at-least, 22),true)
+ifeq (T,T)  # TODO: Obsolete, please remove
 # This feature is enabled for Android LMR1
 libmm-vdec-def += -DFLEXYUV_SUPPORTED
 endif
