@@ -37,22 +37,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "qc_omx_core.h"
 
-omx_core_cb_type core[] =
-{
-  {
-    "OMX.qcom.xxx.yyy.zzz",
-    NULL, // Create instance function
-    // Unique instance handle
-    {
-      NULL
-    },
-    NULL,   // Shared object library handle
-    "abc.so",
-    {
-      "efg.ijk"
-    }
-  }
-};
+omx_core_cb_type core[] = {};
 
 const unsigned int SIZE_OF_CORE = sizeof(core) / sizeof(omx_core_cb_type);
 
