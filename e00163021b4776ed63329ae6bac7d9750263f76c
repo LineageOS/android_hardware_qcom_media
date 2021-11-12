@@ -1,0 +1,73 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "67b8917b_cd85e020",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 2,
+      "author": {
+        "id": 13028
+      },
+      "writtenOn": "2021-11-12T14:19:20Z",
+      "side": 1,
+      "message": "since the commit message states another author, this is surely wrong?",
+      "range": {
+        "startLine": 2,
+        "startChar": 12,
+        "endLine": 2,
+        "endChar": 51
+      },
+      "revId": "e00163021b4776ed63329ae6bac7d9750263f76c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "67810be3_ed8385d6",
+        "filename": "mm-video-v4l2/vidc/vdec/src/omx_vdec_msm8974.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 2705,
+      "author": {
+        "id": 13028
+      },
+      "writtenOn": "2021-11-12T14:19:20Z",
+      "side": 1,
+      "message": "why is renaming required?",
+      "range": {
+        "startLine": 2705,
+        "startChar": 0,
+        "endLine": 2705,
+        "endChar": 51
+      },
+      "revId": "e00163021b4776ed63329ae6bac7d9750263f76c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "a98982ac_d9714d96",
+        "filename": "mm-video-v4l2/vidc/vdec/src/omx_vdec_msm8974.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 2719,
+      "author": {
+        "id": 13028
+      },
+      "writtenOn": "2021-11-12T14:19:20Z",
+      "side": 1,
+      "message": "shouldn\u0027t this probably made condational instead of completely replacing it? as more devices use this?",
+      "range": {
+        "startLine": 2719,
+        "startChar": 45,
+        "endLine": 2719,
+        "endChar": 65
+      },
+      "revId": "e00163021b4776ed63329ae6bac7d9750263f76c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
