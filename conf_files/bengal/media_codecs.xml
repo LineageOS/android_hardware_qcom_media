@@ -139,7 +139,6 @@ Only the three quirks included above are recognized at this point:
             <Limit name="concurrent-instances" max="16" />
             <Limit name="performance-point-1920x1080" value="60" />
             <Limit name="performance-point-1280x720" value="120" />
-            <Limit name="performance-point-720x480" value="120" />
         </MediaCodec>
         <MediaCodec name="OMX.qcom.video.encoder.hevc" type="video/hevc" >
             <Quirk name="requires-allocate-on-input-ports" />
@@ -156,7 +155,6 @@ Only the three quirks included above are recognized at this point:
             <Feature name="bitrate-modes" value="VBR,CBR" />
             <Limit name="performance-point-1920x1080" value="60" />
             <Limit name="performance-point-1280x720" value="120" />
-            <Limit name="performance-point-720x480" value="120" />
         </MediaCodec>
         <MediaCodec name="OMX.qcom.video.encoder.hevc.cq" type="video/hevc" >
                 <Quirk name="requires-allocate-on-input-ports" />
