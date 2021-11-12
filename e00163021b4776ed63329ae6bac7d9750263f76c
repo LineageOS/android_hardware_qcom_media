@@ -24,6 +24,30 @@
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     },
     {
+      "unresolved": false,
+      "key": {
+        "uuid": "7cca0732_137bb8d7",
+        "filename": "/COMMIT_MSG",
+        "patchSetId": 1
+      },
+      "lineNbr": 2,
+      "author": {
+        "id": 14010
+      },
+      "writtenOn": "2021-11-12T16:29:15Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "67b8917b_cd85e020",
+      "range": {
+        "startLine": 2,
+        "startChar": 12,
+        "endLine": 2,
+        "endChar": 51
+      },
+      "revId": "e00163021b4776ed63329ae6bac7d9750263f76c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
       "unresolved": true,
       "key": {
         "uuid": "67810be3_ed8385d6",
@@ -61,6 +85,30 @@
       "side": 1,
       "message": "hrm - probs not needed yeah",
       "parentUuid": "67810be3_ed8385d6",
+      "range": {
+        "startLine": 2705,
+        "startChar": 0,
+        "endLine": 2705,
+        "endChar": 51
+      },
+      "revId": "e00163021b4776ed63329ae6bac7d9750263f76c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "f3b6a858_0ac78507",
+        "filename": "mm-video-v4l2/vidc/vdec/src/omx_vdec_msm8974.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 2705,
+      "author": {
+        "id": 14010
+      },
+      "writtenOn": "2021-11-12T16:29:15Z",
+      "side": 1,
+      "message": "The whole function unification \u0026 renaming in the header file looks like a formal change, yes. I just picked the commit leaving it as it was.",
+      "parentUuid": "2c08bef9_f66492ff",
       "range": {
         "startLine": 2705,
         "startChar": 0,
