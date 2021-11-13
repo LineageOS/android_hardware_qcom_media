@@ -164,6 +164,30 @@
       },
       "revId": "e00163021b4776ed63329ae6bac7d9750263f76c",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "94433f14_d69cbc46",
+        "filename": "mm-video-v4l2/vidc/vdec/src/omx_vdec_msm8974.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 2719,
+      "author": {
+        "id": 13028
+      },
+      "writtenOn": "2021-11-13T12:58:32Z",
+      "side": 1,
+      "message": "didn\u0027t know that. that\u0027s why I am asking :D",
+      "parentUuid": "276bea63_76c760a4",
+      "range": {
+        "startLine": 2719,
+        "startChar": 45,
+        "endLine": 2719,
+        "endChar": 65
+      },
+      "revId": "e00163021b4776ed63329ae6bac7d9750263f76c",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }

@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "a115c7f9_2616b1f9",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 13028
+      },
+      "writtenOn": "2021-11-13T12:58:32Z",
+      "side": 1,
+      "message": "my personal opinion is that the renaming is an unrelated change and should have happened in an extra commit, but since it\u0027s an upstream commit it should be fine?",
+      "revId": "921538f4e1436038b01cf24e567c6fe949917652",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
