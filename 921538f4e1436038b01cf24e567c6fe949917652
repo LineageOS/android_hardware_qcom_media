@@ -16,6 +16,24 @@
       "message": "my personal opinion is that the renaming is an unrelated change and should have happened in an extra commit, but since it\u0027s an upstream commit it should be fine?",
       "revId": "921538f4e1436038b01cf24e567c6fe949917652",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "25207875_edb4926f",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 14010
+      },
+      "writtenOn": "2021-11-14T20:16:23Z",
+      "side": 1,
+      "message": "Your personal opinion makes sense to me, indeed, but since this is how the commit was originally written upstream, I too think it should be fine.",
+      "parentUuid": "a115c7f9_2616b1f9",
+      "revId": "921538f4e1436038b01cf24e567c6fe949917652",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
