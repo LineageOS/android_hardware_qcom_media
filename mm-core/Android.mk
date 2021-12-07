@@ -59,7 +59,7 @@ LOCAL_CFLAGS            := $(OMXCORE_CFLAGS)
 
 LOCAL_SRC_FILES         := src/common/omx_core_cmp.cpp
 LOCAL_SRC_FILES         += src/common/qc_omx_core.c
-ifneq (,$(filter lito bengal kona lahaina holi taro $(MSMSTEPPE),$(TARGET_BOARD_PLATFORM)))
+ifneq (,$(filter lito bengal kona lahaina holi $(MSMSTEPPE),$(TARGET_BOARD_PLATFORM)))
 LOCAL_SRC_FILES         += src/registry_table_android.c
 else
 LOCAL_SRC_FILES         += src/default/qc_registry_table_android.c
@@ -100,7 +100,7 @@ endif
 
 LOCAL_SRC_FILES         := src/common/omx_core_cmp.cpp
 LOCAL_SRC_FILES         += src/common/qc_omx_core.c
-ifneq (,$(filter lito bengal kona lahaina holi taro $(MSMSTEPPE),$(TARGET_BOARD_PLATFORM)))
+ifneq (,$(filter lito bengal kona lahaina holi $(MSMSTEPPE),$(TARGET_BOARD_PLATFORM)))
 LOCAL_SRC_FILES         += src/$(MM_CORE_TARGET)/registry_table.c
 else
 LOCAL_SRC_FILES         += src/$(MM_CORE_TARGET)/default/qc_registry_table.c
