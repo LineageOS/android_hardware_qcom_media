@@ -180,7 +180,7 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     memset(&vqzip_sei_info, 0, sizeof(vqzip_sei_info));
     memset(&ltrinfo, 0, sizeof(ltrinfo));
     memset(&fd_list, 0, sizeof(fd_list));
-    sess_priority.priority = 1;
+    sess_priority.priority = 0;
     operating_rate = 30;
     memset(&color_space, 0x0, sizeof(color_space));
     memset(&temporal_layers_config, 0x0, sizeof(temporal_layers_config));
