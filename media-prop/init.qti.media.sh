@@ -60,6 +60,9 @@ case "$target" in
                if [ $sku_ver -eq 1 ]; then
                    setprop vendor.media.target.version 1
                fi
+               if [ $build_codename -le "12" ]; then
+                   setprop vendor.netflix.bsp_rev "Q6115-31409-1"
+               fi
                ;;
        esac
        ;;
