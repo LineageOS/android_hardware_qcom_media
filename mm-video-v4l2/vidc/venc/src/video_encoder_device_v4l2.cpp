@@ -637,8 +637,13 @@ bool venc_dev::handle_dynamic_config(OMX_BUFFERHEADERTYPE *bufferHdr)
                 break;
             case OMX_IndexConfigCommonMirror:
                 DEBUG_PRINT_LOW("handle_dynamic_config: OMX_IndexConfigCommonMirror");
-                if (!venc_set_mirror(iter->config_data.mirror.eMirror))
+                if (!strncmp(venc_handle->m_platform, "bengal", 6) && (venc_handle->m_no_vpss)) {
+                    DEBUG_PRINT_HIGH("Unsupported dynamic config on this target");
+                    ret = true;
                     goto bailout;
+                } else if (!venc_set_mirror(iter->config_data.mirror.eMirror)) {
+                    goto bailout;
+                }
                 break;
             default:
                 DEBUG_PRINT_ERROR("Unsupported dynamic config type %d with timestamp %lld us", iter->type, iter->timestamp);
