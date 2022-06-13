@@ -56,8 +56,6 @@ endif
 ifneq (,$(call is-board-platform-in-list2, $(TARGETS_THAT_SUPPORT_PQ)))
 ifneq ($(wildcard vendor/qcom/$(TARGET_BOARD_PLATFORM)/prebuilts/grease/),)
 libmm-venc-def += -D_PQ_
-else
-$(warning "venc: PQ compiled out")
 endif
 endif
 
