@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "e17420ab_62f88c9d",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 3
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 28232
+      },
+      "writtenOn": "2022-08-11T08:28:34Z",
+      "side": 1,
+      "message": "Hi Bruno,\nCould you please have a look at this change? I\u0027ve been waiting from a long time.\n\nThanks.",
+      "revId": "da805d65383409f826493b4ac856392bc62b511a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
