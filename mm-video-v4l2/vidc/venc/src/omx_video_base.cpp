@@ -129,47 +129,19 @@ typedef struct OMXComponentCapabilityFlagsType {
 void* message_thread_enc(void *input)
 {
     omx_video* omx = reinterpret_cast<omx_video*>(input);
-    unsigned char id;
-    int n;
-
-    fd_set readFds;
-    int res = 0;
-    struct timeval tv;
+    int ret;
 
     DEBUG_PRINT_HIGH("omx_venc: message thread start");
     prctl(PR_SET_NAME, (unsigned long)"VideoEncMsgThread", 0, 0, 0);
     while (!omx->msg_thread_stop) {
-
-        tv.tv_sec = 2;
-        tv.tv_usec = 0;
-
-        FD_ZERO(&readFds);
-        FD_SET(omx->m_pipe_in, &readFds);
-
-        res = select(omx->m_pipe_in + 1, &readFds, NULL, NULL, &tv);
-        if (res < 0) {
-            DEBUG_PRINT_ERROR("select() ERROR: %s", strerror(errno));
+        ret = omx->signal.wait(2 * 1000000000);
+        if (ret == ETIMEDOUT || omx->msg_thread_stop) {
             continue;
-        } else if (res == 0 /*timeout*/ || omx->msg_thread_stop) {
-            continue;
-        }
-
-        n = read(omx->m_pipe_in, &id, 1);
-        if (0 == n) {
+        } else if (ret) {
+            DEBUG_PRINT_ERROR("omx_venc: message_thread_enc wait on condition failed, exiting");
             break;
         }
-
-        if (1 == n) {
-            omx->process_event_cb(omx, id);
-        }
-#ifdef QLE_BUILD
-        if (n < 0) break;
-#else
-        if ((n < 0) && (errno != EINTR)) {
-            DEBUG_PRINT_LOW("ERROR: read from pipe failed, ret %d errno %d", n, errno);
-            break;
-        }
-#endif
+        omx->process_event_cb(omx);
     }
     DEBUG_PRINT_HIGH("omx_venc: message thread stop");
     return 0;
@@ -178,13 +150,7 @@ void* message_thread_enc(void *input)
 void post_message(omx_video *omx, unsigned char id)
 {
     DEBUG_PRINT_LOW("omx_venc: post_message %d", id);
-    int ret_value;
-    ret_value = write(omx->m_pipe_out, &id, 1);
-    if (ret_value <= 0) {
-        DEBUG_PRINT_ERROR("post_message to pipe failed : %s", strerror(errno));
-    } else {
-        DEBUG_PRINT_LOW("post_message to pipe done %d",ret_value);
-    }
+    omx->signal.signal();
 }
 
 // omx_cmd_queue destructor
@@ -265,8 +231,6 @@ omx_video::omx_video():
     pdest_frame(NULL),
     secure_session(false),
     mEmptyEosBuffer(NULL),
-    m_pipe_in(-1),
-    m_pipe_out(-1),
     m_pInput_pmem(NULL),
     m_pOutput_pmem(NULL),
 #ifdef USE_ION
@@ -346,10 +310,6 @@ omx_video::omx_video():
 omx_video::~omx_video()
 {
     DEBUG_PRINT_HIGH("~omx_video(): Inside Destructor()");
-    close(m_pipe_in);
-    close(m_pipe_out);
-    m_pipe_in = -1;
-    m_pipe_out = -1;
     /*For V4L2 based drivers, pthread_join is done in device_close
      * so no need to do it here*/
 #ifndef _MSM8974_
@@ -386,7 +346,7 @@ omx_video::~omx_video()
    None.
 
    ========================================================================== */
-void omx_video::process_event_cb(void *ctxt, unsigned char id)
+void omx_video::process_event_cb(void *ctxt)
 {
     unsigned long p1; // Parameter - 1
     unsigned long p2; // Parameter - 2
@@ -427,8 +387,7 @@ void omx_video::process_event_cb(void *ctxt, unsigned char id)
 
         /*process message if we have one*/
         if (qsize > 0) {
-            id = ident;
-            switch (id) {
+            switch (ident) {
                 case OMX_COMPONENT_GENERATE_EVENT:
                     if (pThis->m_pCallbacks.EventHandler) {
                         switch (p1) {
@@ -704,7 +663,7 @@ void omx_video::process_event_cb(void *ctxt, unsigned char id)
                     break;
 
                 default:
-                    DEBUG_PRINT_LOW("process_event_cb unknown msg id 0x%02x", id);
+                    DEBUG_PRINT_LOW("process_event_cb unknown msg id 0x%02x", (unsigned int)ident);
                     break;
             }
         }
