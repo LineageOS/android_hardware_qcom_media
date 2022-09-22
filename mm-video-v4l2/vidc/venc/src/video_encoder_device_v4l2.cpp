@@ -1169,7 +1169,8 @@ OMX_ERRORTYPE venc_dev::venc_get_supported_profile_level(OMX_VIDEO_PARAM_PROFILE
                             QOMX_VIDEO_AVCProfileMain,
                             QOMX_VIDEO_AVCProfileConstrainedHigh,
                             QOMX_VIDEO_AVCProfileHigh };
-    int hevc_profiles[3] = { OMX_VIDEO_HEVCProfileMain,
+    int hevc_profiles[4] = { OMX_VIDEO_HEVCProfileMain,
+                             OMX_VIDEO_HEVCProfileMain10,
                              OMX_VIDEO_HEVCProfileMain10HDR10,
                              OMX_VIDEO_HEVCProfileMainStill };
 
@@ -1658,7 +1659,7 @@ bool venc_dev::venc_open(OMX_U32 codec)
         supported_rc_modes = (RC_ALL & ~RC_CBR_CFR);
     }
 
-    if (!strcmp(m_platform_name, "sm6150") || !strcmp(m_platform_name, "atoll") || !strcmp(m_platform_name, "trinket"))
+    if (!strcmp(m_platform_name, "sm6150") || !strcmp(m_platform_name, "atoll") || !strcmp(m_platform_name, "trinket") || !strcmp(m_platform_name, "msmnile"))
     {
        hdr10metadata_supported = false;
     }
@@ -4357,6 +4358,15 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         DEBUG_PRINT_LOW("gralloc format 0x%x (%s) (%s)",
                             handle->format, grallocFormatStr, isUBWC ? "UBWC" : "Linear");
 
+                        if (m_codec == OMX_VIDEO_CodingHEVC && (handle->format == HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC ||
+                            handle->format == HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS) &&
+                            codec_profile.profile != V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10)
+                            {
+                                if (!venc_set_profile (OMX_VIDEO_HEVCProfileMain10)) {
+                                    DEBUG_PRINT_ERROR("ERROR: Unsuccessful in updating Profile OMX_VIDEO_HEVCProfileMain10");
+                                    return false;
+                                }
+                            }
                         if (handle->format == HAL_PIXEL_FORMAT_NV12_ENCODEABLE) {
                             m_sVenc_cfg.inputformat = isUBWC ? V4L2_PIX_FMT_NV12_UBWC : V4L2_PIX_FMT_NV12;
                             DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = NV12 %s", isUBWC ? "UBWC" : "Linear");
