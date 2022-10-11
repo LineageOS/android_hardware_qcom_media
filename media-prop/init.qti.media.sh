@@ -67,7 +67,7 @@ case "$target" in
        esac
        ;;
    "kona")
-       if [ $build_codename -le "12" ]; then
+       if [ $build_codename -le "13" ]; then
            setprop vendor.netflix.bsp_rev "Q8250-19134-1"
        fi
        ;;
