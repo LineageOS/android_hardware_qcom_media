@@ -58,12 +58,12 @@ pl_map profile_level_converter::profile_avc_v4l2_to_omx ({});
 pl_map profile_level_converter::profile_hevc_omx_to_v4l2 ({
             {OMX_VIDEO_HEVCProfileMain,
                         V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN},
-            {OMX_VIDEO_HEVCProfileMain10,
-                        V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10},
             {OMX_VIDEO_HEVCProfileMain10HDR10,
                         V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10},
             {OMX_VIDEO_HEVCProfileMainStill,
                         V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN_STILL_PIC},
+            {OMX_VIDEO_HEVCProfileMain10,
+                        V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10},
         });
 
 pl_map profile_level_converter::profile_hevc_v4l2_to_omx ({});
