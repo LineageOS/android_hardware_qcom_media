@@ -193,6 +193,7 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     mIsNativeRecorder = false;
     m_hdr10meta_enabled = false;
     hdr10metadata_supported = false;
+    is_hevcprofile_explicitly_set = false;
 
     Platform::Config::getInt32(Platform::vidc_enc_log_in,
             (int32_t *)&m_debug.in_buffer_log, 0);
@@ -1169,9 +1170,10 @@ OMX_ERRORTYPE venc_dev::venc_get_supported_profile_level(OMX_VIDEO_PARAM_PROFILE
                             QOMX_VIDEO_AVCProfileMain,
                             QOMX_VIDEO_AVCProfileConstrainedHigh,
                             QOMX_VIDEO_AVCProfileHigh };
-    int hevc_profiles[3] = { OMX_VIDEO_HEVCProfileMain,
+    int hevc_profiles[4] = { OMX_VIDEO_HEVCProfileMain,
                              OMX_VIDEO_HEVCProfileMain10HDR10,
-                             OMX_VIDEO_HEVCProfileMainStill };
+                             OMX_VIDEO_HEVCProfileMainStill,
+                             OMX_VIDEO_HEVCProfileMain10 };
 
     if (!profileLevelType)
         return OMX_ErrorBadParameter;
@@ -4357,6 +4359,16 @@ bool venc_dev::venc_empty_buf(void *buffer, void *pmem_data_buf, unsigned index,
                         DEBUG_PRINT_LOW("gralloc format 0x%x (%s) (%s)",
                             handle->format, grallocFormatStr, isUBWC ? "UBWC" : "Linear");
 
+                        if (m_codec == OMX_VIDEO_CodingHEVC && (handle->format == HAL_PIXEL_FORMAT_YCbCr_420_TP10_UBWC ||
+                            handle->format == HAL_PIXEL_FORMAT_YCbCr_420_P010_VENUS) &&
+                            codec_profile.profile != V4L2_MPEG_VIDC_VIDEO_HEVC_PROFILE_MAIN10)
+                            {
+                                is_hevcprofile_explicitly_set = true;
+                                if (!venc_set_profile (OMX_VIDEO_HEVCProfileMain10)) {
+                                    DEBUG_PRINT_ERROR("ERROR: Unsuccessful in updating Profile OMX_VIDEO_HEVCProfileMain10");
+                                    return false;
+                                }
+                            }
                         if (handle->format == HAL_PIXEL_FORMAT_NV12_ENCODEABLE) {
                             m_sVenc_cfg.inputformat = isUBWC ? V4L2_PIX_FMT_NV12_UBWC : V4L2_PIX_FMT_NV12;
                             DEBUG_PRINT_INFO("ENC_CONFIG: Input Color = NV12 %s", isUBWC ? "UBWC" : "Linear");
@@ -5298,7 +5310,7 @@ bool venc_dev::venc_set_profile(OMX_U32 eProfile)
 
     codec_profile.profile = control.value;
 
-    if (hdr10metadata_supported == true) {
+    if (hdr10metadata_supported == true && (!is_hevcprofile_explicitly_set)) {
         if (venc_set_extradata_hdr10metadata() == false)
         {
             DEBUG_PRINT_ERROR("Failed to set extradata HDR10PLUS_METADATA");
@@ -7276,7 +7288,9 @@ void venc_dev::venc_get_consumer_usage(OMX_U32* usage) {
     *usage |= GRALLOC_USAGE_PRIVATE_ALLOC_UBWC;
 #endif
 
-    if (hevc && eProfile == (OMX_U32)OMX_VIDEO_HEVCProfileMain10HDR10) {
+    if (hevc &&
+       (eProfile == (OMX_U32)OMX_VIDEO_HEVCProfileMain10HDR10 ||
+        eProfile == (OMX_U32)OMX_VIDEO_HEVCProfileMain10)) {
         DEBUG_PRINT_INFO("Setting 10-bit consumer usage bits");
         *usage |= GRALLOC_USAGE_PRIVATE_10BIT_VIDEO;
         if (mUseLinearColorFormat & REQUEST_LINEAR_COLOR_10_BIT) {
