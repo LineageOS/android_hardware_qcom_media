@@ -1660,7 +1660,7 @@ bool venc_dev::venc_open(OMX_U32 codec)
         supported_rc_modes = (RC_ALL & ~RC_CBR_CFR);
     }
 
-    if (!strcmp(m_platform_name, "sm6150") || !strcmp(m_platform_name, "atoll") || !strcmp(m_platform_name, "trinket"))
+    if (!strcmp(m_platform_name, "sm6150") || !strcmp(m_platform_name, "atoll") || !strcmp(m_platform_name, "trinket") || !strcmp(m_platform_name, "msmnile"))
     {
        hdr10metadata_supported = false;
     }
