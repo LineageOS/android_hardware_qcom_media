@@ -8999,6 +8999,39 @@ OMX_ERRORTYPE omx_vdec::describeColorFormat(OMX_PTR pParam)
             img->mPlane[MediaImage::V].mVertSubsampling = 2;
             break;
         }
+        case static_cast <OMX_COLOR_FORMATTYPE> (QOMX_COLOR_FORMATYUV420SemiPlanarP010Venus):
+        {
+            img->mType = MediaImage::MEDIA_IMAGE_TYPE_YUV;
+            img->mNumPlanes = 3;
+            // mWidth and mHeight represent the W x H of the largest plane
+            // In our case, this happens to be the Stride x Scanlines of Y plane
+            img->mWidth = params->nFrameWidth;
+            img->mHeight = params->nFrameHeight;
+            size_t planeWidth = VENUS_Y_STRIDE(COLOR_FMT_P010, params->nFrameWidth);
+            size_t planeHeight = VENUS_Y_SCANLINES(COLOR_FMT_P010, params->nFrameHeight);
+            img->mBitDepth = 8;
+            //Plane 0 (Y)
+            img->mPlane[MediaImage::Y].mOffset = 0;
+            img->mPlane[MediaImage::Y].mColInc = 1;
+            img->mPlane[MediaImage::Y].mRowInc = planeWidth; //same as stride
+            img->mPlane[MediaImage::Y].mHorizSubsampling = 1;
+            img->mPlane[MediaImage::Y].mVertSubsampling = 1;
+            //Plane 1 (U)
+            img->mPlane[MediaImage::U].mOffset = planeWidth * planeHeight;
+            img->mPlane[MediaImage::U].mColInc = 2;           //interleaved UV
+            img->mPlane[MediaImage::U].mRowInc =
+                    VENUS_UV_STRIDE(COLOR_FMT_P010, params->nFrameWidth);
+            img->mPlane[MediaImage::U].mHorizSubsampling = 2;
+            img->mPlane[MediaImage::U].mVertSubsampling = 2;
+            //Plane 2 (V)
+            img->mPlane[MediaImage::V].mOffset = planeWidth * planeHeight + 1;
+            img->mPlane[MediaImage::V].mColInc = 2;           //interleaved UV
+            img->mPlane[MediaImage::V].mRowInc =
+                    VENUS_UV_STRIDE(COLOR_FMT_P010, params->nFrameWidth);
+            img->mPlane[MediaImage::V].mHorizSubsampling = 2;
+            img->mPlane[MediaImage::V].mVertSubsampling = 2;
+            break;
+        }
 
         case OMX_COLOR_FormatYUV420Planar:
         case OMX_COLOR_FormatYUV420SemiPlanar:
