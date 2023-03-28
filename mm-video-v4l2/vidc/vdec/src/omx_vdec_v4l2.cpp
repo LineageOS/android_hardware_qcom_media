@@ -1,5 +1,7 @@
 /*--------------------------------------------------------------------------
 Copyright (c) 2010 - 2021, The Linux Foundation. All rights reserved.
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -3766,6 +3768,7 @@ OMX_ERRORTYPE  omx_vdec::use_output_buffer(
                         return OMX_ErrorInsufficientResources;
                     }
                 }
+                drv_ctx.ptr_outputbuffer[i].mmaped_size = drv_ctx.op_buf.buffer_size;
                 drv_ctx.ptr_outputbuffer[i].offset = 0;
                 privateAppData = appData;
             } else {
