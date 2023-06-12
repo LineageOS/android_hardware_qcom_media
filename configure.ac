@@ -99,7 +99,7 @@ AC_ARG_ENABLE([use-glib],
 AC_ARG_ENABLE([build-mm-video],
         AC_HELP_STRING([--enable-build-mm-video],
                 [Enable conditional compile for build mm video [default=no]]),
-        [build_mm_video="${enableval}"])
+        [build_mm_video="no"])
 
 AC_ARG_WITH([sanitized-headers],
         [AS_HELP_STRING([--with-sanitized-headers=DIR],[location of the sanitized Linux kernel headers])],
@@ -194,11 +194,5 @@ AC_SUBST([CFLAGS])
 AC_CONFIG_FILES([ \
         Makefile \
         mm-core/Makefile \
-        libc2dcolorconvert/Makefile \
-        libplatformconfig/Makefile \
-        mm-video-v4l2/Makefile \
-        mm-video-v4l2/vidc/Makefile \
-        mm-video-v4l2/vidc/venc/Makefile \
-        mm-video-v4l2/vidc/vdec/Makefile \
         ])
 AC_OUTPUT
