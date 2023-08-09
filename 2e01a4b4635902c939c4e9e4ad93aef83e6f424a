@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "fce9b187_51265d72",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 32245
+      },
+      "writtenOn": "2023-08-09T11:35:19Z",
+      "side": 1,
+      "message": "playing 1080p video that recorded from camera seems fine, will continue testing it",
+      "revId": "2e01a4b4635902c939c4e9e4ad93aef83e6f424a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
