@@ -148,13 +148,23 @@ extern "C" {
 #ifdef MASTER_SIDE_CP
 #define MEM_HEAP_ID ION_SECURE_HEAP_ID
 #define SECURE_ALIGN SZ_4K
+#ifdef _TARGET_KERNEL_VERSION_49_
+#define SECURE_FLAGS_INPUT_BUFFER (ION_SECURE | ION_FLAG_CP_BITSTREAM)
+#define SECURE_FLAGS_OUTPUT_BUFFER (ION_SECURE | ION_FLAG_CP_PIXEL)
+#else
 #define SECURE_FLAGS_INPUT_BUFFER (ION_FLAG_SECURE | ION_FLAG_CP_BITSTREAM)
 #define SECURE_FLAGS_OUTPUT_BUFFER (ION_FLAG_SECURE | ION_FLAG_CP_PIXEL)
+#endif
 #else //SLAVE_SIDE_CP
 #define MEM_HEAP_ID ION_CP_MM_HEAP_ID
 #define SECURE_ALIGN SZ_1M
+#ifdef _TARGET_KERNEL_VERSION_49_
+#define SECURE_FLAGS_INPUT_BUFFER ION_SECURE
+#define SECURE_FLAGS_OUTPUT_BUFFER ION_SECURE
+#else
 #define SECURE_FLAGS_INPUT_BUFFER ION_FLAG_SECURE
 #define SECURE_FLAGS_OUTPUT_BUFFER ION_FLAG_SECURE
+#endif
 #endif
 
 #define LUMINANCE_DIV_FACTOR 10000.0
@@ -4624,29 +4634,17 @@ OMX_ERRORTYPE  omx_vdec::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
                                         DEBUG_PRINT_ERROR("%s: Failed to get format on capture mplane", __func__);
                                         return OMX_ErrorBadParameter;
                                     }
-#ifndef _TARGET_KERNEL_VERSION_49_
-                                    enum vdec_output_fromat op_format;
-#else
                                     enum vdec_output_format op_format;
-#endif
                                     if (portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
                                             QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m ||
                                             portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
                                             QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mMultiView ||
                                             portFmt->eColorFormat == OMX_COLOR_FormatYUV420Planar ||
                                             portFmt->eColorFormat == OMX_COLOR_FormatYUV420SemiPlanar) {
-#ifndef _TARGET_KERNEL_VERSION_49_
-                                            op_format = (enum vdec_output_fromat)VDEC_YUV_FORMAT_NV12;
-#else
                                             op_format = (enum vdec_output_format)VDEC_YUV_FORMAT_NV12;
-#endif
                                     } else if (portFmt->eColorFormat == (OMX_COLOR_FORMATTYPE)
                                             QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed) {
-#ifndef _TARGET_KERNEL_VERSION_49_
-                                            op_format = (enum vdec_output_fromat)VDEC_YUV_FORMAT_NV12_UBWC;
-#else
                                             op_format = (enum vdec_output_format)VDEC_YUV_FORMAT_NV12_UBWC;
-#endif
                                     } else
                                         eRet = OMX_ErrorBadParameter;
 
@@ -9311,7 +9309,13 @@ int omx_vdec::async_message_process (void *context, void* message)
                 omx->post_event ((unsigned)NULL, vdec_msg->status_code,\
                         OMX_COMPONENT_GENERATE_HARDWARE_ERROR);
             }
-            if (v4l2_buf_ptr->flags & V4L2_BUF_FLAG_DATA_CORRUPT) {
+            if (v4l2_buf_ptr->flags &
+#ifdef _TARGET_KERNEL_VERSION_49_
+                                    V4L2_QCOM_BUF_DATA_CORRUPT
+#else
+                                    V4L2_BUF_FLAG_DATA_CORRUPT
+#endif
+                                                            ) {
                 omxhdr->nFlags |= OMX_BUFFERFLAG_DATACORRUPT;
                 vdec_msg->status_code = VDEC_S_INPUT_BITSTREAM_ERR;
             }
@@ -9409,7 +9413,13 @@ int omx_vdec::async_message_process (void *context, void* message)
                                OMX_COMPONENT_GENERATE_FTB);
                        break;
                    }
-                   if (v4l2_buf_ptr->flags & V4L2_BUF_FLAG_DATA_CORRUPT) {
+                   if (v4l2_buf_ptr->flags &
+#ifdef _TARGET_KERNEL_VERSION_49_
+                                            V4L2_QCOM_BUF_DATA_CORRUPT
+#else
+                                            V4L2_BUF_FLAG_DATA_CORRUPT
+#endif
+                                                                    ) {
                        omxhdr->nFlags |= OMX_BUFFERFLAG_DATACORRUPT;
                    }
 
@@ -10360,7 +10370,14 @@ bool omx_vdec::alloc_map_ion_memory(OMX_U32 buffer_size, vdec_ion *ion_info, int
     ion_info->ion_alloc_data.len = buffer_size;
 
     ion_info->ion_alloc_data.heap_id_mask = ION_HEAP(ION_SYSTEM_HEAP_ID);
-    if (secure_mode && (ion_info->ion_alloc_data.flags & ION_FLAG_SECURE)) {
+
+    if (secure_mode && (ion_info->ion_alloc_data.flags &
+#ifdef _TARGET_KERNEL_VERSION_49_
+                                                        ION_SECURE
+#else
+                                                        ION_FLAG_SECURE
+#endif
+                                                        )) {
         ion_info->ion_alloc_data.heap_id_mask = ION_HEAP(MEM_HEAP_ID);
     }
 
@@ -10411,8 +10428,11 @@ void omx_vdec::free_ion_memory(struct vdec_ion *buf_ion_info)
         buf_ion_info->dev_fd = -1;
     }
 }
-void omx_vdec::do_cache_operations(int fd)
+void omx_vdec::do_cache_operations([[maybe_unused]] int fd)
 {
+#ifdef _TARGET_KERNEL_VERSION_49_
+    return;
+#else
     if (fd < 0)
         return;
 
@@ -10427,6 +10447,7 @@ void omx_vdec::do_cache_operations(int fd)
             return;
         }
     }
+#endif
 }
 #endif
 void omx_vdec::free_output_buffer_header()
@@ -13789,10 +13810,18 @@ void omx_vdec::prefetchNewBuffers(bool reconfig) {
 
     prefetch_size = 4096 * 16 * 2; //assuming page order 4 blocks to be easily available for allocation
     regions[0].nr_sizes = 1;
+#ifdef _TARGET_KERNEL_VERSION_49_
+    regions[0].sizes = &prefetch_size;
+#else
     regions[0].sizes = (__u64)&prefetch_size;
+#endif
     regions[0].vmid = ION_FLAG_CP_PIXEL;
     prefetch_data->nr_regions = 1;
+#ifdef _TARGET_KERNEL_VERSION_49_
+    prefetch_data->regions = regions;
+#else
     prefetch_data->regions = (__u64)regions;
+#endif
     prefetch_data->heap_id = ION_HEAP(ION_SECURE_HEAP_ID);
 
     custom_data->cmd = ION_IOC_PREFETCH;
@@ -13831,11 +13860,19 @@ void omx_vdec::drainPrefetchedBuffers() {
     }
     DEBUG_PRINT_LOW("drain size : %zu\n",  m_pf_info.pf_size);
     regions[0].nr_sizes = 1;
+#ifdef _TARGET_KERNEL_VERSION_49_
+    regions[0].sizes = &(m_pf_info.pf_size);
+#else
     regions[0].sizes = (__u64)&(m_pf_info.pf_size);
+#endif
     regions[0].vmid = ION_FLAG_CP_PIXEL;
 
     prefetch_data->nr_regions = 1;
+#ifdef _TARGET_KERNEL_VERSION_49_
+    prefetch_data->regions = regions;
+#else
     prefetch_data->regions = (__u64)regions;
+#endif
     prefetch_data->heap_id = ION_HEAP(ION_SECURE_HEAP_ID);
 
     custom_data->cmd = ION_IOC_DRAIN;
