@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "b0900afe_b37a81b9",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 32245
+      },
+      "writtenOn": "2023-09-02T12:55:03Z",
+      "side": 1,
+      "message": "The entire chain has been tested on 4.9 and 4.19, on msm8937 platform",
+      "revId": "89766ed31a596e824027306b535cdf07b760ac2f",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
