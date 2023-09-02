@@ -39,11 +39,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 struct video_decoder_context {
     enum vdec_codec               decoder_format;
-#ifndef _TARGET_KERNEL_VERSION_49_
-    enum vdec_output_fromat       output_format;
-#else
     enum vdec_output_format       output_format;
-#endif
     struct vdec_picsize           video_resoultion;
     struct vdec_allocatorproperty input_buffer;
     struct vdec_allocatorproperty output_buffer;

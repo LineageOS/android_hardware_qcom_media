@@ -36,8 +36,13 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdio.h>
 #ifdef USE_ION
 #include <linux/msm_ion.h>
+#ifdef _TARGET_KERNEL_VERSION_49_
+#define _UAPI_LINUX_ION_H
+#endif
 #include <ion/ion.h>
+#ifndef _TARGET_KERNEL_VERSION_49_
 #include <linux/dma-buf.h>
+#endif
 #endif
 
 #ifdef _ANDROID_

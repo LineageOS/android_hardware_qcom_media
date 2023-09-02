@@ -98,15 +98,25 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define MEM_HEAP_ID ION_SECURE_HEAP_ID
 #define SECURE_ALIGN SZ_4K
+#ifdef _TARGET_KERNEL_VERSION_49_
+#define SECURE_FLAGS_INPUT_BUFFER (ION_SECURE | ION_FLAG_CP_PIXEL)
+#define SECURE_FLAGS_OUTPUT_BUFFER (ION_SECURE | ION_FLAG_CP_BITSTREAM)
+#else
 #define SECURE_FLAGS_INPUT_BUFFER (ION_FLAG_SECURE | ION_FLAG_CP_PIXEL)
 #define SECURE_FLAGS_OUTPUT_BUFFER (ION_FLAG_SECURE | ION_FLAG_CP_BITSTREAM)
+#endif
 
 #else //SLAVE_SIDE_CP
 
 #define MEM_HEAP_ID ION_CP_MM_HEAP_ID
 #define SECURE_ALIGN SZ_1M
+#ifdef _TARGET_KERNEL_VERSION_49_
+#define SECURE_FLAGS_INPUT_BUFFER ION_SECURE
+#define SECURE_FLAGS_OUTPUT_BUFFER ION_SECURE
+#else
 #define SECURE_FLAGS_INPUT_BUFFER ION_FLAG_SECURE
 #define SECURE_FLAGS_OUTPUT_BUFFER ION_FLAG_SECURE
+#endif
 
 #endif
 
@@ -4850,6 +4860,7 @@ char *omx_video::ion_map(int fd, int len)
                                 MAP_SHARED, fd, 0);
     if (bufaddr != MAP_FAILED) {
 #ifdef USE_ION
+#ifndef _TARGET_KERNEL_VERSION_49_
         struct dma_buf_sync buf_sync;
         buf_sync.flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_RW;
         int rc = ioctl(fd, DMA_BUF_IOCTL_SYNC, &buf_sync);
@@ -4857,19 +4868,22 @@ char *omx_video::ion_map(int fd, int len)
             DEBUG_PRINT_ERROR("Failed DMA_BUF_IOCTL_SYNC");
         }
 #endif
+#endif
     }
     return bufaddr;
 }
 
-OMX_ERRORTYPE omx_video::ion_unmap(int fd, void *bufaddr, int len)
+OMX_ERRORTYPE omx_video::ion_unmap([[maybe_unused]] int fd, void *bufaddr, int len)
 {
 #ifdef USE_ION
+#ifndef _TARGET_KERNEL_VERSION_49_
     struct dma_buf_sync buf_sync;
     buf_sync.flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_RW;
     int rc = ioctl(fd, DMA_BUF_IOCTL_SYNC, &buf_sync);
     if (rc) {
         DEBUG_PRINT_ERROR("Failed DMA_BUF_IOCTL_SYNC");
     }
+#endif
 #endif
     if (-1 == munmap(bufaddr, len)) {
         DEBUG_PRINT_ERROR("munmap failed.");
