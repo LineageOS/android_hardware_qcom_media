@@ -4708,6 +4708,7 @@ void omx_swvdec::ion_flush_op(unsigned int index)
     if (index < m_port_op.def.nBufferCountActual)
     {
 #ifdef USE_ION
+#ifndef _TARGET_KERNEL_VERSION_49_
         struct dma_buf_sync dma_buf_sync_data[2];
         dma_buf_sync_data[0].flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_WRITE;
         dma_buf_sync_data[1].flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_WRITE;
@@ -4724,6 +4725,7 @@ void omx_swvdec::ion_flush_op(unsigned int index)
                 goto ion_flush_op_exit;
             }
        }
+#endif
 #endif
     }
     else
@@ -6441,12 +6443,14 @@ unsigned char *omx_swvdec::ion_map(int fd, int len)
                                 MAP_SHARED, fd, 0);
     if (bufaddr != MAP_FAILED) {
 #ifdef USE_ION
+#ifndef _TARGET_KERNEL_VERSION_49_
         struct dma_buf_sync buf_sync;
         buf_sync.flags = DMA_BUF_SYNC_START | DMA_BUF_SYNC_RW;
         int rc = ioctl(fd, DMA_BUF_IOCTL_SYNC, &buf_sync);
         if (rc) {
             OMX_SWVDEC_LOG_ERROR("Failed DMA_BUF_IOCTL_SYNC");
         }
+#endif
 #endif
     }
     return bufaddr;
@@ -6462,12 +6466,14 @@ unsigned char *omx_swvdec::ion_map(int fd, int len)
 OMX_ERRORTYPE omx_swvdec::ion_unmap(int fd, void *bufaddr, int len)
 {
 #ifdef USE_ION
+#ifndef _TARGET_KERNEL_VERSION_49_
     struct dma_buf_sync buf_sync;
     buf_sync.flags = DMA_BUF_SYNC_END | DMA_BUF_SYNC_RW;
     int rc = ioctl(fd, DMA_BUF_IOCTL_SYNC, &buf_sync);
     if (rc) {
         OMX_SWVDEC_LOG_ERROR("Failed DMA_BUF_IOCTL_SYNC");
     }
+#endif
 #endif
     if (-1 == munmap(bufaddr, len)) {
         OMX_SWVDEC_LOG_ERROR("munmap failed.");

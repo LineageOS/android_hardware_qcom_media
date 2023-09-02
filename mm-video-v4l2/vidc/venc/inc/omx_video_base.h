@@ -68,8 +68,13 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "vidc_debug.h"
 #include <vector>
 #include "vidc_vendor_extensions.h"
+#ifdef _TARGET_KERNEL_VERSION_49_
+#define _UAPI_LINUX_ION_H
+#endif
 #include <ion/ion.h>
+#ifndef _TARGET_KERNEL_VERSION_49_
 #include <linux/dma-buf.h>
+#endif
 #ifdef _ANDROID_
 using namespace android;
 #include <utils/Log.h>
@@ -178,7 +183,7 @@ static const char* MEM_DEVICE = "/dev/pmem_smipool";
 #define VEN_MSG_OUTPUT_BUFFER_DONE    2
 #define VEN_MSG_NEED_OUTPUT_BUFFER    3
 #define VEN_MSG_FLUSH_INPUT_DONE    4
-#define VEN_MSG_FLUSH_OUPUT_DONE    5
+#define VEN_MSG_FLUSH_OUTPUT_DONE    5
 #define VEN_MSG_START    6
 #define VEN_MSG_STOP    7
 #define VEN_MSG_PAUSE    8

@@ -55,8 +55,13 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <unordered_map>
 
 #include <linux/msm_ion.h>
+#ifdef _TARGET_KERNEL_VERSION_49_
+#define _UAPI_LINUX_ION_H
+#endif
 #include <ion/ion.h>
+#ifndef _TARGET_KERNEL_VERSION_49_
 #include <linux/dma-buf.h>
+#endif
 
 static ptrdiff_t x;
 
@@ -592,7 +597,7 @@ enum vdec_interlaced_format {
 #define VDEC_YUV_FORMAT_NV12_TP10_UBWC \
     VDEC_YUV_FORMAT_NV12_TP10_UBWC
 
-enum vdec_output_fromat {
+enum vdec_output_format {
     VDEC_YUV_FORMAT_NV12 = 0x1,
     VDEC_YUV_FORMAT_TILE_4x2 = 0x2,
     VDEC_YUV_FORMAT_NV12_UBWC = 0x3,
@@ -742,11 +747,7 @@ struct extradata_buffer_info {
 struct video_driver_context {
     int video_driver_fd;
     enum vdec_codec decoder_format;
-#ifndef _TARGET_KERNEL_VERSION_49_
-    enum vdec_output_fromat output_format;
-#else
-   enum vdec_output_format output_format;
-#endif
+    enum vdec_output_format output_format;
     enum vdec_interlaced_format interlace;
     enum vdec_output_order picture_order;
     struct vdec_framesize frame_size;
