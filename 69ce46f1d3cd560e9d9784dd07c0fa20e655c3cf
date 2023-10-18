@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "c519335f_e6081a5c",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 32245
+      },
+      "writtenOn": "2023-10-18T05:21:25Z",
+      "side": 1,
+      "message": "I met someone who booted k4.19 (into Launcher) on msm8953, I\u0027ll ask him to get feedback about that when he\u0027s ready for it, or I\u0027ll try it out on my own msm8953 devices, if this commit still didn\u0027t get merged by then\n\nAt the meantime, It\u0027s always been working fine on my msm8937 devices",
+      "revId": "69ce46f1d3cd560e9d9784dd07c0fa20e655c3cf",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
