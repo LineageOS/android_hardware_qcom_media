@@ -8050,7 +8050,13 @@ bool venc_dev::venc_validate_profile_level(OMX_U32 *eProfile, OMX_U32 *eLevel)
                                         MIN((unsigned int) (profile_tbl[5] / mb_per_frame), MAXDPB));
                         break;
                     } else {
-                        new_level = (int)profile_tbl[3];
+                        if(m_codec == OMX_VIDEO_CodingHEVC ||
+                           m_codec == OMX_VIDEO_CodingMPEG4) {
+                             new_level = (int)*eLevel;
+                           }
+                         else {
+                            new_level = (int)profile_tbl[3];
+                        }
                         profile_level_found = true;
                         DEBUG_PRINT_LOW("Appropriate profile/level found %u/%u", (int) *eProfile, (int) new_level);
                         break;
