@@ -456,7 +456,12 @@ size_t C2DColorConverter::calcStride(ColorConvertFormat format, size_t width)
         case NV12_128m:
             return ALIGN(width, ALIGN128);
         case YCbCr420P:
+        if (mSrcFormat == YCbCr420P && mDstFormat == NV12_128m &&
+            mSrcWidth > 176 && mSrcHeight > 144) {
+            return ALIGN(width, ALIGN128);
+        } else {
             return ALIGN(width, ALIGN16);
+        }
         case YCrCb420P:
             return ALIGN(width, ALIGN16);
         case NV12_UBWC:
