@@ -1169,9 +1169,9 @@ OMX_ERRORTYPE venc_dev::venc_get_supported_profile_level(OMX_VIDEO_PARAM_PROFILE
                             QOMX_VIDEO_AVCProfileConstrainedHigh,
                             QOMX_VIDEO_AVCProfileHigh };
     int hevc_profiles[4] = { OMX_VIDEO_HEVCProfileMain,
+                             OMX_VIDEO_HEVCProfileMain10,
                              OMX_VIDEO_HEVCProfileMain10HDR10,
-                             OMX_VIDEO_HEVCProfileMainStill,
-                             OMX_VIDEO_HEVCProfileMain10 };
+                             OMX_VIDEO_HEVCProfileMainStill};
 
     if (!profileLevelType)
         return OMX_ErrorBadParameter;
