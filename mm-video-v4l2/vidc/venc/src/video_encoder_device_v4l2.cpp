@@ -6125,10 +6125,10 @@ bool venc_dev::venc_calibrate_gop()
         return false;
     }
 
-    if (nBframes && !nPframes) {
+   /* if (nBframes && !nPframes) {
         DEBUG_PRINT_ERROR("nPframes should be non-zero when nBframes is non-zero\n");
         return false;
-    }
+    }*/
 
     if (nLayers > 1) { /*Multi-layer encoding*/
         sub_gop_size = 1 << (nLayers - 1);
