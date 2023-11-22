@@ -353,8 +353,6 @@ void* venc_dev::async_venc_message_thread (void *input)
                 }
                 if (v4l2_buf.flags & V4L2_BUF_FLAG_PFRAME) {
                     venc_msg.buf.flags |= OMX_VIDEO_PictureTypeP;
-                } else if (v4l2_buf.flags & V4L2_BUF_FLAG_BFRAME) {
-                    venc_msg.buf.flags |= OMX_VIDEO_PictureTypeB;
                 }
 
                 if (v4l2_buf.flags & V4L2_QCOM_BUF_FLAG_CODECCONFIG)
@@ -5585,9 +5583,9 @@ bool venc_dev::_venc_set_intra_period(OMX_U32 nPFrames, OMX_U32 nBFrames)
         nBFrames = 0;
     }
 
-    if (!venc_validate_range(V4L2_CID_MPEG_VIDC_VIDEO_NUM_B_FRAMES, nBFrames) || (nBFrames > VENC_BFRAME_MAX_COUNT)) {
-        DEBUG_PRINT_ERROR("Invalid settings, hardware doesn't support %u bframes", nBFrames);
-        return false;
+    if (nBFrames > VENC_BFRAME_MAX_COUNT) {
+        DEBUG_PRINT_LOW("Hardware doesn't support %u bframes, Continuing with Max supported count 1", nBFrames);
+        nBFrames = VENC_BFRAME_MAX_COUNT;
     }
 
     intra_period.num_pframes = nPFrames;
