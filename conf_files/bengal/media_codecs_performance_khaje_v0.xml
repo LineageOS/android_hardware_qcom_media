@@ -63,7 +63,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
             <Limit name="measured-frame-rate-1920x1080" range="10-15" />
         </MediaCodec>
         <MediaCodec name="c2.android.av1.encoder" type="video/av01" update="true">
-            <Limit name="measured-frame-rate-320x240" range="600-650" />
+            <Limit name="measured-frame-rate-320x240" range="122-125" />
             <Limit name="measured-frame-rate-640x360" range="75-200" />
             <Limit name="measured-frame-rate-720x480" range="49-110" />
             <Limit name="measured-frame-rate-1280x720" range="19-41" />
