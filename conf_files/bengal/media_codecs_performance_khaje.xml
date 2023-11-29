@@ -91,7 +91,7 @@ limitations under the License.
             <Limit name="measured-frame-rate-1280x720" range="19-41" />
         </MediaCodec>
         <MediaCodec name="c2.android.vp9.encoder" type="video/x-vnd.on2.vp9" update="true">
-            <Limit name="measured-frame-rate-320x180" range="600-700" />
+            <Limit name="measured-frame-rate-320x180" range="127-132" />
             <Limit name="measured-frame-rate-640x360" range="100-200" />
             <Limit name="measured-frame-rate-1280x720" range="20-50" />
         </MediaCodec>
