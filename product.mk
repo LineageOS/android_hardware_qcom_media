@@ -14,7 +14,7 @@ PRODUCT_PACKAGES += $(MM_CORE)
 # TODO(PC): Override ccodec selection option back to defult (4).
 #           QSSI is forcing this to '1'. Must be reverted
 ifeq ($(call is-board-platform-in-list, crow blair pitti bengal neo parrot taro lahaina holi \
-        kona trinket), true)
+        kona trinket qcs605), true)
     $(warning "Default Codec2.0 Enabled")
     PRODUCT_PROPERTY_OVERRIDES += debug.stagefright.ccodec=4
 endif
