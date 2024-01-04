@@ -343,8 +343,6 @@ void* venc_dev::async_venc_message_thread (void *input)
                 }
                 if (v4l2_buf.flags & V4L2_BUF_FLAG_PFRAME) {
                     venc_msg.buf.flags |= OMX_VIDEO_PictureTypeP;
-                } else if (v4l2_buf.flags & V4L2_BUF_FLAG_BFRAME) {
-                    venc_msg.buf.flags |= OMX_VIDEO_PictureTypeB;
                 }
 
                 if (v4l2_buf.flags & V4L2_BUF_FLAG_CODECCONFIG)
@@ -1639,6 +1637,16 @@ bool venc_dev::venc_open(OMX_U32 codec)
     }
 
     memset(&fmt, 0, sizeof(fmt));
+    fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
+    fmt.fmt.pix_mp.height = m_sVenc_cfg.input_height;
+    fmt.fmt.pix_mp.width = m_sVenc_cfg.input_width;
+    fmt.fmt.pix_mp.pixelformat = V4L2_DEFAULT_OUTPUT_COLOR_FMT;
+    fmt.fmt.pix_mp.colorspace = V4L2_COLORSPACE_470_SYSTEM_BG;
+
+    ret = ioctl(m_nDriver_fd, VIDIOC_S_FMT, &fmt);
+    m_sInput_buff_property.datasize=fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
+
+    memset(&fmt, 0, sizeof(fmt));
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
     fmt.fmt.pix_mp.height = m_sVenc_cfg.dvs_height;
     fmt.fmt.pix_mp.width = m_sVenc_cfg.dvs_width;
@@ -1654,16 +1662,6 @@ bool venc_dev::venc_open(OMX_U32 codec)
     }
 
     m_sOutput_buff_property.datasize=fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
-
-    memset(&fmt, 0, sizeof(fmt));
-    fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
-    fmt.fmt.pix_mp.height = m_sVenc_cfg.input_height;
-    fmt.fmt.pix_mp.width = m_sVenc_cfg.input_width;
-    fmt.fmt.pix_mp.pixelformat = V4L2_DEFAULT_OUTPUT_COLOR_FMT;
-    fmt.fmt.pix_mp.colorspace = V4L2_COLORSPACE_470_SYSTEM_BG;
-
-    ret = ioctl(m_nDriver_fd, VIDIOC_S_FMT, &fmt);
-    m_sInput_buff_property.datasize=fmt.fmt.pix_mp.plane_fmt[0].sizeimage;
 
     bufreq.memory = V4L2_MEMORY_USERPTR;
     bufreq.count = 2;
