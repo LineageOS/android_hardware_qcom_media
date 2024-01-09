@@ -72,7 +72,7 @@ case "$target" in
        fi
        ;;
    "lito")
-       if [ $build_codename -le "13" ]; then
+       if [ $build_codename -le "14" ]; then
            setprop vendor.netflix.bsp_rev "Q7250-19133-1"
        fi
        ;;
