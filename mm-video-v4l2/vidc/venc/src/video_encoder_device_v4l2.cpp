@@ -420,8 +420,6 @@ void* venc_dev::async_venc_message_thread (void *input)
 
                 if (v4l2_buf.flags & V4L2_BUF_FLAG_PFRAME) {
                     venc_msg.buf.flags |= OMX_VIDEO_PictureTypeP;
-                } else if (v4l2_buf.flags & V4L2_BUF_FLAG_BFRAME) {
-                    venc_msg.buf.flags |= OMX_VIDEO_PictureTypeB;
                 }
 
                 if (v4l2_buf.flags & V4L2_QCOM_BUF_FLAG_CODECCONFIG)
@@ -6263,10 +6261,6 @@ bool venc_dev::venc_calibrate_gop()
         return false;
     }
 
-    if (nBframes && !nPframes) {
-        DEBUG_PRINT_ERROR("nPframes should be non-zero when nBframes is non-zero\n");
-        return false;
-    }
 
     if (nLayers > 1) { /*Multi-layer encoding*/
         sub_gop_size = 1 << (nLayers - 1);
@@ -8096,7 +8090,16 @@ bool venc_dev::venc_validate_profile_level(OMX_U32 *eProfile, OMX_U32 *eLevel)
                                         MIN((unsigned int) (profile_tbl[5] / mb_per_frame), MAXDPB));
                         break;
                     } else {
+                        if(m_codec == OMX_VIDEO_CodingHEVC ||
+                           m_codec == OMX_VIDEO_CodingMPEG4) {
+                           if(*eLevel == profile_tbl[3])
                         new_level = (int)profile_tbl[3];
+                           else {
+                             new_level = (int)*eLevel;
+                           }
+                        } else {
+                            new_level = (int)profile_tbl[3];
+                        }
                         profile_level_found = true;
                         DEBUG_PRINT_LOW("Appropriate profile/level found %u/%u", (int) *eProfile, (int) new_level);
                         break;

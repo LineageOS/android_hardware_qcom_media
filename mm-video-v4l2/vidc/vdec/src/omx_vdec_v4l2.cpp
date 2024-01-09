@@ -8239,9 +8239,12 @@ OMX_ERRORTYPE  omx_vdec::fill_this_buffer_proxy(
         buffer->nFilledLen = 0;
         DEBUG_PRINT_ERROR("Failed to qbuf to driver, error %s", strerror(errno));
         m_cb.FillBufferDone(hComp, m_app_data, buffer);
-        return OMX_ErrorHardware;
+        if (errno == ENOMEM) {
+           return OMX_ErrorInsufficientResources;
+        } else {
+          return OMX_ErrorHardware;
+        }
     }
-
     if (secure_mode)
         prefetchNewBuffers(false);
 

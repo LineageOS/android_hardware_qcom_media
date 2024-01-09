@@ -273,6 +273,7 @@ omx_video::omx_video():
     async_thread_created = false;
     msg_thread_created = false;
     msg_thread_stop = false;
+    is_c2d_reqd = false ;
 
     OMX_INIT_STRUCT(&m_blurInfo, OMX_QTI_VIDEO_CONFIG_BLURINFO);
     m_blurInfo.nPortIndex == (OMX_U32)PORT_INDEX_IN;
@@ -5339,6 +5340,13 @@ bool omx_video::is_conv_needed(int hal_fmt, int hal_flags)
     if (!strncmp(m_platform, "msm8996", 7)) {
         bRet = hal_fmt == HAL_PIXEL_FORMAT_RGBA_8888 &&
             !(hal_flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED);
+    } else if ((!strncmp(m_platform, "sdm660", 6)) && ( hal_fmt == QOMX_COLOR_FORMATYUV420PackedSemiPlanar32mCompressed &&
+        (hal_flags & private_handle_t::PRIV_FLAGS_UBWC_ALIGNED ))){
+        bRet = true;
+        is_c2d_reqd = true;
+    } else if ((!strncmp(m_platform, "sdm660", 6)) && ( hal_fmt == HAL_PIXEL_FORMAT_YV12)) {
+        bRet = true;
+        is_c2d_reqd = true;
     } else {
         bRet = hal_fmt == HAL_PIXEL_FORMAT_RGBA_8888;
     }
@@ -5423,7 +5431,25 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_opaque(OMX_IN OMX_HANDLETYPE hComp,
                 DEBUG_PRINT_INFO("open Color conv forW: %u, H: %u",
                         (unsigned int)m_sInPortDef.format.video.nFrameWidth,
                         (unsigned int)m_sInPortDef.format.video.nFrameHeight);
-                if (!c2d_conv.open(m_sInPortDef.format.video.nFrameHeight,
+                if (is_c2d_reqd) {
+                   if (handle->format == HAL_PIXEL_FORMAT_YV12) {
+                       if (!c2d_conv.open(m_sInPortDef.format.video.nFrameHeight,
+                                    m_sInPortDef.format.video.nFrameWidth,
+                                    YCbCr420P, NV12_128m, handle->width, handle->flags)) {
+                           m_pCallbacks.EmptyBufferDone(hComp,m_app_data,buffer);
+                       DEBUG_PRINT_ERROR("Color conv open failed");
+                           return OMX_ErrorBadParameter;
+                      } 
+                   } else {
+                          if (!c2d_conv.open(m_sInPortDef.format.video.nFrameHeight,
+                                        m_sInPortDef.format.video.nFrameWidth,
+                                        NV12_UBWC, NV12_128m, handle->width, handle->flags)) {
+                               m_pCallbacks.EmptyBufferDone(hComp,m_app_data,buffer);
+                           DEBUG_PRINT_ERROR("Color conv open failed");
+                               return OMX_ErrorBadParameter;
+                        }
+                    }
+                } else if (!c2d_conv.open(m_sInPortDef.format.video.nFrameHeight,
                             m_sInPortDef.format.video.nFrameWidth,
                             RGBA8888, NV12_128m, handle->width, handle->flags)) {
                     m_pCallbacks.EmptyBufferDone(hComp,m_app_data,buffer);

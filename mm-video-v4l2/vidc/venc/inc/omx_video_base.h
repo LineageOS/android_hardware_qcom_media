@@ -728,6 +728,7 @@ class omx_video: public qc_omx_component
         bool async_thread_created;
         bool msg_thread_created;
         volatile bool msg_thread_stop;
+        volatile bool is_c2d_reqd;
 
         OMX_U8 m_nkind[128];
 
