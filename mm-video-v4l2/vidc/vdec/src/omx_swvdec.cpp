@@ -4221,12 +4221,13 @@ OMX_ERRORTYPE omx_swvdec::buffer_deallocate_op(
 
     if (ii < m_port_op.def.nBufferCountActual)
     {
+        pthread_mutex_lock(&m_meta_buffer_array_mutex);
         if (m_meta_buffer_mode)
         {
             // do nothing; munmap() & FD reset done in FBD or RR
         }
         else if (m_android_native_buffers)
-        {            
+        {
             ion_unmap(m_buffer_array_op[ii].buffer_payload.pmem_fd ,
                       m_buffer_array_op[ii].buffer_payload.bufferaddr,
                       m_buffer_array_op[ii].buffer_payload.mmaped_size);
@@ -4269,6 +4270,7 @@ OMX_ERRORTYPE omx_swvdec::buffer_deallocate_op(
                 meta_buffer_array_deallocate();
             }
         }
+        pthread_mutex_unlock(&m_meta_buffer_array_mutex);
     }
     else
     {
@@ -4379,15 +4381,23 @@ void omx_swvdec::meta_buffer_ref_remove(unsigned int index)
 {
     pthread_mutex_lock(&m_meta_buffer_array_mutex);
 
+    if (m_meta_buffer_array == NULL || m_buffer_array_op == NULL) {
+       OMX_SWVDEC_LOG_ERROR("Invalid meta buffer");
+       pthread_mutex_unlock(&m_meta_buffer_array_mutex);
+       return;
+    }
+
     m_meta_buffer_array[index].ref_count--;
 
     if (m_meta_buffer_array[index].ref_count == 0)
     {
-        ion_unmap(m_meta_buffer_array[index].fd,
+        if (m_buffer_array_op[index].buffer_payload.pmem_fd != -1) {
+           ion_unmap(m_meta_buffer_array[index].fd,
                   m_buffer_array_op[index].buffer_payload.bufferaddr,
                   m_buffer_array_op[index].buffer_payload.mmaped_size);
+           m_meta_buffer_array[index].fd = -1;
+        }
 
-        m_meta_buffer_array[index].fd = -1;
         m_buffer_array_op[index].buffer_payload.bufferaddr  = NULL;
         m_buffer_array_op[index].buffer_payload.offset      = 0;
         m_buffer_array_op[index].buffer_payload.mmaped_size = 0;
