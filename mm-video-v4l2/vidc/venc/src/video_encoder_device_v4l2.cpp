@@ -4530,11 +4530,13 @@ bool venc_dev::venc_empty_batch(OMX_BUFFERHEADERTYPE *bufhdr, unsigned index)
 
             if (bufhdr->nFlags & OMX_BUFFERFLAG_EOS)
                 buf.flags |= V4L2_QCOM_BUF_FLAG_EOS;
+#if NEED_TO_REVISIT
             if (i != numBufs - 1) {
                 buf.flags |= V4L2_MSM_BUF_FLAG_DEFER;
                 DEBUG_PRINT_LOW("for buffer %d (etb #%d) in batch of %d, marking as defer",
                         i, etb + 1, numBufs);
             }
+#endif
 
             // timestamp differences from camera are in nano-seconds
             bufTimeStamp = bufhdr->nTimeStamp + MetaBufferUtil::getIntAt(hnd, i, MetaBufferUtil::INT_TIMESTAMP) / 1000;
@@ -4652,10 +4654,12 @@ bool venc_dev::venc_fill_buf(void *buffer, void *pmem_data_buf,unsigned index,un
         // This results in the first batch being of size mBatchSize + 1, but thats good because
         // we need an extra FTB for the codec specific data.
 
+#if NEED_TO_REVISIT
         if (!ftb || ftb % mBatchSize) {
             buf.flags |= V4L2_MSM_BUF_FLAG_DEFER;
             DEBUG_PRINT_LOW("for ftb buffer %d marking as defer", ftb + 1);
         }
+#endif
     }
 
     extra_idx = EXTRADATA_IDX(num_output_planes);
