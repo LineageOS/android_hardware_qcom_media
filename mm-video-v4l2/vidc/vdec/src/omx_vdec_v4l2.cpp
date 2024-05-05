@@ -7542,7 +7542,9 @@ OMX_ERRORTYPE  omx_vdec::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE  hComp,
     buf.timestamp.tv_sec = buffer->nTimeStamp / 1000000;
     buf.timestamp.tv_usec = (buffer->nTimeStamp % 1000000);
     buf.flags |= (buffer->nFlags & OMX_BUFFERFLAG_CODECCONFIG) ? V4L2_QCOM_BUF_FLAG_CODECCONFIG: 0;
+#if NEED_TO_REVISIT
     buf.flags |= (buffer->nFlags & OMX_BUFFERFLAG_DECODEONLY) ? V4L2_QCOM_BUF_FLAG_DECODEONLY: 0;
+#endif
 
     if (buffer->nFlags & OMX_BUFFERFLAG_CODECCONFIG) {
         DEBUG_PRINT_LOW("Increment codec_config buffer counter");
@@ -8889,9 +8891,11 @@ int omx_vdec::async_message_process (void *context, void* message)
                    if (v4l2_buf_ptr->flags & V4L2_QCOM_BUF_FLAG_EOSEQ) {
                        omxhdr->nFlags |= QOMX_VIDEO_BUFFERFLAG_EOSEQ;
                    }
+#if NEED_TO_REVISIT
                    if (v4l2_buf_ptr->flags & V4L2_QCOM_BUF_FLAG_DECODEONLY) {
                        omxhdr->nFlags |= OMX_BUFFERFLAG_DECODEONLY;
                    }
+#endif
                    if (v4l2_buf_ptr->flags & V4L2_QCOM_BUF_FLAG_READONLY) {
                         omxhdr->nFlags |= OMX_BUFFERFLAG_READONLY;
                         DEBUG_PRINT_LOW("F_B_D: READONLY BUFFER - REFERENCE WITH F/W fd = %d",
