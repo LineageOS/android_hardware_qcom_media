@@ -7257,7 +7257,9 @@ if (buffer->nFlags & QOMX_VIDEO_BUFFERFLAG_EOSEQ) {
     buf.timestamp.tv_sec = frameinfo.timestamp / 1000000;
     buf.timestamp.tv_usec = (frameinfo.timestamp % 1000000);
     buf.flags |= (buffer->nFlags & OMX_BUFFERFLAG_CODECCONFIG) ? V4L2_QCOM_BUF_FLAG_CODECCONFIG: 0;
+#if NEED_TO_REVISIT
     buf.flags |= (buffer->nFlags & OMX_BUFFERFLAG_DECODEONLY) ? V4L2_QCOM_BUF_FLAG_DECODEONLY: 0;
+#endif
 
     if (buffer->nFlags & OMX_BUFFERFLAG_CODECCONFIG) {
         DEBUG_PRINT_LOW("Increment codec_config buffer counter");
@@ -8570,9 +8572,11 @@ int omx_vdec::async_message_process (void *context, void* message)
                     if (v4l2_buf_ptr->flags & V4L2_QCOM_BUF_FLAG_EOSEQ) {
                         omxhdr->nFlags |= QOMX_VIDEO_BUFFERFLAG_EOSEQ;
                     }
+#if NEED_TO_REVISIT
                     if (v4l2_buf_ptr->flags & V4L2_QCOM_BUF_FLAG_DECODEONLY) {
                         omxhdr->nFlags |= OMX_BUFFERFLAG_DECODEONLY;
                     }
+#endif
 
                     if (v4l2_buf_ptr->flags & V4L2_MSM_BUF_FLAG_MBAFF) {
                         omxhdr->nFlags |= QOMX_VIDEO_BUFFERFLAG_MBAFF;
@@ -8586,7 +8590,9 @@ int omx_vdec::async_message_process (void *context, void* message)
 
                     if (omxhdr && (v4l2_buf_ptr->flags & V4L2_QCOM_BUF_DROP_FRAME) &&
                             !omx->output_flush_progress &&
+#if NEED_TO_REVISIT
                             !(v4l2_buf_ptr->flags & V4L2_QCOM_BUF_FLAG_DECODEONLY) &&
+#endif
                             !(v4l2_buf_ptr->flags & V4L2_QCOM_BUF_FLAG_EOS)) {
                         unsigned int index = v4l2_buf_ptr->index;
                         unsigned int extra_idx = EXTRADATA_IDX(omx->drv_ctx.num_planes);
