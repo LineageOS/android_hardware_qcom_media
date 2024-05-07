@@ -16,6 +16,24 @@
       "message": "tested on msm8996",
       "revId": "802687d57ce1b9959de25a33d3f566bf2b8bc725",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "284b787c_f5cc56d3",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 16185
+      },
+      "writtenOn": "2024-05-07T03:31:44Z",
+      "side": 1,
+      "message": "Strongly doubt that - what AOSP 8996 could you possibly have booting on QPR2? (hint: This is NOT the CAF HAL)",
+      "parentUuid": "33e02ebd_03830552",
+      "revId": "802687d57ce1b9959de25a33d3f566bf2b8bc725",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
