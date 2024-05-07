@@ -16,6 +16,24 @@
       "message": "@bgcngm@gmail.com pls check xiaomi_msm8996 lge 8996 seemed effected",
       "revId": "4a5c3d0afec12e0c35b27435927fbf7831e681d7",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "6fd18c8f_c534e55d",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2024-05-07T21:41:45Z",
+      "side": 1,
+      "message": "I will check tomorrow, but I never got any complaints from users.",
+      "parentUuid": "67078b47_bd73f036",
+      "revId": "4a5c3d0afec12e0c35b27435927fbf7831e681d7",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
