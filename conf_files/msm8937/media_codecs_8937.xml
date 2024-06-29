@@ -107,9 +107,8 @@ Only the three quirks included above are recognized at this point:
 -->
 
 <MediaCodecs>
-    <Include href="media_codecs_google_audio.xml" />
-    <Include href="media_codecs_google_telephony.xml" />
     <Settings>
+        <Domain name="telephony" enabled="true" />
         <Setting name="max-video-encoder-input-buffers" value="9" />
     </Settings>
     <Encoders>
@@ -232,5 +231,4 @@ Only the three quirks included above are recognized at this point:
             <Limit name="concurrent-instances" max="1" />
         </MediaCodec>
     </Decoders>
-    <Include href="media_codecs_google_video.xml" />
 </MediaCodecs>
