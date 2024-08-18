@@ -49,10 +49,12 @@ omx_core_cb_type core[] =
     OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.vp8", "libOmxVdec.so", "video_decoder.vp8"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.vp9", "libOmxVdec.so", "video_decoder.vp9"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.decoder.vp9.secure", "libOmxVdec.so", "video_decoder.vp9"),
+#ifndef ENABLE_OMX_SW_CODECS
     OMX_REGISTRY_ENTRY("OMX.qti.video.decoder.mpeg4sw", "libOmxSwVdec.so", "video_decoder.mpeg4"),
     OMX_REGISTRY_ENTRY("OMX.qti.video.decoder.h263sw", "libOmxSwVdec.so", "video_decoder.h263"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.mpeg4sw", "libOmxSwVencMpeg4.so", "video_encoder.mpeg4"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.h263sw", "libOmxSwVencMpeg4.so", "video_encoder.h263"),
+#endif
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.avc", "libOmxVenc.so", "video_encoder.avc"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.avc.secure", "libOmxVenc.so", "video_encoder.avc"),
     OMX_REGISTRY_ENTRY("OMX.qcom.video.encoder.vp8", "libOmxVenc.so", "video_encoder.vp8"),
@@ -67,9 +69,13 @@ omx_core_cb_type core[] =
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.wmaLossLess", "libOmxWmaDec.so", "audio_decoder.wma"),
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.amrwbplus", "libOmxAmrwbplusDec.so", "audio_decoder.awbplus"),
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.alac", "libOmxAlacDec.so", "audio_decoder.alac"),
+#ifndef ENABLE_OMX_SW_CODECS
     OMX_REGISTRY_ENTRY("OMX.qti.audio.decoder.alac.sw", "libOmxAlacDecSw.so", "audio_decoder.alac"),
+#endif
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.decoder.ape", "libOmxApeDec.so", "audio_decoder.ape"),
+#ifndef ENABLE_OMX_SW_CODECS
     OMX_REGISTRY_ENTRY("OMX.qti.audio.decoder.ape.sw", "libOmxApeDecSw.so", "audio_decoder.ape"),
+#endif
     OMX_REGISTRY_ENTRY("OMX.qti.audio.decoder.dsd", "libOmxDsdDec.so", "audio_decoder.dsd"),
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.encoder.aac", "libOmxAacEnc.so", "audio_encoder.aac"),
     OMX_REGISTRY_ENTRY("OMX.qcom.audio.encoder.qcelp13", "libOmxQcelp13Enc.so", "audio_encoder.qcelp13"),
@@ -89,7 +95,9 @@ omx_core_cb_type core[] =
 //#endif //_STEPPE_
 
 //#if !defined(_ATOLL_) && !defined(_TRINKET_)
+#ifndef ENABLE_OMX_SW_CODECS
     OMX_REGISTRY_ENTRY("OMX.qti.video.decoder.vc1sw", "libOmxSwVdec.so", "video_decoder.vc1"),
+#endif
 //#endif //_ATOLL_ || _TRINKET_
 
     OMX_REGISTRY_ENTRY("OMX.QCOM.CUST.COMP.START", NULL, NULL),
