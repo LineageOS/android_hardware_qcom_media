@@ -195,5 +195,11 @@ limitations under the License.
             <Limit name="measured-frame-rate-720x480" range="102-228" />
             <Limit name="measured-frame-rate-1280x720" range="52-116" />
         </MediaCodec>
-    </Decoders>
+        <MediaCodec name="c2.android.av1-dav1d.decoder" type="video/av01" update="true">
+            <Limit name="measured-frame-rate-352x288" range="826-855" />
+            <Limit name="measured-frame-rate-640x360" range="260-284" />
+            <Limit name="measured-frame-rate-720x480" range="220-250" />
+            <Limit name="measured-frame-rate-1280x720" range="126-127" />
+        </MediaCodec>
+</Decoders>
 </MediaCodecs>
