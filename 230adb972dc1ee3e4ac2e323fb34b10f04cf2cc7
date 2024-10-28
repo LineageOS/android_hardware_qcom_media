@@ -16,6 +16,24 @@
       "message": "...",
       "revId": "230adb972dc1ee3e4ac2e323fb34b10f04cf2cc7",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "1f198217_afe59b56",
+        "filename": "conf_files/sm6150/media_codecs_vendor_sdmmagpie_v1.xml",
+        "patchSetId": 2
+      },
+      "lineNbr": 90,
+      "author": {
+        "id": 16185
+      },
+      "writtenOn": "2024-10-28T00:30:12Z",
+      "side": 1,
+      "message": "Done and ff\u0027d to 22.0",
+      "parentUuid": "3f3f115b_7890afa9",
+      "revId": "230adb972dc1ee3e4ac2e323fb34b10f04cf2cc7",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ],
   "submitRequirementResults": []
