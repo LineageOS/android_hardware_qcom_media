@@ -1096,8 +1096,8 @@ OMX_ERRORTYPE venc_dev::venc_get_supported_profile_level(OMX_VIDEO_PARAM_PROFILE
     if (m_sVenc_cfg.codectype == V4L2_PIX_FMT_HEVC) {
         property_get("ro.board.platform", platform_name, "0");
         if (!strncmp(platform_name, "lito", 4)) {
-            if (property_get("vendor.media.target.version", version, "0") && ((atoi(version) != 2) && (atoi(version) != 3))) {
-                DEBUG_PRINT_LOW("Disabling main10 and above for saipan");
+            if (property_get("vendor.media.target.version", version, "0") && ((atoi(version) != 2))) {
+                DEBUG_PRINT_LOW("Disabling main10 and above for saipan and lagoon");
                 m_disable_hdr = 0x2;
             }
         }
