@@ -2873,6 +2873,8 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
     bool hdr_supported = true;
     struct v4l2_queryctrl profile_cap, level_cap, tier_cap;
     int v4l2_profile;
+    char platform_name[PROP_VALUE_MAX] = {0};
+    char version[PROP_VALUE_MAX] = {0};
     int avc_profiles[5] = { QOMX_VIDEO_AVCProfileConstrainedBaseline,
                             QOMX_VIDEO_AVCProfileBaseline,
                             QOMX_VIDEO_AVCProfileMain,
@@ -3009,6 +3011,17 @@ OMX_ERRORTYPE omx_vdec::get_supported_profile_level(OMX_VIDEO_PARAM_PROFILELEVEL
         DEBUG_PRINT_ERROR("%s: Invalid index corresponding profile not supported : %d ",__FUNCTION__, profileLevelType->eProfile);
         eRet = OMX_ErrorNoMore;
     }
+
+    if (output_capability == V4L2_PIX_FMT_HEVC) {
+        property_get("ro.board.platform", platform_name, "0");
+        if (!strncmp(platform_name, "lito", 4)) {
+            if (property_get("vendor.media.target.version", version, "0") && ((atoi(version) == 3))) {
+                DEBUG_PRINT_LOW("Disabling main10 and above for lagoon");
+                m_disable_hdr = 0x1;
+            }
+        }
+    }
+
     if (m_disable_hdr & DEC_HDR_DISABLE_FLAG) {
         if (output_capability == V4L2_PIX_FMT_VP9) {
             if (profileLevelType->eProfile == OMX_VIDEO_VP9Profile2HDR || profileLevelType->eProfile == OMX_VIDEO_VP9Profile2HDR10Plus
