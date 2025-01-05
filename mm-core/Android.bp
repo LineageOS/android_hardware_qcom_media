@@ -1,0 +1,80 @@
+cc_library_shared {
+    name: "libOmxCore",
+    vendor: true,
+
+    srcs: [
+        "src/common/omx_core_cmp.cpp",
+        "src/common/qc_omx_core.c",
+    ] + select(soong_config_variable("ANDROID", "target_board_platform"), {
+        "msm8998": ["src/msm8998/registry_table_android.c"],
+        "sdm660": ["src/sdm660/registry_table_android.c"],
+        default: [],
+    }),
+
+    cflags: [
+        "-fno-inline",
+        "-fno-short-enums",
+        "-D_ANDROID_",
+    ],
+
+    local_include_dirs: [
+        "src/common",
+    ],
+
+    header_libs: [
+        "libomxcore_headers",
+        "libutils_headers",
+    ],
+
+    export_header_lib_headers: [
+        "libomxcore_headers",
+    ],
+
+    shared_libs: [
+        "libcutils",
+    ],
+}
+
+
+cc_library_shared {
+    name: "libmm-omxcore",
+    vendor: true,
+
+    srcs: [
+        "src/common/omx_core_cmp.cpp",
+        "src/common/qc_omx_core.c",
+    ] + select(soong_config_variable("ANDROID", "target_board_platform"), {
+        "msm8998": ["src/msm8998/registry_table.c"],
+        "sdm660": ["src/sdm660/registry_table.c"],
+        default: [],
+    }),
+
+    cflags: [
+        "-fno-inline",
+        "-fno-short-enums",
+        "-D_ANDROID_",
+    ],
+
+    local_include_dirs: [
+        "src/common",
+    ],
+
+    header_libs: [
+        "libomxcore_headers",
+        "libutils_headers",
+    ],
+
+    export_header_lib_headers: [
+        "libomxcore_headers",
+    ],
+
+    shared_libs: [
+        "libcutils",
+    ],
+}
+
+cc_library_headers {
+    name: "libomxcore_headers",
+    export_include_dirs: ["inc"],
+    vendor: true,
+}
