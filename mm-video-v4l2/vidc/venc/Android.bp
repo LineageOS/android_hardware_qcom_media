@@ -1,0 +1,66 @@
+cc_library_shared {
+    name: "libOmxVenc",
+    vendor: true,
+
+    srcs: [
+        "src/omx_video_base.cpp",
+        "src/omx_video_encoder.cpp",
+        "src/video_encoder_device_v4l2.cpp",
+    ],
+
+    cflags: [
+        "-Werror",
+        "-D_ANDROID_",
+        "-D_ANDROID_ICS_",
+        "-D_MSM8974_",
+        "-DMAX_RES_1080P",
+        "-DMAX_RES_1080P_EBI",
+        "-DSUPPORT_CONFIG_INTRA_REFRESH",
+        "-DUSE_CAMERA_METABUFFER_UTILS",
+        "-DUSE_ION",
+        "-DUSE_NATIVE_HANDLE_SOURCE",
+    ] + select(soong_config_variable("ANDROID", "target_board_platform"), {
+        "msm8998": [
+            "-D_PQ_",
+            "-D_UBWC_",
+            "-D_VQZIP_",
+            "-DLTR_SUPPORT",
+            "-DMAX_H264_LEVEL_52",
+        ],
+        "sdm660": [
+            "-D_NV21_",
+            "-D_PQ_",
+            "-DLTR_SUPPORT",
+            "-DMAX_H264_LEVEL_51",
+        ],
+        default: [],
+    }),
+
+    header_libs: [
+        "display_headers",
+        "libc2dcolorconvert_headers",
+        "libomxcommon_headers",
+        "libomxcore_headers",
+        "libomxvenc_headers",
+        "libstagefrighthw_headers",
+        "media_plugin_headers",
+        "qti_kernel_headers",
+    ],
+
+    shared_libs: [
+        "libc2dcolorconvert",
+        "libcutils",
+        "liblog",
+        "libqdMetaData",
+    ],
+
+    static_libs: [
+        "libOmxVidcCommon",
+    ],
+}
+
+cc_library_headers {
+    name: "libomxvenc_headers",
+    export_include_dirs: ["inc"],
+    vendor: true,
+}

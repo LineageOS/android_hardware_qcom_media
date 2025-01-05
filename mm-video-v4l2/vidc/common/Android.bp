@@ -1,0 +1,36 @@
+cc_library_static {
+    name: "libOmxVidcCommon",
+    vendor: true,
+
+    srcs: [
+        "src/vidc_common.cpp",
+        "src/vidc_vendor_extensions.cpp"
+    ],
+
+    cflags: [
+        "-Werror",
+        "-D_ANDROID_",
+        "-D_ANDROID_ICS_",
+        "-DUSE_ION",
+    ],
+
+    header_libs: [
+        "display_headers",
+        "libomxcommon_headers",
+        "libomxcore_headers",
+        "libutils_headers",
+        "qti_kernel_headers",
+    ],
+
+    shared_libs: [
+        "libcutils",
+        "libdl",
+        "liblog",
+    ],
+}
+
+cc_library_headers {
+    name: "libomxcommon_headers",
+    export_include_dirs: ["inc"],
+    vendor: true,
+}
