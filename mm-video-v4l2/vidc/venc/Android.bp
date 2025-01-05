@@ -1,0 +1,63 @@
+cc_library_shared {
+    name: "libOmxVenc",
+    sanitize: {
+        integer_overflow: true,
+    },
+    vendor: true,
+
+    srcs: [
+        "src/omx_video_base.cpp",
+        "src/omx_video_encoder.cpp",
+        "src/video_encoder_device_v4l2.cpp",
+        "src/video_encoder_device_v4l2_params.cpp",
+    ],
+
+    cflags: [
+        "-Werror",
+        "-D_ANDROID_",
+        "-D_ANDROID_ICS_",
+        "-D_UBWC_",
+        "-DUSE_CAMERA_METABUFFER_UTILS",
+        "-DUSE_ION",
+        "-DUSE_NATIVE_HANDLE_SOURCE",
+    ] + select(soong_config_variable("ANDROID", "target_board_platform"), {
+        "bengal": ["-U_UBWC_"],
+        default: [],
+    }),
+
+    include_dirs: [
+        "system/memory/libion/include",
+        "system/memory/libion/kernel-headers",
+    ],
+
+    header_libs: [
+        "display_headers",
+        "libc2dcolorconvert_headers",
+        "libomxcommon_headers",
+        "libomxcore_headers",
+        "libomxvenc_headers",
+        "libplatformconfig_headers",
+        "libstagefrighthw_headers",
+        "media_plugin_headers",
+        "qti_kernel_headers",
+    ],
+
+    shared_libs: [
+        "libc2dcolorconvert",
+        "libcutils",
+        "libion",
+        "liblog",
+        "libplatformconfig",
+        "libqdMetaData",
+    ],
+
+    static_libs: [
+        "libOmxVidcCommon",
+    ],
+}
+
+cc_library_headers {
+    name: "libomxvenc_headers",
+    export_include_dirs: ["inc"],
+    vendor: true,
+}
