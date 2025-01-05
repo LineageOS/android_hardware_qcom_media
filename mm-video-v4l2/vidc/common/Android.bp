@@ -1,0 +1,39 @@
+cc_library_static {
+    name: "libOmxVidcCommon",
+    vendor: true,
+
+    srcs: [
+        "src/extra_data_handler.cpp",
+        "src/vidc_color_converter.cpp",
+        "src/vidc_vendor_extensions.cpp"
+    ],
+
+    cflags: [
+        "-Werror",
+        "-D_ANDROID_",
+        "-D_ANDROID_ICS_",
+    ] + select(soong_config_variable("ANDROID", "target_board_platform"), {
+        "msm8937": [
+            "-D_TARGET_KERNEL_VERSION_49_",
+        ],
+        "msm8953": [
+            "-D_TARGET_KERNEL_VERSION_49_",
+        ],
+        default: [],
+    }),
+
+    header_libs: [
+        "display_headers",
+        "libc2dcolorconvert_headers",
+        "libomxcommon_headers",
+        "libomxcore_headers",
+        "libutils_headers",
+        "qti_kernel_headers",
+    ],
+}
+
+cc_library_headers {
+    name: "libomxcommon_headers",
+    export_include_dirs: ["inc"],
+    vendor: true,
+}
