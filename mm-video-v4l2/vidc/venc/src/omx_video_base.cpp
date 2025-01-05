@@ -244,6 +244,13 @@ omx_video::omx_video():
     m_pInput_ion(NULL),
     m_pOutput_ion(NULL),
 #endif
+    m_fastcv_lib(NULL),
+    m_fcvSetOperationMode(NULL),
+    m_fcvMemInit(NULL),
+    m_fcvMemDeInit(NULL),
+    m_fcvCleanUp(NULL),
+    m_fcvFlipu8(NULL),
+    m_fcvFlipu16(NULL),
     m_error_propogated(false),
     m_state(OMX_StateInvalid),
     m_app_data(NULL),
@@ -349,9 +356,10 @@ omx_video::~omx_video()
             ((profile_frame_count - 1) * 1e6) / (profile_last_time - profile_start_time));
     }
     if (m_fastCV_init_done) {
-        fcvMemDeInit();
-        fcvCleanUp();
+        m_fcvMemDeInit();
+        m_fcvCleanUp();
         m_fastCV_init_done = false;
+        dlclose(m_fastcv_lib);
     }
     DEBUG_PRINT_HIGH("omx_video: Destructor exit");
     DEBUG_PRINT_HIGH("Exiting OMX Video Encoder ...");
@@ -5055,9 +5063,63 @@ bool omx_video::is_rotation_enabled()
 }
 
 void omx_video::initFastCV() {
-    fcvSetOperationMode(FASTCV_OP_CPU_PERFORMANCE);
-    fcvMemInit();
+    if (m_fastcv_lib) {
+        DEBUG_PRINT_HIGH("fastcv library already opened");
+        goto init;
+    }
+
+    if ((m_fastcv_lib = dlopen("libfastcvopt.so", RTLD_NOW)) == NULL) {
+        DEBUG_PRINT_ERROR("Failed to open libfastcvopt.so: %s", dlerror());
+        goto handle_err;
+    } else {
+        m_fcvSetOperationMode = (fcvSetOperationMode_t)dlsym(m_fastcv_lib, "fcvSetOperationMode");
+        if (m_fcvSetOperationMode == NULL) {
+            DEBUG_PRINT_ERROR("Failed to load symbol: fcvSetOperationMode");
+            goto handle_err;
+        }
+        m_fcvMemInit = (fcvMemInit_t)dlsym(m_fastcv_lib, "fcvMemInit");
+        if (m_fcvMemInit == NULL) {
+            DEBUG_PRINT_ERROR("Failed to load symbol: fcvMemInit");
+            goto handle_err;
+        }
+        m_fcvMemDeInit = (fcvMemDeInit_t)dlsym(m_fastcv_lib, "fcvMemDeInit");
+        if (m_fcvMemInit == NULL) {
+            DEBUG_PRINT_ERROR("Failed to load symbol: fcvMemDeInit");
+            goto handle_err;
+        }
+        m_fcvCleanUp = (fcvCleanUp_t)dlsym(m_fastcv_lib, "fcvCleanUp");
+        if (m_fcvCleanUp == NULL) {
+            DEBUG_PRINT_ERROR("Failed to load symbol: fcvCleanUp");
+            goto handle_err;
+        }
+        m_fcvFlipu8 = (fcvFlipu8_t)dlsym(m_fastcv_lib, "fcvFlipu8");
+        if (m_fcvFlipu8 == NULL) {
+            DEBUG_PRINT_ERROR("Failed to load symbol: fcvFlipu8");
+            goto handle_err;
+        }
+        m_fcvFlipu16 = (fcvFlipu16_t)dlsym(m_fastcv_lib, "fcvFlipu16");
+        if (m_fcvFlipu16 == NULL) {
+            DEBUG_PRINT_ERROR("Failed to load symbol: fcvFlipu16");
+            goto handle_err;
+        }
+    }
+init:
+    m_fcvSetOperationMode(FASTCV_OP_CPU_PERFORMANCE);
+    m_fcvMemInit();
     m_fastCV_init_done = true;
+    return;
+
+handle_err:
+    if (m_fastcv_lib)
+        dlclose(m_fastcv_lib);
+    m_fastcv_lib = NULL;
+    m_fcvSetOperationMode = NULL;
+    m_fcvMemInit = NULL;
+    m_fcvMemDeInit = NULL;
+    m_fcvCleanUp = NULL;
+    m_fcvFlipu8 = NULL;
+    m_fcvFlipu16 = NULL;
+    m_fastCV_init_done = false;
 }
 
 bool omx_video::is_flip_conv_needed(private_handle_t *handle) {
@@ -5109,9 +5171,9 @@ OMX_ERRORTYPE omx_video::do_flip_conversion(struct pmem *buffer) {
     }
     unsigned char *src = uva;
     DEBUG_PRINT_LOW("start flip conversion");
-    fcvFlipu8( src, width, height, stride, src, stride, direction);
+    m_fcvFlipu8(src, width, height, stride, src, stride, direction);
     src = src + (stride * scanLines);
-    fcvFlipu16((OMX_U16 *)src,width/2,height/2,stride,(OMX_U16 *)src,stride,direction);
+    m_fcvFlipu16((OMX_U16 *)src,width/2,height/2,stride,(OMX_U16 *)src,stride,direction);
 
     ion_unmap(buffer->fd, uva, buffer->size);
     return ret;

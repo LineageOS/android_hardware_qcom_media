@@ -630,7 +630,22 @@ class omx_video: public qc_omx_component
         bool is_conv_needed(private_handle_t *handle);
         bool is_flip_conv_needed(private_handle_t *handle);
         OMX_ERRORTYPE do_flip_conversion(struct pmem *buffer);
+
         void initFastCV();
+        typedef int (*fcvSetOperationMode_t)(int);
+        typedef void (*fcvMemInit_t)(void);
+        typedef void (*fcvMemDeInit_t)(void);
+        typedef void (*fcvCleanUp_t)(void);
+        typedef void (*fcvFlipu8_t)(const uint8_t*, uint32_t, uint32_t, uint32_t, uint8_t*, uint32_t, int);
+        typedef void (*fcvFlipu16_t)(const uint16_t*, uint32_t, uint32_t, uint32_t, uint16_t*, uint32_t, int);
+        void *m_fastcv_lib;
+        fcvSetOperationMode_t m_fcvSetOperationMode;
+        fcvMemInit_t m_fcvMemInit;
+        fcvMemDeInit_t m_fcvMemDeInit;
+        fcvCleanUp_t m_fcvCleanUp;
+        fcvFlipu8_t m_fcvFlipu8;
+        fcvFlipu16_t m_fcvFlipu16;
+
         void print_debug_color_aspects(ColorAspects *aspects, const char *prefix);
 
         OMX_ERRORTYPE get_vendor_extension_config(

@@ -1,0 +1,65 @@
+cc_library_shared {
+    name: "libOmxVdec",
+    sanitize: {
+        integer_overflow: true,
+    },
+    vendor: true,
+
+    srcs: [
+        "src/omx_vdec_v4l2.cpp",
+        "src/omx_vdec_v4l2_params.cpp",
+        "src/ts_parser.cpp",
+    ],
+
+    cflags: [
+        "-Werror",
+        "-Wno-parentheses",
+        "-D_ANDROID_",
+        "-D_ANDROID_ICS_",
+        "-D_UBWC_",
+        "-DADAPTIVE_PLAYBACK_SUPPORTED",
+        "-DALLOCATE_OUTPUT_NATIVEHANDLE",
+        "-DFLEXYUV_SUPPORTED",
+        "-DUSE_ION",
+    ] + select(soong_config_variable("ANDROID", "target_board_platform"), {
+        "bengal": ["-U_UBWC_"],
+        default: [],
+    }),
+
+    include_dirs: [
+        "system/memory/libion/include",
+        "system/memory/libion/kernel-headers",
+    ],
+
+    header_libs: [
+        "display_headers",
+        "libc2dcolorconvert_headers",
+        "libnativebase_headers",
+        "libomxcommon_headers",
+        "libomxcore_headers",
+        "libomxvdec_headers",
+        "libplatformconfig_headers",
+        "libutils_headers",
+        "media_plugin_headers",
+        "qti_kernel_headers",
+    ],
+
+    shared_libs: [
+        "libc2dcolorconvert",
+        "libcutils",
+        "libion",
+        "liblog",
+        "libplatformconfig",
+        "libqdMetaData",
+    ],
+
+    static_libs: [
+        "libOmxVidcCommon",
+    ],
+}
+
+cc_library_headers {
+    name: "libomxvdec_headers",
+    export_include_dirs: ["inc"],
+    vendor: true,
+}
