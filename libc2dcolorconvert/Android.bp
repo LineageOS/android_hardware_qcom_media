@@ -1,0 +1,28 @@
+cc_library_shared {
+    name: "libc2dcolorconvert",
+    vendor: true,
+
+    srcs: [
+        "C2DColorConverter.cpp",
+    ],
+
+    cflags: [
+        "-Werror",
+    ],
+
+    header_libs: [
+        "display_headers",
+        "qti_kernel_headers",
+    ],
+
+    shared_libs: [
+        "libdl",
+        "liblog",
+    ],
+}
+
+cc_library_headers {
+    name: "libc2dcolorconvert_headers",
+    export_include_dirs: ["."],
+    vendor: true,
+}
