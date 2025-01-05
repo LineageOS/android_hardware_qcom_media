@@ -32,7 +32,7 @@
 #include <fcntl.h>
 #include <linux/msm_kgsl.h>
 #include <sys/ioctl.h>
-#include <utils/Log.h>
+#include <log/log.h>
 #include <dlfcn.h>
 #include <string.h>
 #include <errno.h>
