@@ -1,0 +1,49 @@
+cc_library_shared {
+    name: "libOmxCore",
+    sanitize: {
+        integer_overflow: true,
+    },
+    vendor: true,
+
+    srcs: [
+        "src/common/omx_core_cmp.cpp",
+        "src/common/qc_omx_core.c",
+        "src/registry_table_android.c",
+    ],
+
+    cflags: [
+        "-fno-inline",
+        "-fno-short-enums",
+        "-D_ANDROID_",
+    ] + select(soong_config_variable("ANDROID", "target_board_platform"), {
+        "kona": ["-DAUDIO_MPEGH_ENABLED"],
+        "lito": ["-DAUDIO_MPEGH_ENABLED"],
+        "bengal": ["-DAUDIO_MPEGH_ENABLED", "-D_BENGAL_"],
+        default: [],
+    }),
+
+    local_include_dirs: [
+        "src/common",
+    ],
+
+    header_libs: [
+        "libomxcore_headers",
+        "libplatformconfig_headers",
+        "libutils_headers",
+    ],
+
+    export_header_lib_headers: [
+        "libomxcore_headers",
+    ],
+
+    shared_libs: [
+        "libcutils",
+        "libplatformconfig"
+    ],
+}
+
+cc_library_headers {
+    name: "libomxcore_headers",
+    export_include_dirs: ["inc"],
+    vendor: true,
+}
