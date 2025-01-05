@@ -62,8 +62,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifdef _ANDROID_
 #include <cutils/properties.h>
-#undef USE_EGL_IMAGE_GPU
-
 #ifdef _QUERY_DISP_RES_
 #include "display_config.h"
 #endif
@@ -76,17 +74,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <qdMetaData.h>
 #include <gralloc_priv.h>
-
-#ifdef ANDROID_JELLYBEAN_MR2
-#include "QComOMXMetadata.h"
-#endif
-
-#ifdef USE_EGL_IMAGE_GPU
-#include <EGL/egl.h>
-#include <EGL/eglQCOM.h>
-#define EGL_BUFFER_HANDLE 0x4F00
-#define EGL_BUFFER_OFFSET 0x4F01
-#endif
 
 #define BUFFER_LOG_LOC "/data/vendor/media"
 
@@ -8441,27 +8428,11 @@ OMX_ERRORTYPE  omx_vdec::use_EGL_image(OMX_IN OMX_HANDLETYPE     hComp,
     OMX_QCOM_PLATFORM_PRIVATE_ENTRY pmem_entry;
     OMX_QCOM_PLATFORM_PRIVATE_PMEM_INFO pmem_info;
 
-#ifdef USE_EGL_IMAGE_GPU
-    PFNEGLQUERYIMAGEQUALCOMMPROC egl_queryfunc;
-    EGLint fd = -1, offset = 0,pmemPtr = 0;
-#else
     int fd = -1, offset = 0;
-#endif
     DEBUG_PRINT_HIGH("use EGL image support for decoder");
     if (!bufferHdr || !eglImage|| port != OMX_CORE_OUTPUT_PORT_INDEX) {
         DEBUG_PRINT_ERROR("Invalid EGL image");
     }
-#ifdef USE_EGL_IMAGE_GPU
-    if (m_display_id == NULL) {
-        DEBUG_PRINT_ERROR("Display ID is not set by IL client");
-        return OMX_ErrorInsufficientResources;
-    }
-    egl_queryfunc = (PFNEGLQUERYIMAGEQUALCOMMPROC)
-        eglGetProcAddress("eglQueryImageKHR");
-    egl_queryfunc(m_display_id, eglImage, EGL_BUFFER_HANDLE, &fd);
-    egl_queryfunc(m_display_id, eglImage, EGL_BUFFER_OFFSET, &offset);
-    egl_queryfunc(m_display_id, eglImage, EGL_BITMAP_POINTER_KHR, &pmemPtr);
-#else //with OMX test app
     struct temp_egl {
         int pmem_fd;
         int offset;
@@ -8473,7 +8444,6 @@ OMX_ERRORTYPE  omx_vdec::use_EGL_image(OMX_IN OMX_HANDLETYPE     hComp,
         fd = temp_egl_id->pmem_fd;
         offset = temp_egl_id->offset;
     }
-#endif
     if (fd < 0) {
         DEBUG_PRINT_ERROR("Improper pmem fd by EGL client %d",fd);
         return OMX_ErrorInsufficientResources;
