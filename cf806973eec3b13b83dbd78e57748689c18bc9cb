@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "ca845b9d_d1664775",
+        "filename": "mm-video-v4l2/vidc/venc/src/omx_video_base.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 5105,
+      "author": {
+        "id": 10067
+      },
+      "writtenOn": "2025-01-05T21:20:20Z",
+      "side": 1,
+      "message": "```suggestion\n    m_fastcv_lib \u003d dlopen(\"libfastcvopt.so\", RTLD_NOW)\n    if (m_fastcv_lib \u003d\u003d NULL) {\n        DEBUG_PRINT_ERROR(\"Failed to open libfastcvopt.so: %s\", dlerror());\n        goto handle_err;\n    }\n    m_fcvSetOperationMode \u003d (fcvSetOperationMode_t)dlsym(m_fastcv_lib, \"fcvSetOperationMode\");\n    if (m_fcvSetOperationMode \u003d\u003d NULL) {\n        DEBUG_PRINT_ERROR(\"Failed to load symbol: fcvSetOperationMode\");\n        goto handle_err;\n    }\n    m_fcvMemInit \u003d (fcvMemInit_t)dlsym(m_fastcv_lib, \"fcvMemInit\");\n    if (m_fcvMemInit \u003d\u003d NULL) {\n        DEBUG_PRINT_ERROR(\"Failed to load symbol: fcvMemInit\");\n        goto handle_err;\n    }\n    m_fcvMemDeInit \u003d (fcvMemDeInit_t)dlsym(m_fastcv_lib, \"fcvMemDeInit\");\n    if (m_fcvMemInit \u003d\u003d NULL) {\n        DEBUG_PRINT_ERROR(\"Failed to load symbol: fcvMemDeInit\");\n        goto handle_err;\n    }\n    m_fcvCleanUp \u003d (fcvCleanUp_t)dlsym(m_fastcv_lib, \"fcvCleanUp\");\n    if (m_fcvCleanUp \u003d\u003d NULL) {\n        DEBUG_PRINT_ERROR(\"Failed to load symbol: fcvCleanUp\");\n        goto handle_err;\n    }\n    m_fcvFlipu8 \u003d (fcvFlipu8_t)dlsym(m_fastcv_lib, \"fcvFlipu8\");\n    if (m_fcvFlipu8 \u003d\u003d NULL) {\n        DEBUG_PRINT_ERROR(\"Failed to load symbol: fcvFlipu8\");\n        goto handle_err;\n    }\n    m_fcvFlipu16 \u003d (fcvFlipu16_t)dlsym(m_fastcv_lib, \"fcvFlipu16\");\n    if (m_fcvFlipu16 \u003d\u003d NULL) {\n        DEBUG_PRINT_ERROR(\"Failed to load symbol: fcvFlipu16\");\n        goto handle_err;\n    }\n```",
+      "range": {
+        "startLine": 5071,
+        "startChar": 0,
+        "endLine": 5105,
+        "endChar": 5
+      },
+      "revId": "cf806973eec3b13b83dbd78e57748689c18bc9cb",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
