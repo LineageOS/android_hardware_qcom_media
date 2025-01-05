@@ -26,14 +26,23 @@ cc_library_shared {
         "-DPROCESS_EXTRADATA_IN_OUTPUT_PORT",
         "-DUSE_ION",
     ] + select(soong_config_variable("ANDROID", "target_board_platform"), {
-        "msm8998": [
+        "msm8937": [
+            "-DMAX_H264_LEVEL_42",
+            "-DHEVC_PROFILE_HDR10_NOT_SUPPORTED",
+        ],
+        "msm8953": [
+            "-D_UBWC_",
+            "-DMAX_H264_LEVEL_51",
+            "-DHEVC_PROFILE_HDR10_NOT_SUPPORTED",
+        ],
+        "msm8996": [
+            "-DVENUS_HEVC",
             "-D_UBWC_",
             "-DMAX_H264_LEVEL_52",
         ],
-        "sdm660": [
-            "-D_UBWC_",
-            "-DMAX_H264_LEVEL_51",
-        ],
+        default: [],
+    }) + select(soong_config_variable("qtidisplay", "master_side_cp"), {
+        "true": ["-DMASTER_SIDE_CP"],
         default: [],
     }),
 

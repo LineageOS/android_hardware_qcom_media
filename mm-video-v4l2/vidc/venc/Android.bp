@@ -20,19 +20,24 @@ cc_library_shared {
         "-DUSE_ION",
         "-DUSE_NATIVE_HANDLE_SOURCE",
     ] + select(soong_config_variable("ANDROID", "target_board_platform"), {
-        "msm8998": [
-            "-D_PQ_",
-            "-D_UBWC_",
-            "-D_VQZIP_",
-            "-DLTR_SUPPORT",
-            "-DMAX_H264_LEVEL_52",
+        "msm8937": [
+            "-DMAX_H264_LEVEL_4",
+            "-D_DISABLE_TEMPORAL_LAYER_",
         ],
-        "sdm660": [
+        "msm8953": [
             "-D_NV21_",
             "-D_PQ_",
-            "-DLTR_SUPPORT",
             "-DMAX_H264_LEVEL_51",
         ],
+        "msm8996": [
+            "-D_UBWC_",
+            "-D_VQZIP_",
+            "-D_PQ_",
+            "-DMAX_H264_LEVEL_52",
+        ],
+        default: [],
+    }) + select(soong_config_variable("qtidisplay", "master_side_cp"), {
+        "true": ["-DMASTER_SIDE_CP"],
         default: [],
     }),
 
