@@ -16,9 +16,7 @@ cc_library_shared {
         "-fno-short-enums",
         "-D_ANDROID_",
     ] + select(soong_config_variable("ANDROID", "target_board_platform"), {
-        "kona": ["-DAUDIO_MPEGH_ENABLED"],
-        "lito": ["-DAUDIO_MPEGH_ENABLED"],
-        "bengal": ["-DAUDIO_MPEGH_ENABLED", "-D_BENGAL_"],
+        "bengal": ["-D_BENGAL_"],
         default: [],
     }),
 
