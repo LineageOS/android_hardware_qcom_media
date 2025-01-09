@@ -57,11 +57,6 @@ libmm-venc-def += -DUSE_NATIVE_HANDLE_SOURCE
 libmm-venc-def += -DSUPPORT_CONFIG_INTRA_REFRESH
 libmm-venc-def += -DUSE_CAMERA_METABUFFER_UTILS
 
-# Hypervisor
-ifneq (,$(filter $(MACHINE), "8x96autogvmquin" "8x96autogvmred"))
-libmm-venc-def += -D_HYPERVISOR_
-endif
-
 # Common Includes
 libmm-venc-inc      := $(LOCAL_PATH)/inc
 libmm-venc-inc      += $(call project-path-for,qcom-media)/mm-video-v4l2/vidc/common/inc
@@ -69,7 +64,6 @@ libmm-venc-inc      += $(call project-path-for,qcom-media)/mm-core/inc
 libmm-venc-inc      += $(call project-path-for,qcom-media)/libstagefrighthw
 libmm-venc-inc      += $(TARGET_OUT_HEADERS)/adreno
 libmm-venc-inc      += $(call project-path-for,qcom-media)/libc2dcolorconvert
-libmm-venc-inc      += $(call project-path-for,qcom-media)/hypv-intercept
 libmm-venc-inc      += $(TARGET_OUT_HEADERS)/libvqzip
 libmm-venc-inc      += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 
@@ -107,7 +101,6 @@ LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-venc-add-dep)
 LOCAL_SHARED_LIBRARIES    := liblog libcutils libdl
 
 LOCAL_SHARED_LIBRARIES    += libc2dcolorconvert
-LOCAL_SHARED_LIBRARIES += libhypv_intercept
 LOCAL_SHARED_LIBRARIES += libqdMetaData
 LOCAL_STATIC_LIBRARIES    := libOmxVidcCommon
 
