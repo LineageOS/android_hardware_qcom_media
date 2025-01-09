@@ -35,7 +35,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "video_encoder_device_v4l2.h"
 #include "omx_video_encoder.h"
 #include <media/msm_vidc.h>
-#include "hypv_intercept.h"
 #ifdef USE_ION
 #include <linux/msm_ion.h>
 #endif
@@ -55,13 +54,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <utils/Trace.h>
 
 #define YUV_STATS_LIBRARY_NAME "libgpustats.so" // UBWC case: use GPU library
-
-#ifdef _HYPERVISOR_
-#define ioctl(x, y, z) hypv_ioctl(x, y, z)
-#define HYPERVISOR 1
-#else
-#define HYPERVISOR 0
-#endif
 
 #define ALIGN(x, to_align) ((((unsigned long) x) + (to_align - 1)) & ~(to_align - 1))
 #define EXTRADATA_IDX(__num_planes) ((__num_planes) ? (__num_planes) - 1 : 0)
@@ -250,8 +242,6 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     memset(&color_space, 0x0, sizeof(color_space));
     memset(&temporal_layers_config, 0x0, sizeof(temporal_layers_config));
 
-    m_hypervisor = !!HYPERVISOR;
-
     char property_value[PROPERTY_VALUE_MAX] = {0};
     property_get("vendor.vidc.enc.log.in", property_value, "0");
     m_debug.in_buffer_log = atoi(property_value);
@@ -263,10 +253,7 @@ venc_dev::venc_dev(class omx_venc *venc_class)
     m_debug.extradata_log = atoi(property_value);
 
 #ifdef _UBWC_
-    if (m_hypervisor)
-        property_get("debug.gralloc.gfx_ubwc_disable", property_value, "1");
-    else
-        property_get("debug.gralloc.gfx_ubwc_disable", property_value, "0");
+    property_get("debug.gralloc.gfx_ubwc_disable", property_value, "0");
     if(!(strncmp(property_value, "1", PROPERTY_VALUE_MAX)) ||
         !(strncmp(property_value, "true", PROPERTY_VALUE_MAX))) {
         is_gralloc_source_ubwc = 0;
@@ -325,10 +312,6 @@ void* venc_dev::async_venc_message_thread (void *input)
     omx_venc_base = reinterpret_cast<omx_video*>(input);
     OMX_BUFFERHEADERTYPE* omxhdr = NULL;
 
-    if (omx->handle->m_hypervisor) {
-        DEBUG_PRINT_HIGH("omx_venc: Async Thread exit.m_hypervisor=%d",omx->handle->m_hypervisor);
-        return NULL;
-    }
     prctl(PR_SET_NAME, (unsigned long)"VideoEncCallBackThread", 0, 0, 0);
     struct v4l2_plane plane[VIDEO_MAX_PLANES];
     struct pollfd pfds[2];
@@ -1377,14 +1360,7 @@ bool venc_dev::venc_open(OMX_U32 codec)
         device_name = (OMX_STRING)"/dev/video/q6_enc";
         supported_rc_modes = (RC_ALL & ~RC_CBR_CFR);
     }
-    if (m_hypervisor) {
-        hvfe_callback_t hvfe_cb;
-        hvfe_cb.handler = async_message_process_v4l2;
-        hvfe_cb.context = (void *) this;
-        m_nDriver_fd = hypv_open(device_name, O_RDWR, &hvfe_cb);
-    } else {
-        m_nDriver_fd = open(device_name, O_RDWR);
-    }
+    m_nDriver_fd = open(device_name, O_RDWR);
     if ((int)m_nDriver_fd < 0) {
         DEBUG_PRINT_ERROR("ERROR: Omx_venc::Comp Init Returning failure");
         return false;
@@ -1666,10 +1642,8 @@ void venc_dev::venc_close()
             async_thread_force_stop = true;
         }
 
-        if (!m_hypervisor) {
-            if (async_thread_created)
-                pthread_join(m_tid,NULL);
-        }
+        if (async_thread_created)
+            pthread_join(m_tid,NULL);
 
         if (venc_handle->msg_thread_created) {
             venc_handle->msg_thread_created = false;
@@ -1681,11 +1655,7 @@ void venc_dev::venc_close()
         DEBUG_PRINT_HIGH("venc_close X");
         unsubscribe_to_events(m_nDriver_fd);
         close(m_poll_efd);
-        if (m_hypervisor) {
-            hypv_close(m_nDriver_fd);
-        } else {
-            close(m_nDriver_fd);
-        }
+        close(m_nDriver_fd);
         m_nDriver_fd = -1;
     }
 
