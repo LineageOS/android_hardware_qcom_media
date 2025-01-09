@@ -1,0 +1,33 @@
+cc_library_shared {
+    name: "libarbitrarybytes",
+    vendor: true,
+
+    srcs: [
+        "src/frameparser.cpp",
+        "src/h264_utils.cpp",
+        "src/hevc_utils.cpp",
+    ],
+
+    cflags: [
+        "-Werror",
+        "-D_ANDROID_",
+    ],
+
+    header_libs: [
+        "libomxcommon_headers",
+        "libomxcore_headers",
+        "libutils_headers",
+        "qti_kernel_headers",
+    ],
+
+    shared_libs: [
+        "libcutils",
+        "liblog",
+    ],
+}
+
+cc_library_headers {
+    name: "libarbitrarybytes_headers",
+    export_include_dirs: ["inc"],
+    vendor: true,
+}
