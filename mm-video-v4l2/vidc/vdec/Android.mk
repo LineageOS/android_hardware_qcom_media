@@ -60,7 +60,6 @@ libmm-vdec-inc          += $(call project-path-for,qcom-media)/mm-video-v4l2/vid
 libmm-vdec-inc          += $(call project-path-for,qcom-media)/mm-core/inc
 libmm-vdec-inc          += $(TARGET_OUT_HEADERS)/adreno
 libmm-vdec-inc          += $(call project-path-for,qcom-media)/libc2dcolorconvert
-libmm-vdec-inc          += $(call project-path-for,qcom-media)/hypv-intercept
 libmm-vdec-inc          += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 
 # Common Dependencies
@@ -84,10 +83,6 @@ else ifeq ($(call is-board-platform-in-list, $(TARGETS_THAT_SUPPORT_MAX_H264_LEV
 libmm-vdec-def += -DMAX_H264_LEVEL_51
 endif
 
-# Hypervisor
-ifneq (,$(filter $(MACHINE), "8x96autogvmquin" "8x96autogvmred"))
-libmm-vdec-def += -D_HYPERVISOR_
-endif
 # ---------------------------------------------------------------------------------
 # 			Make the Shared library (libOmxVdec)
 # ---------------------------------------------------------------------------------
@@ -113,7 +108,7 @@ LOCAL_ADDITIONAL_DEPENDENCIES   := $(libmm-vdec-add-dep)
 LOCAL_PRELINK_MODULE    := false
 LOCAL_SHARED_LIBRARIES  := liblog libcutils libdl libqdutils libion
 
-LOCAL_SHARED_LIBRARIES  += libqdMetaData libhypv_intercept
+LOCAL_SHARED_LIBRARIES  += libqdMetaData
 
 LOCAL_SRC_FILES         := src/frameparser.cpp
 LOCAL_SRC_FILES         += src/h264_utils.cpp
