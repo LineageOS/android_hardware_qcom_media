@@ -22,6 +22,30 @@
       },
       "revId": "cf806973eec3b13b83dbd78e57748689c18bc9cb",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "56175411_122d18dd",
+        "filename": "mm-video-v4l2/vidc/venc/src/omx_video_base.cpp",
+        "patchSetId": 1
+      },
+      "lineNbr": 5105,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2025-02-09T12:26:54Z",
+      "side": 1,
+      "message": "Fix applied.",
+      "parentUuid": "ca845b9d_d1664775",
+      "range": {
+        "startLine": 5071,
+        "startChar": 0,
+        "endLine": 5105,
+        "endChar": 5
+      },
+      "revId": "cf806973eec3b13b83dbd78e57748689c18bc9cb",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
