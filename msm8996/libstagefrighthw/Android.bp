@@ -1,0 +1,18 @@
+cc_library_shared {
+    name: "libstagefrighthw",
+    vendor: true,
+    srcs: [
+        "QComOMXPlugin.cpp",
+    ],
+    header_libs: [
+        "media_plugin_headers",
+        "native_headers",
+    ],
+    shared_libs: [
+        "libbinder",
+        "libutils",
+        "libcutils",
+        "libdl",
+        "libui",
+    ],
+}
