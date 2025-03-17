@@ -1,0 +1,58 @@
+OMXCORE_CFLAGS = [
+    "-D_ANDROID_",
+    "-DVERBOSE",
+    "-fno-inline",
+    "-fno-short-enums",
+    "-g",
+    "-O0",
+    "-U_ENABLE_QC_MSG_LOG_",
+    "-Wno-error",
+]
+
+cc_library_shared {
+    name: "libOmxCore",
+    vendor: true,
+    srcs: [
+        "src/common/omx_core_cmp.cpp",
+        "src/common/qc_omx_core.c",
+        "src/msm8996/registry_table_android.c",
+    ],
+    cflags: OMXCORE_CFLAGS,
+    shared_libs: [
+        "liblog",
+        "libdl",
+        "libcutils",
+    ],
+    local_include_dirs: [
+        "src/common",
+        "inc",
+    ],
+}
+
+cc_library_headers {
+    name: "OmxCore_headers",
+    vendor: true,
+    export_include_dirs: [
+        "inc",
+    ],
+}
+
+cc_library_shared {
+    name: "libmm-omxcore",
+    vendor: true,
+    srcs: [
+        "src/common/omx_core_cmp.cpp",
+        "src/common/qc_omx_core.c",
+        "src/msm8996/registry_table.c",
+    ],
+    cflags: OMXCORE_CFLAGS,
+    shared_libs: [
+        "liblog",
+        "libdl",
+        "libcutils",
+    ],
+    local_include_dirs: [
+        "src/common",
+        "inc",
+    ],
+}
