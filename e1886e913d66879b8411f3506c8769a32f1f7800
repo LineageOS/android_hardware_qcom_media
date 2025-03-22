@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "4c4bbe95_d3b1feab",
+        "filename": "mm-video-v4l2/vidc/vdec/Android.mk",
+        "patchSetId": 1
+      },
+      "lineNbr": 29,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2025-03-22T00:39:08Z",
+      "side": 0,
+      "message": "Restore this (in the other files as well) and then in the commit that switches to bp read TARGET_KERNEL_VERSION with select() instead of guarding this per SoC",
+      "revId": "e1886e913d66879b8411f3506c8769a32f1f7800",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
