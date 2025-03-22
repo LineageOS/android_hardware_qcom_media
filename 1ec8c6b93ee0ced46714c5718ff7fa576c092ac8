@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "4c3e8ef6_ddae9cd2",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 4
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 32253
+      },
+      "writtenOn": "2025-03-22T00:14:07Z",
+      "side": 1,
+      "message": "Chain looks to be fine on msm8953 (Android 10 blobs)",
+      "revId": "1ec8c6b93ee0ced46714c5718ff7fa576c092ac8",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
