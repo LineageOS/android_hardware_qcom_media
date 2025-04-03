@@ -20,6 +20,9 @@ cc_library_shared {
         "msm8996": ["-D_VQZIP_"],
         "msm8998": ["-D_VQZIP_"],
         default: [],
+    }) + select(soong_config_variable("qtimedia", "disabled_ubwc"), {
+        "true": ["-DDISABLE_UBWC"],
+        default: [],
     }),
 
     include_dirs: [
