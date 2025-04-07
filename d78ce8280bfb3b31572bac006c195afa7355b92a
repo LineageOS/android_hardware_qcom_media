@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "4a668a14_54fd6d16",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 28223
+      },
+      "writtenOn": "2025-04-07T18:49:05Z",
+      "side": 1,
+      "message": "For people still using OMX https://review.lineageos.org/c/LineageOS/android_device_xiaomi_sm6150-common/+/425622 that\u0027s the relevant device change. Dropped it since it isn\u0027t needed with C2 but this apparently works fine.",
+      "revId": "d78ce8280bfb3b31572bac006c195afa7355b92a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
