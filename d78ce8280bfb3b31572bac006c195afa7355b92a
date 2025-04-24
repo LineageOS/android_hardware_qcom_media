@@ -16,6 +16,29 @@
       "message": "For people still using OMX https://review.lineageos.org/c/LineageOS/android_device_xiaomi_sm6150-common/+/425622 that\u0027s the relevant device change. Dropped it since it isn\u0027t needed with C2 but this apparently works fine.",
       "revId": "d78ce8280bfb3b31572bac006c195afa7355b92a",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "813db767_6bdc8cb7",
+        "filename": "mm-video-v4l2/vidc/venc/Android.bp",
+        "patchSetId": 1
+      },
+      "lineNbr": 23,
+      "author": {
+        "id": 4550
+      },
+      "writtenOn": "2025-04-24T16:56:40Z",
+      "side": 1,
+      "message": "```suggestion\n    }) + select(soong_config_variable(\"qtimedia\", \"disable_ubwc\"), {\n```",
+      "range": {
+        "startLine": 23,
+        "startChar": 51,
+        "endLine": 23,
+        "endChar": 64
+      },
+      "revId": "d78ce8280bfb3b31572bac006c195afa7355b92a",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
