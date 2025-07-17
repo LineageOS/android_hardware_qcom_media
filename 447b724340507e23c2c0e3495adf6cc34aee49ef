@@ -1,4 +1,22 @@
 {
-  "comments": [],
+  "comments": [
+    {
+      "unresolved": true,
+      "key": {
+        "uuid": "c6474a3c_1304fd68",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 33857
+      },
+      "writtenOn": "2025-07-17T07:32:50Z",
+      "side": 1,
+      "message": "Can not work as original sm8150 has converted to blueprint package and removed omx register entry codes...",
+      "revId": "447b724340507e23c2c0e3495adf6cc34aee49ef",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ],
   "submitRequirementResults": []
 }
