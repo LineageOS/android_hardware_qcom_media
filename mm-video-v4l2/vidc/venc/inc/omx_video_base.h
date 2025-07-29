@@ -519,7 +519,8 @@ struct venc_ltruse {
     unsigned long   ltr_frames;
 };
 
-typedef struct encoder_meta_buffer_payload_type {
+typedef union encoder_meta_buffer_payload_type {
+    LEGACY_CAM_METADATA_TYPE cam; // Ensures proper alignment
     char data[sizeof(LEGACY_CAM_METADATA_TYPE) + sizeof(int)];
 } encoder_meta_buffer_payload_type;
 
