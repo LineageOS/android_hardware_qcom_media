@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "8cce7408_ccb73d49",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 11883
+      },
+      "writtenOn": "2025-07-29T08:30:48Z",
+      "side": 1,
+      "message": "What happens with __attribute__((aligned(4)))",
+      "revId": "32052d6116ad9cfac09c431eaa7972a7d45ab7a6",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
