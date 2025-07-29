@@ -5572,6 +5572,7 @@ OMX_ERRORTYPE omx_video::push_input_buffer(OMX_HANDLETYPE hComp)
             return handle_empty_eos_buffer();
         }
         media_buffer = (LEGACY_CAM_METADATA_TYPE *)psource_frame->pBuffer;
+        DEBUG_PRINT_LOW("media_buffer address is %p",media_buffer);
         /*Will enable to verify camcorder in current TIPS can be removed*/
         if (media_buffer->buffer_type == LEGACY_CAM_SOURCE) {
             Input_pmem_info.buffer = media_buffer;
