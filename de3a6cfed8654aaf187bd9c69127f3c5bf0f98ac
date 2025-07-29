@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "14ca3837_49fd7268",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 11883
+      },
+      "writtenOn": "2025-07-29T14:18:05Z",
+      "side": 1,
+      "message": "This needs to be picked to any branch using OMX on 23 @mkbestas@lineageos.org",
+      "revId": "de3a6cfed8654aaf187bd9c69127f3c5bf0f98ac",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
