@@ -23,12 +23,12 @@
 
 typedef const native_handle_t* buffer_handle_t;
 namespace android {
-    typedef struct encoder_nativehandle_buffer_type {
+    typedef struct __attribute__((packed)) encoder_nativehandle_buffer_type {
         MetadataBufferType buffer_type;
         buffer_handle_t meta_handle;
     } encoder_nativehandle_buffer_type;
 
-    typedef struct encoder_media_buffer_type {
+    typedef struct __attribute__((packed)) encoder_media_buffer_type {
         MetadataBufferType buffer_type;
         buffer_handle_t meta_handle;
     } encoder_media_buffer_type;
