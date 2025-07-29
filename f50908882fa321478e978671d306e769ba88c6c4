@@ -16,6 +16,23 @@
       "message": "https://review.lineageos.org/c/LineageOS/android_hardware_qcom_media/+/441735",
       "revId": "f50908882fa321478e978671d306e769ba88c6c4",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "47a53c3f_e6171e8c",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 14962
+      },
+      "writtenOn": "2025-07-29T12:06:21Z",
+      "side": 1,
+      "message": "The correct fix is here: https://review.lineageos.org/c/LineageOS/android_hardware_qcom_media/+/441741",
+      "revId": "f50908882fa321478e978671d306e769ba88c6c4",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
