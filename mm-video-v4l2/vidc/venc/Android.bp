@@ -21,7 +21,6 @@ cc_library_shared {
         "-DUSE_NATIVE_HANDLE_SOURCE",
     ] + select(soong_config_variable("ANDROID", "target_board_platform"), {
         "msm8998": [
-            "-D_PQ_",
             "-D_UBWC_",
             "-D_VQZIP_",
             "-DLTR_SUPPORT",
